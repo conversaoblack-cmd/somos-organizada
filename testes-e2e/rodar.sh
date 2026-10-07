@@ -10,6 +10,7 @@ npm --prefix "$RAIZ/functions" run build
 cat > "$RAIZ/functions/.secret.local" <<EOF
 MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 QR_HMAC=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+EMAIL_API_KEY=desativado
 EOF
 cat > "$RAIZ/functions/.env.local" <<EOF
 PAGARME_API_URL=http://127.0.0.1:4010

@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
-import { MASTER_KEY, QR_HMAC, PADROES } from "../config";
+import { EMAIL_API_KEY, MASTER_KEY, QR_HMAC, PADROES } from "../config";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { gerarQr } from "../util/cripto";
 import { cpfValido, endereco, soDigitos, telefoneBR, texto, umDe, type Pessoa } from "../util/validacao";
@@ -15,7 +15,7 @@ import { registrarCpfDaConta } from "./conta";
 import { aplicarRespostaPedido, mensagemErroPagarme, pagamentoPg, torcidaVendendo } from "./ingressos";
 import type { Pedido, Plano, Sede, Socio, StatusSocio, Torcida } from "../dominio/tipos";
 
-const segredos = [MASTER_KEY, QR_HMAC];
+const segredos = [MASTER_KEY, QR_HMAC, EMAIL_API_KEY];
 const ATIVOS: StatusSocio[] = ["ativo", "em_analise", "inadimplente", "suspenso"];
 
 function pessoaDoSocio(s: Socio): Pessoa {

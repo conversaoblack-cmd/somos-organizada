@@ -67,6 +67,29 @@ for SEGREDO in MASTER_KEY QR_HMAC; do
 done
 echo "Cópia de segurança local: $COFRE (somente seu usuário consegue ler)"
 
+passo "E-mails automáticos (Brevo ou Resend)"
+# A chave é digitada aqui no terminal (não aparece na tela), vai direto para o Secret Manager e o arquivo
+# temporário é apagado. Nunca cole essa chave em chat. Para trocar depois: TROCAR_EMAIL=1 bash scripts/implantar.sh
+if firebase functions:secrets:access EMAIL_API_KEY --project "$PROJETO" >/dev/null 2>&1 && [ "${TROCAR_EMAIL:-0}" != "1" ]; then
+  echo "EMAIL_API_KEY já existe no Secret Manager. Mantida."
+else
+  CHAVE_EMAIL=""
+  if [ -t 0 ]; then
+    echo "Cole a chave de API do Brevo (começa com xkeysib-) ou do Resend (começa com re_)."
+    echo "Ainda não tem? Só aperte Enter: o sistema funciona e os e-mails ficam desligados até você cadastrar."
+    read -r -s -p "Chave: " CHAVE_EMAIL; echo
+  fi
+  case "$CHAVE_EMAIL" in
+    xkeysib-*|re_*) echo "Chave reconhecida." ;;
+    "") CHAVE_EMAIL="desativado"; aviso "E-mails desligados por enquanto." ;;
+    *) aviso "Formato não reconhecido: os e-mails ficam desligados."; CHAVE_EMAIL="desativado" ;;
+  esac
+  TMP_EMAIL="$(mktemp)"; chmod 600 "$TMP_EMAIL"; printf '%s' "$CHAVE_EMAIL" > "$TMP_EMAIL"
+  firebase functions:secrets:set EMAIL_API_KEY --data-file "$TMP_EMAIL" --project "$PROJETO" >/dev/null
+  rm -f "$TMP_EMAIL"; unset CHAVE_EMAIL
+  echo "EMAIL_API_KEY gravada no Secret Manager."
+fi
+
 passo "Parâmetros das functions"
 if [ ! -f functions/.env ]; then
   printf 'URL_APP=https://%s.web.app\nPLATAFORMA_EMAILS=%s\n' "$PROJETO" "$EMAILS_PLATAFORMA" > functions/.env

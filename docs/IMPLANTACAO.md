@@ -158,6 +158,32 @@ prova de vida da subsede têm botão "Simular". Depois é só trocar pelas chave
     cobrar aquele cartão (as bandeiras penalizam insistir) e pede cartão novo ou Pix.
   - O motivo aparece em linguagem simples, a partir do código ABECS que a Pagar.me devolve.
 
+### E-mails automáticos
+
+O Firebase não tem servidor de e-mail próprio, então os e-mails saem pela API do **Brevo** (recomendado:
+grátis até 300/dia) ou do **Resend**. O sistema reconhece pela chave (`xkeysib-...` ou `re_...`).
+
+Que e-mails saem (todos com a cor e o escudo da torcida, e **nenhum leva ingresso, QR ou carteirinha**;
+todos levam a pessoa para a conta dela):
+- compra de ingresso confirmada (para quem comprou, sócio ou não);
+- "tem ingresso no seu nome" (para o sócio, quando outra pessoa compra no CPF dele);
+- associação ou renovação confirmada;
+- lembrete do Pix da mensalidade (quando a cobrança é gerada, 5 dias antes) e no dia do vencimento;
+- cartão recusado na renovação (motivo em linguagem simples e o que fazer).
+
+Cada e-mail sai uma única vez (registro em `torcidas/{id}/emails`, sem o conteúdo).
+
+Como ligar:
+1. Crie a conta no Brevo e, em **Remetentes e domínios**, autentique o domínio `somosorganizada.com.br`
+   (o Brevo mostra os registros DNS de SPF, DKIM e DMARC para colar no Registro.br).
+2. Em **SMTP e API → Chaves de API**, gere uma chave.
+3. Rode `TROCAR_EMAIL=1 bash scripts/implantar.sh` e cole a chave quando o terminal pedir (ela não aparece na
+   tela e vai direto para o Secret Manager). Nunca cole a chave em chat.
+4. Remetente padrão: `Somos Organizada <nao-responda@somosorganizada.com.br>`. Para trocar, adicione
+   `EMAIL_REMETENTE=Nome <email@dominio>` em `functions/.env`. O nome exibido é sempre o da torcida.
+
+Sem chave, tudo funciona normalmente; os e-mails só ficam registrados como "sem_provedor".
+
 ### Conta do torcedor e portaria
 
 - Toda compra de ingresso cria (ou usa) uma conta: o comprador cria a senha no checkout e depois entra com
@@ -184,6 +210,13 @@ bash testes-e2e/rodar.sh          # 12 cenários ponta a ponta nos emuladores
 ```
 
 ## Custos a acompanhar
+
+Quem paga o quê:
+- **Somos Organizada**: plano Blaze do Firebase (Functions, Firestore, Hosting, Storage, agendamentos,
+  Secret Manager), o serviço de e-mail e o domínio. A mensalidade das torcidas entra por Pix copia e cola
+  direto na conta, sem gateway (confira se o seu banco cobra tarifa por Pix recebido na conta PJ).
+- **Torcida e subsedes**: tarifas da Pagar.me nas vendas de ingresso e mensalidades de sócio (na conta delas).
+
 
 - Cloud Functions: chamadas de checkout, webhook e 2 rotinas agendadas (a cada 15 min e diária).
 - Firestore: leituras do painel e da página pública.

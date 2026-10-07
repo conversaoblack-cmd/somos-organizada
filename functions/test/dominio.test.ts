@@ -136,3 +136,19 @@ test("recusa de cartão: código ABECS e código antigo da Pagar.me viram mensag
   assert.equal(classificarRecusa({ id: "t", status: "failed", antifraud_response: { status: "reproved" } }).categoria, "antifraude");
   assert.equal(classificarRecusa(undefined).categoria, "generica");
 });
+
+test("e-mail: personalizado com a torcida, sem ingresso no corpo e à prova de HTML injetado", async () => {
+  const { emailIngressoComprado } = await import("../src/email/modelos");
+  const torcida = { nome: "Fúria <b>Jovem</b>", slug: "furia", tema: { corPrimaria: "#facc15", corSecundaria: "#000000", corFundo: "#000000", corTexto: "#ffffff" } } as never;
+  const e = emailIngressoComprado({
+    torcida, url: "https://x.test/furia/conta/ingressos", nome: "Ana <script>", email: "ana@x.test", eventoNome: "Caravana",
+    data: new Date("2026-10-25T22:00:00Z"), titulares: ["Ana"], total: 5500, metodo: "pix",
+  });
+  assert.ok(!e.html.includes("<script>"));
+  assert.ok(e.html.includes("Fúria &lt;b&gt;Jovem&lt;/b&gt;"));
+  assert.ok(e.html.includes("#facc15") && e.html.includes("color:#111111")); // botão amarelo com texto escuro
+  assert.ok(e.html.includes("https://x.test/furia/conta/ingressos"));
+  assert.ok(!/SO1\\.|qr/i.test(e.html.replace(/QR Code/g, ""))); // nada de QR/ingresso no e-mail
+  assert.match(e.texto, /Domingo, 25 de outubro, às 19:00/);
+  assert.equal(e.assunto, "Ingresso confirmado: Caravana");
+});

@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { MASTER_KEY, QR_HMAC } from "../config";
+import { EMAIL_API_KEY, MASTER_KEY, QR_HMAC } from "../config";
 import { refs } from "../util/firebase";
 import { texto, umDe } from "../util/validacao";
 import { exigirLogin } from "../dominio/permissoes";
@@ -14,7 +14,7 @@ import type { Pedido, Torcida } from "../dominio/tipos";
  * Ações que só existem no MODO DEMONSTRAÇÃO (chaves sk_demo_): simular o pagamento de um Pix e a
  * aprovação da prova de vida de um recebedor. Em torcidas com Pagar.me real, sempre recusa.
  */
-export const simularDemo = onCall({ secrets: [MASTER_KEY, QR_HMAC] }, async (req) => {
+export const simularDemo = onCall({ secrets: [MASTER_KEY, QR_HMAC, EMAIL_API_KEY] }, async (req) => {
   const uid = exigirLogin(req, { permitirAnonimo: true });
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });

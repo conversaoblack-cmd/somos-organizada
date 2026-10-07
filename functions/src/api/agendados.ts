@@ -1,7 +1,8 @@
+import { avisarCartaoRecusado, avisarRenovacaoPix } from "../email/avisos";
 import { FALHA_TECNICA } from "../pagarme/recusas";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions/v2";
-import { FUSO, MASTER_KEY, PADROES, QR_HMAC } from "../config";
+import { EMAIL_API_KEY, FUSO, MASTER_KEY, PADROES, QR_HMAC } from "../config";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { dias } from "../util/datas";
 import { confirmarPedidoPago, contarMudancaStatus, encerrarPedidoNaoPago } from "../dominio/processamento";
@@ -13,7 +14,7 @@ const torcidaDe = (ref: FirebaseFirestore.DocumentReference) => ref.parent.paren
 
 /** A cada 15 min: pedidos vencidos. Antes de expirar, confere na Pagar.me se não foram pagos no último segundo. */
 export const expirarPedidos = onSchedule(
-  { schedule: "every 15 minutes", timeZone: FUSO, secrets: [MASTER_KEY, QR_HMAC] },
+  { schedule: "every 15 minutes", timeZone: FUSO, secrets: [MASTER_KEY, QR_HMAC, EMAIL_API_KEY] },
   async () => {
     const vencidos = await db
       .collectionGroup("pedidos")
@@ -56,7 +57,7 @@ export const expirarPedidos = onSchedule(
 
 /** Todo dia 07:10: cobranças de renovação no Pix, inadimplência e fim de assinaturas canceladas. */
 export const rotinaSocios = onSchedule(
-  { schedule: "10 7 * * *", timeZone: FUSO, secrets: [MASTER_KEY, QR_HMAC], timeoutSeconds: 540 },
+  { schedule: "10 7 * * *", timeZone: FUSO, secrets: [MASTER_KEY, QR_HMAC, EMAIL_API_KEY], timeoutSeconds: 540 },
   async () => {
     const agora = Date.now();
     const torcidas = new Map<string, Torcida | null>();
@@ -79,14 +80,21 @@ export const rotinaSocios = onSchedule(
       if (!t || t.status === "suspensa" || !t.pagamentos?.configurado || !t.pagamentos.pix) continue;
       if (s.cobrancaAbertaId) {
         const aberto = (await refs.pedido(tid, s.cobrancaAbertaId).get()).data() as Pedido | undefined;
-        if (aberto?.status === "aguardando") continue;
+        if (aberto?.status === "aguardando") {
+          // Ainda não pagou e vence hoje: último lembrete por e-mail
+          const v = s.validoAte?.toMillis() ?? 0;
+          if (v >= agora - dias(1) && v <= agora + dias(1)) await avisarRenovacaoPix(tid, t, s, aberto.total, true);
+          continue;
+        }
       }
       // Inadimplente há mais de 60 dias não recebe cobrança automática nova
       if (s.validoAte && s.validoAte.toMillis() < agora - dias(60)) continue;
       try {
-        await criarCobrancaSocio({
+        const r = await criarCobrancaSocio({
           tid, torcida: t, socio: s, metodo: "pix", renovacao: true, expiraSeg: PADROES.pixRenovacaoExpiraDias * 86400,
         });
+        const novo = (await refs.pedido(tid, r.pedidoId).get()).data() as Pedido | undefined;
+        if (novo?.status === "aguardando") await avisarRenovacaoPix(tid, t, s, novo.total, false);
       } catch (e) {
         logger.error("Falha ao gerar renovação Pix", { tid, uid: s.uid, erro: String(e) });
       }
@@ -120,6 +128,7 @@ export const rotinaSocios = onSchedule(
             motivoFalhaCobranca: r.resultado.falhou,
             ...(r.resultado.definitiva ? { cobrancaCartaoPausada: true } : {}),
           });
+          await avisarCartaoRecusado(tid, t, s, r.resultado.falhou, !!r.resultado.definitiva);
         }
       } catch (e) {
         logger.error("Falha na renovação no cartão", { tid, uid: s.uid, erro: String(e) });

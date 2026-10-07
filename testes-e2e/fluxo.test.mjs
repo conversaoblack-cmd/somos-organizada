@@ -609,6 +609,16 @@ test("17. conta do torcedor: ingresso no CPF do sócio aparece no painel dele; l
   assert.equal(doAmigo.size, 2);
   const doSocio = await getDocs(query(collection(socio.db, `torcidas/${tid}/ingressos`), where("titularUid", "==", socio.auth.currentUser.uid)));
   assert.deepEqual(doSocio.docs.map((d) => d.get("titularCpf")), ["86288366757"]);
+  // e-mails: comprador recebe a confirmação; o sócio titular recebe o aviso. Sem chave de e-mail no teste = "sem_provedor"
+  const emailCompra = await aDb.doc(`torcidas/${tid}/emails/ingresso-${p.pedidoId}`).get();
+  assert.equal(emailCompra.get("para"), "amigo@x.test");
+  assert.equal(emailCompra.get("status"), "sem_provedor");
+  assert.match(emailCompra.get("assunto"), /Ingresso confirmado: Caravana demo/);
+  const ingSocio = doSocio.docs[0].id;
+  assert.equal((await aDb.doc(`torcidas/${tid}/emails/ingresso-titular-${ingSocio}`).get()).get("para"), "socio@furia.test");
+  // pagar de novo (webhook repetido) não duplica
+  await amigo.chamar("simularDemo", { tid, acao: "pagar_pedido", pedidoId: p.pedidoId });
+  assert.equal((await aDb.doc(`torcidas/${tid}/emails/ingresso-${p.pedidoId}`).get()).get("tentativas"), 1);
   const outro = doAmigo.docs.find((d) => d.get("titularCpf") === "11144477735");
   await negado(getDoc(doc(socio.db, `torcidas/${tid}/ingressos/${outro.id}`)));
 

@@ -12,6 +12,7 @@ npm --prefix "$RAIZ/functions" run build >/dev/null
 MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 QR_HMAC=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 EOS
+grep -q '^EMAIL_API_KEY=' "$RAIZ/functions/.secret.local" || echo "EMAIL_API_KEY=desativado" >> "$RAIZ/functions/.secret.local"
 cat > "$RAIZ/functions/.env.local" <<EOS
 PAGARME_API_URL=http://127.0.0.1:4010
 URL_APP=http://127.0.0.1:5173

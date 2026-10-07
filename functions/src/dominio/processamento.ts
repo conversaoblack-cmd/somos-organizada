@@ -8,6 +8,7 @@ import { gerarQr, codigoLegivel, tokenAleatorio } from "../util/cripto";
 import { competencia } from "../util/datas";
 import { avancarCiclo } from "./precos";
 import { pagoIntegral, type PgPedido, type PgFatura } from "../pagarme/cliente";
+import { notificarPedidoPago } from "../email/avisos";
 import type { Evento, Ingresso, Liquidacao, Pedido, Socio, StatusSocio, Torcida } from "./tipos";
 
 type Tx = FirebaseFirestore.Transaction;
@@ -67,6 +68,13 @@ async function lerTorcida(tx: Tx, tid: string): Promise<Torcida> {
 
 /** Pedido avulso (ingresso ou mensalidade via Pix/cartão) confirmado como pago na Pagar.me. */
 export async function confirmarPedidoPago(tid: string, pedidoId: string, pg: PgPedido, segredoQr: string) {
+  const r = await confirmarNaTransacao(tid, pedidoId, pg, segredoQr);
+  // E-mail de confirmação (com chave única: repetir não duplica). Nunca derruba a confirmação.
+  await notificarPedidoPago(tid, pedidoId);
+  return r;
+}
+
+function confirmarNaTransacao(tid: string, pedidoId: string, pg: PgPedido, segredoQr: string) {
   return db.runTransaction(async (tx) => {
     const pRef = refs.pedido(tid, pedidoId);
     const p = (await tx.get(pRef)).data() as Pedido | undefined;

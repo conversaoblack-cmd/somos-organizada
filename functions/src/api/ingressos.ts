@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
-import { MASTER_KEY, QR_HMAC, PADROES } from "../config";
+import { EMAIL_API_KEY, MASTER_KEY, QR_HMAC, PADROES } from "../config";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { lerQr, igualSeguro } from "../util/cripto";
 import { cpfValido, endereco, mascararCpf, pessoa, soDigitos, texto, umDe } from "../util/validacao";
@@ -14,7 +14,7 @@ import { motivoRecusa, recusaDefinitiva, PagarmeErro, type PgPagamento, type PgP
 import { dividir, subsedePodeVender } from "../dominio/split";
 import type { Evento, Ingresso, Pedido, Sede, Socio, Torcida } from "../dominio/tipos";
 
-const segredos = [MASTER_KEY, QR_HMAC];
+const segredos = [MASTER_KEY, QR_HMAC, EMAIL_API_KEY];
 
 /**
  * Torcida apta a vender. Antes de o site ser publicado, só a equipe da própria torcida (membros do
