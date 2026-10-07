@@ -138,7 +138,7 @@ export default function VisaoGeral() {
 
   const pendencias: { tom: "alerta" | "info" | "perigo"; titulo: string; texto: string; para: string; acao: string }[] = [];
   if (ehDiretoria && !pag?.configurado)
-    pendencias.push({ tom: "perigo", titulo: "Pagamentos não configurados", texto: "Sem a Pagar.me conectada, ninguém consegue comprar ingresso nem virar sócio.", para: `${base}/pagamentos`, acao: "Conectar Pagar.me" });
+    pendencias.push({ tom: "perigo", titulo: "Pagamentos não configurados", texto: "Conecte a Pagar.me da torcida ou teste tudo no modo demonstração. Sem isso, ninguém consegue comprar.", para: `${base}/pagamentos?tour=admin-pagamentos`, acao: "Configurar pagamentos" });
   if (ehDiretoria && pag?.configurado && !pag.webhookRecebidoEm)
     pendencias.push({ tom: "alerta", titulo: "Webhook nunca recebido", texto: "Sem o webhook, pagamentos por Pix podem demorar a confirmar. Confira o passo 5 em Pagamentos.", para: `${base}/pagamentos`, acao: "Ver instruções" });
   if (ehDiretoria && pag?.configurado && pag.ambiente === "teste")

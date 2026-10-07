@@ -616,7 +616,7 @@ test("17. conta do torcedor: ingresso no CPF do sócio aparece no painel dele; l
   const visitante = navegador("login-cpf");
   assert.deepEqual(await visitante.chamar("entrarComCpf", { cpf: "111.444.777-35", senha: SENHA }), { email: "amigo@x.test" });
   assert.deepEqual(await visitante.chamar("entrarComCpf", { cpf: "86288366757", senha: SENHA }), { email: "socio@furia.test" });
-  await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "52998224725", senha: SENHA }), /incorretos/); // CPF sem conta: mesma resposta
+  await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "12345678909", senha: SENHA }), /incorretos/); // CPF sem conta: mesma resposta
   for (let i = 0; i < 5; i++) await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: "errada-123" }), /incorretos/);
   await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: SENHA }), /Muitas tentativas/);
 });

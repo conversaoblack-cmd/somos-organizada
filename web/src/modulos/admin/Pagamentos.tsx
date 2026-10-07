@@ -557,7 +557,8 @@ function CartaoDemo({ demo, sair }: { demo: boolean; sair: () => void }) {
       <div className="flex flex-wrap gap-2 mt-4">
         {demo ? (
           <Botao variante="contorno" icone="cartao" onClick={sair}>
-            Sair da demonstração / conectar Pagar.me real
+            <span className="hidden sm:inline">Sair da demonstração / conectar Pagar.me real</span>
+            <span className="sm:hidden">Conectar Pagar.me real</span>
           </Botao>
         ) : (
           <Botao icone="raio" carregando={ativando} onClick={() => setConfirmar(true)}>
