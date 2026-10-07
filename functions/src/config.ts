@@ -14,7 +14,9 @@ export const URL_APP = defineString("URL_APP", { default: "https://somosorganiza
 /** E-mails (separados por vírgula) que podem reivindicar acesso ao painel da plataforma. */
 export const PLATAFORMA_EMAILS = defineString("PLATAFORMA_EMAILS", { default: "conversaoblack@gmail.com" });
 
-setGlobalOptions({ region: REGIAO, maxInstances: 20 });
+// CPU fracionada (perfil "gcf_gen1") + teto de instâncias: cabe na cota de CPU por região
+// de projetos novos no Cloud Run (com 1 vCPU x 20 instâncias por função, o deploy estoura a cota).
+setGlobalOptions({ region: REGIAO, maxInstances: 10, cpu: "gcf_gen1", memory: "512MiB" });
 
 /** Regras de negócio padrão. Cada torcida pode sobrescrever algumas no próprio documento. */
 export const PADROES = {

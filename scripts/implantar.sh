@@ -26,6 +26,9 @@ falha() { printf '\033[1;31m✖ %s\033[0m\n' "$*"; exit 1; }
 
 cd "$RAIZ"
 
+passo "Atualizando o código"
+git pull --ff-only 2>/dev/null || aviso "Não consegui atualizar via git pull; seguindo com o código desta pasta."
+
 passo "Conferindo ferramentas"
 command -v node >/dev/null || falha "Node.js não encontrado. Instale a versão 22: https://nodejs.org"
 NODE_MAIOR="$(node -p 'process.versions.node.split(".")[0]')"
