@@ -106,8 +106,14 @@ remova-o de lá antes, para o Firebase liberar.
 
 1. Abra `https://somosorganizada.com.br/plataforma`, crie a conta com o e-mail de `PLATAFORMA_EMAILS`
    (o painel pede a verificação do e-mail) e clique em **Ativar acesso da equipe**.
-2. Em **Torcidas → Nova torcida**: nome, endereço (`/gavioes`), diretor e mensalidade do contrato.
-   O sistema gera o link para o diretor criar a senha. Mande pelo WhatsApp.
+2. Em **Configurações**: cadastre a **chave Pix** que recebe as mensalidades da plataforma, o nome e a cidade
+   do recebedor e confira os valores dos planos (pequena R$ 500, grande R$ 1.000, gigante R$ 1.500 acima de 3.000 sócios).
+3. Torcidas novas chegam pelo cadastro da página inicial (`/cadastro`) e aparecem em **Solicitações**: aprovar cria
+   a torcida e libera o painel para o diretor (ele entra com a mesma conta do cadastro). Também dá para criar
+   direto em **Torcidas → Nova torcida**.
+4. **Mensalidades**: a 1ª fatura sai 7 dias depois de a torcida publicar o site; as seguintes 5 dias antes de vencer.
+   Pagamento só no Pix, sem multa nem juros. Ao receber, toque em **Confirmar Pix recebido**.
+   Com 7 dias de atraso o site da torcida sai do ar sozinho e volta na confirmação.
 
 ## 9. Onboarding de cada torcida (feito pela diretoria)
 
@@ -137,6 +143,30 @@ Tudo guiado no painel `/{torcida}/admin`:
 6. **Usuários**: convidar subsedes e portaria.
 
 Recomendado: fazer a 1ª venda com chaves de **teste** (evento de R$ 1,00) e só depois trocar para as de produção.
+
+Sem conta na Pagar.me ainda? Em **Pagamentos → modo demonstração** o sistema simula a Pagar.me (nenhum dinheiro
+circula), seguindo o simulador oficial: cartão `4000 0000 0000 0010` aprova, `4000 0000 0000 0028` recusa; Pix e
+prova de vida da subsede têm botão "Simular". Depois é só trocar pelas chaves reais.
+
+### Recorrência do sócio
+
+- A Pagar.me não oferece Pix Automático (out/2026) e a assinatura dela não aceita Pix nem divide o valor (split).
+  Por isso a renovação é feita pelo próprio sistema:
+  - **Pix**: 5 dias antes do vencimento o sistema gera o Pix do ciclo (válido por 7 dias); o sócio paga pelo painel.
+  - **Cartão**: cobrado no vencimento no cartão salvo. Recusa que pode passar depois (saldo, banco fora do ar)
+    é tentada de novo todo dia por até 15 dias; recusa definitiva (vencido, bloqueado, dados errados) **para** de
+    cobrar aquele cartão (as bandeiras penalizam insistir) e pede cartão novo ou Pix.
+  - O motivo aparece em linguagem simples, a partir do código ABECS que a Pagar.me devolve.
+
+### Conta do torcedor e portaria
+
+- Toda compra de ingresso cria (ou usa) uma conta: o comprador cria a senha no checkout e depois entra com
+  **CPF ou e-mail + senha** em `/{torcida}/conta`. Ingresso comprado por outra pessoa no CPF de um sócio
+  aparece também no painel do sócio.
+- O login por CPF confere a senha no servidor com a chave pública do app Web (`WEB_API_KEY` em
+  `functions/.env`, preenchida pelo `scripts/implantar.sh`).
+- Portaria: a diretoria convida o usuário com papel **Portaria**; ele entra em `/{torcida}/admin` no celular ou
+  tablet e cai direto no leitor. Portaria/subsede ligada a uma sede só confere eventos dessa sede.
 
 ## Rodar localmente (sem tocar em nada real)
 
