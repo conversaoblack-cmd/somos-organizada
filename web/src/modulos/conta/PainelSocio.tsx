@@ -10,6 +10,7 @@ import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import { Login } from "@/componentes/Login";
 import { Avatar, Botao, BotaoLink, Carregando, cx, Icone, type NomeIcone } from "@/ui";
 import { usePagarMensalidade } from "./acoes";
+import { aceitaCartao, ModalCartao } from "./CartaoCobranca";
 import { CSS_CONTA, ROTULO_SITUACAO, situacaoDoSocio, useFotoSocio } from "./comum";
 import AbaCarteirinha from "./Carteirinha";
 import AbaIngressos, { ehProximo } from "./Ingressos";
@@ -140,6 +141,7 @@ function BarraAbas({ slug, contadorIngressos }: { slug: string; contadorIngresso
 
 function Pendente({ tid, torcida, ficha }: { tid: string; torcida: Torcida; ficha: ComId<Socio> }) {
   const { pagar, carregando } = usePagarMensalidade(tid, torcida.slug, ficha);
+  const [modalCartao, setModalCartao] = useState(false);
   const total = ficha.cobranca ? ficha.cobranca.valorBase + ficha.cobranca.taxa : ficha.valorPlano + taxa(ficha.valorPlano, torcida.taxaServicoPct ?? 10);
   return (
     <div className="relative overflow-hidden rounded-[24px] border border-primaria/40 bg-superficie p-5 sm:p-6 shadow-[0_24px_70px_-34px_var(--color-primaria)] so-entrar">
@@ -157,10 +159,18 @@ function Pendente({ tid, torcida, ficha }: { tid: string; torcida: Torcida; fich
             </p>
           </div>
         </div>
-        <Botao tamanho="lg" icone="pix" carregando={carregando} onClick={() => pagar(true)} className="sm:shrink-0">
-          {ficha.cobrancaAbertaId ? "Ver meu Pix" : "Pagar agora"}
-        </Botao>
+        <div className="flex flex-col gap-2 sm:shrink-0">
+          <Botao tamanho="lg" icone="pix" carregando={carregando} onClick={() => pagar(true)}>
+            {ficha.cobrancaAbertaId ? "Ver meu Pix" : "Pagar no Pix"}
+          </Botao>
+          {aceitaCartao(torcida) && (
+            <Botao variante="suave" icone="cartao" onClick={() => setModalCartao(true)}>
+              Pagar com cartão
+            </Botao>
+          )}
+        </div>
       </div>
+      <ModalCartao aberto={modalCartao} fechar={() => setModalCartao(false)} tid={tid} torcida={torcida} ficha={ficha} titulo="Pagar com cartão" />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import type { ComId, Ingresso, Plano, Socio, Torcida } from "@/lib/tipos";
 import { useDocumento } from "@/hooks/dados";
 import { Aviso, Botao, BotaoLink, Cartao, cx, Girando, Icone, QrCode } from "@/ui";
 import { buscarQrCarteirinha, usePagarMensalidade } from "./acoes";
+import { AvisoFalhaCartao, useFalhaCobranca } from "./CartaoCobranca";
 import {
   diasParaVencer,
   mesAno,
@@ -390,6 +391,7 @@ export default function AbaCarteirinha({
   const [qr, setQr] = useState<{ valor: string | null; carregando: boolean; erro: string | null }>({ valor: null, carregando: false, erro: null });
   const { pagar, carregando: pagando } = usePagarMensalidade(tid, torcida.slug, ficha);
   const plano = useDocumento<Plano>(`torcidas/${tid}/planos/${ficha.planoId}`).dados;
+  const falhaCartao = useFalhaCobranca(tid, ficha);
   const dias = diasParaVencer(ficha);
 
   useEffect(() => {
@@ -421,6 +423,7 @@ export default function AbaCarteirinha({
       </div>
 
       <div className="space-y-4 min-w-0">
+        {falhaCartao && <AvisoFalhaCartao tid={tid} torcida={torcida} ficha={ficha} />}
         {situacao === "em_dia" && (
           <Cartao className="p-5">
             <div className="flex items-center gap-3">
@@ -443,7 +446,7 @@ export default function AbaCarteirinha({
           </Cartao>
         )}
 
-        {(situacao === "vencida" || situacao === "inadimplente") && (
+        {(situacao === "vencida" || situacao === "inadimplente") && !falhaCartao && (
           <Aviso
             tom="alerta"
             titulo={situacao === "vencida" ? "Sua mensalidade venceu" : "Mensalidade em atraso"}

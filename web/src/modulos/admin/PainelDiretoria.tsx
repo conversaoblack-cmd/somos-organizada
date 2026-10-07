@@ -4,7 +4,7 @@ import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { aplicarTema, TEMA_PAINEL } from "@/lib/tema";
-import type { Sede, Socio } from "@/lib/tipos";
+import type { Evento, Sede, Socio } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { useMembro, useTorcida } from "@/hooks/torcida";
 import { LayoutPainel, type ItemMenu } from "@/componentes/LayoutPainel";
@@ -22,6 +22,8 @@ import Usuarios from "./Usuarios";
 import Personalizacao from "./Personalizacao";
 import Pagamentos from "./Pagamentos";
 import InicioPortaria from "./InicioPortaria";
+import Recebimentos from "./Recebimentos";
+import { recebedorAtivo } from "./recebedor";
 
 function Centro({ children }: { children: ReactNode }) {
   return <div className="min-h-dvh grid place-items-center px-4 py-10">{children}</div>;
@@ -91,6 +93,13 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
         ? query(collection(db, `torcidas/${tid}/socios`), where("sedeId", "==", sedeEscopo), where("status", "==", "em_analise"))
         : null;
   const analise = useColecao<Socio>(consultaAnalise, `analise-${tid}-${papel}-${sedeEscopo}`);
+  // Eventos de subsede aguardando aprovação (só a diretoria aprova).
+  const aprovacao = useColecao<Evento>(
+    ehDiretoria ? query(collection(db, `torcidas/${tid}/eventos`), where("status", "==", "em_aprovacao")) : null,
+    `aprovacao-${tid}-${ehDiretoria}`,
+  );
+  const minhaSede = sedeEscopo ? sedes.find((s) => s.id === sedeEscopo) : undefined;
+  const contaPendente = papel === "subsede" && !!minhaSede && !recebedorAtivo(minhaSede);
 
   const ctx: ContextoPainel = useMemo(
     () => ({
@@ -106,26 +115,29 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
       base,
       pct: torcida.taxaServicoPct ?? 10,
       emAnalise: analise.dados.length,
+      emAprovacao: aprovacao.dados.length,
+      podePublicarNaSede: (id) => recebedorAtivo(sedes.find((s) => s.id === id)),
     }),
-    [tid, torcida, uid, membro, papel, ehDiretoria, sedeEscopo, sedes, base, analise.dados.length],
+    [tid, torcida, uid, membro, papel, ehDiretoria, sedeEscopo, sedes, base, analise.dados.length, aprovacao.dados.length],
   );
 
   const menu: ItemMenu[] = useMemo(() => {
     if (papel === "portaria") return [{ para: base, rotulo: "Portaria", icone: "qr", fim: true }];
     const itens: (ItemMenu & { so?: boolean })[] = [
       { para: base, rotulo: "Visão geral", icone: "painel", fim: true },
-      { para: `${base}/eventos`, rotulo: "Eventos", icone: "calendario" },
+      { para: `${base}/eventos`, rotulo: "Eventos", icone: "calendario", contador: ehDiretoria ? aprovacao.dados.length : undefined },
       { para: `${base}/pedidos`, rotulo: "Pedidos e ingressos", icone: "ingresso" },
       { para: `${base}/socios`, rotulo: "Sócios", icone: "usuarios", contador: analise.dados.length },
       { para: `${base}/planos`, rotulo: "Planos de sócio", icone: "estrela", so: true },
       { para: `${base}/financeiro`, rotulo: "Financeiro", icone: "dinheiro" },
+      ...(papel === "subsede" ? [{ para: `${base}/recebimentos`, rotulo: "Recebimentos", icone: "cartao" as const, contador: contaPendente ? 1 : undefined }] : []),
       { para: `${base}/sedes`, rotulo: "Sedes", icone: "casa", so: true },
       { para: `${base}/usuarios`, rotulo: "Usuários do painel", icone: "chave", so: true },
       { para: `${base}/personalizacao`, rotulo: "Personalizar página", icone: "pincel", so: true },
       { para: `${base}/pagamentos`, rotulo: "Pagamentos", icone: "cartao", so: true, contador: torcida.pagamentos?.configurado ? undefined : 1 },
     ];
     return itens.filter((i) => !i.so || ehDiretoria);
-  }, [papel, base, ehDiretoria, analise.dados.length, torcida.pagamentos?.configurado]);
+  }, [papel, base, ehDiretoria, analise.dados.length, aprovacao.dados.length, contaPendente, torcida.pagamentos?.configurado]);
 
   const marca = (
     <div className="flex items-center gap-3">
@@ -177,6 +189,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
             <Route path="pedidos" element={<Pedidos />} />
             <Route path="socios" element={<Socios />} />
             <Route path="financeiro" element={<Financeiro />} />
+            <Route path="recebimentos" element={papel === "subsede" ? <Recebimentos /> : <Navigate to={base} replace />} />
             <Route path="planos" element={soDiretoria(<Planos />)} />
             <Route path="sedes" element={soDiretoria(<Sedes />)} />
             <Route path="usuarios" element={soDiretoria(<Usuarios />)} />

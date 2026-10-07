@@ -42,16 +42,49 @@ import {
 
 export const ROTULO_STATUS_EVENTO: Record<StatusEvento, string> = {
   rascunho: "Rascunho",
+  em_aprovacao: "Aguardando aprovação",
   publicado: "Publicado",
   encerrado: "Encerrado",
   cancelado: "Cancelado",
 };
 const TOM_STATUS_EVENTO: Record<StatusEvento, Tom> = {
   rascunho: "neutro",
+  em_aprovacao: "alerta",
   publicado: "sucesso",
   encerrado: "info",
   cancelado: "perigo",
 };
+
+/** Campos extras do fluxo de aprovação (gravados pela diretoria). */
+type EventoAdm = Evento & { motivoDevolucao?: string; devolvidoEm?: Timestamp; aprovadoEm?: Timestamp };
+
+const EDITAVEL_SUBSEDE: StatusEvento[] = ["rascunho", "em_aprovacao"];
+
+/** Subsede só mexe nos próprios eventos enquanto rascunho ou aguardando aprovação. */
+function usePodeEditar() {
+  const { ehDiretoria, sedeEscopo } = usePainel();
+  return (e: Evento) => ehDiretoria || (e.sedeId === sedeEscopo && EDITAVEL_SUBSEDE.includes(e.status));
+}
+
+/** Aviso para a subsede sem conta de recebimento ativa. */
+function AvisoContaSubsede() {
+  const { ehDiretoria, sedeEscopo, podePublicarNaSede, base } = usePainel();
+  if (ehDiretoria || !sedeEscopo || podePublicarNaSede(sedeEscopo)) return null;
+  return (
+    <Aviso
+      tom="alerta"
+      titulo="Sua subsede ainda não tem conta de recebimento ativa"
+      className="mb-5"
+      acao={
+        <BotaoLink to={`${base}/recebimentos`} tamanho="sm" variante="contorno" iconeDireita="setaDireita">
+          Ir para Recebimentos
+        </BotaoLink>
+      }
+    >
+      Sem conta de recebimento ativa a diretoria não consegue aprovar seus eventos. Você pode criar e enviar para aprovação mesmo assim.
+    </Aviso>
+  );
+}
 
 /** Consulta de eventos no escopo do usuário (subsede: só a própria sede). */
 function useEventos() {
@@ -69,8 +102,9 @@ function useEventos() {
 export default function Eventos() {
   const { ehDiretoria, sedes, nomeSede, base } = usePainel();
   const eventos = useEventos();
+  const podeEditar = usePodeEditar();
   const [params, setParams] = useSearchParams();
-  const [status, setStatus] = useState<"todos" | StatusEvento>("todos");
+  const [status, setStatus] = useState<"todos" | StatusEvento>(() => (params.get("status") as StatusEvento) || "todos");
   const [sede, setSede] = useState("");
   const [busca, setBusca] = useState("");
   const [editando, setEditando] = useState<ComId<Evento> | "novo" | null>(null);
@@ -107,7 +141,11 @@ export default function Eventos() {
     <div>
       <CabecalhoPagina
         titulo="Eventos"
-        descricao="Crie eventos, defina preços e acompanhe as vendas."
+        descricao={
+          ehDiretoria
+            ? "Crie eventos, aprove os das subsedes e acompanhe as vendas."
+            : "Crie os eventos da sua sede e envie para a diretoria aprovar."
+        }
         acoes={
           <Botao icone="mais" onClick={() => setEditando("novo")}>
             Novo evento
@@ -115,11 +153,13 @@ export default function Eventos() {
         }
       />
 
+      <AvisoContaSubsede />
+
       <div className="flex flex-col gap-3 mb-5">
         <Pilulas
           valor={status}
           onChange={setStatus}
-          opcoes={(["todos", "publicado", "rascunho", "encerrado", "cancelado"] as const).map((s) => ({
+          opcoes={(["todos", "em_aprovacao", "publicado", "rascunho", "encerrado", "cancelado"] as const).map((s) => ({
             valor: s,
             rotulo: s === "todos" ? "Todos" : ROTULO_STATUS_EVENTO[s],
             contador: contagem[s] ?? 0,
@@ -163,7 +203,7 @@ export default function Eventos() {
               <h2 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-3">Próximos</h2>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                 {filtrados.futuros.map((e) => (
-                  <CartaoEvento key={e.id} e={e} sede={nomeSede(e.sedeId)} para={`${base}/eventos/${e.id}`} editar={() => setEditando(e)} />
+                  <CartaoEvento key={e.id} e={e} sede={nomeSede(e.sedeId)} para={`${base}/eventos/${e.id}`} editar={podeEditar(e) ? () => setEditando(e) : undefined} />
                 ))}
               </div>
             </section>
@@ -173,7 +213,7 @@ export default function Eventos() {
               <h2 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-3">Já aconteceram</h2>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                 {filtrados.passados.map((e) => (
-                  <CartaoEvento key={e.id} e={e} sede={nomeSede(e.sedeId)} para={`${base}/eventos/${e.id}`} editar={() => setEditando(e)} passado />
+                  <CartaoEvento key={e.id} e={e} sede={nomeSede(e.sedeId)} para={`${base}/eventos/${e.id}`} editar={podeEditar(e) ? () => setEditando(e) : undefined} passado />
                 ))}
               </div>
             </section>
@@ -186,7 +226,7 @@ export default function Eventos() {
   );
 }
 
-function CartaoEvento({ e, sede, para, editar, passado }: { e: ComId<Evento>; sede: string; para: string; editar: () => void; passado?: boolean }) {
+function CartaoEvento({ e, sede, para, editar, passado }: { e: ComId<EventoAdm>; sede: string; para: string; editar?: () => void; passado?: boolean }) {
   return (
     <Cartao className={cx("relative overflow-hidden flex flex-col transition-colors hover:border-linha-forte", passado && "opacity-75")}>
       <Link to={para} className="flex gap-4 p-4 pb-3 min-w-0">
@@ -214,6 +254,7 @@ function CartaoEvento({ e, sede, para, editar, passado }: { e: ComId<Evento>; se
             <Selo tom={TOM_STATUS_EVENTO[e.status]} ponto>
               {ROTULO_STATUS_EVENTO[e.status]}
             </Selo>
+            {e.status === "rascunho" && e.motivoDevolucao && <Selo tom="perigo">Devolvido</Selo>}
             <span className="text-xs text-texto-3 numeros">
               Sócio {e.valorSocio ? moeda(e.valorSocio) : "grátis"} · Público {moeda(e.valorPublico)}
             </span>
@@ -222,7 +263,13 @@ function CartaoEvento({ e, sede, para, editar, passado }: { e: ComId<Evento>; se
       </Link>
       <div className="px-4 pb-4 mt-auto flex items-end gap-3">
         <BarraOcupacao vendidos={e.vendidos} reservados={e.reservados} capacidade={e.capacidade} className="flex-1" />
-        <BotaoIcone icone="lapis" rotulo="Editar evento" onClick={editar} className="-mb-1 -mr-1" />
+        {editar ? (
+          <BotaoIcone icone="lapis" rotulo="Editar evento" onClick={editar} className="-mb-1 -mr-1" />
+        ) : (
+          <span className="size-10 grid place-items-center text-texto-3 -mb-1 -mr-1" title="Só a diretoria altera eventos publicados">
+            <Icone nome="cadeado" className="size-4" />
+          </span>
+        )}
       </div>
     </Cartao>
   );
@@ -262,8 +309,8 @@ function formDe(e: ComId<Evento> | null, sedePadrao: string): Form {
   };
 }
 
-function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null; fechar: () => void }) {
-  const { tid, torcida, ehDiretoria, sedeEscopo, sedes, pct } = usePainel();
+function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | null; fechar: () => void }) {
+  const { tid, torcida, ehDiretoria, sedeEscopo, sedes, pct, podePublicarNaSede } = usePainel();
   const avisar = useToast();
   const existente = evento && evento !== "novo" ? evento : null;
   const sedePadrao = sedeEscopo ?? torcida.sedePrincipalId;
@@ -283,6 +330,15 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }));
   const vSocio = centavosDeTexto(f.valorSocio || "0");
   const vPublico = centavosDeTexto(f.valorPublico || "0");
+  // Subsede: só rascunho ou "enviar para aprovação". Diretoria: tudo (publicar exige conta ativa em subsede).
+  const opcoesStatus: StatusEvento[] = !ehDiretoria
+    ? ["rascunho", "em_aprovacao"]
+    : existente
+      ? existente.status === "em_aprovacao"
+        ? ["rascunho", "em_aprovacao", "publicado", "cancelado"]
+        : ["rascunho", "publicado", "encerrado", "cancelado"]
+      : ["rascunho", "publicado"];
+  const publicarBloqueado = ehDiretoria && !podePublicarNaSede(f.sedeId);
   const dica = (v: number) => (v > 0 ? `Torcedor paga ${moeda(v + taxa(v, pct))} (inclui ${pct}% de taxa)` : undefined);
 
   function validar(): boolean {
@@ -306,7 +362,9 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
       else if (data && va.toMillis() > data.toMillis() + 6 * 3600_000) e.vendaAte = "As vendas devem terminar antes (ou pouco depois) do início do evento.";
     }
     if (!f.sedeId) e.sedeId = "Escolha a sede organizadora.";
-    if (!existente && !["rascunho", "publicado"].includes(f.status)) e.status = "Um evento novo começa como rascunho ou publicado.";
+    if (!opcoesStatus.includes(f.status)) e.status = "Escolha uma situação válida.";
+    else if (f.status === "publicado" && !podePublicarNaSede(f.sedeId))
+      e.status = "Esta subsede ainda não tem conta de recebimento ativa. Salve como rascunho e publique quando a conta estiver ativa.";
     setErros(e);
     return Object.keys(e).length === 0;
   }
@@ -335,6 +393,8 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
       vendaAte: f.vendaAte ? deInputDataHora(f.vendaAte) : null,
       status: f.status,
     };
+    // Ao reenviar para aprovação (ou publicar), o motivo da devolução anterior deixa de valer.
+    const limparDevolucao = !!existente?.motivoDevolucao && f.status !== "rascunho";
     try {
       if (!existente) {
         await addDoc(collection(db, `torcidas/${tid}/eventos`), {
@@ -344,7 +404,14 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
           reservados: 0,
           criadoEm: serverTimestamp(),
         });
-        avisar(f.status === "publicado" ? "Evento publicado! Já está na página da torcida." : "Rascunho salvo.", "sucesso");
+        avisar(
+          f.status === "publicado"
+            ? "Evento publicado! Já está na página da torcida."
+            : f.status === "em_aprovacao"
+              ? "Evento enviado para a diretoria aprovar."
+              : "Rascunho salvo.",
+          "sucesso",
+        );
       } else {
         // Só os campos que mudaram — nunca os contadores (vendidos/reservados/entradas), que são do servidor.
         const mudancas: Record<string, unknown> = {};
@@ -356,6 +423,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
           if (!igual) mudancas[k] = v;
         }
         if ((f.imagemUrl ?? null) !== (existente.imagemUrl ?? null)) mudancas.imagemUrl = f.imagemUrl ?? deleteField();
+        if (limparDevolucao) mudancas.motivoDevolucao = deleteField();
         if (Object.keys(mudancas).length === 0) {
           fechar();
           return;
@@ -371,7 +439,6 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
     }
   }
 
-  const opcoesStatus: StatusEvento[] = existente ? ["rascunho", "publicado", "encerrado", "cancelado"] : ["rascunho", "publicado"];
   const sedesPermitidas = ehDiretoria ? sedes.filter((s) => s.ativa !== false || s.id === f.sedeId) : sedes.filter((s) => s.id === sedeEscopo);
 
   return (
@@ -385,7 +452,13 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
             Cancelar
           </Botao>
           <Botao onClick={pedirSalvar} carregando={salvando} icone="check">
-            {existente ? "Salvar alterações" : f.status === "publicado" ? "Publicar evento" : "Salvar rascunho"}
+            {f.status === "em_aprovacao" && (!existente || existente.status !== "em_aprovacao")
+              ? "Enviar para aprovação"
+              : existente
+                ? "Salvar alterações"
+                : f.status === "publicado"
+                  ? "Publicar evento"
+                  : "Salvar rascunho"}
           </Botao>
         </div>
       }
@@ -484,14 +557,20 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
         />
         <div>
           <p className="block text-sm font-medium text-texto-2 mb-1.5">Situação</p>
+          {existente?.motivoDevolucao && (
+            <Aviso tom="alerta" titulo="A diretoria devolveu este evento" className="mb-3">
+              {existente.motivoDevolucao}
+            </Aviso>
+          )}
           <div className="grid grid-cols-2 gap-2">
             {opcoesStatus.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => set("status", s)}
+                disabled={s === "publicado" && publicarBloqueado && existente?.status !== "publicado"}
                 className={cx(
-                  "h-12 rounded-2xl border text-sm font-semibold transition-colors",
+                  "min-h-12 px-2 py-2 rounded-2xl border text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
                   f.status === s ? "border-primaria bg-primaria/10 text-texto ring-1 ring-primaria" : "border-linha bg-superficie-2 text-texto-2 hover:border-linha-forte",
                 )}
               >
@@ -502,12 +581,19 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
           <p className="text-xs text-texto-3 mt-1.5">
             {f.status === "rascunho"
               ? "Rascunho não aparece na página pública."
-              : f.status === "publicado"
+              : f.status === "em_aprovacao"
+                ? "A diretoria confere e publica. Enquanto isso o evento não aparece na página."
+                : f.status === "publicado"
                 ? "Publicado aparece na página e pode ser comprado."
                 : f.status === "encerrado"
                   ? "Encerrado continua visível, mas sem vendas."
                   : "Cancelado some da página. Estornos são feitos na Pagar.me."}
           </p>
+          {publicarBloqueado && (
+            <p className="text-xs text-alerta mt-1.5">
+              Para publicar evento desta subsede, ela precisa de conta de recebimento ativa (a própria subsede cadastra em Recebimentos).
+            </p>
+          )}
           {erros.status && <p className="text-xs text-perigo mt-1">{erros.status}</p>}
         </div>
       </form>

@@ -1,7 +1,7 @@
 /** Chamadas às Cloud Functions (functions/src/index.ts). Todas tipadas aqui, em um só lugar. */
 import { httpsCallable, type FunctionsError } from "firebase/functions";
 import { fns } from "./firebase";
-import type { Endereco, Papel, StatusTorcida, Stats } from "./tipos";
+import type { Endereco, Papel, RecebedorSede, StatusTorcida, Stats } from "./tipos";
 
 function chamar<E, S>(nome: string) {
   const fn = httpsCallable<E, S>(fns, nome);
@@ -29,6 +29,20 @@ export interface DadosPessoa {
   cpf: string;
   telefone: string;
 }
+/** Dados do titular (pessoa física) da conta de recebimento da subsede. rendaMensal em centavos. */
+export interface DadosRecebedor {
+  nome: string;
+  email: string;
+  cpf: string;
+  nascimento: string; // AAAA-MM-DD
+  nomeMae: string;
+  rendaMensal: number;
+  profissao: string;
+  telefone: string;
+  endereco: { cep: string; logradouro: string; numero: string; complemento?: string; bairro: string; cidade: string; uf: string; referencia?: string };
+  banco: { codigo: string; agencia: string; agenciaDv?: string; conta: string; contaDv: string; tipo: "checking" | "savings" };
+}
+
 export interface DadosCartao {
   token: string;
   endereco: Endereco;
@@ -96,6 +110,14 @@ export const api = {
   sincronizarAssinatura: chamar<{ tid: string; socioUid?: string }, { pagas: number }>("sincronizarAssinatura"),
   cancelarAssinatura: chamar<{ tid: string }, { ok: boolean }>("cancelarAssinatura"),
   minhaCarteirinha: chamar<{ tid: string }, { qr: string }>("minhaCarteirinha"),
+  atualizarCartao: chamar<{ tid: string; cartao: { token: string; endereco?: Endereco } }, { cobrado: boolean; status: string }>("atualizarCartao"),
+
+  // ── Split / recebedores ──────────────────────────────
+  configurarSplit: chamar<{ tid: string; recebedorPrincipalId?: string; desativar?: boolean }, { splitAtivo: boolean; nome?: string | null }>(
+    "configurarSplit",
+  ),
+  cadastrarRecebedor: chamar<{ tid: string; dados: DadosRecebedor }, { recebedor: RecebedorSede }>("cadastrarRecebedor"),
+  atualizarRecebedor: chamar<{ tid: string; sedeId?: string }, { recebedor: RecebedorSede }>("atualizarRecebedor"),
 
   // ── Diretoria ────────────────────────────────────────
   alterarStatusSocio: chamar<

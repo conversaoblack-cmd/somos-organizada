@@ -18,6 +18,10 @@ export interface ContextoPainel {
   pct: number;
   /** Sócios aguardando aprovação no escopo do usuário. */
   emAnalise: number;
+  /** Eventos de subsede aguardando aprovação da diretoria (0 para outros papéis). */
+  emAprovacao: number;
+  /** Regra do Firestore: evento de subsede só é publicado com a conta de recebimento ativa. */
+  podePublicarNaSede: (sedeId: string | undefined | null) => boolean;
 }
 
 export const CtxPainel = createContext<ContextoPainel | null>(null);

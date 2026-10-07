@@ -1,13 +1,11 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { collection, limit, orderBy, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
 import { dataCurta, dataHora, moeda, periodicidade, ROTULO_STATUS_PEDIDO, taxa } from "@/lib/formatos";
-import type { ComId, Pedido, Socio, StatusPedido, Torcida } from "@/lib/tipos";
-import { useColecao } from "@/hooks/dados";
+import type { ComId, Socio, StatusPedido, Torcida } from "@/lib/tipos";
 import { Aviso, Botao, Cartao, cx, Esqueleto, Icone, Modal, Selo, useToast, type Tom } from "@/ui";
 import { usePagarMensalidade } from "./acoes";
+import { aceitaCartao, AvisoFalhaCartao, ModalCartao, useFalhaCobranca, usePedidosDoSocio } from "./CartaoCobranca";
 import { diasParaVencer, ROTULO_SITUACAO, situacaoDoSocio, TOM_SITUACAO } from "./comum";
 
 const TOM_PEDIDO: Record<StatusPedido, Tom> = {
@@ -30,8 +28,7 @@ function Linha({ rotulo, children }: { rotulo: string; children: ReactNode }) {
 }
 
 function Historico({ tid, uid, slug }: { tid: string; uid: string; slug: string }) {
-  const q = useMemo(() => query(collection(db, `torcidas/${tid}/pedidos`), where("uid", "==", uid), orderBy("criadoEm", "desc"), limit(60)), [tid, uid]);
-  const r = useColecao<Pedido>(q, `pedidos-socio-${tid}-${uid}`);
+  const r = usePedidosDoSocio(tid, uid);
   const lista = r.dados.filter((p) => p.tipo === "socio" && p.status !== "criando");
 
   return (
@@ -100,6 +97,10 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
   const [sincronizando, setSincronizando] = useState(false);
   const [confirmarCancelar, setConfirmarCancelar] = useState(false);
   const [cancelando, setCancelando] = useState(false);
+  const [modalCartao, setModalCartao] = useState<null | "trocar" | "pagar">(null);
+  const falhaCartao = useFalhaCobranca(tid, ficha);
+  const cartaoDisponivel = aceitaCartao(torcida);
+  const final = ficha.pagarme?.cartaoFinal ?? "····";
 
   const base = ficha.cobranca?.valorBase ?? ficha.valorPlano;
   const valorTaxa = ficha.cobranca?.taxa ?? taxa(ficha.valorPlano, torcida.taxaServicoPct ?? 10);
@@ -124,7 +125,7 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
     try {
       await api.cancelarAssinatura({ tid });
       setConfirmarCancelar(false);
-      avisar("Renovação cancelada.", "sucesso");
+      avisar("Cobrança automática cancelada.", "sucesso");
     } catch (e) {
       avisar(mensagemDeErro(e), "erro");
     } finally {
@@ -134,6 +135,7 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 items-start">
+      {falhaCartao && <AvisoFalhaCartao tid={tid} torcida={torcida} ficha={ficha} className="lg:col-span-2" />}
       <div className="space-y-5">
         <Cartao className="overflow-hidden">
           <div
@@ -170,10 +172,12 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
                   <Icone nome="pix" className="size-4 text-primaria" /> Pix a cada ciclo
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5">
-                  <Icone nome="cartao" className="size-4 text-primaria" />
-                  {ficha.pagarme?.cartaoBandeira ? `${ficha.pagarme.cartaoBandeira} ` : "Cartão "}
-                  <span className="font-mono">•••• {ficha.pagarme?.cartaoFinal ?? "····"}</span>
+                <span className="inline-flex items-start gap-1.5 text-right">
+                  <Icone nome="cartao" className="size-4 text-primaria shrink-0 mt-1" />
+                  <span>
+                    Cartão <span className="font-mono">•••• {final}</span>
+                    <span className="block text-xs font-medium text-texto-3">cobrança automática a cada período</span>
+                  </span>
                 </span>
               )}
             </Linha>
@@ -187,7 +191,7 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
                 )}
               </span>
             </Linha>
-            <Linha rotulo="Renovação">{ficha.assinaturaCancelada ? "Cancelada" : pix ? "Você paga cada ciclo pelo Pix" : "Automática no cartão"}</Linha>
+            <Linha rotulo="Renovação">{ficha.assinaturaCancelada ? "Cancelada" : pix ? "Você paga cada ciclo pelo Pix" : "Automática no cartão salvo"}</Linha>
             {ficha.matricula && (
               <Linha rotulo="Matrícula">
                 <span className="font-mono tracking-wider">{ficha.matricula}</span>
@@ -199,7 +203,7 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
         {ficha.assinaturaCancelada && (
           <Aviso tom="alerta" titulo="Renovação cancelada">
             {ficha.validoAte && (dias ?? 0) > 0
-              ? `Você continua sócio até ${dataCurta(ficha.validoAte)}. Depois disso a associação é encerrada.`
+              ? `Paramos de cobrar automaticamente; você continua sócio até ${dataCurta(ficha.validoAte)}. Depois disso a associação é encerrada.`
               : "A associação será encerrada. Para voltar, faça uma nova adesão pela página da torcida."}
             {pix && " Se quiser continuar, é só pagar a próxima mensalidade pelo Pix."}
           </Aviso>
@@ -238,6 +242,11 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
                   >
                     Pagar próxima mensalidade
                   </Botao>
+                  {cartaoDisponivel && (
+                    <Botao largo variante="contorno" icone="cartao" onClick={() => setModalCartao("pagar")}>
+                      Pagar com cartão
+                    </Botao>
+                  )}
                 </div>
               </>
             ) : (
@@ -248,12 +257,23 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
                   </span>
                   <div>
                     <p className="font-bold text-lg leading-tight">Cobrança automática</p>
-                    <p className="text-sm text-texto-2">O cartão é cobrado a cada ciclo. Pagou e não atualizou? Confira aqui.</p>
+                    <p className="text-sm text-texto-2">
+                      Cobramos {moeda(base + valorTaxa)} no cartão •••• {final} a cada período. Se for recusado, tentamos de novo todos os dias por até 15 dias.
+                    </p>
                   </div>
                 </div>
-                <Botao className="mt-5" largo variante="suave" icone="atualizar" carregando={sincronizando} onClick={sincronizar}>
-                  Atualizar status
-                </Botao>
+                <div className="mt-5 grid gap-2.5">
+                  {cartaoDisponivel && (
+                    <Botao largo variante="suave" icone="cartao" onClick={() => setModalCartao("trocar")}>
+                      Trocar cartão
+                    </Botao>
+                  )}
+                  {ficha.pagarme?.subscriptionId && (
+                    <Botao largo variante="suave" icone="atualizar" carregando={sincronizando} onClick={sincronizar}>
+                      Atualizar status
+                    </Botao>
+                  )}
+                </div>
                 {(situacao === "vencida" || situacao === "inadimplente") && (
                   <Botao className="mt-2.5" largo icone="pix" carregando={pagando} onClick={() => pagar(true)}>
                     Pagar este ciclo pelo Pix
@@ -275,6 +295,14 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
         )}
       </div>
 
+      <ModalCartao
+        aberto={!!modalCartao}
+        fechar={() => setModalCartao(null)}
+        tid={tid}
+        torcida={torcida}
+        ficha={ficha}
+        titulo={modalCartao === "pagar" ? "Pagar com cartão" : "Trocar cartão"}
+      />
       <Modal
         aberto={confirmarCancelar}
         fechar={() => !cancelando && setConfirmarCancelar(false)}
@@ -292,10 +320,10 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
       >
         <div className="space-y-3 text-[15px] text-texto-2">
           <p>
-            Você <strong className="text-texto">continua sócio até {ficha.validoAte ? dataCurta(ficha.validoAte) : "o fim do período pago"}</strong>, com carteirinha e preço de
+            {pix ? "Você" : "Paramos de cobrar automaticamente; você"} <strong className="text-texto">continua sócio até {ficha.validoAte ? dataCurta(ficha.validoAte) : "o fim do período pago"}</strong>, com carteirinha e preço de
             sócio valendo normalmente.
           </p>
-          <p>{pix ? "Depois disso não geramos novas cobranças e a associação é encerrada." : "O cartão não será mais cobrado e, ao fim do período, a associação é encerrada."}</p>
+          <p>{pix ? "Depois disso não geramos novas cobranças e a associação é encerrada." : "O cartão salvo não será mais cobrado e, ao fim do período, a associação é encerrada."}</p>
           <p>Sua matrícula fica guardada caso queira voltar.</p>
         </div>
       </Modal>

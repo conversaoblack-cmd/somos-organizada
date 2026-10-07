@@ -33,7 +33,25 @@ export interface Torcida {
     cartao: boolean;
     descritorFatura?: string;
     webhookRecebidoEm?: Timestamp;
+    /** Recebedor (rp_...) da conta da torcida; com split ativo, vendas de subsede são divididas. */
+    recebedorPrincipalId?: string;
+    splitAtivo?: boolean;
   };
+}
+
+/** Conta de recebimento da subsede na Pagar.me (gravada só pelo servidor). */
+export interface RecebedorSede {
+  id: string;
+  /** registration | affiliation | active | refused | suspended | blocked | inactive */
+  status: string;
+  kycStatus?: string | null;
+  nomeTitular: string;
+  documentoMascarado: string;
+  banco: { codigo: string; agencia: string; conta: string };
+  kycUrl?: string | null;
+  kycExpiraEm?: string | null;
+  cadastradoPor: string;
+  atualizadoEm?: Timestamp;
 }
 
 export interface Sede {
@@ -45,6 +63,7 @@ export interface Sede {
   bairro?: string;
   endereco?: string;
   responsavel?: string;
+  recebedor?: RecebedorSede;
 }
 
 export type Intervalo = "mes" | "ano";
@@ -63,7 +82,7 @@ export interface Plano {
   ordem?: number;
 }
 
-export type StatusEvento = "rascunho" | "publicado" | "encerrado" | "cancelado";
+export type StatusEvento = "rascunho" | "em_aprovacao" | "publicado" | "encerrado" | "cancelado";
 
 export interface Evento {
   nome: string;
@@ -116,7 +135,9 @@ export interface Socio {
   validoAte?: Timestamp | null;
   cobrancaAbertaId?: string | null;
   assinaturaCancelada?: boolean;
-  pagarme?: { subscriptionId?: string; cartaoFinal?: string; cartaoBandeira?: string };
+  pagarme?: { customerId?: string; cardId?: string; subscriptionId?: string; cartaoFinal?: string; cartaoBandeira?: string };
+  ultimaFalhaCobranca?: Timestamp;
+  motivoFalhaCobranca?: string;
   cobranca?: { valorBase: number; taxa: number };
   historico?: { acao: string; por: string; em: Timestamp; de: StatusSocio; para: StatusSocio }[];
   criadoEm: Timestamp;
@@ -145,6 +166,7 @@ export interface Pedido {
   planoId?: string;
   renovacao?: boolean;
   pagarme?: { orderId?: string; chargeId?: string | null };
+  liquidacao?: "split" | "torcida";
   pix?: { qrCode: string; qrCodeUrl?: string; expiraEm: Timestamp };
   expiraEm?: Timestamp;
   criadoEm: Timestamp;
@@ -188,6 +210,8 @@ export interface Lancamento {
   valor: number;
   competencia: string;
   descricao: string;
+  /** split = já caiu direto na conta da subsede; torcida = caiu na conta da torcida (entra no repasse). */
+  liquidacao?: "split" | "torcida";
   criadoEm: Timestamp;
 }
 
