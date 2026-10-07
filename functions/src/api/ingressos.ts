@@ -283,6 +283,13 @@ export const validarEntrada = onCall({ secrets: [QR_HMAC] }, async (req) => {
     if (!qr || qr.tid !== tid) return { resultado: "invalido", mensagem: "QR Code inválido ou de outra torcida." };
     if (qr.tipo === "s") return { resultado: "invalido", mensagem: "Este QR é a carteirinha de sócio, não um ingresso." };
     ingressoRef = refs.ingresso(tid, qr.id);
+  } else if (d.codigo) {
+    // código legível impresso no ingresso (ex.: K7QM-2XRA)
+    const codigo = String(d.codigo).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (codigo.length !== 8) throw new HttpsError("invalid-argument", "Código inválido.");
+    const q = await refs.ingressos(tid).where("eventoId", "==", eventoId).where("codigo", "==", `${codigo.slice(0, 4)}-${codigo.slice(4)}`).limit(1).get();
+    if (q.empty) return { resultado: "nao_encontrado", mensagem: "Nenhum ingresso com este código neste evento." };
+    ingressoRef = q.docs[0].ref;
   } else {
     const cpf = soDigitos(d.cpf);
     if (!cpfValido(cpf)) throw new HttpsError("invalid-argument", "CPF inválido.");

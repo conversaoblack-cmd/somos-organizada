@@ -233,7 +233,7 @@ export default function Personalizacao() {
           </Secao>
 
           <Secao titulo="Contato">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
               <Campo
                 rotulo="WhatsApp"
                 mascara="telefone"

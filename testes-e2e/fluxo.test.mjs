@@ -297,6 +297,13 @@ test("9. portaria: QR libera uma vez, segunda leitura acusa uso, QR forjado é b
   const forjado = ctx.qrPublico.replace(/.$/, (c) => (c === "A" ? "B" : "A"));
   const r3 = await b.chamar("validarEntrada", { tid: ctx.tid, eventoId: ctx.evento, qr: forjado });
   assert.equal(r3.resultado, "invalido");
+  // pelo código impresso no ingresso (sem traço e em minúsculas também vale)
+  const outro = (await aDb.collection(`torcidas/${ctx.tid}/ingressos`).where("tipo", "==", "socio").limit(1).get()).docs[0];
+  const r4 = await b.chamar("validarEntrada", { tid: ctx.tid, eventoId: ctx.evento, codigo: outro.get("codigo").replace("-", "").toLowerCase() });
+  assert.equal(r4.resultado, "liberado");
+  assert.equal(r4.tipo, "socio");
+  const r5 = await b.chamar("validarEntrada", { tid: ctx.tid, eventoId: ctx.evento, codigo: "ZZZZ-ZZZZ" });
+  assert.equal(r5.resultado, "nao_encontrado");
   // torcedor comum não acessa a portaria
   await assert.rejects(ctx.torcedor.chamar("validarEntrada", { tid: ctx.tid, eventoId: ctx.evento, qr: ctx.qrPublico }), /permissão|login/i);
 });

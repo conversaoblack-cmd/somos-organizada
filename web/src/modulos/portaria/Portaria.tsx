@@ -37,7 +37,7 @@ function gravar(chave: string, valor: string | null) {
 
 type RespostaValidacao = Awaited<ReturnType<typeof api.validarEntrada>>;
 type Resultado = (RespostaValidacao | { resultado: "erro_conexao"; mensagem: string }) & { em: number; entrada: Entrada };
-type Entrada = { qr: string } | { cpf: string };
+type Entrada = { qr: string } | { cpf: string } | { codigo: string };
 
 const CSS_PORTARIA = `
 .scan-region-highlight-svg, .code-outline-highlight { stroke: var(--color-secundaria) !important; }
@@ -299,12 +299,12 @@ function TelaResultado({ r, proximo, tentarDeNovo }: { r: Resultado; proximo: ()
 // ── Passo 2: leitura ─────────────────────────────────────────────────────
 function interpretar(texto: string): Entrada | { erro: string } {
   const t = texto.trim();
-  if (!t) return { erro: "Digite o CPF do titular ou cole o QR." };
+  if (!t) return { erro: "Digite o CPF do titular, o código do ingresso ou cole o QR." };
   if (/^SO1\./i.test(t)) return { qr: t };
   const semPontuacao = t.replace(/[\s.\-/]/g, "");
   if (/^\d{11}$/.test(semPontuacao)) return cpfValido(semPontuacao) ? { cpf: semPontuacao } : { erro: "CPF inválido. Confira os números." };
-  if (/^[A-Z0-9]{4}-?[A-Z0-9]{4}$/i.test(t)) return { erro: "A busca pelo código do ingresso não está disponível. Use o CPF do titular ou leia o QR." };
-  return { erro: "Não reconheci. Digite o CPF do titular (11 números) ou cole o conteúdo do QR." };
+  if (/^[A-Z0-9]{4}-?[A-Z0-9]{4}$/i.test(t)) return { codigo: t.toUpperCase() };
+  return { erro: "Não reconheci. Digite o CPF do titular (11 números), o código do ingresso (ex.: K7QM-2XRA) ou cole o QR." };
 }
 
 const COR_HIST: Record<Resultado["resultado"], string> = {
@@ -525,7 +525,7 @@ function Leitura({ tid, eventoId, membro, trocar }: { tid: string; eventoId: str
                   spellCheck={false}
                   enterKeyHint="go"
                   inputMode={/^[\d.\-\s]*$/.test(texto) ? "numeric" : "text"}
-                  placeholder="000.000.000-00"
+                  placeholder="CPF ou código (K7QM-2XRA)"
                   className={cx(
                     "w-full h-16 rounded-2xl bg-superficie-2 border px-4 pr-24 text-xl font-mono outline-none focus:border-primaria",
                     erroTexto ? "border-perigo" : "border-linha",

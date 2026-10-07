@@ -61,6 +61,14 @@
       "collectionGroup": "ingressos",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "eventoId", "order": "ASCENDING" },
+        { "fieldPath": "codigo", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ingressos",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "uid", "order": "ASCENDING" },
         { "fieldPath": "eventoData", "order": "DESCENDING" }
       ]

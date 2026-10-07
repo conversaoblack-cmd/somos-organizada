@@ -39,6 +39,7 @@ export default function Financeiro() {
   const [mes, setMes] = useState("");
   const [sedeFiltro, setSedeFiltro] = useState("");
   const [novoRepasse, setNovoRepasse] = useState<string | null>(null);
+  const [limite, setLimite] = useState(50);
 
   const principalId = torcida.sedePrincipalId;
   const resumo = useMemo(() => {
@@ -255,7 +256,7 @@ export default function Financeiro() {
               ) : (
                 <Cartao className="overflow-hidden">
                   <ul className="divide-y divide-linha">
-                    {lancFiltrados.slice(0, 300).map((l) => (
+                    {lancFiltrados.slice(0, limite).map((l) => (
                       <li key={l.id} className="flex items-center gap-3 px-4 py-3">
                         <span
                           className={cx(
@@ -275,7 +276,16 @@ export default function Financeiro() {
                       </li>
                     ))}
                   </ul>
-                  {lancFiltrados.length > 300 && <p className="px-4 py-3 text-xs text-texto-3 border-t border-linha">Mostrando 300 de {lancFiltrados.length}. Exporte o CSV para ver tudo.</p>}
+                  {lancFiltrados.length > limite && (
+                    <div className="px-4 py-3 border-t border-linha flex items-center justify-between gap-3">
+                      <p className="text-xs text-texto-3">
+                        Mostrando {limite} de {lancFiltrados.length}
+                      </p>
+                      <Botao tamanho="sm" variante="suave" onClick={() => setLimite((n) => n + 100)}>
+                        Mostrar mais
+                      </Botao>
+                    </div>
+                  )}
                 </Cartao>
               )
             ) : repFiltrados.length === 0 ? (

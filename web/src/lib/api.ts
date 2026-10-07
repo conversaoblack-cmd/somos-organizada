@@ -116,7 +116,7 @@ export const api = {
     { ok: boolean }
   >("atualizarMembro"),
   validarEntrada: chamar<
-    { tid: string; eventoId: string; qr?: string; cpf?: string; confirmar?: boolean },
+    { tid: string; eventoId: string; qr?: string; cpf?: string; codigo?: string; confirmar?: boolean },
     {
       resultado: "liberado" | "ja_usado" | "invalido" | "cancelado" | "outro_evento" | "nao_encontrado";
       mensagem: string;

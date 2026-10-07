@@ -215,7 +215,7 @@ function CartaoEvento({ e, sede, para, editar, passado }: { e: ComId<Evento>; se
               {ROTULO_STATUS_EVENTO[e.status]}
             </Selo>
             <span className="text-xs text-texto-3 numeros">
-              Sócio {moeda(e.valorSocio)} · Público {moeda(e.valorPublico)}
+              Sócio {e.valorSocio ? moeda(e.valorSocio) : "grátis"} · Público {moeda(e.valorPublico)}
             </span>
           </div>
         </div>
@@ -625,7 +625,7 @@ export function DetalheEvento() {
               )}
             </p>
             <p className="text-sm text-texto-3 mt-2 numeros">
-              Sócio {moeda(e.valorSocio)} · Público {moeda(e.valorPublico)} · + {pct}% de taxa
+              Sócio {e.valorSocio ? moeda(e.valorSocio) : "grátis"} · Público {moeda(e.valorPublico)} · + {pct}% de taxa
               {e.vendaAte && ` · vendas até ${dataHora(e.vendaAte)}`}
             </p>
             <div className="flex flex-wrap gap-2 mt-5">
