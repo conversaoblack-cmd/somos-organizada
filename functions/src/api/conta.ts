@@ -41,7 +41,7 @@ async function senhaConfere(email: string, senha: string): Promise<boolean> {
   throw new HttpsError("unavailable", "Não foi possível entrar com CPF agora. Use o seu e-mail.");
 }
 
-export const entrarComCpf = onCall({ ...ESCALA_PUBLICA }, async (req) => {
+export const entrarComCpf = onCall(ESCALA_PUBLICA, async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;
   const cpf = soDigitos(d.cpf);
   const senha = typeof d.senha === "string" ? d.senha : "";

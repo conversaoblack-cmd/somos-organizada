@@ -222,7 +222,7 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
 });
 
 /** Prévia de preço para o checkout mostrar (o valor final é sempre recalculado em criarPedidoIngresso). */
-export const cotarIngresso = onCall({ ...ESCALA_PUBLICA }, async (req) => {
+export const cotarIngresso = onCall(ESCALA_PUBLICA, async (req) => {
   const uid = req.auth?.uid;
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
@@ -283,7 +283,7 @@ export const verificarPedido = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, 
 });
 
 /** Acesso aos ingressos pelo link enviado ao comprador (funciona em qualquer aparelho, sem login). */
-export const ingressosDoPedido = onCall({ ...ESCALA_PUBLICA }, async (req) => {
+export const ingressosDoPedido = onCall(ESCALA_PUBLICA, async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
   const pedidoId = texto(d.pedidoId, "pedido", { max: 40 });

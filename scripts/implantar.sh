@@ -132,21 +132,25 @@ npm --prefix web run build
 
 passo "Deploy (pode levar alguns minutos na primeira vez)"
 echo "Se o Firebase perguntar se pode dar ao Storage acesso de leitura ao Firestore, responda Y."
-# Projeto novo: o Google limita CPU por região e o deploy atualiza tudo ao mesmo tempo. Se alguma function
-# esbarrar na cota ("Quota exceeded for total allowable CPU"), espera e reenvia só as functions.
-if ! firebase deploy --project "$PROJETO"; then
-  OK=0
-  for TENTATIVA in 1 2; do
-    aviso "Algumas functions não subiram (cota de CPU do Google ou permissões ainda liberando). Tentando de novo em 90s ($TENTATIVA/2)..."
-    sleep 90
-    if firebase deploy --only functions --project "$PROJETO"; then OK=1; break; fi
-  done
-  if [ "$OK" != "1" ]; then
-    aviso "Ainda faltou function. Rode o script de novo daqui a alguns minutos."
-    aviso "Se repetir, peça aumento de cota: console.cloud.google.com/iam-admin/quotas → filtre 'Total CPU allocation' em southamerica-east1."
-    exit 1
+# Projeto novo: o Google limita CPU por região. Enquanto uma function é atualizada, a versão velha e a nova
+# coexistem por alguns instantes, então uma falha de cota pode ser passageira: tenta o deploy completo de novo
+# (completo, para não deixar site, regras ou índices para trás).
+LOG_DEPLOY="$(mktemp)"
+if ! firebase deploy --project "$PROJETO" 2>&1 | tee "$LOG_DEPLOY"; then
+  aviso "Parte do deploy falhou. Tentando o deploy completo de novo em 90s..."
+  sleep 90
+  if ! firebase deploy --project "$PROJETO" 2>&1 | tee "$LOG_DEPLOY"; then
+    if grep -q "Quota exceeded for total allowable CPU" "$LOG_DEPLOY"; then
+      rm -f "$LOG_DEPLOY"
+      falha "Cota de CPU do Google esgotada nesta região. Escolha um caminho e rode o script de novo:
+  a) diminuir o fôlego: em functions/.env coloque MAX_INSTANCIAS=1 e MAX_INSTANCIAS_PUBLICAS=3;
+  b) pedir aumento: console.cloud.google.com/iam-admin/quotas → 'Total CPU allocation' em southamerica-east1."
+    fi
+    rm -f "$LOG_DEPLOY"
+    falha "O deploy falhou duas vezes. Veja a mensagem acima (ou mande um print) e rode o script de novo."
   fi
 fi
+rm -f "$LOG_DEPLOY"
 
 passo "Pronto!"
 cat <<FIM

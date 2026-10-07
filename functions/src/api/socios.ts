@@ -112,7 +112,7 @@ async function salvarCartao(tid: string, socio: Socio, cartao: Record<string, un
 }
 
 /** Sócio troca o cartão. Se estiver com mensalidade vencida/pendente, já cobra no cartão novo. */
-export const atualizarCartao = onCall({ secrets: segredos }, async (req) => {
+export const atualizarCartao = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, async (req) => {
   const uid = exigirLogin(req);
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
@@ -235,7 +235,7 @@ export const aderirSocio = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, asyn
 });
 
 /** Sócio no Pix pede a cobrança do próximo ciclo (ou reabre a que está em aberto). */
-export const pagarMensalidade = onCall({ secrets: segredos }, async (req) => {
+export const pagarMensalidade = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, async (req) => {
   const uid = exigirLogin(req);
   const tid = texto((req.data ?? {}).tid, "torcida", { max: 40 });
   const torcida = await torcidaVendendo(tid, { permitirNaoPublicada: true });

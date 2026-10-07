@@ -1,5 +1,5 @@
 import { setGlobalOptions } from "firebase-functions/v2";
-import { defineSecret, defineString } from "firebase-functions/params";
+import { defineInt, defineSecret, defineString } from "firebase-functions/params";
 
 export const REGIAO = "southamerica-east1";
 export const FUSO = "America/Sao_Paulo";
@@ -20,15 +20,15 @@ export const EMAIL_REMETENTE = defineString("EMAIL_REMETENTE", { default: "Somos
 export const WEB_API_KEY = defineString("WEB_API_KEY", { default: "" });
 export const PLATAFORMA_EMAILS = defineString("PLATAFORMA_EMAILS", { default: "conversaoblack@gmail.com" });
 
-// Cota de CPU por região do Cloud Run = soma de (vCPU x máx. instâncias) de todas as funções.
-// Com 1 vCPU x 20 instâncias por função o deploy estoura a cota de projeto novo. Aqui: 1 vCPU,
-// até 4 instâncias, cada uma atendendo 80 requisições simultâneas (o trabalho é quase todo I/O:
-// Firestore e Pagar.me). ~320 compras em paralelo por função usando só 4 vCPU de cota.
-// Projeto novo no Google Cloud tem cota baixa de CPU por região (soma de cpu × máximo de instâncias).
-// Padrão enxuto (2 instâncias × 80 pedidos simultâneos cada) e mais fôlego só onde o torcedor está:
-// compra, pagamento, carteirinha e portaria (ESCALA_PUBLICA).
-setGlobalOptions({ region: REGIAO, maxInstances: 2, cpu: 1, concurrency: 80, memory: "512MiB" });
-export const ESCALA_PUBLICA = { maxInstances: 5 } as const;
+// Cota de CPU por região do Cloud Run = soma de (vCPU × máx. instâncias) de todas as funções, e projeto
+// novo tem cota baixa. Cada instância (1 vCPU) atende 80 pedidos ao mesmo tempo (o trabalho é quase todo
+// espera de Firestore e Pagar.me). Padrão enxuto e mais fôlego só onde o torcedor está (ESCALA_PUBLICA).
+// Ajustável por projeto em functions/.env, sem mexer no código: MAX_INSTANCIAS e MAX_INSTANCIAS_PUBLICAS.
+export const MAX_INSTANCIAS = defineInt("MAX_INSTANCIAS", { default: 2 });
+export const MAX_INSTANCIAS_PUBLICAS = defineInt("MAX_INSTANCIAS_PUBLICAS", { default: 5 });
+setGlobalOptions({ region: REGIAO, maxInstances: MAX_INSTANCIAS, cpu: 1, concurrency: 80, memory: "512MiB" });
+/** Compra, pagamento, aviso da Pagar.me, carteirinha, login por CPF e portaria. */
+export const ESCALA_PUBLICA = { maxInstances: MAX_INSTANCIAS_PUBLICAS };
 
 /** Regras de negócio padrão. Cada torcida pode sobrescrever algumas no próprio documento. */
 export const PADROES = {
