@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORGANIZADA — O sistema operacional da torcida organizada</title>
+<meta name="description" content="Sócios, financeiro, loja, bar e ingressos numa única plataforma. A transparência que protege a torcida, a estrutura que multiplica a receita — e a implantação sem tirar R$ 1 do caixa.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2307090B'/%3E%3Crect x='10' y='10' width='20' height='20' rx='4' fill='%2300A94F'/%3E%3Crect x='34' y='10' width='20' height='20' rx='4' fill='%23FFDF00'/%3E%3Crect x='10' y='34' width='20' height='20' rx='4' fill='%232E6BFF'/%3E%3Crect x='34' y='34' width='20' height='20' rx='4' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090B; --panel:#0D1218; --panel2:#111823; --line:rgba(255,255,255,.08);
+  --verde:#00A94F; --verde-forte:#009C3B; --verde-neon:#2BE080; --verde-escuro:#00722B;
+  --amarelo:#FFDF00; --azul:#2E6BFF; --azul-bandeira:#002776;
+  --txt:#F2F5F3; --txt2:#9BA8A1; --txt3:#5E6A64;
+  --disp:'Archivo Black',sans-serif; --body:'Archivo',sans-serif;
+  --r:18px; --max:1180px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:var(--body);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+::selection{background:var(--amarelo);color:#111}
+a{color:inherit;text-decoration:none}
+img{max-width:100%}
+
+/* ── loader ── */
+#loader{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .6s ease,visibility .6s}
+#loader.off{opacity:0;visibility:hidden}
+.ld-grid{display:grid;grid-template-columns:repeat(4,18px);gap:6px}
+.ld-grid span{width:18px;height:18px;border-radius:4px;background:var(--verde);animation:ldp 1s infinite ease-in-out}
+.ld-grid span:nth-child(2){background:var(--amarelo);animation-delay:.1s}
+.ld-grid span:nth-child(3){background:var(--azul);animation-delay:.2s}
+.ld-grid span:nth-child(4){background:#fff;animation-delay:.3s}
+.ld-grid span:nth-child(5){background:#fff;animation-delay:.4s}
+.ld-grid span:nth-child(6){background:var(--verde);animation-delay:.5s}
+.ld-grid span:nth-child(7){background:var(--amarelo);animation-delay:.6s}
+.ld-grid span:nth-child(8){background:var(--azul);animation-delay:.7s}
+@keyframes ldp{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.4);opacity:.3}}
+
+/* ── progress + nav ── */
+#prog{position:fixed;top:0;left:0;height:3px;width:0;z-index:120;background:linear-gradient(90deg,var(--verde),var(--amarelo),var(--azul))}
+nav{position:fixed;top:0;left:0;right:0;z-index:110;display:flex;align-items:center;justify-content:space-between;padding:22px clamp(20px,4vw,48px);transition:all .4s ease}
+nav.solid{background:rgba(7,9,11,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding-top:14px;padding-bottom:14px}
+.logo{display:flex;align-items:center;gap:12px;font-family:var(--disp);font-size:20px;letter-spacing:.06em}
+.logo-mark{display:grid;grid-template-columns:repeat(2,10px);gap:3px}
+.logo-mark i{width:10px;height:10px;border-radius:2.5px;background:var(--verde);transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
+.logo-mark i:nth-child(2){background:var(--amarelo)}
+.logo-mark i:nth-child(3){background:var(--azul)}
+.logo-mark i:nth-child(4){background:#fff}
+.logo:hover .logo-mark i{transform:rotate(90deg) scale(1.15)}
+.nav-links{display:flex;gap:6px;align-items:center}
+.nav-links a{padding:9px 16px;border-radius:99px;font-size:14px;font-weight:600;color:var(--txt2);transition:.25s}
+.nav-links a:hover{color:#fff;background:rgba(255,255,255,.07)}
+.nav-cta{background:var(--verde-forte);color:#fff!important;font-weight:700}
+.nav-cta:hover{background:var(--verde)!important}
+@media(max-width:840px){.nav-links a:not(.nav-cta){display:none}}
+
+/* ── hero ── */
+#hero{position:relative;min-height:100svh;display:flex;align-items:center;overflow:hidden}
+#mosaic{position:absolute;inset:0;width:100%;height:100%}
+.hero-fade{position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 32% 52%,rgba(7,9,11,.94) 0%,rgba(7,9,11,.72) 45%,rgba(7,9,11,.18) 100%);pointer-events:none}
+.hero-in{position:relative;z-index:3;max-width:var(--max);margin:0 auto;padding:120px clamp(20px,4vw,48px) 90px;width:100%}
+.kicker{display:inline-flex;align-items:center;gap:10px;font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--verde-neon);border:1px solid rgba(43,224,128,.3);background:rgba(0,169,79,.08);padding:9px 18px;border-radius:99px}
+.kicker::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--verde-neon);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(43,224,128,.5)}50%{box-shadow:0 0 0 7px rgba(43,224,128,0)}}
+h1{font-family:var(--disp);font-size:clamp(42px,7.4vw,96px);line-height:.98;text-transform:uppercase;margin:28px 0 0;letter-spacing:-.01em}
+h1 .l1{display:block}
+h1 .l2{display:block;background:linear-gradient(92deg,var(--verde-neon) 8%,var(--amarelo) 50%,var(--azul) 96%);-webkit-background-clip:text;background-clip:text;color:transparent}
+h1 span.w{display:inline-block;animation:rise .9s cubic-bezier(.16,1,.3,1) var(--d,0s) both}
+h1 .clip{display:block;overflow:hidden;padding-bottom:.08em}
+@keyframes rise{from{transform:translateY(110%);opacity:0}to{transform:translateY(0);opacity:1}}
+.hero-sub{max-width:560px;color:var(--txt2);font-size:clamp(16px,1.6vw,19px);line-height:1.65;margin-top:26px}
+.hero-ctas{display:flex;gap:14px;margin-top:38px;flex-wrap:wrap}
+.btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:17px 32px;border-radius:14px;font-weight:700;font-size:15px;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;cursor:pointer;border:0;will-change:transform}
+.btn-p{background:var(--verde-forte);color:#fff;box-shadow:0 10px 34px rgba(0,156,59,.35)}
+.btn-p:hover{box-shadow:0 14px 44px rgba(0,156,59,.55)}
+.btn-g{border:1.5px solid rgba(255,255,255,.2);color:#fff;background:rgba(255,255,255,.03)}
+.btn-g:hover{border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.07)}
+.btn .ar{transition:transform .25s}
+.btn:hover .ar{transform:translateX(4px)}
+.hero-oferta{display:inline-flex;align-items:center;gap:10px;margin-top:26px;padding:11px 20px;border-radius:99px;font-size:13.5px;font-weight:600;color:#ffe97a;background:rgba(255,223,0,.07);border:1px solid rgba(255,223,0,.28);transition:.3s}
+.hero-oferta:hover{background:rgba(255,223,0,.13);transform:translateY(-2px)}
+.hero-oferta b{color:var(--amarelo)}
+.hero-oferta .iline{color:var(--amarelo)}
+.hero-scroll{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);z-index:3;color:var(--txt3);font-size:11px;letter-spacing:.25em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:9px}
+.hero-scroll i{width:1px;height:44px;background:linear-gradient(var(--verde-neon),transparent);display:block;animation:drop 1.8s infinite ease-in-out;transform-origin:top}
+@keyframes drop{0%{transform:scaleY(0)}45%{transform:scaleY(1)}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* ── marquee ── */
+.marq{border-block:1px solid var(--line);padding:20px 0;overflow:hidden;background:rgba(255,255,255,.015);position:relative}
+.marq-in{display:flex;gap:0;width:max-content;animation:marq 26s linear infinite}
+.marq:hover .marq-in{animation-play-state:paused}
+.marq-in span{font-family:var(--disp);font-size:clamp(16px,2vw,22px);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;padding:0 18px;color:var(--txt3)}
+.marq-in span b{color:var(--verde-neon);font-weight:400;padding-right:36px}
+@keyframes marq{to{transform:translateX(-50%)}}
+
+/* ── sections base ── */
+section{position:relative;scroll-margin-top:68px}
+.wrap{max-width:var(--max);margin:0 auto;padding:clamp(80px,11vw,150px) clamp(20px,4vw,48px)}
+.tag{font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--verde-neon);display:flex;align-items:center;gap:12px}
+.tag::before{content:'';width:34px;height:2px;background:var(--verde);border-radius:2px}
+h2{font-family:var(--disp);font-size:clamp(30px,4.6vw,58px);line-height:1.04;text-transform:uppercase;margin-top:18px;letter-spacing:-.01em}
+h2 em{font-style:normal;color:var(--verde-neon)}
+h2 u{text-decoration:none;position:relative;isolation:isolate}
+h2 u::after{content:'';position:absolute;left:0;right:0;bottom:.04em;height:.16em;background:var(--amarelo);z-index:-1;transform:scaleX(0);transform-origin:left;transition:transform .8s cubic-bezier(.16,1,.3,1) .3s}
+.inview h2 u::after{transform:scaleX(1)}
+.lead{color:var(--txt2);font-size:clamp(16px,1.5vw,19px);line-height:1.7;max-width:640px;margin-top:20px}
+
+/* reveal (só esconde quando o JS está ativo — sem JS, tudo visível) */
+.js .rv{opacity:0;transform:translateY(34px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1);transition-delay:var(--d,0s)}
+.js .rv.in{opacity:1;transform:none}
+
+/* ── problema ── */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:54px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:34px 30px;position:relative;overflow:hidden;transition:border-color .3s;will-change:transform}
+.card::before{content:'';position:absolute;inset:0;background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),rgba(43,224,128,.08),transparent 55%);opacity:0;transition:opacity .35s;pointer-events:none}
+.card:hover::before{opacity:1}
+.card:hover{border-color:rgba(43,224,128,.28)}
+.card .num{font-family:var(--disp);font-size:15px;color:var(--txt3);letter-spacing:.1em}
+.card h3{font-size:21px;font-weight:700;margin:14px 0 10px;line-height:1.3}
+.card p{color:var(--txt2);font-size:15px;line-height:1.65}
+.card .ic{width:52px;height:52px;border-radius:14px;display:grid;place-content:center;margin-bottom:20px;background:rgba(0,169,79,.1);border:1px solid rgba(0,169,79,.25)}
+.card .ic svg{width:25px;height:25px;stroke:var(--verde-neon)}
+.card.warn .ic{background:rgba(255,223,0,.07);border-color:rgba(255,223,0,.2)}
+.card.warn .ic svg{stroke:var(--amarelo)}
+.card.info .ic{background:rgba(46,107,255,.1);border-color:rgba(46,107,255,.3)}
+.card.info .ic svg{stroke:var(--azul)}
+
+/* ── números ── */
+#numeros{background:linear-gradient(180deg,transparent,rgba(0,156,59,.05) 50%,transparent)}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px;margin-top:54px}
+.num-c{text-align:center;padding:44px 20px;border:1px solid var(--line);border-radius:var(--r);background:rgba(255,255,255,.015);transition:transform .35s cubic-bezier(.34,1.56,.64,1),border-color .3s}
+.num-c:hover{transform:translateY(-7px);border-color:rgba(43,224,128,.3)}
+.num-c b{font-family:var(--disp);font-size:clamp(40px,5vw,62px);display:block;background:linear-gradient(180deg,#fff,#9fe8bd);-webkit-background-clip:text;background-clip:text;color:transparent}
+.num-c b sup{font-size:.45em;color:var(--verde-neon);-webkit-text-fill-color:var(--verde-neon)}
+.num-c span{color:var(--txt2);font-size:14px;font-weight:600;letter-spacing:.02em;display:block;margin-top:8px}
+
+/* ── showroom ── */
+#showroom .demo-note{display:inline-flex;align-items:center;gap:10px;margin-top:26px;padding:12px 20px;border-radius:12px;background:rgba(255,223,0,.06);border:1px solid rgba(255,223,0,.22);color:#ffe97a;font-size:14px;font-weight:600}
+.sh-group{margin-top:58px}
+.sh-group h3{font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--txt3);display:flex;align-items:center;gap:14px}
+.sh-group h3::after{content:'';flex:1;height:1px;background:var(--line)}
+.sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:14px;margin-top:22px}
+.app{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px 22px;position:relative;overflow:hidden;transition:border-color .3s;will-change:transform}
+.app::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--verde);transform:scaleY(0);transform-origin:bottom;transition:transform .35s cubic-bezier(.16,1,.3,1)}
+.app:hover::after{transform:scaleY(1)}
+.app:hover{border-color:rgba(43,224,128,.3)}
+.app .em{font-size:26px;line-height:1}
+.app h4{font-size:16.5px;font-weight:700}
+.app p{color:var(--txt2);font-size:13.5px;line-height:1.55;flex:1}
+.app .open{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:var(--verde-neon);margin-top:6px}
+.app .open .ar{transition:transform .25s}
+.app:hover .open .ar{transform:translate(3px,-3px)}
+.badge{position:absolute;top:18px;right:18px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;border-radius:99px}
+.badge.pub{background:rgba(0,169,79,.14);color:var(--verde-neon);border:1px solid rgba(0,169,79,.3)}
+.badge.log{background:rgba(46,107,255,.12);color:#8FB0FF;border:1px solid rgba(46,107,255,.3)}
+.badge.gui{background:rgba(255,255,255,.05);color:var(--txt2);border:1px solid var(--line)}
+.badge.amostra{background:rgba(0,169,79,.16);color:var(--verde-neon);border:1px solid rgba(43,224,128,.4);animation:pulse 2.4s infinite}
+.app.live{border-color:rgba(43,224,128,.4);background:linear-gradient(160deg,rgba(0,156,59,.1),var(--panel) 55%)}
+.app.live::after{transform:scaleY(1)}
+
+/* ── ícones premium ── */
+.i{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.chip{width:46px;height:46px;border-radius:13px;display:grid;place-content:center;flex-shrink:0;color:var(--verde-neon);background:linear-gradient(145deg,rgba(0,169,79,.16),rgba(0,169,79,.04));border:1px solid rgba(43,224,128,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.chip .i{width:22px;height:22px}
+.app:hover .chip,.stream:hover .chip{transform:scale(1.12) rotate(-4deg)}
+.sh-d .chip{color:#8FB0FF;background:linear-gradient(145deg,rgba(46,107,255,.18),rgba(46,107,255,.05));border-color:rgba(46,107,255,.32)}
+.sh-o .chip{color:var(--amarelo);background:linear-gradient(145deg,rgba(255,223,0,.13),rgba(255,223,0,.03));border-color:rgba(255,223,0,.26)}
+.stream .chip{width:40px;height:40px;border-radius:11px}
+.stream .chip .i{width:19px;height:19px}
+.iline{width:16px;height:16px;flex-shrink:0}
+.ess-pill .iline{width:15px;height:15px;color:var(--verde-neon)}
+.ess-pill span{display:inline-flex;align-items:center;gap:9px}
+.lat-item .fl{width:28px;height:20px;flex-shrink:0;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))}
+.lat-item .fl.i{width:24px;height:24px;color:var(--verde-neon)}
+.cofre .big-i{width:44px;height:44px;color:var(--verde-neon);stroke-width:1.5}
+
+/* ── receita ── */
+#receita{background:linear-gradient(180deg,transparent,rgba(46,107,255,.045) 55%,transparent)}
+.flow{display:grid;grid-template-columns:1fr auto 1fr;gap:clamp(18px,4vw,60px);align-items:center;margin-top:64px}
+@media(max-width:900px){.flow{grid-template-columns:1fr}}
+.streams{display:flex;flex-direction:column;gap:12px}
+.stream{display:flex;align-items:center;gap:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px 20px;transition:transform .3s,border-color .3s}
+.stream:hover{transform:translateX(9px);border-color:rgba(255,223,0,.3)}
+.stream .em{font-size:22px}
+.stream b{font-size:15.5px;display:block}
+.stream span{font-size:12.5px;color:var(--txt2)}
+.stream .bar{margin-left:auto;width:86px;height:6px;border-radius:6px;background:rgba(255,255,255,.07);overflow:hidden;flex-shrink:0}
+.stream .bar i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--verde),var(--verde-neon));transition:width 1.2s cubic-bezier(.16,1,.3,1) var(--d,.2s)}
+.inview .stream .bar i{width:var(--w,70%)}
+.flow-arrow{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--verde-neon)}
+.flow-arrow svg{width:44px;height:44px;animation:slideR 1.6s infinite ease-in-out}
+@media(max-width:900px){.flow-arrow svg{transform:rotate(90deg);animation:slideD 1.6s infinite ease-in-out}}
+@keyframes slideR{0%,100%{transform:translateX(-5px);opacity:.4}50%{transform:translateX(5px);opacity:1}}
+@keyframes slideD{0%,100%{transform:rotate(90deg) translateX(-5px);opacity:.4}50%{transform:rotate(90deg) translateX(5px);opacity:1}}
+.cofre{background:linear-gradient(160deg,rgba(0,156,59,.14),rgba(46,107,255,.1));border:1px solid rgba(43,224,128,.3);border-radius:22px;padding:42px 34px;text-align:center;position:relative;overflow:hidden}
+.cofre::before{content:'';position:absolute;inset:-40%;background:conic-gradient(from 0deg,transparent 70%,rgba(43,224,128,.16),transparent 82%);animation:spin 7s linear infinite}
+@keyframes spin{to{transform:rotate(1turn)}}
+.cofre>*{position:relative}
+.cofre .em{font-size:44px}
+.cofre h3{font-family:var(--disp);font-size:21px;text-transform:uppercase;margin:14px 0 8px}
+.cofre p{color:var(--txt2);font-size:14.5px;line-height:1.6}
+.cofre .sela{display:inline-flex;gap:8px;align-items:center;margin-top:18px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--verde-neon)}
+
+/* ── governança ── */
+.gov-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:16px;margin-top:54px}
+.gov{border:1px solid var(--line);border-left:3px solid var(--verde);border-radius:14px;padding:28px 26px;background:var(--panel)}
+.gov h4{font-size:16px;font-weight:700;display:flex;gap:10px;align-items:flex-start;line-height:1.35}
+.gov h4 .ok{color:var(--verde-neon);flex-shrink:0}
+.gov p{color:var(--txt2);font-size:14px;line-height:1.6;margin-top:10px}
+.gov code{font-size:12px;background:rgba(43,224,128,.08);color:var(--verde-neon);border:1px solid rgba(43,224,128,.2);padding:2px 8px;border-radius:6px}
+
+/* ── essência ── */
+#essencia{overflow:hidden}
+#essencia .wrap{text-align:center;position:relative}
+.ess-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;overflow:hidden}
+.ess-bg span{font-family:var(--disp);font-size:clamp(120px,26vw,340px);text-transform:uppercase;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.045);white-space:nowrap;letter-spacing:-.02em}
+#essencia h2{font-size:clamp(32px,5vw,64px)}
+.ess-copy{max-width:620px;margin:26px auto 0;color:var(--txt2);font-size:clamp(16px,1.6vw,19px);line-height:1.75}
+.ess-copy b{color:#fff}
+.ess-pill{display:inline-flex;gap:10px;margin-top:36px;flex-wrap:wrap;justify-content:center}
+.ess-pill span{border:1px solid var(--line);border-radius:99px;padding:11px 22px;font-size:14px;font-weight:600;color:var(--txt2);transition:.3s}
+.ess-pill span:hover{border-color:var(--verde-neon);color:#fff;transform:translateY(-3px)}
+
+/* ── latam ── */
+#latam .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(30px,5vw,80px);align-items:center}
+@media(max-width:900px){#latam .wrap{grid-template-columns:1fr}}
+.lat-list{display:flex;flex-direction:column;gap:0;margin-top:10px}
+.lat-item{display:flex;align-items:center;gap:16px;padding:20px 6px;border-bottom:1px solid var(--line);transition:padding-left .3s}
+.lat-item:hover{padding-left:16px}
+.lat-item .fl{font-size:24px}
+.lat-item b{font-size:16px}
+.lat-item span{color:var(--txt3);font-size:13px;margin-left:auto;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+
+/* ── cta final ── */
+#cta .wrap{text-align:center}
+.cta-box{background:linear-gradient(160deg,#0B3D22,#062a52);border:1px solid rgba(43,224,128,.25);border-radius:28px;padding:clamp(50px,8vw,100px) clamp(24px,5vw,80px);position:relative;overflow:hidden}
+.cta-box::before{content:'';position:absolute;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle,rgba(43,224,128,.16),transparent 65%);top:-240px;left:-140px}
+.cta-box::after{content:'';position:absolute;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle,rgba(255,223,0,.1),transparent 65%);bottom:-240px;right:-140px}
+.cta-box>*{position:relative;z-index:2}
+.cta-box h2{margin-top:0}
+.cta-box .lead{margin-inline:auto}
+.cta-ctas{display:flex;gap:14px;justify-content:center;margin-top:40px;flex-wrap:wrap}
+
+/* ── footer ── */
+footer{border-top:1px solid var(--line);padding:44px clamp(20px,4vw,48px);display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+footer .fine{color:var(--txt3);font-size:13px;line-height:1.6}
+footer .fine a{color:var(--txt2);font-weight:600}
+footer .fine a:hover{color:var(--verde-neon)}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  html{scroll-behavior:auto}
+  .js .rv{opacity:1;transform:none}
+  h1 span.w{animation:none}
+}
+</style>
+</head>
+<body>
+<script>document.documentElement.classList.add('js')</script>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10"/><path d="M9 21v-6h6v6"/></symbol>
+<symbol id="i-idcard" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><circle cx="8" cy="11" r="2"/><path d="M5.5 16c.6-1.8 4.4-1.8 5 0"/><path d="M14 9.5h5M14 13h5"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></symbol>
+<symbol id="i-shirt" viewBox="0 0 24 24"><path d="M20.4 3.5L16 2a4 4 0 01-8 0L3.6 3.5a2 2 0 00-1.3 2.2l.5 3.5a1 1 0 001 .8H6v10a2 2 0 002 2h8a2 2 0 002-2V10h2.2a1 1 0 001-.8l.5-3.5a2 2 0 00-1.3-2.2z"/></symbol>
+<symbol id="i-beer" viewBox="0 0 24 24"><path d="M5 8h11v10a3 3 0 01-3 3H8a3 3 0 01-3-3V8z"/><path d="M16 10h1.5a2.5 2.5 0 010 5H16"/><path d="M9 12v5M12 12v5"/><path d="M5 8c0-2 1.5-3.5 3.5-3.5.4-1.5 1.7-2.5 3.5-2.5S15 3 15.5 4.5 16 8 16 8"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17V10M13 17V5M18 17v-4"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></symbol>
+<symbol id="i-headset" viewBox="0 0 24 24"><path d="M4 14a8 8 0 0116 0"/><rect x="3" y="13.5" width="4.5" height="7" rx="2"/><rect x="16.5" y="13.5" width="4.5" height="7" rx="2"/></symbol>
+<symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M3 4h2l2.4 11.5a1 1 0 001 .8h9.4a1 1 0 001-.8L21 7H6"/></symbol>
+<symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 010 6v2a2 2 0 002 2h16a2 2 0 002-2v-2a3 3 0 010-6V7a2 2 0 00-2-2H4a2 2 0 00-2 2v2z"/><path d="M13 5.5v2.5M13 11v2M13 16.5V19"/></symbol>
+<symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></symbol>
+<symbol id="i-bus" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="14" rx="2.5"/><path d="M4 10h16"/><circle cx="8.5" cy="20" r="1.5"/><circle cx="15.5" cy="20" r="1.5"/><path d="M8 6.5h8"/></symbol>
+<symbol id="i-bank" viewBox="0 0 24 24"><path d="M12 3L3 9h18L12 3z"/><path d="M5 9v9M9.5 9v9M14.5 9v9M19 9v9"/><path d="M3 21h18"/></symbol>
+<symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 11-13h-8l1-7z"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+<symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+<symbol id="i-drum" viewBox="0 0 24 24"><ellipse cx="12" cy="6.5" rx="9" ry="3"/><path d="M3 6.5V16c0 1.7 4 3 9 3s9-1.3 9-3V6.5"/><path d="M7.5 9v9M16.5 9v9"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1.5 14h5M9.5 8h5M17.5 16h5"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 018 0v4"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 4 5.7 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.7-4-9s1.5-6.4 4-9z"/></symbol>
+<symbol id="f-br" viewBox="0 0 28 20"><rect width="28" height="20" rx="3" fill="#009C3B"/><path d="M14 3l10 7-10 7L4 10z" fill="#FFDF00"/><circle cx="14" cy="10" r="3.4" fill="#2E6BFF"/></symbol>
+<symbol id="f-ar" viewBox="0 0 28 20"><rect width="28" height="20" rx="3" fill="#74ACDF"/><rect y="6.7" width="28" height="6.6" fill="#F4F6F8"/><circle cx="14" cy="10" r="2.1" fill="#F6B40E"/></symbol>
+<symbol id="f-co" viewBox="0 0 28 20"><rect width="28" height="20" rx="3" fill="#FCD116"/><path d="M0 10h28v5H0z" fill="#003893"/><path d="M0 15h28v5H0z" fill="#CE1126"/></symbol>
+<symbol id="f-mx" viewBox="0 0 28 20"><rect width="28" height="20" rx="3" fill="#F4F6F8"/><path d="M0 0h9.3v20H0z" fill="#006847"/><path d="M18.7 0H28v20h-9.3z" fill="#CE1126"/><circle cx="14" cy="10" r="2.2" fill="#8a6d3b"/></symbol>
+</defs></svg>
+
+<div id="loader"><div class="ld-grid"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+<div id="prog"></div>
+
+<nav id="nav">
+  <a class="logo" href="#hero"><span class="logo-mark"><i></i><i></i><i></i><i></i></span>ORGANIZADA</a>
+  <div class="nav-links">
+    <a href="#problema">O problema</a>
+    <a href="#showroom">Showroom</a>
+    <a href="#receita">Receita</a>
+    <a href="#oferta">A oferta</a>
+    <a class="nav-cta" href="#cta">Agendar demo</a>
+  </div>
+</nav>
+
+<!-- ════ HERO ════ -->
+<section id="hero">
+  <canvas id="mosaic"></canvas>
+  <div class="hero-fade"></div>
+  <div class="hero-in">
+    <span class="kicker">O sistema operacional da torcida organizada</span>
+    <h1>
+      <span class="clip"><span class="l1 w" style="--d:.08s">A paixão já existe.</span></span>
+      <span class="clip"><span class="l2 w" style="--d:.32s">Agora ela tem estrutura.</span></span>
+    </h1>
+    <p class="hero-sub">Sócios, financeiro, loja, bar e ingressos numa única plataforma — com a <b style="color:#fff">transparência que protege a torcida</b> e a <b style="color:#fff">estrutura que multiplica a receita</b>.</p>
+    <div class="hero-ctas">
+      <a class="btn btn-p" data-mag href="#showroom">Ver a estrutura por dentro <span class="ar">→</span></a>
+      <a class="btn btn-g" data-mag href="https://wa.me/5571994095784?text=Quero%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20plataforma%20Organizada%20para%20a%20nossa%20torcida." target="_blank" rel="noopener">Agendar demonstração</a>
+    </div>
+    <a class="hero-oferta" href="#oferta"><svg class="i iline"><use href="#i-check"/></svg> <b>R$&nbsp;0</b> de implantação · <b>R$&nbsp;0</b> de mensalidade — veja a oferta</a>
+  </div>
+  <div class="hero-scroll">role<i></i></div>
+</section>
+
+<!-- ════ MARQUEE ════ -->
+<div class="marq"><div class="marq-in" id="marq">
+  <span>Sócios <b>•</b></span><span>Financeiro <b>•</b></span><span>Loja oficial <b>•</b></span><span>Bar da torcida <b>•</b></span><span>Ingressos <b>•</b></span><span>Eventos <b>•</b></span><span>Carteirinha digital <b>•</b></span><span>Portaria QR <b>•</b></span>
+</div></div>
+
+<!-- ════ PROBLEMA ════ -->
+<section id="problema">
+  <div class="wrap">
+    <span class="tag rv">O problema</span>
+    <h2 class="rv" style="--d:.08s">Operação de milhões.<br><em>Gestão de caderno.</em></h2>
+    <p class="lead rv" style="--d:.16s">Uma torcida grande movimenta o faturamento de uma empresa média — mensalidades, loja, bar de jogo, ingresso, caravana. Mas quase toda essa operação ainda roda no papel, no grupo de WhatsApp e no bolso de alguém.</p>
+    <div class="grid3">
+      <div class="card warn rv" data-tilt style="--d:.05s">
+        <div class="ic"><svg fill="none" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg></div>
+        <span class="num">01</span>
+        <h3>Dinheiro sem rastro</h3>
+        <p>Entrada e saída sem registro, conferência de memória, prestação de contas impossível. Onde não há rastro, sobra desconfiança — e a desconfiança racha torcida.</p>
+      </div>
+      <div class="card rv" data-tilt style="--d:.13s">
+        <div class="ic"><svg fill="none" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.36-1.86M17 20H7m10 0v-2c0-.65-.13-1.28-.36-1.86M7 20H2v-2a3 3 0 015.36-1.86M7 20v-2c0 -.65.13-1.28.36-1.86m0 0a5 5 0 019.28 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+        <span class="num">02</span>
+        <h3>A gestão muda, tudo se perde</h3>
+        <p>Cadastro de sócio no celular de um, senha da conta com outro, histórico em lugar nenhum. Cada troca de diretoria é um recomeço do zero.</p>
+      </div>
+      <div class="card info rv" data-tilt style="--d:.21s">
+        <div class="ic"><svg fill="none" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg></div>
+        <span class="num">03</span>
+        <h3>Receita escapando todo dia</h3>
+        <p>Mensalidade que ninguém cobra, loja no improviso, bar sem controle de caixa, ingresso de papel que se falsifica. A paixão existe — a estrutura para monetizá-la, não.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ NÚMEROS ════ -->
+<section id="numeros">
+  <div class="wrap" style="padding-top:0">
+    <div class="nums">
+      <div class="num-c rv" style="--d:.02s"><b data-count="11">0</b><span>aplicações integradas</span></div>
+      <div class="num-c rv" style="--d:.10s"><b data-count="5">0</b><span>fontes de receita digitalizadas</span></div>
+      <div class="num-c rv" style="--d:.18s"><b data-count="100">0<sup>%</sup></b><span>dos lançamentos rastreados</span></div>
+      <div class="num-c rv" style="--d:.26s"><b data-count="1">0</b><span>instituição que não depende de gestão</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ SHOWROOM ════ -->
+<section id="showroom">
+  <div class="wrap">
+    <span class="tag rv">Showroom ao vivo</span>
+    <h2 class="rv" style="--d:.08s">Isto não é apresentação.<br><em>É a plataforma <u>rodando</u>.</em></h2>
+    <p class="lead rv" style="--d:.16s">O ecossistema completo opera hoje com a torcida-demonstração <b style="color:#fff">BRASIL</b> (fictícia). Uma amostra fica aberta para você sentir a qualidade agora — <b style="color:#fff">o tour completo é guiado, ao vivo, módulo por módulo</b>, na demonstração de 30 minutos.</p>
+    <div class="demo-note rv" style="--d:.22s"><svg class="i iline"><use href="#i-zap"/></svg> Ambiente de demonstração real — dados fictícios, sistema de verdade.</div>
+
+    <div class="sh-group sh-t rv">
+      <h3>Para o torcedor</h3>
+      <div class="sh-grid">
+        <a class="app live" data-tilt href="https://brasil-site-oficial.web.app" target="_blank" rel="noopener">
+          <span class="badge amostra">Amostra ao vivo</span><span class="chip"><svg class="i"><use href="#i-home"/></svg></span>
+          <h4>Site da torcida</h4>
+          <p>Home, distritos, agenda de eventos e compra de ingresso pelo público — com QR e PDF na hora.</p>
+          <span class="open">Abrir a amostra ao vivo <span class="ar">↗</span></span>
+        </a>
+        <a class="app" data-tilt href="https://wa.me/5571994095784?text=Quero%20ver%20o%20cadastro%20de%20s%C3%B3cio%20rodando%20na%20demonstra%C3%A7%C3%A3o%20da%20Organizada." target="_blank" rel="noopener">
+          <span class="badge gui">Demonstração guiada</span><span class="chip"><svg class="i"><use href="#i-idcard"/></svg></span>
+          <h4>Seja sócio</h4>
+          <p>Cadastro completo com foto 3x4, escolha de plano e pagamento Pix. Do formulário à carteirinha.</p>
+          <span class="open">Ver na demonstração <span class="ar">→</span></span>
+        </a>
+        <a class="app" data-tilt href="https://wa.me/5571994095784?text=Quero%20ver%20o%20painel%20do%20s%C3%B3cio%20rodando%20na%20demonstra%C3%A7%C3%A3o%20da%20Organizada." target="_blank" rel="noopener">
+          <span class="badge gui">Demonstração guiada</span><span class="chip"><svg class="i"><use href="#i-phone"/></svg></span>
+          <h4>Painel do sócio</h4>
+          <p>Carteirinha digital com QR, mensalidade e ingressos com preço de sócio, tudo no bolso.</p>
+          <span class="open">Ver na demonstração <span class="ar">→</span></span>
+        </a>
+        <a class="app" data-tilt href="https://wa.me/5571994095784?text=Quero%20ver%20a%20loja%20oficial%20rodando%20na%20demonstra%C3%A7%C3%A3o%20da%20Organizada." target="_blank" rel="noopener">
+          <span class="badge gui">Demonstração guiada</span><span class="chip"><svg class="i"><use href="#i-shirt"/></svg></span>
+          <h4>Loja oficial</h4>
+          <p>Catálogo completo, carrinho, desconto automático de sócio e checkout direto no WhatsApp.</p>
+          <span class="open">Ver na demonstração <span class="ar">→</span></span>
+        </a>
+        <a class="app" data-tilt href="https://wa.me/5571994095784?text=Quero%20ver%20o%20card%C3%A1pio%20digital%20do%20bar%20rodando%20na%20demonstra%C3%A7%C3%A3o%20da%20Organizada." target="_blank" rel="noopener">
+          <span class="badge gui">Demonstração guiada</span><span class="chip"><svg class="i"><use href="#i-beer"/></svg></span>
+          <h4>Cardápio do bar</h4>
+          <p>O torcedor pede pelo celular. Sócio entra com CPF e libera combo e desconto na hora.</p>
+          <span class="open">Ver na demonstração <span class="ar">→</span></span>
+        </a>
+      </div>
+    </div>
+
+    <div class="sh-group sh-d rv">
+      <h3>Para a diretoria</h3>
+      <div class="sh-grid">
+        <a class="app" data-tilt href="https://wa.me/5571994095784?text=Quero%20ver%20o%20painel%20administrativo%20rodando%20na%20demonstra%C3%A7%C3%A3o%20da%20Organizada." target="_blank" rel="noopener">
+          <span class="badge gui">Demonstração guiada</span><span class="chip"><svg class="i"><use href="#i-chart"/></svg></span>
+          <h4>Painel administrativo</h4>
+          <p>13 seções: sócios, distritos, eventos, ingressos, financeiro, relatórios, patrocinadores e logs.</p>
+          <span class="open">Ver na demonstração <span class="ar">→</span></span>
+        </a>
+        <a class="app" data-tilt href="https://wa.me/5571994095784?text=Quero%20ver%20a%20administra%C3%A7%C3%A3o%20de%20bares%20rodando%20na%20demonstra%C3%A7%C3%A3o%20da%20Organizada." target="_blank" rel="noopener">
+          <span class="badge gui">Demonstração guiada</span><span class="chip"><svg class="i"><use href="#i-layers"/></svg></span>
+          <h4>Administração de bares</h4>
+          <p>Unidades, cardápio por unidade, operadores de caixa e desempenho de cada bar.</p>
+          <span class="open">Ver na demonstração <span class="ar">→</span></span>
+        </a>
+        <a class="app" data-tilt href="https://wa.me/5571994095784?text=Quero%20ver%20o%20m%C3%B3dulo%20de%20suporte%20rodando%20na%20demonstra%C3%A7%C3%A3o%20da%20Organizada." target="_blank" rel="noopener">
+          <span class="badge gui">Demonstração guiada</span><span class="chip"><svg class="i"><use href="#i-headset"/></svg></span>
+          <h4>Suporte</h4>
+          <p>Atendimento ao sócio: consulta de cadastro e validação de carteirinha pela equipe.</p>
+          <span class="open">Ver na demonstração <span class="ar">→</span></span>
+        </a>
+      </div>
+    </div>
+
+    <div class="sh-group sh-o rv">
+      <h3>Para a operação</h3>
+      <div class="sh-grid">
+        <a class="app" data-tilt href="https://wa.me/5571994095784?text=Quero%20ver%20o%20PDV%20da%20loja%20f%C3%ADsica%20rodando%20na%20demonstra%C3%A7%C3%A3o%20da%20Organizada." target="_blank" rel="noopener">
+          <span class="badge gui">Demonstração guiada</span><span class="chip"><svg class="i"><use href="#i-cart"/></svg></span>
+          <h4>PDV — loja física</h4>
+          <p>Frente de caixa com carrinho, desconto de sócio, controle de estoque e histórico de vendas.</p>
+          <span class="open">Ver na demonstração <span class="ar">→</span></span>
+        </a>
+        <a class="app" data-tilt href="https://wa.me/5571994095784?text=Quero%20ver%20o%20PDV%20do%20bar%20rodando%20na%20demonstra%C3%A7%C3%A3o%20da%20Organizada." target="_blank" rel="noopener">
+          <span class="badge gui">Demonstração guiada</span><span class="chip"><svg class="i"><use href="#i-beer"/></svg></span>
+          <h4>PDV — bar</h4>
+          <p>Caixa do bar com combos por quantidade, desconto de sócio e pedidos chegando do cardápio.</p>
+          <span class="open">Ver na demonstração <span class="ar">→</span></span>
+        </a>
+        <a class="app" data-tilt href="https://wa.me/5571994095784?text=Quero%20ver%20o%20PDV%20de%20eventos%20com%20a%20portaria%20QR%20rodando%20na%20demonstra%C3%A7%C3%A3o%20da%20Organizada." target="_blank" rel="noopener">
+          <span class="badge gui">Demonstração guiada</span><span class="chip"><svg class="i"><use href="#i-ticket"/></svg></span>
+          <h4>PDV eventos + portaria</h4>
+          <p>Venda de ingresso e leitor de QR na portaria: libera na primeira leitura, bloqueia na segunda.</p>
+          <span class="open">Ver na demonstração <span class="ar">→</span></span>
+        </a>
+      </div>
+    </div>
+    <p class="lead rv" style="margin-top:44px;font-size:15px;color:var(--txt3);display:flex;align-items:center;gap:10px"><svg class="i iline"><use href="#i-zap"/></svg> O tour guiado leva 30 minutos e pode ser hoje mesmo — toque em qualquer módulo para agendar o seu.</p>
+  </div>
+</section>
+
+<!-- ════ RECEITA ════ -->
+<section id="receita">
+  <div class="wrap">
+    <span class="tag rv">Feita para faturar</span>
+    <h2 class="rv" style="--d:.08s">Cada real da torcida<br><em>passando pelo <u>caixa certo</u>.</em></h2>
+    <p class="lead rv" style="--d:.16s">A Organizada digitaliza as cinco fontes de receita que toda torcida grande já tem — e que hoje rendem menos do que deveriam. Sem intermediário no caminho do dinheiro: cai direto na conta da instituição.</p>
+    <div class="flow">
+      <div class="streams rv">
+        <div class="stream" style="--w:88%;--d:.10s"><span class="chip"><svg class="i"><use href="#i-repeat"/></svg></span><div><b>Mensalidade recorrente</b><span>cobrança automática, inadimplência visível</span></div><div class="bar"><i></i></div></div>
+        <div class="stream" style="--w:76%;--d:.20s"><span class="chip"><svg class="i"><use href="#i-shirt"/></svg></span><div><b>Loja oficial</b><span>online + PDV físico, estoque integrado</span></div><div class="bar"><i></i></div></div>
+        <div class="stream" style="--w:70%;--d:.30s"><span class="chip"><svg class="i"><use href="#i-beer"/></svg></span><div><b>Bar da torcida</b><span>multi-unidade, combo e margem controlada</span></div><div class="bar"><i></i></div></div>
+        <div class="stream" style="--w:82%;--d:.40s"><span class="chip"><svg class="i"><use href="#i-ticket"/></svg></span><div><b>Ingressos e eventos</b><span>QR de uso único, sem falsificação</span></div><div class="bar"><i></i></div></div>
+        <div class="stream" style="--w:64%;--d:.50s"><span class="chip"><svg class="i"><use href="#i-bus"/></svg></span><div><b>Caravanas</b><span>venda organizada, lista e embarque</span></div><div class="bar"><i></i></div></div>
+      </div>
+      <div class="flow-arrow rv"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5-5 5M6 7l5 5-5 5"/></svg></div>
+      <div class="cofre rv" style="--d:.2s">
+        <svg class="i big-i"><use href="#i-bank"/></svg>
+        <h3>Caixa da torcida</h3>
+        <p>Todo lançamento com origem, valor, responsável e data. O dinheiro do sócio vai direto para o CNPJ da torcida — ninguém no meio do caminho toca no valor.</p>
+        <span class="sela"><svg class="i iline"><use href="#i-check"/></svg> 100% rastreado, do Pix ao relatório</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ GOVERNANÇA ════ -->
+<section id="governanca">
+  <div class="wrap">
+    <span class="tag rv">Governança</span>
+    <h2 class="rv" style="--d:.08s">Transparência não é discurso.<br><em>É regra no código.</em></h2>
+    <div class="gov-grid">
+      <div class="gov rv" style="--d:.04s">
+        <h4><span class="ok"><svg class="i iline"><use href="#i-check"/></svg></span> Ingresso de uso único</h4>
+        <p>A regra do banco só aceita marcar o ingresso como usado — nunca desmarcar, nunca trocar o titular. <code>usado: false → true</code> e nada mais. Reentrada bloqueada na segunda leitura.</p>
+      </div>
+      <div class="gov rv" style="--d:.12s">
+        <h4><span class="ok"><svg class="i iline"><use href="#i-check"/></svg></span> Lançamento imutável</h4>
+        <p>Registro financeiro não se edita nem se apaga. Errou? Lança o estorno — e os dois ficam no histórico, para sempre, com autor e data.</p>
+      </div>
+      <div class="gov rv" style="--d:.20s">
+        <h4><span class="ok"><svg class="i iline"><use href="#i-check"/></svg></span> Ninguém muda regra sozinho</h4>
+        <p>Alteração nas regras de segurança exige presidente <b>e</b> conselho. A infraestrutura fica com um terceiro neutro, por contrato — o que quebra qualquer conluio interno.</p>
+      </div>
+      <div class="gov rv" style="--d:.28s">
+        <h4><span class="ok"><svg class="i iline"><use href="#i-check"/></svg></span> Cada um vê o que lhe compete</h4>
+        <p>Operador de caixa só registra venda na própria unidade. Suporte não vê financeiro. Conselho audita tudo, sem editar nada.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ ESSÊNCIA ════ -->
+<section id="essencia">
+  <div class="ess-bg"><span id="essParallax">RAIZ</span></div>
+  <div class="wrap">
+    <span class="tag rv" style="justify-content:center">A essência</span>
+    <h2 class="rv" style="--d:.08s">A torcida continua<br>sendo <em>a torcida.</em></h2>
+    <p class="ess-copy rv" style="--d:.16s">A Organizada não muda o canto, não muda a bandeira, não muda o distrito, não muda a história. Muda o caderno pelo sistema, o bolso pelo caixa rastreado, o improviso pela estrutura profissional.<br><br><b>A essência é de vocês. A estrutura é a nossa missão.</b> Entra presidente, sai presidente — a instituição fica de pé, com memória, patrimônio e futuro.</p>
+    <div class="ess-pill rv" style="--d:.24s">
+      <span><svg class="i iline"><use href="#i-flag"/></svg> A ideologia fica</span><span><svg class="i iline"><use href="#i-music"/></svg> O canto fica</span><span><svg class="i iline"><use href="#i-drum"/></svg> A bateria fica</span><span><svg class="i iline"><use href="#i-book"/></svg> A história fica</span><span><svg class="i iline"><use href="#i-sliders"/></svg> O improviso, não</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════ LATAM ════ -->
+<section id="latam">
+  <div class="wrap">
+    <div>
+      <span class="tag rv">A visão</span>
+      <h2 class="rv" style="--d:.08s">Do Brasil para a<br><em>América Latina.</em></h2>
+      <p class="lead rv" style="--d:.16s">Torcida, hinchada, barra: a arquibancada fala a mesma língua no continente inteiro — e sofre dos mesmos problemas de estrutura. A Organizada nasce no Brasil com ambição continental.</p>
+    </div>
+    <div class="lat-list rv" style="--d:.2s">
+      <div class="lat-item"><svg class="fl"><use href="#f-br"/></svg><b>Torcidas organizadas</b><span>Série A → todo o Brasil</span></div>
+      <div class="lat-item"><svg class="fl"><use href="#f-ar"/></svg><b>Hinchadas</b><span>Argentina</span></div>
+      <div class="lat-item"><svg class="fl"><use href="#f-co"/></svg><b>Barras</b><span>Colômbia</span></div>
+      <div class="lat-item"><svg class="fl"><use href="#f-mx"/></svg><b>Porras e barras</b><span>México</span></div>
+      <div class="lat-item"><svg class="fl i"><use href="#i-globe"/></svg><b>Uma plataforma</b><span>um continente</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ OFERTA ════ -->
+<section id="oferta">
+  <div class="wrap">
+    <span class="tag rv">A oferta</span>
+    <h2 class="rv" style="--d:.08s">Implantar tudo isso custa<br><em><u>R$ 0</u> do caixa da torcida.</em></h2>
+    <p class="lead rv" style="--d:.16s">Essa é a parte que nenhuma diretoria espera ouvir: <b style="color:#fff">sem investimento inicial, sem mensalidade, sem hospedagem</b> — e sem descontar um centavo do faturamento. A estrutura inteira, com os 11 aplicativos, operando para a torcida desde o primeiro dia.</p>
+    <div class="grid3">
+      <div class="card rv" data-tilt style="--d:.05s">
+        <div class="ic"><svg class="i" style="width:25px;height:25px"><use href="#i-check"/></svg></div>
+        <span class="num">01</span>
+        <h3>R$ 0 de implantação</h3>
+        <p>Os 11 aplicativos, o banco de dados, a publicação e a configuração: tudo entra em operação sem investimento inicial. O caixa da torcida continua onde sempre esteve — no caixa da torcida.</p>
+      </div>
+      <div class="card rv" data-tilt style="--d:.13s">
+        <div class="ic"><svg class="i" style="width:25px;height:25px"><use href="#i-repeat"/></svg></div>
+        <span class="num">02</span>
+        <h3>R$ 0 de mensalidade</h3>
+        <p>Sem assinatura, sem aluguel de sistema, sem hospedagem. Na loja virtual, o único custo da torcida é o produto que ela mesma vende — e o domínio próprio, se quiser um.</p>
+      </div>
+      <div class="card warn rv" data-tilt style="--d:.21s">
+        <div class="ic"><svg class="i" style="width:25px;height:25px"><use href="#i-bank"/></svg></div>
+        <span class="num">03</span>
+        <h3>Nada sai do faturamento</h3>
+        <p>O valor das vendas vai integral para a conta da torcida, sem desconto. "E como vocês ganham?" — pergunta certa. O modelo é apresentado preto no branco na demonstração, sem letra miúda.</p>
+      </div>
+    </div>
+    <p class="lead rv" style="margin-top:36px;font-size:14px;color:var(--txt3)">O modelo completo é apresentado na demonstração de 30 minutos — junto com a projeção de receita para a realidade da sua torcida. Sem compromisso.</p>
+  </div>
+</section>
+
+<!-- ════ CTA ════ -->
+<section id="cta">
+  <div class="wrap">
+    <div class="cta-box rv">
+      <span class="kicker" style="margin-bottom:22px">Demonstração ao vivo · 30 minutos</span>
+      <h2>Sua torcida, <em>organizada.</em></h2>
+      <p class="lead" style="margin-top:16px">Veja o ecossistema completo rodando com a sua realidade em mente: quantos sócios, quantas unidades, quais fontes de receita. Saia da reunião sabendo exatamente quanto a estrutura pode render — e como implantá-la <b style="color:#fff">sem tirar R$ 1 do caixa e sem pagar mensalidade</b>.</p>
+      <div class="cta-ctas">
+        <a class="btn btn-p" data-mag href="https://wa.me/5571994095784?text=Quero%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20da%20plataforma%20Organizada%20para%20a%20nossa%20torcida." target="_blank" rel="noopener">Agendar pelo WhatsApp <span class="ar">→</span></a>
+        <a class="btn btn-g" data-mag href="https://brasil-site-oficial.web.app" target="_blank" rel="noopener">Ver a amostra ao vivo ↗</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <a class="logo" href="#hero"><span class="logo-mark"><i></i><i></i><i></i><i></i></span>ORGANIZADA</a>
+  <p class="fine">Uma iniciativa <a href="mailto:conversaoblack@gmail.com">Conversão Black</a> · O showroom usa a torcida fictícia BRASIL — qualquer semelhança é só com o futuro da sua.<br>© 2026 Organizada. Todos os direitos reservados.</p>
+</footer>
+
+<script>
+(function(){
+"use strict";
+var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* loader */
+addEventListener('load', function(){ setTimeout(function(){ document.getElementById('loader').classList.add('off'); }, 500); });
+setTimeout(function(){ document.getElementById('loader').classList.add('off'); }, 2200);
+
+/* nav + progress */
+var nav = document.getElementById('nav'), prog = document.getElementById('prog');
+addEventListener('scroll', function(){
+  var y = scrollY, h = document.documentElement.scrollHeight - innerHeight;
+  nav.classList.toggle('solid', y > 40);
+  prog.style.width = (h > 0 ? (y / h * 100) : 0) + '%';
+  var ep = document.getElementById('essParallax');
+  if (ep && !reduced) {
+    var r = ep.closest('section').getBoundingClientRect();
+    ep.style.transform = 'translateX(' + ((r.top / innerHeight) * 120 - 60) + 'px)';
+  }
+}, { passive: true });
+
+/* marquee duplicado para loop perfeito */
+var mq = document.getElementById('marq');
+mq.innerHTML += mq.innerHTML;
+
+/* reveal on scroll */
+var io = new IntersectionObserver(function(es){
+  es.forEach(function(e){
+    if (e.isIntersecting) {
+      e.target.classList.add('in');
+      if (e.target.closest('section')) e.target.closest('section').classList.add('inview');
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: .18, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.rv').forEach(function(el){ io.observe(el); });
+
+/* contadores */
+var ioN = new IntersectionObserver(function(es){
+  es.forEach(function(e){
+    if (!e.isIntersecting) return;
+    ioN.unobserve(e.target);
+    var el = e.target, target = +el.dataset.count, sup = el.querySelector('sup');
+    var t0 = performance.now(), dur = 1400;
+    (function tick(t){
+      var p = Math.min((t - t0) / dur, 1), v = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      el.childNodes[0].nodeValue = v;
+      if (p < 1) requestAnimationFrame(tick);
+    })(t0);
+    if (sup) el.appendChild(sup);
+  });
+}, { threshold: .5 });
+document.querySelectorAll('[data-count]').forEach(function(el){ ioN.observe(el); });
+
+/* tilt + spotlight nos cards */
+if (!reduced && matchMedia('(pointer:fine)').matches) {
+  document.querySelectorAll('[data-tilt]').forEach(function(c){
+    c.addEventListener('mousemove', function(ev){
+      var r = c.getBoundingClientRect();
+      var x = (ev.clientX - r.left) / r.width, y = (ev.clientY - r.top) / r.height;
+      c.style.transform = 'perspective(800px) rotateY(' + ((x - .5) * 7) + 'deg) rotateX(' + ((.5 - y) * 6) + 'deg) translateY(-4px)';
+      c.style.setProperty('--mx', (x * 100) + '%');
+      c.style.setProperty('--my', (y * 100) + '%');
+    });
+    c.addEventListener('mouseleave', function(){ c.style.transform = ''; });
+  });
+  /* botões magnéticos */
+  document.querySelectorAll('[data-mag]').forEach(function(b){
+    b.addEventListener('mousemove', function(ev){
+      var r = b.getBoundingClientRect();
+      b.style.transform = 'translate(' + ((ev.clientX - r.left - r.width / 2) * .18) + 'px,' + ((ev.clientY - r.top - r.height / 2) * .3) + 'px)';
+    });
+    b.addEventListener('mouseleave', function(){ b.style.transform = ''; });
+  });
+}
+
+/* ── mosaico canvas: do caos à organização ── */
+var cv = document.getElementById('mosaic'), ctx = cv.getContext('2d');
+var TILES = [], DPR = Math.min(devicePixelRatio || 1, 2), W, H;
+var COLS = ['#009C3B','#00722B','#2BE080','#FFDF00','#2E6BFF','#1a5c38','#0d3e26'];
+var mouse = { x: -9999, y: -9999 };
+
+function build(){
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  TILES = [];
+  var small = W < 720;
+  var size = small ? 16 : 20, gap = 6, step = size + gap;
+  /* grade-alvo ocupa a metade direita (desktop) ou o terço de baixo (mobile) */
+  var gx0 = small ? Math.floor(W * .06 / step) * step : Math.floor(W * .52 / step) * step;
+  var gy0 = small ? Math.floor(H * .62 / step) * step : Math.floor(H * .16 / step) * step;
+  var gx1 = W - step, gy1 = H - (small ? step : Math.floor(H * .14));
+  for (var x = gx0; x < gx1; x += step) {
+    for (var y = gy0; y < gy1; y += step) {
+      /* recorte diagonal: organização "crescendo" */
+      var fr = (x - gx0) / (gx1 - gx0), fv = (y - gy0) / (gy1 - gy0);
+      if (!small && fr < (1 - fv) * .55 - .18) continue;
+      if (Math.random() < .16) continue; /* respiros na grade */
+      TILES.push({
+        tx: x, ty: y,
+        x: Math.random() * W, y: Math.random() * H,
+        s: size,
+        c: COLS[Math.random() < .72 ? Math.floor(Math.random() * 3) : (3 + Math.floor(Math.random() * 4))],
+        d: Math.random() * 1.2,             /* atraso */
+        f: .5 + Math.random() * 1.4,        /* flutuação */
+        ph: Math.random() * Math.PI * 2,
+        o: .25 + Math.random() * .6
+      });
+    }
+  }
+  window.__mos = function(){ return { n: TILES.length, W: W, H: H }; };
+}
+
+var t0 = performance.now();
+function frame(t){
+  /* o painel pode ter carregado oculto (largura 0): reconstrói quando o layout aparecer */
+  if (cv.clientWidth && (cv.clientWidth !== W || cv.clientHeight !== H)) build();
+  var el = (t - t0) / 1000;
+  ctx.clearRect(0, 0, W, H);
+  for (var i = 0; i < TILES.length; i++) {
+    var p = TILES[i];
+    /* progresso da organização: 0 (caos) → 1 (grade), com atraso individual */
+    var k = Math.max(0, Math.min(1, (el - p.d) / 2.2));
+    k = 1 - Math.pow(1 - k, 3);
+    var fx = Math.sin(el * p.f + p.ph) * (1 - k * .82) * 14;
+    var fy = Math.cos(el * p.f * .8 + p.ph) * (1 - k * .82) * 14;
+    var x = p.x + (p.tx - p.x) * k + fx + Math.sin(el * .55 + p.ph) * 2.2;
+    var y = p.y + (p.ty - p.y) * k + fy + Math.cos(el * .5 + p.ph) * 2.2;
+    /* interação com o cursor: peças próximas acendem e afastam de leve */
+    var dx = x - mouse.x, dy = y - mouse.y, dist = Math.sqrt(dx * dx + dy * dy);
+    var glow = 0;
+    if (dist < 130) {
+      var f = (130 - dist) / 130;
+      x += (dx / (dist || 1)) * f * 13;
+      y += (dy / (dist || 1)) * f * 13;
+      glow = f;
+    }
+    ctx.globalAlpha = Math.min(1, p.o * (0.5 + k * .8) + glow * .5);
+    ctx.fillStyle = glow > .45 ? '#FFDF00' : p.c;
+    var s = p.s * (0.86 + Math.sin(el * .9 + p.ph) * .05 + glow * .18);
+    var r = 4;
+    ctx.beginPath();
+    ctx.roundRect(x, y, s, s, r);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(frame);
+}
+
+if (!reduced) {
+  build();
+  requestAnimationFrame(frame);
+  addEventListener('resize', function(){ clearTimeout(cv._r); cv._r = setTimeout(build, 180); });
+  document.getElementById('hero').addEventListener('mousemove', function(e){
+    var r = cv.getBoundingClientRect();
+    mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
+  });
+  document.getElementById('hero').addEventListener('mouseleave', function(){ mouse.x = -9999; mouse.y = -9999; });
+} else {
+  build();
+  /* versão estática para quem prefere menos movimento */
+  TILES.forEach(function(p){
+    ctx.globalAlpha = p.o; ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.roundRect(p.tx, p.ty, p.s, p.s, 4); ctx.fill();
+  });
+}
+})();
+</script>
+</body>
+</html>

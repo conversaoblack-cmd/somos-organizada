@@ -1,0 +1,15 @@
+{
+  "hosting": [
+    {
+      "target": "organizada",
+      "public": "sites/organizada",
+      "ignore": ["firebase.json", "**/.*"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    },
+    {
+      "target": "calendario-organizada",
+      "public": "sites/calendario-organizada",
+      "ignore": ["firebase.json", "**/.*"]
+    }
+  ]
+}
