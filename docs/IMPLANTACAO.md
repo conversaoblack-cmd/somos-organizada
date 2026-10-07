@@ -23,6 +23,19 @@ Tempo estimado: 40 minutos.
 | Storage | Criação → Storage | Criar com o mesmo local |
 | App Web | ⚙️ Configurações do projeto → Seus apps → `</>` | Registrar app "web". Copie o objeto `firebaseConfig` |
 
+## Atalho: tudo de uma vez
+
+Depois dos passos 1 e 2 (criar o projeto e ligar os serviços no console), um único comando faz o resto:
+gera e guarda as chaves, configura o app Web, roda os testes, faz o build e o deploy.
+
+```bash
+git clone https://github.com/conversaoblack-cmd/somos-organizada.git
+cd somos-organizada && git checkout claude/firebase-access-oxibba
+bash scripts/implantar.sh
+```
+
+No Windows, rode no Git Bash ou no WSL. Os passos 3 a 6 abaixo são o mesmo processo feito à mão.
+
 ## 3. Preparar a máquina
 
 ```powershell
