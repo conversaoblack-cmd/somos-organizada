@@ -2,7 +2,8 @@
 // Contas (senha de todas: senha123456):
 //   equipe@somos.test      → plataforma Somos Organizada
 //   diretoria@brasil.test  → diretoria da torcida
-//   subsede4@brasil.test   → subsede 4º Distrito
+//   subsede4@brasil.test   → subsede 4º Distrito (conta de recebimento ativa)
+//   subsede7@brasil.test   → subsede 7º Distrito (sem conta de recebimento; evento aguardando aprovação)
 //   portaria@brasil.test   → portaria
 //   socio@brasil.test      → sócio ativo (Pix)
 import { initializeApp as adminApp } from "firebase-admin/app";
@@ -119,17 +120,69 @@ for (const [id, pl] of planos) {
   await setDoc(doc(d.db, `torcidas/${tid}/planos/${id}`), { pix: true, cartao: true, ativo: true, ...pl });
 }
 
+// Split: a torcida informa o recebedor principal (conta dela) e liga a divisão
+await d.chamar("configurarSplit", { tid, recebedorPrincipalId: "rp_principal" });
+
+// Membros do painel (o convite gera o acesso; aqui a senha é definida direto)
+const contas = {};
+for (const [email, nome, papel, sedeId] of [
+  ["subsede4@brasil.test", "Coordenador 4º Distrito", "subsede", sedes.d4],
+  ["subsede12@brasil.test", "Coordenador 12º Distrito", "subsede", sedes.d12],
+  ["subsede7@brasil.test", "Coordenador 7º Distrito", "subsede", sedes.d7],
+  ["portaria@brasil.test", "Equipe Portaria", "portaria", undefined],
+]) {
+  const r = await d.chamar("convidarMembro", { tid, email, nome, papel, sedeId });
+  await aAuth.updateUser(r.uid, { password: SENHA });
+  if (papel === "subsede") {
+    const b = navegador();
+    await signInWithEmailAndPassword(b.auth, email, SENHA);
+    contas[email] = b;
+  }
+}
+
+// 4º e 12º Distrito cadastram a conta de recebimento e passam na prova de vida; 7º ainda não
+for (const [email, cpf, nomeTitular] of [
+  ["subsede4@brasil.test", "25426823642", "Carlos Henrique do Periperi"],
+  ["subsede12@brasil.test", "32006387022", "Joana Feirense Santos"],
+]) {
+  const b = contas[email];
+  const { recebedor } = await b.chamar("cadastrarRecebedor", {
+    tid,
+    dados: {
+      nome: nomeTitular, email, cpf, nascimento: "1982-07-15", nomeMae: "Maria das Graças", rendaMensal: 450000,
+      profissao: "Comerciante", telefone: "71999887766",
+      endereco: { cep: "40720000", logradouro: "Rua da Quadra", numero: "40", bairro: "Periperi", cidade: "Salvador", uf: "BA" },
+      banco: { codigo: "341", agencia: "1234", conta: "45678", contaDv: "9", tipo: "checking" },
+    },
+  });
+  await fetch(`${PAGARME}/__recebedor/${recebedor.id}`, { method: "POST" });
+  await b.chamar("atualizarRecebedor", { tid });
+}
+
 const eventos = {};
+const criarEvento = async (b, ev, status) =>
+  (await addDoc(collection(b.db, `torcidas/${tid}/eventos`), { ...ev, vendidos: 0, reservados: 0, status, limitePorPedido: 6 })).id;
+// Eventos da sede principal: a diretoria publica direto
 for (const [chave, ev] of [
   ["final", { nome: "Caravana para a Final", descricao: "Ônibus saindo da Sede Central às 13h, ingresso do setor da torcida incluso. Chegue com 30 min de antecedência com documento com foto.", sedeId: sedePrincipal, local: "Saída: Sede Central", data: em(9, 13), valorSocio: 12000, valorPublico: 15000, capacidade: 180 }],
-  ["churras", { nome: "Churrasco do 4º Distrito", descricao: "Confraternização com bateria ao vivo. Bebidas à parte.", sedeId: sedes.d4, local: "Quadra do Periperi", data: em(4, 12), valorSocio: 3000, valorPublico: 4000, capacidade: 120 }],
   ["aniversario", { nome: "Festa de 36 anos da Torcida", descricao: "A noite mais esperada do ano. Show, homenagens e o lançamento do novo bandeirão.", sedeId: sedePrincipal, local: "Clube Central", data: em(21, 21), valorSocio: 5000, valorPublico: 8000, capacidade: 600 }],
-  ["bateria", { nome: "Ensaio aberto da bateria", descricao: "Ensaio para o clássico. Aberto à família.", sedeId: sedes.d7, local: "Praça de Itapuã", data: em(2, 18, 30), valorSocio: 0, valorPublico: 1000, capacidade: 200 }],
-  ["interior", { nome: "Excursão Interior → Capital", descricao: "Ônibus do 12º Distrito para o jogo de domingo.", sedeId: sedes.d12, local: "Rodoviária de Feira", data: em(16, 9), valorSocio: 7000, valorPublico: 9000, capacidade: 46 }],
-  ["classico", { nome: "Clássico — Bloco da Torcida", descricao: "Setor exclusivo da torcida. Ingresso nominal, entrada até 1h antes do jogo.", sedeId: sedes.d1, local: "Arena", data: em(30, 16), valorSocio: 6000, valorPublico: 9000, capacidade: 400 }],
+  ["classico", { nome: "Clássico — Bloco da Torcida", descricao: "Setor exclusivo da torcida. Ingresso nominal, entrada até 1h antes do jogo.", sedeId: sedePrincipal, local: "Arena", data: em(30, 16), valorSocio: 6000, valorPublico: 9000, capacidade: 400 }],
 ]) {
-  eventos[chave] = (await addDoc(collection(d.db, `torcidas/${tid}/eventos`), { ...ev, vendidos: 0, reservados: 0, status: "publicado", limitePorPedido: 6 })).id;
+  eventos[chave] = await criarEvento(d, ev, "publicado");
 }
+// Eventos de subsede: a subsede envia para aprovação e a diretoria publica (conta de recebimento ativa)
+for (const [chave, email, ev] of [
+  ["churras", "subsede4@brasil.test", { nome: "Churrasco do 4º Distrito", descricao: "Confraternização com bateria ao vivo. Bebidas à parte.", sedeId: sedes.d4, local: "Quadra do Periperi", data: em(4, 12), valorSocio: 3000, valorPublico: 4000, capacidade: 120 }],
+  ["interior", "subsede12@brasil.test", { nome: "Excursão Interior → Capital", descricao: "Ônibus do 12º Distrito para o jogo de domingo.", sedeId: sedes.d12, local: "Rodoviária de Feira", data: em(16, 9), valorSocio: 7000, valorPublico: 9000, capacidade: 46 }],
+]) {
+  eventos[chave] = await criarEvento(contas[email], ev, "em_aprovacao");
+  await updateDoc(doc(d.db, `torcidas/${tid}/eventos/${eventos[chave]}`), { status: "publicado" });
+}
+// 7º Distrito: evento aguardando aprovação, mas sem conta de recebimento ainda (a diretoria não consegue aprovar)
+eventos.bateria = await criarEvento(contas["subsede7@brasil.test"], {
+  nome: "Ensaio aberto da bateria", descricao: "Ensaio para o clássico. Aberto à família.", sedeId: sedes.d7, local: "Praça de Itapuã",
+  data: em(2, 18, 30), valorSocio: 0, valorPublico: 1000, capacidade: 200,
+}, "em_aprovacao");
 await addDoc(collection(d.db, `torcidas/${tid}/eventos`), {
   nome: "Bingo beneficente", descricao: "Rascunho — ainda não publicado.", sedeId: sedePrincipal, local: "Sede Central",
   data: em(40, 15), valorSocio: 1500, valorPublico: 2000, capacidade: 150, vendidos: 0, reservados: 0, status: "rascunho",
@@ -140,15 +193,6 @@ await addDoc(collection(d.db, `torcidas/${tid}/eventos`), {
     data: em(-12, 16), valorSocio: 9000, valorPublico: 12000, capacidade: 100, vendidos: 0, reservados: 0, status: "publicado",
   });
   await updateDoc(passado, { status: "encerrado" });
-}
-
-// Membros do painel
-for (const [email, nome, papel, sedeId] of [
-  ["subsede4@brasil.test", "Coordenador 4º Distrito", "subsede", sedes.d4],
-  ["portaria@brasil.test", "Equipe Portaria", "portaria", undefined],
-]) {
-  const r = await d.chamar("convidarMembro", { tid, email, nome, papel, sedeId });
-  await aAuth.updateUser(r.uid, { password: SENHA });
 }
 
 // ── Vendas de demonstração ─────────────────────────────────
@@ -164,7 +208,7 @@ const compradores = [
   ["Bruno Lima", "11144477735", "71991110002", "final", 1],
   ["Carla Dias", "52998224725", "71991110003", "churras", 3],
   ["Diego Alves", "86288366757", "71991110004", "aniversario", 2],
-  ["Elaine Rocha", "71428793860", "71991110005", "bateria", 4],
+  ["Elaine Rocha", "71428793860", "71991110005", "classico", 4],
 ];
 const cpfsExtras = ["83400613991", "45317828791", "59790057067", "26631318300", "95473830862", "67129029919", "13711081703", "38640161852"];
 let extra = 0;
@@ -242,5 +286,5 @@ await addDoc(collection(d.db, `torcidas/${tid}/repasses`), {
 
 console.log("✔ Torcida de demonstração criada: /brasil");
 console.log(`  Webhook (simulado): ${webhookUrl}`);
-console.log("  Contas (senha senha123456): equipe@somos.test · diretoria@brasil.test · subsede4@brasil.test · portaria@brasil.test · socio@brasil.test");
+console.log("  Contas (senha senha123456): equipe@somos.test · diretoria@brasil.test · subsede4@brasil.test (conta ativa) · subsede7@brasil.test (sem conta de recebimento) · portaria@brasil.test · socio@brasil.test");
 process.exit(0);

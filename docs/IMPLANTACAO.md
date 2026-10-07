@@ -111,12 +111,26 @@ remova-o de lá antes, para o Firebase liberar.
 
 ## 9. Onboarding de cada torcida (feito pela diretoria)
 
+### Como o dinheiro é dividido (split)
+
+- Cada torcida usa **a própria conta Pagar.me** (tipo PSP, com split liberado: confirme com a Pagar.me).
+- Cada **subsede vira um recebedor** dentro dessa conta. Quem cadastra é o diretor da subsede, no painel dele
+  (CPF, conta bancária e prova de vida da Pagar.me). A diretoria só vê o status, nunca os dados.
+- Venda de evento de subsede: o **valor do ingresso cai direto na conta da subsede** (ela paga as tarifas da
+  Pagar.me e responde por chargeback); os **10% de taxa caem inteiros na conta da torcida**.
+- Eventos da sede principal: tudo na conta da torcida.
+- Evento de subsede só vai para a página depois que a **diretoria aprova**, e a aprovação só é liberada com a
+  conta de recebimento da subsede **ativa**.
+- Mensalidade de sócio: a diretoria escolhe em Personalização se vai para a subsede do sócio (com split) ou para a torcida.
+
+
 Tudo guiado no painel `/{torcida}/admin`:
 
 1. **Pagamentos**: criar conta na Pagar.me, colar chave secreta + pública, cadastrar o domínio
    `somosorganizada.com.br` na Pagar.me (necessário para cartão) e configurar o webhook com a URL
-   mostrada no painel.
-2. **Sedes**: cadastrar as subsedes/distritos.
+   mostrada no painel. Depois, **ativar a divisão (split)** informando o ID do recebedor principal (`rp_...`).
+2. **Sedes e usuários**: cadastrar as subsedes/distritos e convidar o diretor de cada uma (ele recebe um
+   e-mail para criar a senha). Cada diretor de subsede entra em **Recebimentos** e cadastra a conta dele.
 3. **Planos**: mensal, anual, mirim...
 4. **Eventos**: criar e publicar.
 5. **Personalização**: cores, logo, banner e textos.
