@@ -77,7 +77,7 @@ export default function PainelPlataforma() {
       <div className="min-h-dvh grid place-items-center px-4 py-10 grade-fundo">
         <div className="w-full max-w-md flex flex-col items-center gap-6">
           <MarcaSomos />
-          <Login titulo="Somos Organizada · Plataforma" subtitulo="Acesso restrito à equipe interna." />
+          <Login titulo="Somos Organizada · Plataforma" subtitulo="Acesso restrito à equipe interna." permitirCadastro />
         </div>
       </div>
     );

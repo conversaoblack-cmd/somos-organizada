@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { emailValido } from "@/lib/formatos";
 import { Aviso, Botao, Campo, Cartao } from "@/ui";
@@ -8,11 +8,26 @@ function traduzir(codigo: string): string {
   if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(codigo)) return "E-mail ou senha incorretos.";
   if (/too-many-requests/.test(codigo)) return "Muitas tentativas. Aguarde alguns minutos.";
   if (/network/.test(codigo)) return "Sem conexão. Verifique sua internet.";
+  if (/email-already-in-use/.test(codigo)) return "Este e-mail já tem conta. Use Entrar.";
+  if (/weak-password/.test(codigo)) return "Senha fraca: use pelo menos 8 caracteres.";
   return "Não foi possível entrar. Tente novamente.";
 }
 
-/** Formulário de login reutilizado (sócio, diretoria, plataforma). */
-export function Login({ titulo, subtitulo, rodape, extra }: { titulo: string; subtitulo?: ReactNode; rodape?: ReactNode; extra?: ReactNode }) {
+/** Formulário de login reutilizado. Com `permitirCadastro`, oferece também "Criar conta" (envia verificação de e-mail). */
+export function Login({
+  titulo,
+  subtitulo,
+  rodape,
+  extra,
+  permitirCadastro,
+}: {
+  titulo: string;
+  subtitulo?: ReactNode;
+  rodape?: ReactNode;
+  extra?: ReactNode;
+  permitirCadastro?: boolean;
+}) {
+  const [criando, setCriando] = useState(false);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -23,8 +38,14 @@ export function Login({ titulo, subtitulo, rodape, extra }: { titulo: string; su
     e.preventDefault();
     setErro(null);
     if (!emailValido(email)) return setErro("Informe um e-mail válido.");
+    if (criando && senha.length < 8) return setErro("Senha fraca: use pelo menos 8 caracteres.");
     setCarregando(true);
     try {
+      if (criando) {
+        const cred = await createUserWithEmailAndPassword(auth, email.trim(), senha);
+        await sendEmailVerification(cred.user, { url: location.href }).catch(() => undefined);
+        return;
+      }
       await signInWithEmailAndPassword(auth, email.trim(), senha);
     } catch (err) {
       setErro(traduzir(String((err as { code?: string }).code ?? err)));
@@ -50,15 +71,22 @@ export function Login({ titulo, subtitulo, rodape, extra }: { titulo: string; su
       {subtitulo && <p className="text-texto-2 mt-1">{subtitulo}</p>}
       <form onSubmit={entrar} className="mt-6 space-y-4" noValidate>
         <Campo rotulo="E-mail" type="email" autoComplete="email" icone="usuario" value={email} onChange={setEmail} />
-        <Campo rotulo="Senha" type="password" autoComplete="current-password" icone="cadeado" value={senha} onChange={setSenha} />
+        <Campo rotulo="Senha" type="password" autoComplete={criando ? "new-password" : "current-password"} icone="cadeado" value={senha} onChange={setSenha} />
         {erro && <Aviso tom="perigo">{erro}</Aviso>}
         {aviso && <Aviso tom="sucesso">{aviso}</Aviso>}
         <Botao type="submit" largo tamanho="lg" carregando={carregando}>
-          Entrar
+          {criando ? "Criar conta" : "Entrar"}
         </Botao>
-        <button type="button" onClick={esqueci} className="w-full text-sm text-texto-2 hover:text-texto py-1">
-          Esqueci minha senha
-        </button>
+        {!criando && (
+          <button type="button" onClick={esqueci} className="w-full text-sm text-texto-2 hover:text-texto py-1">
+            Esqueci minha senha
+          </button>
+        )}
+        {permitirCadastro && (
+          <button type="button" onClick={() => { setCriando(!criando); setErro(null); }} className="w-full text-sm font-semibold text-primaria py-1">
+            {criando ? "Já tenho conta: entrar" : "Primeiro acesso? Criar conta"}
+          </button>
+        )}
       </form>
       {extra}
       {rodape && <div className="mt-6 pt-5 border-t border-linha text-sm text-texto-2 text-center">{rodape}</div>}
