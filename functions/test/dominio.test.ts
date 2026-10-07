@@ -121,3 +121,18 @@ test("plano da plataforma: gigante acima de 3.000 sócios ativos", () => {
   assert.equal(planoEfetivo("pequena", 3001, 3000), "gigante");
   assert.equal(planoEfetivo("grande", 120, 3000), "grande");
 });
+
+test("recusa de cartão: código ABECS e código antigo da Pagar.me viram mensagem clara", async () => {
+  const { classificarRecusa } = await import("../src/pagarme/recusas");
+  const t = (acquirer_return_code: string) => ({ id: "t", status: "not_authorized", acquirer_return_code });
+  assert.equal(classificarRecusa(t("51")).categoria, "saldo");
+  assert.equal(classificarRecusa(t("1016")).categoria, "saldo");
+  assert.equal(classificarRecusa(t("54")).categoria, "vencido");
+  assert.equal(classificarRecusa(t("54")).retentar, false);
+  assert.equal(classificarRecusa(t("N7")).categoria, "cvv");
+  assert.equal(classificarRecusa(t("05")).categoria, "generica");
+  assert.equal(classificarRecusa(t("05")).retentar, true);
+  assert.equal(classificarRecusa(t("91")).categoria, "indisponivel");
+  assert.equal(classificarRecusa({ id: "t", status: "failed", antifraud_response: { status: "reproved" } }).categoria, "antifraude");
+  assert.equal(classificarRecusa(undefined).categoria, "generica");
+});

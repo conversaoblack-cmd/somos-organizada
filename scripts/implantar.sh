@@ -96,9 +96,13 @@ node -e '
     `VITE_FIREBASE_APP_ID=${c.appId}`,
     `VITE_VERSAO=${new Date().toISOString().slice(0, 10)}`,
   ];
-  require("fs").writeFileSync("web/.env.production.local", linhas.join("\n") + "\n");
+  const fs = require("fs");
+  fs.writeFileSync("web/.env.production.local", linhas.join("\n") + "\n");
+  // Chave pública do app Web (a mesma que vai no site): as functions usam para conferir a senha no login por CPF
+  const env = fs.readFileSync("functions/.env", "utf8").split("\n").filter((l) => l && !l.startsWith("WEB_API_KEY="));
+  fs.writeFileSync("functions/.env", [...env, `WEB_API_KEY=${c.apiKey}`].join("\n") + "\n");
 ' "$JSON_CFG"
-echo "web/.env.production.local gerado."
+echo "web/.env.production.local gerado (e WEB_API_KEY em functions/.env)."
 
 passo "Build do front-end"
 npm --prefix web run build

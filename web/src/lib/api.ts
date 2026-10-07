@@ -166,6 +166,7 @@ export const api = {
   executarRotinaSaas: chamar<{ agora?: number }, { faturasGeradas: number; bloqueadas: number }>("executarRotinaSaas"),
 
   // ── Cadastro de torcida (página principal) ───────────
+  entrarComCpf: chamar<{ cpf: string; senha: string }, { email: string }>("entrarComCpf"),
   slugDisponivel: chamar<{ slug: string }, { disponivel: boolean; motivo?: string }>("slugDisponivel"),
   solicitarTorcida: chamar<
     {

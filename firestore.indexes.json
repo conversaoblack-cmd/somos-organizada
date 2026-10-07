@@ -4,185 +4,340 @@
       "collectionGroup": "solicitacoes",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "pedidos",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "expiraEm", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "expiraEm",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "pedidos",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "pedidos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" },
-        { "fieldPath": "eventoId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "pedidos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "pedidos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "sedeId", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "ingressos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" },
-        { "fieldPath": "eventoId", "order": "ASCENDING" }
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "ingressos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventoId", "order": "ASCENDING" },
-        { "fieldPath": "titularCpf", "order": "ASCENDING" }
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "titularCpf",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "ingressos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventoId", "order": "ASCENDING" },
-        { "fieldPath": "codigo", "order": "ASCENDING" }
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "codigo",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "ingressos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" },
-        { "fieldPath": "eventoData", "order": "DESCENDING" }
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "eventoData",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "ingressos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventoId", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "socios",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "metodo", "order": "ASCENDING" },
-        { "fieldPath": "validoAte", "order": "ASCENDING" }
+        {
+          "fieldPath": "metodo",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "validoAte",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "socios",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "validoAte", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "validoAte",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "socios",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "sedeId", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "socios",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "lancamentos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "sedeId", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "lancamentos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "competencia", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "competencia",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "eventos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "data", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "data",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "eventos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "sedeId", "order": "ASCENDING" },
-        { "fieldPath": "data", "order": "DESCENDING" }
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "data",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "suporte",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "torcidaId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
+        {
+          "fieldPath": "torcidaId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "suporte",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" },
-        { "fieldPath": "atualizadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "atualizadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "suporte",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "atualizadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "atualizadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "logsErro",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "torcidaId", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "torcidaId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "ingressos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "titularUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "eventoData",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],

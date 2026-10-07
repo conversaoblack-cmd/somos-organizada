@@ -82,6 +82,17 @@ export async function confirmarPedidoPago(tid: string, pedidoId: string, pg: PgP
       const evRef = refs.evento(tid, p.eventoId!);
       const ev = (await tx.get(evRef)).data() as Evento;
       const itens = p.itens ?? [];
+      // Ingresso em nome de um sócio (CPF de sócio que já pagou ao menos uma vez) aparece também no painel dele
+      const titularUid = new Map<string, string>();
+      if (itens.length) {
+        const cpfs = await tx.getAll(...itens.map((i) => refs.cpf(tid, i.titularCpf)));
+        const uids = cpfs.map((c) => c.get("uid") as string | undefined).filter((u): u is string => !!u && u !== p.uid);
+        const fichas = uids.length ? await tx.getAll(...uids.map((u) => refs.socio(tid, u))) : [];
+        for (const f of fichas) {
+          const s = f.data() as Socio | undefined;
+          if (s?.matricula && s.cpf) titularUid.set(s.cpf, f.id);
+        }
+      }
       const ingressoIds: string[] = [];
       for (const item of itens) {
         const iRef = refs.ingressos(tid).doc();
@@ -96,6 +107,7 @@ export async function confirmarPedidoPago(tid: string, pedidoId: string, pg: PgP
           titularNome: item.titularNome,
           titularCpf: item.titularCpf,
           uid: p.uid,
+          ...(titularUid.has(item.titularCpf) ? { titularUid: titularUid.get(item.titularCpf) } : {}),
           codigo: codigoLegivel(),
           qr: gerarQr("i", tid, iRef.id, segredoQr),
           valorBase: item.valorBase,

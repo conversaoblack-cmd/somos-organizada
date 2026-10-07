@@ -1,7 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { emailValido } from "@/lib/formatos";
+import { emailValido, soDigitos } from "@/lib/formatos";
+import { api, mensagemDeErro } from "@/lib/api";
 import { Aviso, Botao, Campo, Cartao } from "@/ui";
 
 function traduzir(codigo: string): string {
@@ -20,12 +21,15 @@ export function Login({
   rodape,
   extra,
   permitirCadastro,
+  aceitaCpf,
 }: {
   titulo: string;
   subtitulo?: ReactNode;
   rodape?: ReactNode;
   extra?: ReactNode;
   permitirCadastro?: boolean;
+  /** Torcedor pode entrar com CPF no lugar do e-mail. */
+  aceitaCpf?: boolean;
 }) {
   const [criando, setCriando] = useState(false);
   const [email, setEmail] = useState("");
@@ -37,7 +41,22 @@ export function Login({
   async function entrar(e: FormEvent) {
     e.preventDefault();
     setErro(null);
-    if (!emailValido(email)) return setErro("Informe um e-mail válido.");
+    const cpf = aceitaCpf && !criando && !email.includes("@") ? soDigitos(email) : "";
+    if (cpf) {
+      if (cpf.length !== 11) return setErro("CPF incompleto: são 11 números.");
+      if (!senha) return setErro("Digite sua senha.");
+      setCarregando(true);
+      try {
+        const r = await api.entrarComCpf({ cpf, senha });
+        await signInWithEmailAndPassword(auth, r.email, senha);
+      } catch (err) {
+        setErro((err as { code?: string }).code?.startsWith("auth/") ? traduzir(String((err as { code?: string }).code)) : mensagemDeErro(err));
+      } finally {
+        setCarregando(false);
+      }
+      return;
+    }
+    if (!emailValido(email)) return setErro(aceitaCpf ? "Informe seu CPF ou e-mail." : "Informe um e-mail válido.");
     if (criando && senha.length < 8) return setErro("Senha fraca: use pelo menos 8 caracteres.");
     setCarregando(true);
     try {
@@ -56,7 +75,7 @@ export function Login({
 
   async function esqueci() {
     setErro(null);
-    if (!emailValido(email)) return setErro("Digite seu e-mail acima para receber o link.");
+    if (!emailValido(email)) return setErro(aceitaCpf && !email.includes("@") && email ? "Para redefinir a senha, digite o seu e-mail (não o CPF)." : "Digite seu e-mail acima para receber o link.");
     try {
       await sendPasswordResetEmail(auth, email.trim(), { url: `${location.origin}${location.pathname}` });
       setAviso("Enviamos um link para redefinir sua senha. Confira também o spam.");
@@ -70,7 +89,14 @@ export function Login({
       <h1 className="text-2xl font-bold">{titulo}</h1>
       {subtitulo && <p className="text-texto-2 mt-1">{subtitulo}</p>}
       <form onSubmit={entrar} className="mt-6 space-y-4" noValidate>
-        <Campo rotulo="E-mail" type="email" autoComplete="email" icone="usuario" value={email} onChange={setEmail} />
+        <Campo
+          rotulo={aceitaCpf && !criando ? "CPF ou e-mail" : "E-mail"}
+          type={aceitaCpf && !criando ? "text" : "email"}
+          autoComplete={aceitaCpf && !criando ? "username" : "email"}
+          icone="usuario"
+          value={email}
+          onChange={setEmail}
+        />
         <Campo rotulo="Senha" type="password" autoComplete={criando ? "new-password" : "current-password"} icone="cadeado" value={senha} onChange={setSenha} />
         {erro && <Aviso tom="perigo">{erro}</Aviso>}
         {aviso && <Aviso tom="sucesso">{aviso}</Aviso>}

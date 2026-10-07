@@ -124,6 +124,8 @@ export interface Socio {
   pagarme?: { customerId?: string; cardId?: string; subscriptionId?: string; cartaoFinal?: string; cartaoBandeira?: string };
   ultimaFalhaCobranca?: Timestamp;
   motivoFalhaCobranca?: string;
+  /** Recusa definitiva no cartão: a cobrança automática para até o sócio trocar o cartão. */
+  cobrancaCartaoPausada?: boolean;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
@@ -170,6 +172,8 @@ export interface Ingresso {
   titularNome: string;
   titularCpf: string;
   uid: string;
+  /** Sócio titular do ingresso (quando outra pessoa comprou no CPF dele). */
+  titularUid?: string;
   codigo: string;
   qr: string;
   valorBase: number;

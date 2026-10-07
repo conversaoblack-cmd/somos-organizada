@@ -5,7 +5,7 @@ import { api, mensagemDeErro, type DiagnosticoTorcida } from "@/lib/api";
 import { dataHora, moeda, relativo, ROTULO_STATUS_PEDIDO } from "@/lib/formatos";
 import type { StatusPedido, Tema } from "@/lib/tipos";
 import { Aviso, Botao, Cartao, Carregando, cx, Icone, Selo, type NomeIcone, type Tom } from "@/ui";
-import { msDe, ROTULO_STATUS_TORCIDA, TOM_STATUS_TORCIDA } from "./comum";
+import { msDe, ROTULO_AMBIENTE, ROTULO_STATUS_TORCIDA, TOM_AMBIENTE, TOM_STATUS_TORCIDA } from "./comum";
 
 type ItemSaude = { tom: "sucesso" | "alerta" | "perigo" | "info"; texto: string; detalhe?: string };
 
@@ -142,7 +142,7 @@ export default function Depuracao({ tid }: { tid: string }) {
           <Linhas
             itens={[
               ["Configurado", pg.configurado ? <Selo tom="sucesso">Sim</Selo> : <Selo tom="perigo">Não</Selo>],
-              ["Ambiente", pg.ambiente ? <Selo tom={pg.ambiente === "producao" ? "sucesso" : "alerta"}>{pg.ambiente === "producao" ? "Produção" : "Teste"}</Selo> : "—"],
+              ["Ambiente", pg.ambiente ? <Selo tom={TOM_AMBIENTE[pg.ambiente] ?? "alerta"}>{ROTULO_AMBIENTE[pg.ambiente] ?? pg.ambiente}</Selo> : "—"],
               ["Pix / Cartão", `${pg.pix ? "Pix ✓" : "Pix ✗"} · ${pg.cartao ? "Cartão ✓" : "Cartão ✗"}`],
               ["Chave pública", pg.chavePublica ? `${pg.chavePublica.slice(0, 8)}…${pg.chavePublica.slice(-4)}` : "—"],
               [
@@ -312,11 +312,12 @@ function checklist(d: DiagnosticoTorcida, datas: Record<string, number | null>):
   } else {
     r.push({ tom: "sucesso", texto: "Pagamentos configurados" });
     if (!d.credenciais.salvas) r.push({ tom: "perigo", texto: "Chave secreta ausente", detalhe: "Pagamentos marcados como configurados, mas não há credencial cifrada salva." });
+    if (pg.ambiente === "demo") r.push({ tom: "info", texto: "Modo demonstração", detalhe: "Pagamentos simulados: nada é cobrado de verdade." });
     if (pg.ambiente === "teste" && t.status === "ativa") r.push({ tom: "alerta", texto: "Ambiente de teste em torcida ativa", detalhe: "As vendas não são reais." });
   }
 
   const webhookEm = msDe(pg.webhookRecebidoEm) ?? d.webhooks[0]?.recebidoEm ?? null;
-  if (pg.configurado && !webhookEm) {
+  if (pg.configurado && pg.ambiente !== "demo" && !webhookEm) {
     r.push({ tom: "alerta", texto: "Webhook nunca recebido", detalhe: "Confira se o webhook foi criado na Pagar.me com a URL do painel da diretoria." });
   } else if (webhookEm) {
     r.push({ tom: "sucesso", texto: `Último webhook ${relativo(webhookEm)}` });

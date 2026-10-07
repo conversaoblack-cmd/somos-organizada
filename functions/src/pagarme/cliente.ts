@@ -13,6 +13,8 @@ export class PagarmeErro extends Error {
   }
 }
 
+import { classificarRecusa } from "./recusas";
+
 export interface PgCustomer {
   name: string;
   email: string;
@@ -79,6 +81,8 @@ export interface PgTransacao {
   qr_code_url?: string;
   expires_at?: string;
   acquirer_message?: string;
+  acquirer_return_code?: string;
+  antifraud_response?: { status?: string };
   gateway_response?: { errors?: { message: string }[] };
 }
 
@@ -235,8 +239,15 @@ function mensagemErro(json: unknown, status: number): string {
 
 /** Motivo de recusa legível para mostrar ao comprador. */
 export function motivoRecusa(pedido: PgPedido): string {
-  const t = pedido.charges?.[0]?.last_transaction;
-  return t?.acquirer_message || t?.gateway_response?.errors?.[0]?.message || "Pagamento não aprovado.";
+  const c = pedido.charges?.[0];
+  if (c?.payment_method === "pix") return "O Pix não foi concluído dentro do prazo.";
+  return classificarRecusa(c?.last_transaction).mensagem;
+}
+
+/** Recusa definitiva (cartão vencido, bloqueado, dados errados): não adianta cobrar de novo o mesmo cartão. */
+export function recusaDefinitiva(pedido: PgPedido): boolean {
+  const c = pedido.charges?.[0];
+  return c?.payment_method === "credit_card" && !classificarRecusa(c.last_transaction).retentar;
 }
 
 export function pagoIntegral(pedido: PgPedido, totalEsperado: number): boolean {

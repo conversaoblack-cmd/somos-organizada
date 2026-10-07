@@ -10,7 +10,10 @@ import type { Chamado } from "@/lib/tipos";
 import { LayoutPainel, type ItemMenu } from "@/componentes/LayoutPainel";
 import { Login } from "@/componentes/Login";
 import { Aviso, Botao, Cartao, Icone, TelaCarregando } from "@/ui";
-import { ProvedorResumo } from "./comum";
+import { ProvedorResumo, useResumo } from "./comum";
+import Solicitacoes from "./Solicitacoes";
+import Mensalidades from "./Mensalidades";
+import Configuracoes from "./Configuracoes";
 import Dashboard from "./Dashboard";
 import Torcidas from "./Torcidas";
 import DetalheTorcida from "./DetalheTorcida";
@@ -175,12 +178,26 @@ function SemPermissao({ usuario, aoAtivar }: { usuario: User; aoAtivar: () => Pr
 
 function PainelLogado({ usuario }: { usuario: User }) {
   const abertos = useColecao<Chamado>(query(collection(db, "suporte"), where("status", "==", "aberto")), "suporte-abertos");
+  // contador em tempo real (o resumo traz o mesmo número, mas só é lido ao carregar)
+  const pendentes = useColecao(query(collection(db, "solicitacoes"), where("status", "==", "pendente")), "solicitacoes-pendentes");
+  const { resumo } = useResumo();
+  const mensalidadesAtencao = (resumo?.torcidas ?? []).filter(
+    (t) => t.saas && (t.saas.bloqueada || t.saas.situacao === "bloqueada" || t.saas.faturasAbertas.some((f) => f.informadoPagamentoEm)),
+  ).length;
   const menu: ItemMenu[] = [
     { para: "/plataforma", rotulo: "Visão geral", icone: "painel", fim: true },
+    {
+      para: "/plataforma/solicitacoes",
+      rotulo: "Solicitações",
+      icone: "sino",
+      contador: pendentes.carregando || pendentes.erro ? resumo?.solicitacoesPendentes : pendentes.dados.length,
+    },
     { para: "/plataforma/torcidas", rotulo: "Torcidas", icone: "bandeira" },
+    { para: "/plataforma/mensalidades", rotulo: "Mensalidades", icone: "pix", contador: mensalidadesAtencao },
     { para: "/plataforma/depuracao", rotulo: "Depuração", icone: "bug" },
     { para: "/plataforma/suporte", rotulo: "Suporte", icone: "chat", contador: abertos.dados.length },
     { para: "/plataforma/faq", rotulo: "FAQ do robô", icone: "lista" },
+    { para: "/plataforma/configuracoes", rotulo: "Configurações", icone: "engrenagem" },
   ];
   return (
     <LayoutPainel
@@ -198,6 +215,10 @@ function PainelLogado({ usuario }: { usuario: User }) {
         <Route path="suporte" element={<CentralSuporte />} />
         <Route path="suporte/:chamadoId" element={<CentralSuporte />} />
         <Route path="faq" element={<FaqRobo />} />
+        <Route path="solicitacoes" element={<Solicitacoes />} />
+        <Route path="solicitacoes/:id" element={<Solicitacoes />} />
+        <Route path="mensalidades" element={<Mensalidades />} />
+        <Route path="configuracoes" element={<Configuracoes />} />
         <Route path="*" element={<Navigate to="/plataforma" replace />} />
       </Routes>
     </LayoutPainel>

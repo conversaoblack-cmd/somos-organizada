@@ -5,11 +5,12 @@ import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { lerQr, igualSeguro } from "../util/cripto";
 import { cpfValido, endereco, mascararCpf, pessoa, soDigitos, texto, umDe } from "../util/validacao";
 import { calcularPedidoIngresso, taxaServico, type Titular } from "../dominio/precos";
-import { exigirLogin, exigirMembro } from "../dominio/permissoes";
+import { exigirEscopoSede, exigirLogin, exigirMembro } from "../dominio/permissoes";
 import { confirmarPedidoPago, encerrarPedidoNaoPago } from "../dominio/processamento";
 import { pagarmeDaTorcida } from "../pagarme/credenciais";
 import { clientePg, descritor, enderecoPg } from "../pagarme/montagem";
-import { motivoRecusa, PagarmeErro, type PgPagamento, type PgPedido, type PgSplit } from "../pagarme/cliente";
+import { registrarCpfDaConta } from "./conta";
+import { motivoRecusa, recusaDefinitiva, PagarmeErro, type PgPagamento, type PgPedido, type PgSplit } from "../pagarme/cliente";
 import { dividir, subsedePodeVender } from "../dominio/split";
 import type { Evento, Ingresso, Pedido, Sede, Socio, Torcida } from "../dominio/tipos";
 
@@ -73,6 +74,13 @@ export function pagamentoPg(
 }
 
 /** Grava o resultado da criação do pedido na Pagar.me e dispara a confirmação se já veio pago (cartão). */
+/** Erro da API da Pagar.me (não é recusa do banco) traduzido para o comprador; o detalhe técnico fica no log. */
+export function mensagemErroPagarme(e: PagarmeErro): string {
+  if (e.status >= 500 || e.status === 0) return "A operadora de pagamento está instável agora. Tente de novo em alguns minutos.";
+  if (e.status === 401 || e.status === 403) return "Os pagamentos desta torcida estão em manutenção. Avise a diretoria.";
+  return "Não foi possível processar o pagamento com estes dados. Confira o cartão ou pague com Pix.";
+}
+
 export async function aplicarRespostaPedido(tid: string, pedidoId: string, pg: PgPedido, expiraEm: Date) {
   const charge = pg.charges?.[0];
   const t = charge?.last_transaction;
@@ -90,7 +98,7 @@ export async function aplicarRespostaPedido(tid: string, pedidoId: string, pg: P
   if (pg.status === "failed" || pg.status === "canceled" || charge?.status === "failed") {
     const motivo = motivoRecusa(pg);
     await encerrarPedidoNaoPago(tid, pedidoId, "falhou", motivo);
-    return { falhou: motivo };
+    return { falhou: motivo, definitiva: recusaDefinitiva(pg) };
   }
   return "aguardando" as const;
 }
@@ -200,6 +208,7 @@ export const criarPedidoIngresso = onCall({ secrets: segredos }, async (req) => 
       payments: [pagamentoPg(metodo, torcida, d, PADROES.pixExpiraSegundos, { split: calc.split })],
       metadata: { torcidaId: tid, pedidoId: pedidoRef.id, tipo: "ingresso" },
     });
+    await registrarCpfDaConta(uid, comprador.cpf, req.auth?.token.firebase?.sign_in_provider === "anonymous");
     const resultado = await aplicarRespostaPedido(tid, pedidoRef.id, resposta, expiraEm);
     if (typeof resultado === "object") throw new HttpsError("aborted", resultado.falhou);
     return { pedidoId: pedidoRef.id, status: resultado };
@@ -207,7 +216,7 @@ export const criarPedidoIngresso = onCall({ secrets: segredos }, async (req) => 
     if (e instanceof HttpsError && e.code === "aborted") throw e;
     await encerrarPedidoNaoPago(tid, pedidoRef.id, "falhou", e instanceof Error ? e.message : "erro").catch(() => undefined);
     logger.error("Falha ao criar pedido na Pagar.me", { tid, pedidoId: pedidoRef.id, erro: String(e) });
-    if (e instanceof PagarmeErro) throw new HttpsError("unavailable", `Pagamento recusado pela operadora: ${e.message}`);
+    if (e instanceof PagarmeErro) throw new HttpsError("unavailable", mensagemErroPagarme(e));
     throw e instanceof HttpsError ? e : new HttpsError("internal", "Não foi possível iniciar o pagamento.");
   }
 });
@@ -313,6 +322,11 @@ export const validarEntrada = onCall({ secrets: [QR_HMAC] }, async (req) => {
   const eventoId = texto(d.eventoId, "evento", { max: 40 });
   const membro = await exigirMembro(req, tid, ["diretoria", "subsede", "portaria"]);
   const confirmar = d.confirmar !== false;
+  const ev = (await refs.evento(tid, eventoId).get()).data() as Evento | undefined;
+  if (!ev) throw new HttpsError("not-found", "Evento não encontrado.");
+  // Subsede (e portaria ligada a uma sede) só confere a entrada dos eventos da própria sede
+  if (membro.papel === "subsede" || (membro.papel === "portaria" && membro.sedeId)) exigirEscopoSede(membro, ev.sedeId);
+  if (ev.status === "cancelado") return { resultado: "cancelado", mensagem: "Este evento foi cancelado." };
 
   let ingressoRef: FirebaseFirestore.DocumentReference;
   if (d.qr) {

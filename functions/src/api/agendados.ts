@@ -1,3 +1,4 @@
+import { FALHA_TECNICA } from "../pagarme/recusas";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions/v2";
 import { FUSO, MASTER_KEY, PADROES, QR_HMAC } from "../config";
@@ -101,6 +102,7 @@ export const rotinaSocios = onSchedule(
       const s = doc.data() as Socio;
       if (!["ativo", "inadimplente"].includes(s.status) || s.assinaturaCancelada) continue;
       if (!s.pagarme?.cardId || s.pagarme.subscriptionId) continue; // sem cartão salvo, ou assinatura legada
+      if (s.cobrancaCartaoPausada) continue; // recusa definitiva (vencido, bloqueado...): só volta com cartão novo ou Pix
       if (s.validoAte && s.validoAte.toMillis() < agora - dias(15)) continue;
       const tid = torcidaDe(doc.ref);
       const t = await torcida(tid);
@@ -112,11 +114,16 @@ export const rotinaSocios = onSchedule(
       try {
         const r = await criarCobrancaSocio({ tid, torcida: t, socio: s, metodo: "cartao", renovacao: true, expiraSeg: PADROES.pixExpiraSegundos });
         if (typeof r.resultado === "object") {
-          await doc.ref.update({ ultimaFalhaCobranca: FieldValue.serverTimestamp(), motivoFalhaCobranca: r.resultado.falhou });
+          // Bandeiras penalizam retentativa de recusa IRREVERSÍVEL (ABECS): nesse caso para e pede cartão novo
+          await doc.ref.update({
+            ultimaFalhaCobranca: FieldValue.serverTimestamp(),
+            motivoFalhaCobranca: r.resultado.falhou,
+            ...(r.resultado.definitiva ? { cobrancaCartaoPausada: true } : {}),
+          });
         }
       } catch (e) {
         logger.error("Falha na renovação no cartão", { tid, uid: s.uid, erro: String(e) });
-        await doc.ref.update({ ultimaFalhaCobranca: FieldValue.serverTimestamp(), motivoFalhaCobranca: String(e).slice(0, 200) }).catch(() => undefined);
+        await doc.ref.update({ ultimaFalhaCobranca: FieldValue.serverTimestamp(), motivoFalhaCobranca: FALHA_TECNICA }).catch(() => undefined);
       }
     }
 

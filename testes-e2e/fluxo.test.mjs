@@ -7,7 +7,7 @@ import { getAuth as adminAuth } from "firebase-admin/auth";
 import { getFirestore as adminDb } from "firebase-admin/firestore";
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, updateDoc, addDoc, collection, Timestamp } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator, doc, getDoc, getDocs, query, where, setDoc, updateDoc, addDoc, collection, Timestamp } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator, httpsCallable } from "firebase/functions";
 import { getStorage, connectStorageEmulator, ref as sRef, uploadBytes } from "firebase/storage";
 import { iniciar, chamadas } from "./pagarme-simulada.mjs";
@@ -305,7 +305,7 @@ test("6. cartão recusado libera a reserva e devolve o motivo", async () => {
     titulares: [{ nome: "Amigo", cpf: "52998224725" }],
     cartao: { token: "tok_recusado", endereco: { cep: "40000000", logradouro: "Rua A", numero: "1", bairro: "Centro", cidade: "Salvador", uf: "BA" } },
   });
-  await assert.rejects(r, /não autorizada/);
+  await assert.rejects(r, /Saldo ou limite insuficiente/);
   const ev = await aDb.doc(`torcidas/${ctx.tid}/eventos/${ctx.evento}`).get();
   assert.equal(ev.get("reservados"), 0);
 });
@@ -415,7 +415,7 @@ test("10. sócio no cartão: cartão salvo, 1ª cobrança na hora e troca de car
   // cartão recusado: não ativa
   await assert.rejects(
     b.chamar("aderirSocio", { tid: ctx.tid, planoId: "mensal", sedeId: ctx.sedePrincipal, metodo: "cartao", cartao: { token: "tok_recusado" }, dados }),
-    /recusado/i,
+    /insuficiente/i,
   );
   // troca para um cartão bom: cobra na hora e ativa
   const t = await b.chamar("atualizarCartao", { tid: ctx.tid, cartao: { token: "tok_ok" } });
@@ -582,12 +582,43 @@ test("16. modo demonstração: torcida sem Pagar.me vende ingresso (Pix simulado
   await createUserWithEmailAndPassword(s.auth, "socio@furia.test", SENHA);
   const dadosSocio = { nome: "Sócio Demo", cpf: "86288366757", telefone: "71977770000", nascimento: "1999-09-09",
     endereco: { cep: "40000000", logradouro: "Rua S", numero: "1", bairro: "Norte", cidade: "Salvador", uf: "BA" } };
-  await assert.rejects(s.chamar("aderirSocio", { tid, planoId: "mensal", sedeId: sede.id, metodo: "cartao", cartao: { token: "tok_demo_recusado_0028" }, dados: dadosSocio }), /recusado/i);
+  await assert.rejects(s.chamar("aderirSocio", { tid, planoId: "mensal", sedeId: sede.id, metodo: "cartao", cartao: { token: "tok_demo_recusado_0028" }, dados: dadosSocio }), /banco não autorizou/i);
   const ok = await s.chamar("atualizarCartao", { tid, cartao: { token: "tok_demo_aprovado_0010" } });
   assert.equal(ok.status, "ativo");
 
+  ctx.demo.evento = ev.id;
+  ctx.demo.socio = s;
+
   // simulador nunca funciona em torcida com Pagar.me de verdade
   await assert.rejects(ctx.torcedor.chamar("simularDemo", { tid: ctx.tid, acao: "pagar_pedido", pedidoId: "x" }), /demonstração/);
+});
+
+test("17. conta do torcedor: ingresso no CPF do sócio aparece no painel dele; login com CPF e senha", async () => {
+  const { tid, evento, socio } = ctx.demo;
+  const amigo = navegador("demo-amigo");
+  await createUserWithEmailAndPassword(amigo.auth, "amigo@x.test", SENHA);
+  const p = await amigo.chamar("criarPedidoIngresso", {
+    tid, eventoId: evento, metodo: "pix",
+    comprador: { nome: "Amigo Comprador", email: "amigo@x.test", cpf: "11144477735", telefone: "71999991111" },
+    titulares: [{ nome: "Sócio Demo", cpf: "86288366757" }, { nome: "Amigo Comprador", cpf: "11144477735" }],
+  });
+  await amigo.chamar("simularDemo", { tid, acao: "pagar_pedido", pedidoId: p.pedidoId });
+
+  // quem comprou vê os 2; o sócio vê só o que está no CPF dele
+  const doAmigo = await getDocs(query(collection(amigo.db, `torcidas/${tid}/ingressos`), where("uid", "==", amigo.auth.currentUser.uid)));
+  assert.equal(doAmigo.size, 2);
+  const doSocio = await getDocs(query(collection(socio.db, `torcidas/${tid}/ingressos`), where("titularUid", "==", socio.auth.currentUser.uid)));
+  assert.deepEqual(doSocio.docs.map((d) => d.get("titularCpf")), ["86288366757"]);
+  const outro = doAmigo.docs.find((d) => d.get("titularCpf") === "11144477735");
+  await negado(getDoc(doc(socio.db, `torcidas/${tid}/ingressos/${outro.id}`)));
+
+  // login com CPF: devolve o e-mail só com a senha certa
+  const visitante = navegador("login-cpf");
+  assert.deepEqual(await visitante.chamar("entrarComCpf", { cpf: "111.444.777-35", senha: SENHA }), { email: "amigo@x.test" });
+  assert.deepEqual(await visitante.chamar("entrarComCpf", { cpf: "86288366757", senha: SENHA }), { email: "socio@furia.test" });
+  await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "52998224725", senha: SENHA }), /incorretos/); // CPF sem conta: mesma resposta
+  for (let i = 0; i < 5; i++) await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: "errada-123" }), /incorretos/);
+  await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: SENHA }), /Muitas tentativas/);
 });
 
 test("13. Storage: sócio envia a própria foto; estranhos são barrados", async () => {

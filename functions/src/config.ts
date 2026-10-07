@@ -12,6 +12,8 @@ export const QR_HMAC = defineSecret("QR_HMAC");
 /** Endereço público do app (usado em links e na URL de webhook mostrada às torcidas). */
 export const URL_APP = defineString("URL_APP", { default: "https://somosorganizada.com.br" });
 /** E-mails (separados por vírgula) que podem reivindicar acesso ao painel da plataforma. */
+/** Chave pública do app Web: usada só para conferir a senha no login por CPF. */
+export const WEB_API_KEY = defineString("WEB_API_KEY", { default: "" });
 export const PLATAFORMA_EMAILS = defineString("PLATAFORMA_EMAILS", { default: "conversaoblack@gmail.com" });
 
 // Cota de CPU por região do Cloud Run = soma de (vCPU x máx. instâncias) de todas as funções.

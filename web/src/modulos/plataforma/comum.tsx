@@ -79,18 +79,7 @@ export function rotuloMes(mes: string | undefined, longo = false): string {
   return `${new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(d).replace(".", "")}/${String(a).slice(2)}`;
 }
 
-/** "Torcida Jovem São João" → "torcida-jovem-sao-joao" */
-export function slugDoNome(nome: string): string {
-  return nome
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40)
-    .replace(/-+$/g, "");
-}
-export const SLUG_VALIDO = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
+export { slugDoNome, SLUG_VALIDO } from "@/modulos/inicio/planos";
 
 /** Moeda compacta para KPIs grandes: R$ 12,3 mil */
 export function moedaCompacta(centavos: number): string {
@@ -106,6 +95,8 @@ export interface AlertaSaude {
   tom: "alerta" | "perigo" | "info";
   titulo: string;
   detalhe: string;
+  /** "mensalidades" leva à tela de Mensalidades; padrão: depuração da torcida */
+  destino?: "mensalidades";
 }
 
 /** Alertas a partir do resumo (dashboard e lista). */
@@ -114,11 +105,53 @@ export function alertasDaTorcida(t: LinhaTorcida): AlertaSaude[] {
   if (t.status === "ativa" && !t.pagamentos.configurado) {
     a.push({ tom: "perigo", titulo: "Ativa sem pagamentos", detalhe: "A torcida está ativa mas a conta Pagar.me não foi configurada." });
   }
-  if (t.pagamentos.configurado && !t.pagamentos.webhookRecebidoEm) {
+  if (t.pagamentos.configurado && t.pagamentos.ambiente !== "demo" && !t.pagamentos.webhookRecebidoEm) {
     a.push({ tom: "alerta", titulo: "Nenhum webhook recebido", detalhe: "Pagamentos configurados, mas a Pagar.me nunca chamou o nosso webhook." });
+  }
+  if (t.saas?.situacao === "bloqueada" || t.saas?.bloqueada) {
+    a.push({ tom: "perigo", titulo: "Bloqueada por mensalidade", detalhe: "Site fora do ar por atraso na mensalidade da plataforma. Confirme o Pix em Mensalidades.", destino: "mensalidades" });
+  } else if (t.saas?.situacao === "atrasada") {
+    a.push({ tom: "alerta", titulo: "Mensalidade atrasada", detalhe: "Fatura vencida. Após 7 dias de atraso o site sai do ar.", destino: "mensalidades" });
+  }
+  if (t.saas?.faturasAbertas.some((f) => f.informadoPagamentoEm)) {
+    a.push({ tom: "info", titulo: "Pix informado", detalhe: "A diretoria avisou que pagou a mensalidade. Confira e confirme em Mensalidades.", destino: "mensalidades" });
   }
   if (t.status === "ativa" && t.pagamentos.configurado && t.pagamentos.ambiente === "teste") {
     a.push({ tom: "alerta", titulo: "Ambiente de teste", detalhe: "Torcida ativa usando chaves de teste: as vendas não são reais." });
   }
   return a;
 }
+
+// ── Mensalidade Somos Organizada ──────────────────────────
+export type SituacaoSaas = NonNullable<LinhaTorcida["saas"]>["situacao"];
+export const ROTULO_SITUACAO_SAAS: Record<SituacaoSaas, string> = {
+  em_dia: "Em dia",
+  aberta: "Fatura aberta",
+  atrasada: "Atrasada",
+  bloqueada: "Bloqueada",
+};
+export const TOM_SITUACAO_SAAS: Record<SituacaoSaas, Tom> = {
+  em_dia: "sucesso",
+  aberta: "info",
+  atrasada: "alerta",
+  bloqueada: "perigo",
+};
+export const ROTULO_PLANO_SAAS: Record<string, string> = {
+  pequena: "Torcida pequena",
+  grande: "Torcida grande",
+  gigante: "Torcida gigante",
+};
+
+/** Valor mensal previsto da torcida no plano Somos Organizada (gigante automático acima do limite). */
+export function valorPlanoDaTorcida(
+  t: LinhaTorcida,
+  planos: Record<string, { valor: number }>,
+  limiteGigante: number,
+): { plano: string; valor: number } | null {
+  if (!t.saas) return null;
+  const plano = (t.geral.socios?.ativo ?? 0) > limiteGigante ? "gigante" : t.saas.plano;
+  return { plano, valor: planos[plano]?.valor ?? 0 };
+}
+
+export const ROTULO_AMBIENTE: Record<string, string> = { producao: "Produção", teste: "Teste", demo: "Demonstração" };
+export const TOM_AMBIENTE: Record<string, Tom> = { producao: "sucesso", teste: "alerta", demo: "info" };

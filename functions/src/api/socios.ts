@@ -11,7 +11,8 @@ import { pagarmeDaTorcida } from "../pagarme/credenciais";
 import { clientePg, enderecoPg } from "../pagarme/montagem";
 import { dividir } from "../dominio/split";
 import { PagarmeErro, type Pagarme } from "../pagarme/cliente";
-import { aplicarRespostaPedido, pagamentoPg, torcidaVendendo } from "./ingressos";
+import { registrarCpfDaConta } from "./conta";
+import { aplicarRespostaPedido, mensagemErroPagarme, pagamentoPg, torcidaVendendo } from "./ingressos";
 import type { Pedido, Plano, Sede, Socio, StatusSocio, Torcida } from "../dominio/tipos";
 
 const segredos = [MASTER_KEY, QR_HMAC];
@@ -102,7 +103,11 @@ async function salvarCartao(tid: string, socio: Socio, cartao: Record<string, un
     cartaoFinal: card.last_four_digits ?? null,
     cartaoBandeira: card.brand ?? null,
   };
-  await refs.socio(tid, socio.uid).update({ pagarme, metodo: "cartao", atualizadoEm: FieldValue.serverTimestamp() });
+  // Cartão novo: limpa a recusa anterior e volta a cobrar automaticamente
+  await refs.socio(tid, socio.uid).update({
+    pagarme, metodo: "cartao", atualizadoEm: FieldValue.serverTimestamp(),
+    ultimaFalhaCobranca: FieldValue.delete(), motivoFalhaCobranca: FieldValue.delete(), cobrancaCartaoPausada: FieldValue.delete(),
+  });
   return { ...socio, metodo: "cartao", pagarme: pagarme as Socio["pagarme"] };
 }
 
@@ -119,12 +124,12 @@ export const atualizarCartao = onCall({ secrets: segredos }, async (req) => {
     const emDia = socio.status === "ativo" && !!socio.validoAte && socio.validoAte.toMillis() > Date.now();
     if (emDia || socio.status === "suspenso" || socio.status === "cancelado") return { cobrado: false, status: socio.status };
     const r = await criarCobrancaSocio({ tid, torcida, socio: ficha, metodo: "cartao", renovacao: !!socio.matricula, expiraSeg: PADROES.pixExpiraSegundos });
-    if (typeof r.resultado === "object") throw new HttpsError("aborted", `Cartão recusado: ${r.resultado.falhou}`);
+    if (typeof r.resultado === "object") throw new HttpsError("aborted", r.resultado.falhou);
     const atual = (await refs.socio(tid, uid).get()).data() as Socio;
     return { cobrado: true, status: atual.status };
   } catch (e) {
     if (e instanceof HttpsError) throw e;
-    if (e instanceof PagarmeErro) throw new HttpsError("unavailable", `Cartão não aceito: ${e.message}`);
+    if (e instanceof PagarmeErro) throw new HttpsError("unavailable", mensagemErroPagarme(e));
     throw new HttpsError("internal", "Não foi possível atualizar o cartão.");
   }
 });
@@ -206,6 +211,7 @@ export const aderirSocio = onCall({ secrets: segredos }, async (req) => {
     contarMudancaStatus(tx, tid, atual?.status ?? null, "pendente_pagamento");
     return ficha;
   });
+  await registrarCpfDaConta(uid, cpf, false);
 
   try {
     if (metodo === "pix") {
@@ -217,13 +223,13 @@ export const aderirSocio = onCall({ secrets: segredos }, async (req) => {
     // Os próximos ciclos são cobrados pela rotina diária no mesmo cartão.
     const fichaComCartao = await salvarCartao(tid, socio, (d.cartao ?? {}) as Record<string, unknown>, end);
     const r = await criarCobrancaSocio({ tid, torcida, socio: fichaComCartao, metodo: "cartao", renovacao: false, expiraSeg: PADROES.pixExpiraSegundos });
-    if (typeof r.resultado === "object") throw new HttpsError("aborted", `Cartão recusado: ${r.resultado.falhou}`);
+    if (typeof r.resultado === "object") throw new HttpsError("aborted", r.resultado.falhou);
     const atualizado = (await refs.socio(tid, uid).get()).data() as Socio;
     return { modo: "assinatura", status: atualizado.status };
   } catch (e) {
     logger.error("Falha na adesão de sócio", { tid, uid, erro: String(e) });
     if (e instanceof HttpsError) throw e;
-    if (e instanceof PagarmeErro) throw new HttpsError("unavailable", `Pagamento recusado: ${e.message}`);
+    if (e instanceof PagarmeErro) throw new HttpsError("unavailable", mensagemErroPagarme(e));
     throw new HttpsError("internal", "Não foi possível concluir a adesão.");
   }
 });

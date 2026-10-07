@@ -5,7 +5,7 @@ import { collection, orderBy, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { iniciais, moeda, taxa } from "@/lib/formatos";
 import type { ComId, Ingresso, Socio, Torcida } from "@/lib/tipos";
-import { useColecao } from "@/hooks/dados";
+import { useColecao, type Estado } from "@/hooks/dados";
 import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import { Login } from "@/componentes/Login";
 import { Avatar, Botao, BotaoLink, Carregando, cx, Icone, type NomeIcone } from "@/ui";
@@ -189,17 +189,31 @@ function Saudacao({ ficha }: { ficha: Socio }) {
   );
 }
 
+/** Ingressos comprados pela conta + ingressos que outra pessoa comprou no CPF do sócio. */
+function useMeusIngressos(tid: string, uid: string | null): Estado<ComId<Ingresso>[]> {
+  const col = collection(db, `torcidas/${tid}/ingressos`);
+  const comprados = useColecao<Ingresso>(
+    useMemo(() => (uid ? query(col, where("uid", "==", uid), orderBy("eventoData", "desc")) : null), [tid, uid]), // eslint-disable-line react-hooks/exhaustive-deps
+    `meus-ingressos-${tid}-${uid ?? "-"}`,
+  );
+  const emMeuNome = useColecao<Ingresso>(
+    useMemo(() => (uid ? query(col, where("titularUid", "==", uid), orderBy("eventoData", "desc")) : null), [tid, uid]), // eslint-disable-line react-hooks/exhaustive-deps
+    `ingressos-titular-${tid}-${uid ?? "-"}`,
+  );
+  return useMemo(() => {
+    const porId = new Map([...comprados.dados, ...emMeuNome.dados].map((i) => [i.id, i]));
+    const dados = [...porId.values()].sort((a, b) => b.eventoData.toMillis() - a.eventoData.toMillis());
+    return { dados, carregando: comprados.carregando || emMeuNome.carregando, erro: comprados.erro ?? emMeuNome.erro };
+  }, [comprados, emMeuNome]);
+}
+
 export default function PainelSocio() {
   const { tid, torcida } = useTorcida();
   const { ficha, carregando, usuario } = useMinhaFicha(tid);
   const logado = !!usuario && !usuario.isAnonymous;
   const foto = useFotoSocio(ficha?.fotoPath);
 
-  const consulta = useMemo(
-    () => (logado && ficha ? query(collection(db, `torcidas/${tid}/ingressos`), where("uid", "==", usuario!.uid), orderBy("eventoData", "desc")) : null),
-    [tid, logado, ficha ? ficha.uid : null, usuario?.uid],
-  );
-  const ingressos = useColecao<Ingresso>(consulta, `meus-ingressos-${tid}-${logado ? usuario!.uid : "-"}-${!!ficha}`);
+  const ingressos = useMeusIngressos(tid, logado ? usuario!.uid : null);
   const proximos = useMemo(
     () => ingressos.dados.filter((i) => ehProximo(i) && i.status === "valido").sort((a, b) => a.eventoData.toMillis() - b.eventoData.toMillis()),
     [ingressos.dados],
@@ -222,8 +236,9 @@ export default function PainelSocio() {
             <Icone nome="escudo" className="size-5 text-primaria" /> Carteirinha, ingressos e mensalidade num só lugar
           </div>
           <Login
-            titulo="Área do sócio"
-            subtitulo={`Entre com o e-mail e a senha da sua associação à ${torcida.nome}.`}
+            titulo="Minha conta"
+            subtitulo="Entre com seu CPF ou e-mail e a senha. Sócios e quem comprou ingresso usam a mesma conta."
+            aceitaCpf
             rodape={
               <>
                 Ainda não é sócio?{" "}
@@ -237,29 +252,29 @@ export default function PainelSocio() {
       </div>
     );
   } else if (!ficha) {
+    // Conta de quem comprou ingresso sem ser sócio: vê os ingressos e o convite para se associar
     conteudo = (
-      <div className="min-h-[calc(100dvh-4rem)] grid place-items-center py-10">
-        <div className="w-full max-w-md text-center so-entrar">
-          <div className="relative mx-auto w-48 aspect-[54/86] rounded-[22px] border-2 border-dashed border-linha-forte grid place-items-center rotate-[-6deg]">
-            <div className="text-texto-3">
-              <Icone nome="escudo" className="size-10 mx-auto" />
-              <p className="mt-2 text-xs font-bold uppercase tracking-[.2em]">Sua carteirinha</p>
-            </div>
-          </div>
-          <h1 className="mt-8 text-2xl font-bold">Você ainda não é sócio</h1>
-          <p className="text-texto-2 mt-2">
-            A conta <strong className="text-texto">{usuario!.email}</strong> não tem associação na {torcida.nome}. Associe-se para ter carteirinha digital, preço de sócio nos
-            ingressos e fazer parte da história.
-          </p>
-          <div className="mt-6 flex flex-col gap-2.5">
-            <BotaoLink to={`/${torcida.slug}?aba=socios`} tamanho="lg" largo iconeDireita="setaDireita">
-              Quero ser sócio
-            </BotaoLink>
-            <Botao variante="fantasma" onClick={() => signOut(auth)} icone="sair">
-              Entrar com outra conta
-            </Botao>
-          </div>
+      <div className="py-8 pb-16 space-y-6 animate-surgir">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.2em] text-texto-3">Minha conta</p>
+          <h1 className="text-2xl font-bold mt-1">Olá{usuario!.displayName ? `, ${usuario!.displayName.split(" ")[0]}` : ""}!</h1>
+          <p className="text-sm text-texto-2 mt-1">{usuario!.email}</p>
         </div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border border-primaria/40 bg-primaria/10 p-4">
+          <Icone nome="escudo" className="size-8 text-primaria shrink-0" />
+          <div className="flex-1 text-sm">
+            <p className="font-semibold">Seja sócio da {torcida.nome}</p>
+            <p className="text-texto-2">Carteirinha digital e preço de sócio nos ingressos.</p>
+          </div>
+          <BotaoLink to={`/${torcida.slug}?aba=socios`} iconeDireita="setaDireita">Quero ser sócio</BotaoLink>
+        </div>
+        <section>
+          <h2 className="text-lg font-bold mb-3">Meus ingressos</h2>
+          <AbaIngressos tid={tid} torcida={torcida} ingressos={ingressos} />
+        </section>
+        <Botao variante="fantasma" onClick={() => signOut(auth)} icone="sair">
+          Sair da conta
+        </Botao>
       </div>
     );
   } else {

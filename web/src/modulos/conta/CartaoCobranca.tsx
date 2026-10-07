@@ -137,7 +137,10 @@ export function AvisoFalhaCartao({ tid, torcida, ficha, className }: { tid: stri
           </div>
         }
       >
-        Não conseguimos cobrar sua mensalidade no cartão{ficha.motivoFalhaCobranca ? `: ${ficha.motivoFalhaCobranca}` : ""}. Troque o cartão ou pague no Pix.
+        Não conseguimos cobrar sua mensalidade no cartão. {ficha.motivoFalhaCobranca}{" "}
+        {ficha.cobrancaCartaoPausada
+          ? "Não vamos tentar de novo neste cartão: troque o cartão ou pague no Pix para continuar em dia."
+          : "Vamos tentar de novo automaticamente amanhã. Se preferir, troque o cartão ou pague no Pix agora."}
       </Aviso>
       <ModalCartao aberto={modal} fechar={() => setModal(false)} tid={tid} torcida={torcida} ficha={ficha} titulo="Trocar cartão" />
     </>

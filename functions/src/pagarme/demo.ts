@@ -103,7 +103,8 @@ export class PagarmeDemo extends Pagarme {
         charge.last_transaction = {
           id: this.novoId("tran"),
           status: "not_authorized",
-          acquirer_message: "Transação não autorizada (cartão de teste de recusa)",
+          acquirer_message: "Contate a central do seu cartão",
+          acquirer_return_code: "05",
         };
       }
     }

@@ -32,3 +32,4 @@ export {
 } from "./api/saas";
 export { slugDisponivel, solicitarTorcida, avaliarSolicitacao } from "./api/cadastro";
 export { expirarPedidos, rotinaSocios } from "./api/agendados";
+export { entrarComCpf } from "./api/conta";

@@ -121,7 +121,7 @@ export function iniciar(porta = 4010) {
         if (pay.credit_card.card_token === "tok_recusado") {
           pedido.status = "failed";
           pedido.charges[0].status = "failed";
-          pedido.charges[0].last_transaction = { id: id("tran"), status: "not_authorized", acquirer_message: "Transação não autorizada" };
+          pedido.charges[0].last_transaction = { id: id("tran"), status: "not_authorized", acquirer_message: "Saldo insuficiente", acquirer_return_code: "51" };
         } else pagar(pedido);
       }
       pedidos.set(pedido.id, pedido);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { signInAnonymously } from "firebase/auth";
+import { createUserWithEmailAndPassword, EmailAuthProvider, linkWithCredential, signInAnonymously, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
 import type { ComId, Evento, Sede } from "@/lib/tipos";
@@ -39,6 +39,8 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [loginAberto, setLoginAberto] = useState(false);
+  const [senha, setSenha] = useState("");
+  const [criandoConta, setCriandoConta] = useState(false);
 
   const uidLogado = usuario && !usuario.isAnonymous ? usuario.uid : null;
 
@@ -56,6 +58,11 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
   }, [tid, evento.id, uidLogado]);
 
   const socioPreco = cot?.socio && !cot.socio.jaUsou ? cot.socio : null;
+
+  // Conta logada sem ficha de sócio: pelo menos o e-mail já vem preenchido
+  useEffect(() => {
+    if (uidLogado && usuario?.email) setComprador((c) => ({ ...c, email: c.email || usuario.email!, nome: c.nome || usuario.displayName || "" }));
+  }, [uidLogado]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pré-preenche com os dados do sócio logado
   useEffect(() => {
@@ -112,6 +119,42 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
       requestAnimationFrame(() => document.querySelector("[data-erro]")?.scrollIntoView({ behavior: "smooth", block: "center" }));
     }
     return !Object.keys(e).length;
+  }
+
+  /**
+   * Todo ingresso fica numa conta (e-mail + senha; depois dá para entrar também com o CPF).
+   * Se o navegador já tinha sessão anônima, ela vira a conta: nada comprado antes se perde.
+   */
+  async function avancarParaPagamento() {
+    if (!validarTitulares()) return;
+    if (uidLogado) return setEtapa(2);
+    if (senha.length < 8) {
+      setErros((e) => ({ ...e, senha: "Crie uma senha com pelo menos 8 caracteres." }));
+      return;
+    }
+    setCriandoConta(true);
+    try {
+      const atual = auth.currentUser;
+      const cred = atual?.isAnonymous
+        ? await linkWithCredential(atual, EmailAuthProvider.credential(comprador.email.trim(), senha))
+        : await createUserWithEmailAndPassword(auth, comprador.email.trim(), senha);
+      await updateProfile(cred.user, { displayName: comprador.nome.trim() }).catch(() => undefined);
+      setEtapa(2);
+    } catch (err) {
+      const c = String((err as { code?: string }).code ?? "");
+      setErros((e) => ({
+        ...e,
+        senha: /email-already-in-use|credential-already-in-use/.test(c)
+          ? "Este e-mail já tem conta. Toque em “Entrar” logo acima e use sua senha."
+          : /weak-password/.test(c)
+            ? "Senha fraca: use pelo menos 8 caracteres."
+            : /invalid-email/.test(c)
+              ? "E-mail inválido."
+              : mensagemDeErro(err),
+      }));
+    } finally {
+      setCriandoConta(false);
+    }
   }
 
   async function pagar() {
@@ -253,6 +296,11 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
                 Usar os dados do ingresso 1
               </button>
             )}
+            {!uidLogado && (
+              <button type="button" className="block text-sm text-texto-2" onClick={() => setLoginAberto(true)}>
+                Já tem conta? <span className="font-semibold text-primaria">Entrar</span>
+              </button>
+            )}
             <Campo rotulo="Nome" value={comprador.nome} onChange={(v) => setComprador({ ...comprador, nome: v })} erro={erros.cnome} autoComplete="name" />
             <Campo
               rotulo="E-mail"
@@ -261,19 +309,32 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
               onChange={(v) => setComprador({ ...comprador, email: v })}
               erro={erros.cemail}
               autoComplete="email"
-              dica="Usado para identificar sua compra."
+              disabled={!!uidLogado && !!usuario?.email && comprador.email === usuario.email}
+              dica={uidLogado ? "Os ingressos ficam na sua conta." : "Será o login da sua conta."}
             />
             <div className="grid sm:grid-cols-2 gap-3">
               <Campo rotulo="CPF" mascara="cpf" value={comprador.cpf} onChange={(v) => setComprador({ ...comprador, cpf: v })} erro={erros.ccpf} />
               <Campo rotulo="Celular (WhatsApp)" mascara="telefone" value={comprador.telefone} onChange={(v) => setComprador({ ...comprador, telefone: v })} erro={erros.ctel} autoComplete="tel" />
             </div>
+            {!uidLogado && (
+              <Campo
+                rotulo="Crie uma senha"
+                type="password"
+                autoComplete="new-password"
+                icone="cadeado"
+                value={senha}
+                onChange={setSenha}
+                erro={erros.senha}
+                dica="Com seu CPF (ou e-mail) e esta senha você vê seus ingressos em qualquer celular."
+              />
+            )}
           </fieldset>
 
           <div className="flex gap-3">
             <Botao aria-label="Voltar" className="shrink-0 px-4 sm:px-7" variante="contorno" tamanho="lg" onClick={() => setEtapa(0)} icone="setaEsquerda">
               <span className="hidden sm:inline">Voltar</span>
             </Botao>
-            <Botao largo tamanho="lg" iconeDireita="setaDireita" onClick={() => validarTitulares() && setEtapa(2)}>
+            <Botao largo tamanho="lg" iconeDireita="setaDireita" carregando={criandoConta} onClick={avancarParaPagamento}>
               Ir para pagamento
             </Botao>
           </div>
@@ -340,8 +401,9 @@ function EntrarSocio({ aoEntrar }: { aoEntrar: () => void }) {
   return (
     <div className="-mx-6 -my-4 [&>div]:border-0 [&>div]:bg-transparent">
       <Login
-        titulo="Entrar como sócio"
-        subtitulo={`Use o e-mail da sua associação na ${torcida.nome}.`}
+        titulo="Entrar na sua conta"
+        subtitulo="Use seu CPF ou e-mail e a senha. Sócios liberam o preço de sócio."
+        aceitaCpf
         rodape={
           <a href={`/${torcida.slug}?aba=socios`} className="font-semibold text-primaria">
             Ainda não é sócio? Conheça os planos

@@ -3,7 +3,8 @@ import { Link } from "react-router";
 import { moeda, relativo } from "@/lib/formatos";
 import type { Stats } from "@/lib/tipos";
 import { Aviso, Botao, CabecalhoPagina, Cartao, Carregando, cx, Icone, Indicador, Selo, Vazio } from "@/ui";
-import { alertasDaTorcida, gmv, moedaCompacta, numero, plural, rotuloMes, ROTULO_STATUS_TORCIDA, TOM_STATUS_TORCIDA, useResumo } from "./comum";
+import { alertasDaTorcida, gmv, moedaCompacta, numero, plural, rotuloMes, ROTULO_STATUS_TORCIDA, TOM_STATUS_TORCIDA, useResumo, valorPlanoDaTorcida } from "./comum";
+import { usePlanosSaas } from "@/modulos/inicio/planos";
 
 function somar(lista: (Stats | undefined)[]) {
   const t = { ingressos: 0, socios: 0, taxa: 0, ingressosQtd: 0, pedidos: 0, novosSocios: 0, sociosAtivos: 0 };
@@ -21,6 +22,7 @@ function somar(lista: (Stats | undefined)[]) {
 
 export default function Dashboard() {
   const { resumo, carregando, erro, recarregar } = useResumo();
+  const cfg = usePlanosSaas();
 
   const kpi = useMemo(() => {
     if (!resumo) return null;
@@ -34,12 +36,15 @@ export default function Dashboard() {
       ativas: ativas.length,
       implantacao: ts.filter((t) => t.status === "implantacao").length,
       suspensas: ts.filter((t) => t.status === "suspensa").length,
-      mrr: ativas.reduce((s, t) => s + (t.mensalidadeSaas ?? 0), 0),
+      mrr: ts.reduce((s, t) => s + (t.saas && !t.saas.bloqueada ? (valorPlanoDaTorcida(t, cfg.planos, cfg.limiteGigante)?.valor ?? 0) : 0), 0),
+      assinantes: ts.filter((t) => t.saas && !t.saas.bloqueada).length,
+      atrasadas: ts.filter((t) => t.saas && (t.saas.situacao === "atrasada" || t.saas.situacao === "bloqueada")).length,
+      publicadas: ts.filter((t) => t.publicada).length,
       chamados: ts.reduce((s, t) => s + (t.chamadosAbertos ?? 0), 0),
       ranking: [...ts].sort((a, b) => gmv(b.mes) - gmv(a.mes)).slice(0, 8),
       alertas: ts.flatMap((t) => alertasDaTorcida(t).map((a) => ({ ...a, torcida: t }))),
     };
-  }, [resumo]);
+  }, [resumo, cfg.planos, cfg.limiteGigante]);
 
   return (
     <>
@@ -56,6 +61,19 @@ export default function Dashboard() {
       {!resumo && carregando && <Carregando texto="Somando os números das torcidas…" />}
       {resumo && kpi && (
         <div className="space-y-8">
+          {resumo.solicitacoesPendentes > 0 && (
+            <Aviso
+              tom="info"
+              titulo={`${plural(resumo.solicitacoesPendentes, "cadastro de torcida aguardando", "cadastros de torcida aguardando")} aprovação`}
+              acao={
+                <Link to="/plataforma/solicitacoes" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primaria hover:underline">
+                  Ver solicitações <Icone nome="setaDireita" className="size-4" />
+                </Link>
+              }
+            >
+              Torcidas que se cadastraram pela página principal e esperam a análise da equipe.
+            </Aviso>
+          )}
           <section aria-labelledby="t-mes">
             <h2 id="t-mes" className="text-sm font-semibold uppercase tracking-wide text-texto-3 mb-3">
               Este mês · {rotuloMes(resumo.mes, true)}
@@ -70,7 +88,18 @@ export default function Dashboard() {
               />
               <Indicador rotulo="Taxa de serviço gerada" valor={moedaCompacta(kpi.mes.taxa)} detalhe="Vai para o caixa das torcidas" icone="grafico" tom="info" />
               <Indicador rotulo="Ingressos vendidos" valor={numero(kpi.mes.ingressosQtd)} detalhe={`${numero(kpi.mes.pedidos)} pedidos pagos`} icone="ingresso" />
-              <Indicador rotulo="MRR da plataforma" valor={moedaCompacta(kpi.mrr)} detalhe={`Mensalidade SaaS de ${plural(kpi.ativas, "torcida ativa", "torcidas ativas")}`} icone="escudo" tom="sucesso" />
+              <Indicador
+                rotulo="MRR da plataforma"
+                valor={moedaCompacta(kpi.mrr)}
+                detalhe={
+                  <Link to="/plataforma/mensalidades" className="hover:text-texto">
+                    {plural(kpi.assinantes, "assinatura", "assinaturas")}
+                    {kpi.atrasadas ? ` · ${kpi.atrasadas} em atraso` : ""}
+                  </Link>
+                }
+                icone="escudo"
+                tom={kpi.atrasadas ? "alerta" : "sucesso"}
+              />
             </div>
           </section>
 
@@ -89,7 +118,7 @@ export default function Dashboard() {
                     <span className="text-base font-semibold text-texto-3"> {kpi.ativas === 1 ? "ativa" : "ativas"}</span>
                   </span>
                 }
-                detalhe={`${kpi.implantacao} em implantação${kpi.suspensas ? ` · ${kpi.suspensas} suspensas` : ""}`}
+                detalhe={`${kpi.publicadas} no ar · ${kpi.implantacao} em implantação${kpi.suspensas ? ` · ${kpi.suspensas} suspensas` : ""}`}
                 icone="bandeira"
               />
               <Indicador
@@ -151,7 +180,7 @@ export default function Dashboard() {
             {kpi.alertas.length === 0 ? (
               <Cartao>
                 <Vazio icone="checkCirculo" titulo="Tudo em ordem">
-                  Nenhuma torcida ativa sem pagamentos, sem webhook ou em ambiente de teste.
+                  Nenhuma torcida com pagamentos pendentes, webhook parado, ambiente de teste ou mensalidade em atraso.
                 </Vazio>
               </Cartao>
             ) : (
@@ -159,13 +188,13 @@ export default function Dashboard() {
                 {kpi.alertas.map((a, i) => (
                   <Link
                     key={i}
-                    to={`/plataforma/torcidas/${a.torcida.id}/depuracao`}
+                    to={a.destino === "mensalidades" ? "/plataforma/mensalidades" : `/plataforma/torcidas/${a.torcida.id}/depuracao`}
                     className={cx(
                       "flex gap-3 rounded-2xl border p-4 transition-colors hover:bg-superficie-2",
-                      a.tom === "perigo" ? "border-perigo/30 bg-perigo/8" : "border-alerta/30 bg-alerta/8",
+                      a.tom === "perigo" ? "border-perigo/30 bg-perigo/8" : a.tom === "info" ? "border-info/30 bg-info/8" : "border-alerta/30 bg-alerta/8",
                     )}
                   >
-                    <Icone nome="alerta" className={cx("size-5 shrink-0 mt-0.5", a.tom === "perigo" ? "text-perigo" : "text-alerta")} />
+                    <Icone nome={a.tom === "info" ? "info" : "alerta"} className={cx("size-5 shrink-0 mt-0.5", a.tom === "perigo" ? "text-perigo" : a.tom === "info" ? "text-info" : "text-alerta")} />
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold">{a.torcida.nome}</span>

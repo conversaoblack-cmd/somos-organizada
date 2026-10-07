@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { api, mensagemDeErro } from "@/lib/api";
-import { centavosDeTexto, emailValido, moeda, relativo } from "@/lib/formatos";
+import { emailValido, moeda, relativo } from "@/lib/formatos";
 import { copiarTexto } from "@/lib/servicos";
 import {
   Aviso,
@@ -21,7 +21,12 @@ import {
   alertasDaTorcida,
   gmv,
   numero,
+  ROTULO_AMBIENTE,
+  ROTULO_PLANO_SAAS,
+  TOM_AMBIENTE,
+  ROTULO_SITUACAO_SAAS,
   ROTULO_STATUS_TORCIDA,
+  TOM_SITUACAO_SAAS,
   SLUG_VALIDO,
   slugDoNome,
   TOM_STATUS_TORCIDA,
@@ -33,11 +38,36 @@ export function SeloPagamentos({ t }: { t: LinhaTorcida }) {
   if (!t.pagamentos.configurado) return <Selo tom="perigo">Não configurado</Selo>;
   return (
     <span className="inline-flex flex-col gap-1">
-      <Selo tom={t.pagamentos.ambiente === "producao" ? "sucesso" : "alerta"} ponto>
-        {t.pagamentos.ambiente === "producao" ? "Produção" : "Teste"}
+      <Selo tom={TOM_AMBIENTE[t.pagamentos.ambiente ?? ""] ?? "alerta"} ponto>
+        {ROTULO_AMBIENTE[t.pagamentos.ambiente ?? ""] ?? "—"}
       </Selo>
       <span className="text-xs text-texto-3">
         {t.pagamentos.webhookRecebidoEm ? `webhook ${relativo(t.pagamentos.webhookRecebidoEm)}` : "nenhum webhook"}
+      </span>
+    </span>
+  );
+}
+
+/** Plano Somos Organizada + situação da mensalidade. */
+export function SeloPlano({ t }: { t: LinhaTorcida }) {
+  if (!t.saas) return <span className="text-xs text-texto-3">{t.publicada ? "Sem assinatura" : "Ainda não publicou"}</span>;
+  return (
+    <span className="inline-flex flex-col gap-1 items-start">
+      <span className="text-sm">{ROTULO_PLANO_SAAS[t.saas.plano] ?? t.saas.plano}</span>
+      <Selo tom={TOM_SITUACAO_SAAS[t.saas.situacao]}>{ROTULO_SITUACAO_SAAS[t.saas.situacao]}</Selo>
+    </span>
+  );
+}
+
+/** Publicada sim/não + módulos ligados. */
+export function SeloSite({ t }: { t: LinhaTorcida }) {
+  return (
+    <span className="inline-flex flex-col gap-1 items-start">
+      <Selo tom={t.publicada ? "sucesso" : "neutro"} ponto>
+        {t.publicada ? "No ar" : "Não publicada"}
+      </Selo>
+      <span className="text-xs text-texto-3">
+        {[t.modulos?.eventos !== false && "Eventos", t.modulos?.socios !== false && "Sócios"].filter(Boolean).join(" + ") || "Nenhum módulo"}
       </span>
     </span>
   );
@@ -90,10 +120,11 @@ export default function Torcidas() {
                 <tr>
                   <th className="px-5 py-3 font-medium">Torcida</th>
                   <th className="px-3 py-3 font-medium">Status</th>
+                  <th className="px-3 py-3 font-medium">Site</th>
                   <th className="px-3 py-3 font-medium">Pagamentos</th>
                   <th className="px-3 py-3 font-medium text-right">Sócios ativos</th>
                   <th className="px-3 py-3 font-medium text-right">Receita do mês</th>
-                  <th className="px-3 py-3 font-medium text-right">Mensalidade SaaS</th>
+                  <th className="px-3 py-3 font-medium">Plano Somos</th>
                   <th className="px-3 py-3 font-medium text-right">Chamados</th>
                   <th className="px-3 py-3" />
                 </tr>
@@ -117,11 +148,16 @@ export default function Torcidas() {
                         <Selo tom={TOM_STATUS_TORCIDA[t.status]}>{ROTULO_STATUS_TORCIDA[t.status]}</Selo>
                       </td>
                       <td className="px-3 py-3.5">
+                        <SeloSite t={t} />
+                      </td>
+                      <td className="px-3 py-3.5">
                         <SeloPagamentos t={t} />
                       </td>
                       <td className="px-3 py-3.5 text-right numeros">{numero(t.geral.socios?.ativo)}</td>
                       <td className="px-3 py-3.5 text-right numeros">{moeda(gmv(t.mes))}</td>
-                      <td className="px-3 py-3.5 text-right numeros">{moeda(t.mensalidadeSaas)}</td>
+                      <td className="px-3 py-3.5">
+                        <SeloPlano t={t} />
+                      </td>
                       <td className="px-3 py-3.5 text-right">
                         {t.chamadosAbertos ? <Selo tom="alerta">{t.chamadosAbertos}</Selo> : <span className="text-texto-3">0</span>}
                       </td>
@@ -172,14 +208,22 @@ export default function Torcidas() {
                         <dd className="font-semibold numeros">{numero(t.geral.socios?.ativo)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-texto-3">Mensalidade SaaS</dt>
-                        <dd className="numeros">{moeda(t.mensalidadeSaas)}</dd>
+                        <dt className="text-xs text-texto-3 mb-1">Plano Somos</dt>
+                        <dd>
+                          <SeloPlano t={t} />
+                        </dd>
                       </div>
                       <div>
                         <dt className="text-xs text-texto-3">Chamados abertos</dt>
                         <dd className="numeros">{t.chamadosAbertos}</dd>
                       </div>
-                      <div className="col-span-2">
+                      <div>
+                        <dt className="text-xs text-texto-3 mb-1">Site</dt>
+                        <dd>
+                          <SeloSite t={t} />
+                        </dd>
+                      </div>
+                      <div>
                         <dt className="text-xs text-texto-3 mb-1">Pagamentos</dt>
                         <dd>
                           <SeloPagamentos t={t} />
@@ -225,7 +269,6 @@ function NovaTorcida({ aberto, fechar, aoCriar, slugsUsados }: { aberto: boolean
   const [sede, setSede] = useState("");
   const [diretorNome, setDiretorNome] = useState("");
   const [diretorEmail, setDiretorEmail] = useState("");
-  const [mensalidade, setMensalidade] = useState("");
   const [tentou, setTentou] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -251,7 +294,6 @@ function NovaTorcida({ aberto, fechar, aoCriar, slugsUsados }: { aberto: boolean
     setSede("");
     setDiretorNome("");
     setDiretorEmail("");
-    setMensalidade("");
     setTentou(false);
     setErro(null);
     setCriada(null);
@@ -273,7 +315,6 @@ function NovaTorcida({ aberto, fechar, aoCriar, slugsUsados }: { aberto: boolean
         slug: slugFinal,
         nomeSedePrincipal: sede.trim() || undefined,
         diretor: { nome: diretorNome.trim(), email: diretorEmail.trim().toLowerCase() },
-        mensalidadeSaas: centavosDeTexto(mensalidade),
       });
       setCriada({ ...r, nome: nome.trim(), diretor: diretorNome.trim() });
       aoCriar();
@@ -328,9 +369,8 @@ function NovaTorcida({ aberto, fechar, aoCriar, slugsUsados }: { aberto: boolean
             <Campo rotulo="Nome" value={diretorNome} onChange={setDiretorNome} erro={tentou && erros.diretorNome} />
             <Campo rotulo="E-mail" type="email" value={diretorEmail} onChange={setDiretorEmail} erro={tentou && erros.diretorEmail} dica="Vai receber o acesso de diretoria ao painel." />
           </div>
-          <Campo rotulo="Mensalidade SaaS" mascara="moeda" value={mensalidade} onChange={setMensalidade} placeholder="0,00" dica="Valor que a diretoria paga à Somos Organizada por mês." />
           <Aviso tom="info">
-            A torcida nasce <strong>em implantação</strong>, com taxa de serviço padrão. A diretoria configura a própria conta Pagar.me no painel dela — nós não temos
+            A torcida nasce <strong>em implantação</strong> e fora do ar. A mensalidade começa quando a diretoria publicar o site e escolher o plano. A diretoria configura a própria conta Pagar.me no painel dela — nós não temos
             acesso ao dinheiro.
           </Aviso>
           {erro && <Aviso tom="perigo">{erro}</Aviso>}

@@ -1,16 +1,30 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { useDocumento } from "@/hooks/dados";
+import { useColecao, useDocumento } from "@/hooks/dados";
 import { api, mensagemDeErro } from "@/lib/api";
-import { centavosDeTexto, moeda } from "@/lib/formatos";
-import type { StatusTorcida, Torcida } from "@/lib/tipos";
+import { dataCurta, dataHora, moeda } from "@/lib/formatos";
+import { collection, limit, orderBy, query } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import type { FaturaSaas, StatusTorcida, Torcida } from "@/lib/tipos";
+import { usePlanosSaas } from "@/modulos/inicio/planos";
+import { ConfirmarPix } from "./Mensalidades";
 import { Abas, AreaTexto, Aviso, Botao, Campo, Cartao, Carregando, Icone, Indicador, Modal, OpcoesCartao, Selo, Vazio, useToast } from "@/ui";
-import { gmv, numero, ROTULO_STATUS_TORCIDA, TOM_STATUS_TORCIDA, useResumo } from "./comum";
-import { SeloPagamentos } from "./Torcidas";
+import {
+  gmv,
+  numero,
+  ROTULO_PLANO_SAAS,
+  ROTULO_SITUACAO_SAAS,
+  ROTULO_STATUS_TORCIDA,
+  TOM_SITUACAO_SAAS,
+  TOM_STATUS_TORCIDA,
+  useResumo,
+  valorPlanoDaTorcida,
+  type LinhaTorcida,
+} from "./comum";
+import { SeloPagamentos, SeloSite } from "./Torcidas";
 import Depuracao from "./Depuracao";
 
 /** Formata centavos para o campo com máscara de moeda ("1.234,56"). */
-const textoMoeda = (c: number) => (c ? moeda(c).replace(/^R\$\s?/, "").trim() : "");
 
 export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) {
   const { id = "" } = useParams();
@@ -49,7 +63,13 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
             <div className="flex flex-wrap items-center gap-2 mt-1">
               <Selo tom={TOM_STATUS_TORCIDA[torcida.status]}>{ROTULO_STATUS_TORCIDA[torcida.status]}</Selo>
               <span className="text-sm text-texto-3">/{torcida.slug}</span>
+              {torcida.bloqueioSaas && <Selo tom="perigo">Bloqueada por mensalidade</Selo>}
             </div>
+            {linha && (
+              <div className="mt-2">
+                <SeloSite t={linha} />
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -111,7 +131,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
               </Link>
             </Cartao>
             <CartaoTaxa tid={id} atual={torcida.taxaServicoPct} aoSalvar={recarregar} />
-            <CartaoContrato tid={id} mensalidadeAtual={linha?.mensalidadeSaas ?? 0} contrato={linha?.contrato} aoSalvar={recarregar} />
+            <CartaoPlanoSomos tid={id} linha={linha} aoSalvar={recarregar} />
           </div>
         </div>
       )}
@@ -237,38 +257,28 @@ function CartaoTaxa({ tid, atual, aoSalvar }: { tid: string; atual: number; aoSa
   );
 }
 
-function CartaoContrato({
-  tid,
-  mensalidadeAtual,
-  contrato,
-  aoSalvar,
-}: {
-  tid: string;
-  mensalidadeAtual: number;
-  contrato?: { diaVencimento: number; observacoes: string };
-  aoSalvar: () => Promise<void>;
-}) {
-  const [mensalidade, setMensalidade] = useState(textoMoeda(mensalidadeAtual));
-  const [dia, setDia] = useState(String(contrato?.diaVencimento ?? 10));
+function CartaoPlanoSomos({ tid, linha, aoSalvar }: { tid: string; linha: LinhaTorcida | undefined; aoSalvar: () => Promise<void> }) {
+  const cfg = usePlanosSaas();
+  const faturas = useColecao<FaturaSaas>(
+    query(collection(db, `torcidas/${tid}/faturasSaas`), orderBy("vencimento", "desc"), limit(6)),
+    `faturas-saas-${tid}`,
+  );
+  const contrato = linha?.contrato;
   const [obs, setObs] = useState(contrato?.observacoes ?? "");
-  useEffect(() => {
-    if (contrato) {
-      setDia(String(contrato.diaVencimento));
-      setObs(contrato.observacoes);
-    }
-  }, [contrato?.diaVencimento, contrato?.observacoes]); // eslint-disable-line react-hooks/exhaustive-deps
   const [salvando, setSalvando] = useState(false);
   const avisar = useToast();
-  useEffect(() => setMensalidade(textoMoeda(mensalidadeAtual)), [mensalidadeAtual]);
-  const d = Number(dia);
-  const erroDia = !Number.isInteger(d) || d < 1 || d > 28 ? "Escolha um dia entre 1 e 28." : null;
+  useEffect(() => setObs(contrato?.observacoes ?? ""), [contrato?.observacoes]);
+  const valor = linha ? valorPlanoDaTorcida(linha, cfg.planos, cfg.limiteGigante) : null;
 
-  async function salvar() {
-    if (erroDia) return;
+  async function salvarObs() {
     setSalvando(true);
     try {
-      await api.atualizarTorcidaPlataforma({ tid, contrato: { mensalidadeSaas: centavosDeTexto(mensalidade), diaVencimento: d, observacoes: obs.trim() } });
-      avisar("Contrato salvo.", "sucesso");
+      // o contrato antigo continua no servidor; aqui só mudam as observações internas
+      await api.atualizarTorcidaPlataforma({
+        tid,
+        contrato: { mensalidadeSaas: contrato?.mensalidadeSaas ?? 0, diaVencimento: contrato?.diaVencimento ?? 10, observacoes: obs.trim() },
+      });
+      avisar("Observações salvas.", "sucesso");
       void aoSalvar();
     } catch (e) {
       avisar(mensagemDeErro(e), "erro");
@@ -276,18 +286,63 @@ function CartaoContrato({
       setSalvando(false);
     }
   }
+
   return (
     <Cartao className="p-5 sm:p-6">
-      <h2 className="font-bold mb-1">Contrato SaaS</h2>
-      <p className="text-sm text-texto-3 mb-4">O que a diretoria paga à Somos Organizada. Guardado em área privada (só o servidor lê).</p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Campo rotulo="Mensalidade" mascara="moeda" value={mensalidade} onChange={setMensalidade} placeholder="0,00" />
-        <Campo rotulo="Dia de vencimento" inputMode="numeric" value={dia} onChange={(v) => setDia(v.replace(/\D/g, "").slice(0, 2))} erro={erroDia} />
-        <AreaTexto className="sm:col-span-2" rotulo="Observações" value={obs} onChange={(e) => setObs(e.target.value)} maxLength={1000} placeholder="Condições, desconto de implantação, contato financeiro…" />
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <h2 className="font-bold">Plano Somos Organizada</h2>
+        {linha?.saas && (
+          <Selo tom={TOM_SITUACAO_SAAS[linha.saas.situacao]} ponto>
+            {ROTULO_SITUACAO_SAAS[linha.saas.situacao]}
+          </Selo>
+        )}
       </div>
-      <p className="text-xs text-texto-3 mt-3">O contrato é cobrado por fora do sistema. Estes dados servem de controle interno da equipe.</p>
-      <Botao className="mt-4" onClick={salvar} carregando={salvando} disabled={!!erroDia} icone="check">
-        Salvar contrato
+      {!linha?.saas ? (
+        <p className="text-sm text-texto-3 mb-4">
+          Sem assinatura: a cobrança começa quando a diretoria publicar o site e escolher entre Torcida pequena e Torcida grande.
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-texto-2 mb-4">
+            {ROTULO_PLANO_SAAS[valor?.plano ?? linha.saas.plano]} · <strong className="text-texto">{moeda(valor?.valor ?? 0)}/mês</strong> · Pix, sem multa nem juros
+          </p>
+          {faturas.dados.length > 0 && (
+            <ul className="divide-y divide-linha text-sm mb-4">
+              {faturas.dados.map((f) => (
+                <li key={f.id} className="py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <span className="numeros font-semibold w-24">{moeda(f.valor)}</span>
+                  <span className="text-texto-2 flex-1 min-w-32">
+                    vence {dataCurta(f.vencimento)}
+                    {f.informadoPagamentoEm && f.status === "aberta" && (
+                      <span className="block text-xs text-info font-semibold">Pagamento informado em {dataHora(f.informadoPagamentoEm)}</span>
+                    )}
+                    {f.pagaEm && <span className="block text-xs text-texto-3">paga em {dataHora(f.pagaEm)}</span>}
+                  </span>
+                  <Selo tom={f.status === "paga" ? "sucesso" : f.status === "aberta" ? (f.vencimento.toMillis() < Date.now() ? "perigo" : "info") : "neutro"}>
+                    {f.status === "paga" ? "Paga" : f.status === "aberta" ? (f.vencimento.toMillis() < Date.now() ? "Vencida" : "Aberta") : "Cancelada"}
+                  </Selo>
+                  {f.status === "aberta" && linha && (
+                    <ConfirmarPix
+                      fatura={{
+                        tid,
+                        torcidaNome: linha.nome,
+                        id: f.id,
+                        valor: f.valor,
+                        vencimento: f.vencimento.toMillis(),
+                        informadoPagamentoEm: f.informadoPagamentoEm?.toMillis() ?? null,
+                      }}
+                      aoConfirmar={() => void aoSalvar()}
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+      <AreaTexto rotulo="Observações internas" value={obs} onChange={(e) => setObs(e.target.value)} maxLength={1000} rows={3} placeholder="Combinados com a diretoria, contato financeiro…" />
+      <Botao className="mt-3" variante="contorno" tamanho="sm" onClick={salvarObs} carregando={salvando} disabled={obs.trim() === (contrato?.observacoes ?? "")} icone="check">
+        Salvar observações
       </Botao>
     </Cartao>
   );
