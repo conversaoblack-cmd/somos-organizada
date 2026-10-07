@@ -8,6 +8,8 @@ import { useColecao, useDocumento } from "@/hooks/dados";
 import { Aviso, BotaoLink, CabecalhoPagina, Cartao, Carregando, Icone, Indicador, Selo } from "@/ui";
 import { usePainel } from "./contexto";
 import { GraficoReceita, type PontoReceita } from "./Grafico";
+import { CartaoPrimeirosPassos } from "./PrimeirosPassos";
+import { useTourPagina } from "./tours";
 import { BarraOcupacao, EstadoLista, mesAtualSP, rotuloMes, ultimosMeses } from "./util";
 
 const ORDEM_STATUS: StatusSocio[] = ["ativo", "em_analise", "inadimplente", "pendente_pagamento", "suspenso", "cancelado"];
@@ -96,6 +98,7 @@ function useResumoSubsede(sedeId: string | null): Resumo & { socios: (Socio & { 
 
 export default function VisaoGeral() {
   const { tid, torcida, ehDiretoria, sedeEscopo, nomeSede, base, emAnalise, emAprovacao, membro, sedes, podePublicarNaSede } = usePainel();
+  useTourPagina("visao-geral");
   const dir = useResumoDiretoria(ehDiretoria);
   const sub = useResumoSubsede(ehDiretoria ? null : sedeEscopo);
   const r = ehDiretoria ? dir : sub;
@@ -179,8 +182,10 @@ export default function VisaoGeral() {
 
       {!ehDiretoria && !sedeEscopo && <Aviso tom="alerta" titulo="Usuário sem sede">Peça para a diretoria vincular seu usuário a uma subsede.</Aviso>}
 
+      <CartaoPrimeirosPassos />
+
       {pendencias.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 mb-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 mb-6 lg:grid-cols-2" data-tour="pendencias">
           {pendencias.map((p) => (
             <Aviso key={p.titulo} tom={p.tom} titulo={p.titulo} acao={<BotaoLink to={p.para} tamanho="sm" variante="contorno" iconeDireita="setaDireita">{p.acao}</BotaoLink>}>
               {p.texto}
@@ -192,7 +197,7 @@ export default function VisaoGeral() {
       {r.erro ? (
         <EstadoLista carregando={false} erro={r.erro} vazio={false} tituloVazio="" />
       ) : (
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4" data-tour="kpis">
           <Indicador
             rotulo="Ingressos (mês)"
             icone="ingresso"
@@ -234,7 +239,7 @@ export default function VisaoGeral() {
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr] mt-4">
-        <Cartao className="p-5 sm:p-6 min-w-0">
+        <Cartao className="p-5 sm:p-6 min-w-0" data-tour="grafico-receita">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
               <h2 className="font-bold">Receita dos últimos 6 meses</h2>
@@ -283,7 +288,7 @@ export default function VisaoGeral() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mt-4">
-        <Cartao className="p-5 sm:p-6">
+        <Cartao className="p-5 sm:p-6" data-tour="proximos-eventos">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold">Próximos eventos</h2>
             <Link to={`${base}/eventos`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1">

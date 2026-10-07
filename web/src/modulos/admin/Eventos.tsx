@@ -28,6 +28,7 @@ import {
   type Tom,
 } from "@/ui";
 import { usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import {
   BarraOcupacao,
   BotaoCopiar,
@@ -72,6 +73,7 @@ function AvisoContaSubsede() {
   const { ehDiretoria, sedeEscopo, podePublicarNaSede, base } = usePainel();
   if (ehDiretoria || !sedeEscopo || podePublicarNaSede(sedeEscopo)) return null;
   return (
+    <div data-tour="aviso-conta">
     <Aviso
       tom="alerta"
       titulo="Sua subsede ainda não tem conta de recebimento ativa"
@@ -84,6 +86,7 @@ function AvisoContaSubsede() {
     >
       Sem conta de recebimento ativa a diretoria não consegue aprovar seus eventos. Você pode criar e enviar para aprovação mesmo assim.
     </Aviso>
+    </div>
   );
 }
 
@@ -104,6 +107,7 @@ export default function Eventos() {
   const { ehDiretoria, sedes, nomeSede, base } = usePainel();
   const eventos = useEventos();
   const podeEditar = usePodeEditar();
+  useTourPagina("eventos");
   const [params, setParams] = useSearchParams();
   const [status, setStatus] = useState<"todos" | StatusEvento>(() => (params.get("status") as StatusEvento) || "todos");
   const [sede, setSede] = useState("");
@@ -148,7 +152,7 @@ export default function Eventos() {
             : "Crie os eventos da sua sede e envie para a diretoria aprovar."
         }
         acoes={
-          <Botao icone="mais" onClick={() => setEditando("novo")}>
+          <Botao icone="mais" onClick={() => setEditando("novo")} data-tour="novo-evento">
             Novo evento
           </Botao>
         }
@@ -156,7 +160,7 @@ export default function Eventos() {
 
       <AvisoContaSubsede />
 
-      <div className="flex flex-col gap-3 mb-5">
+      <div className="flex flex-col gap-3 mb-5" data-tour="filtros-eventos">
         <Pilulas
           valor={status}
           onChange={setStatus}
@@ -198,7 +202,7 @@ export default function Eventos() {
           }
         />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-8" data-tour="lista-eventos">
           {filtrados.futuros.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-3">Próximos</h2>
@@ -319,6 +323,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
   const [erros, setErros] = useState<Partial<Record<keyof Form, string>>>({});
   const [salvando, setSalvando] = useState(false);
   const [confirmarStatus, setConfirmarStatus] = useState(false);
+  useTourPagina("eventos-criar", { ativo: evento === "novo" });
 
   useEffect(() => {
     if (evento) {
@@ -452,7 +457,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
           <Botao variante="fantasma" onClick={fechar} disabled={salvando}>
             Cancelar
           </Botao>
-          <Botao onClick={pedirSalvar} carregando={salvando} icone="check">
+          <Botao onClick={pedirSalvar} carregando={salvando} icone="check" data-tour="evento-salvar">
             {f.status === "em_aprovacao" && (!existente || existente.status !== "em_aprovacao")
               ? "Enviar para aprovação"
               : existente
@@ -472,6 +477,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
         }}
         noValidate
       >
+        <div className="space-y-5" data-tour="evento-nome">
         <Campo rotulo="Nome do evento" value={f.nome} onChange={(v) => set("nome", v)} erro={erros.nome} maxLength={90} placeholder="Ex.: Caravana para a final" />
         <AreaTexto
           rotulo="Descrição"
@@ -480,6 +486,8 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
           maxLength={2000}
           placeholder="Horário de saída, o que está incluso, regras de entrada..."
         />
+        </div>
+        <div data-tour="evento-sede">
         <Selecao
           rotulo="Sede organizadora"
           value={f.sedeId}
@@ -495,11 +503,12 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
             </option>
           ))}
         </Selecao>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-tour="evento-data">
           <Campo rotulo="Data e hora" type="datetime-local" value={f.data} onChange={(v) => set("data", v)} erro={erros.data} />
           <Campo rotulo="Local" value={f.local} onChange={(v) => set("local", v)} placeholder="Ex.: Sede Central" maxLength={120} />
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-tour="evento-valores">
           <Campo
             rotulo="Valor para sócio"
             mascara="moeda"
@@ -522,7 +531,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
         <Aviso tom="info">
           A taxa de serviço de {pct}% é somada ao valor e fica no caixa da diretoria. O valor do ingresso vai para a sede organizadora.
         </Aviso>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-tour="evento-capacidade">
           <Campo
             rotulo="Capacidade (opcional)"
             inputMode="numeric"
@@ -548,6 +557,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
           erro={erros.vendaAte}
           dica="Depois desse horário o botão de compra some."
         />
+        <div data-tour="evento-imagem">
         <SeletorImagem
           rotulo="Imagem do evento"
           url={f.imagemUrl}
@@ -556,7 +566,8 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
           prefixo="evento"
           dica="JPG, PNG ou WebP até 5 MB. Formato horizontal fica melhor."
         />
-        <div>
+        </div>
+        <div data-tour="evento-situacao">
           <p className="block text-sm font-medium text-texto-2 mb-1.5">Situação</p>
           {existente?.motivoDevolucao && (
             <Aviso tom="alerta" titulo="A diretoria devolveu este evento" className="mb-3">
@@ -644,6 +655,7 @@ export function DetalheEvento() {
   const [busca, setBusca] = useState("");
   const e = ev.dados;
   const podeEditarFn = usePodeEditar();
+  useTourPagina("evento-detalhe");
   const podeEditar = !!e && podeEditarFn(e);
 
   const ingressos = useColecao<Ingresso>(
@@ -723,7 +735,7 @@ export function DetalheEvento() {
               Sócio {e.valorSocio ? moeda(e.valorSocio) : "grátis"} · Público {moeda(e.valorPublico)} · + {pct}% de taxa
               {e.vendaAte && ` · vendas até ${dataHora(e.vendaAte)}`}
             </p>
-            <div className="flex flex-wrap gap-2 mt-5">
+            <div className="flex flex-wrap gap-2 mt-5" data-tour="evento-acoes">
               {podeEditar && (
                 <Botao tamanho="sm" icone="lapis" onClick={() => setEditando(true)}>
                   Editar
@@ -747,7 +759,7 @@ export function DetalheEvento() {
 
       {/* Fluxo de aprovação */}
       {ehDiretoria && e.status === "em_aprovacao" && (
-        <Cartao className="p-5 sm:p-6 mb-4 border-alerta/40">
+        <Cartao className="p-5 sm:p-6 mb-4 border-alerta/40" data-tour="evento-aprovacao">
           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
             <span className="size-12 shrink-0 rounded-2xl grid place-items-center bg-alerta/15 text-alerta">
               <Icone nome="relogio" className="size-6" />
@@ -776,6 +788,7 @@ export function DetalheEvento() {
           </div>
         </Cartao>
       )}
+      <div data-tour="evento-situacao-subsede">
       {!ehDiretoria && e.status === "em_aprovacao" && (
         <Aviso tom="info" titulo="Aguardando aprovação da diretoria" className="mb-4">
           Você ainda pode editar. Quando a diretoria aprovar, o evento é publicado e só ela poderá alterar.
@@ -801,8 +814,9 @@ export function DetalheEvento() {
           {e.status === "publicado" ? "Publicado pela diretoria" : `Evento ${ROTULO_STATUS_EVENTO[e.status].toLowerCase()}`}; para alterar, fale com a diretoria.
         </Aviso>
       )}
+      </div>
 
-      <Cartao className="p-4 sm:p-5 mb-4">
+      <Cartao className="p-4 sm:p-5 mb-4" data-tour="evento-link">
         <p className="text-sm font-semibold mb-2">Link para divulgar</p>
         <div className="flex flex-col sm:flex-row gap-2">
           <code className="flex-1 min-w-0 truncate rounded-xl bg-superficie-2 border border-linha px-3 h-9 leading-9 text-sm text-texto-2">{linkPublico}</code>
@@ -820,7 +834,7 @@ export function DetalheEvento() {
         </div>
       </Cartao>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4" data-tour="evento-numeros">
         <Indicador rotulo="Vendidos" icone="ingresso" tom="primaria" valor={e.vendidos} detalhe={e.capacidade ? `de ${e.capacidade} lugares` : "Sem limite de lugares"} />
         <Indicador rotulo="Reservados" icone="relogio" tom="alerta" valor={e.reservados} detalhe="Aguardando pagamento" />
         <Indicador rotulo="Entradas" icone="qr" tom="info" valor={e.entradas ?? 0} detalhe={e.vendidos ? `${Math.round(((e.entradas ?? 0) / e.vendidos) * 100)}% dos vendidos` : "Na portaria"} />
@@ -828,7 +842,7 @@ export function DetalheEvento() {
       </div>
       {e.capacidade ? <BarraOcupacao vendidos={e.vendidos} reservados={e.reservados} capacidade={e.capacidade} className="mb-6" /> : null}
 
-      <Cartao className="p-4 sm:p-5">
+      <Cartao className="p-4 sm:p-5" data-tour="evento-ingressos">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between mb-4">
           <h2 className="font-bold">
             Ingressos <span className="text-texto-3 font-normal">({ingressos.dados.length})</span>

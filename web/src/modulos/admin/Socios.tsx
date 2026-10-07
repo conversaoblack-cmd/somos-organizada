@@ -20,6 +20,7 @@ import type { ComId, Membro, Socio, StatusSocio } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { Avatar, Botao, CabecalhoPagina, Campo, Cartao, Gaveta, Icone, Selecao, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import { baixarCsv, Confirmar, decimalBR, EstadoLista, Linha, normalizar, numeroWhatsapp, Pilulas } from "./util";
 
 const STATUS: StatusSocio[] = ["ativo", "em_analise", "inadimplente", "pendente_pagamento", "suspenso", "cancelado"];
@@ -33,6 +34,7 @@ export default function Socios() {
   const [sede, setSede] = useState("");
   const [busca, setBusca] = useState("");
   const [abertoId, setAbertoId] = useState<string | null>(null);
+  useTourPagina("socios");
 
   const socios = useColecao<Socio>(
     ehDiretoria
@@ -92,13 +94,14 @@ export default function Socios() {
         titulo="Sócios"
         descricao={ehDiretoria ? "Todos os sócios da torcida." : `Sócios da ${nomeSede(sedeEscopo)}.`}
         acoes={
-          <Botao variante="contorno" tamanho="sm" icone="download" onClick={exportar} disabled={!filtrados.length}>
+          <Botao variante="contorno" tamanho="sm" icone="download" onClick={exportar} disabled={!filtrados.length} data-tour="socios-exportar">
             Exportar CSV
           </Botao>
         }
       />
 
       <div className="flex flex-col gap-3 mb-5">
+        <div data-tour="socios-status">
         <Pilulas
           valor={status}
           onChange={setStatus}
@@ -107,7 +110,8 @@ export default function Socios() {
             ...STATUS.map((s) => ({ valor: s, rotulo: ROTULO_STATUS_SOCIO[s], contador: contagem[s] ?? 0 })),
           ]}
         />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_260px]">
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_260px]" data-tour="socios-busca">
           <Campo value={busca} onChange={setBusca} placeholder="Nome, CPF, matrícula ou e-mail" icone="busca" aria-label="Buscar sócios" />
           {ehDiretoria && (
             <Selecao value={sede} onChange={(e) => setSede(e.target.value)} aria-label="Filtrar por sede">
@@ -132,7 +136,7 @@ export default function Socios() {
           textoVazio={socios.dados.length ? "Mude os filtros ou a busca." : "Divulgue a página da torcida (aba Sócios) para receber as primeiras adesões."}
         />
       ) : (
-        <>
+        <div data-tour="socios-lista">
           <Cartao className="hidden md:block overflow-hidden">
             <table className="w-full text-sm">
               <thead className="text-left text-texto-3 text-xs uppercase tracking-wide">
@@ -191,7 +195,7 @@ export default function Socios() {
               </button>
             ))}
           </div>
-        </>
+        </div>
       )}
 
       <DetalheSocio s={aberto} fechar={() => setAbertoId(null)} />

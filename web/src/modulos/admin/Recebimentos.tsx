@@ -4,6 +4,7 @@ import { buscarCep } from "@/lib/servicos";
 import { centavosDeTexto, cpfValido, dataHora, emailValido, mascaraCpf, moeda, soDigitos, taxa, telefoneValido } from "@/lib/formatos";
 import { Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, OpcoesCartao, QrCode, Selecao, useToast } from "@/ui";
 import { usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import { BANCOS, infoRecebedor, nomeBanco, podeCadastrarRecebedor, SeloRecebedor } from "./recebedor";
 import { Confirmar, Linha } from "./util";
 
@@ -45,7 +46,8 @@ function idade(iso: string): number {
 }
 
 export default function Recebimentos() {
-  const { tid, torcida, sedes, sedeEscopo, nomeSede, pct } = usePainel();
+  const { tid, torcida, sedes, sedeEscopo, nomeSede, pct, demo } = usePainel();
+  useTourPagina("recebimentos");
   const avisar = useToast();
   const sede = sedes.find((s) => s.id === sedeEscopo);
   const r = sede?.recebedor;
@@ -59,6 +61,18 @@ export default function Recebimentos() {
     try {
       const res = await api.atualizarRecebedor({ tid });
       avisar(`Situação atualizada: ${infoRecebedor(res.recebedor).rotulo}.`, "sucesso");
+    } catch (e) {
+      avisar(mensagemDeErro(e), "erro");
+    } finally {
+      setAtualizando(false);
+    }
+  }
+
+  async function simular() {
+    setAtualizando(true);
+    try {
+      await api.simularDemo({ tid, acao: "aprovar_recebedor" });
+      avisar("Prova de vida aprovada (demonstração). Sua conta está ativa.", "sucesso");
     } catch (e) {
       avisar(mensagemDeErro(e), "erro");
     } finally {
@@ -80,7 +94,7 @@ export default function Recebimentos() {
 
       {/* Situação */}
       {sede && (
-        <Cartao className={cx("p-5 sm:p-6 mb-6", r?.status === "active" ? "border-sucesso/40" : r ? "border-alerta/40" : "")}>
+        <Cartao data-tour="receb-status" className={cx("p-5 sm:p-6 mb-6", r?.status === "active" ? "border-sucesso/40" : r ? "border-alerta/40" : "")}>
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
             <span
               className={cx(
@@ -124,8 +138,20 @@ export default function Recebimentos() {
       )}
 
       {/* Prova de vida */}
+      {demo && r && r.status !== "active" && (
+        <Cartao className="p-5 sm:p-6 mb-6 border-info/40 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1">
+            <p className="font-semibold">Modo demonstração</p>
+            <p className="text-sm text-texto-2">Na demonstração não existe prova de vida de verdade. Simule a aprovação para a conta ficar ativa.</p>
+          </div>
+          <Botao icone="raio" carregando={atualizando} onClick={simular}>
+            Simular prova de vida aprovada
+          </Botao>
+        </Cartao>
+      )}
+
       {r?.kycUrl && r.status !== "active" && (
-        <Cartao className="p-5 sm:p-6 mb-6 border-info/40">
+        <Cartao className="p-5 sm:p-6 mb-6 border-info/40" data-tour="receb-kyc">
           <div className="grid md:grid-cols-[200px_1fr] gap-6 items-center">
             <QrCode valor={r.kycUrl} className="w-44 md:w-full mx-auto" />
             <div>
@@ -163,7 +189,7 @@ export default function Recebimentos() {
       )}
 
       {/* Como funciona */}
-      <Cartao className="p-5 sm:p-6 mb-6">
+      <Cartao className="p-5 sm:p-6 mb-6" data-tour="receb-como-funciona">
         <h2 className="font-bold text-lg">Como o dinheiro é dividido</h2>
         <p className="text-sm text-texto-2 mt-1">
           A Pagar.me divide cada venda na hora (o chamado “split”). Ninguém precisa repassar nada à mão.
@@ -212,7 +238,7 @@ export default function Recebimentos() {
       {sede && splitAtivo && podeCadastrarRecebedor(r) && (
         <>
           {!formAberto ? (
-            <Cartao className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <Cartao className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4" data-tour="receb-cadastro">
               <div className="flex-1">
                 <p className="font-bold">{r ? "Cadastrar a conta novamente" : "Cadastrar a conta de recebimento"}</p>
                 <p className="text-sm text-texto-2 mt-0.5">

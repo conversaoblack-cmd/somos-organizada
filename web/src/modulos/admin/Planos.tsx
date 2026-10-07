@@ -7,6 +7,7 @@ import type { ComId, Intervalo, Plano } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { AreaTexto, Aviso, Botao, BotaoIcone, CabecalhoPagina, Campo, Cartao, cx, Gaveta, Icone, Interruptor, Selecao, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import { Confirmar, EstadoLista, textoMoeda } from "./util";
 
 interface Form {
@@ -78,6 +79,7 @@ export default function Planos() {
   const { tid, pct } = usePainel();
   const planos = useColecao<Plano>(collection(db, `torcidas/${tid}/planos`), `planos-${tid}`);
   const [editando, setEditando] = useState<ComId<Plano> | "novo" | null>(null);
+  useTourPagina("planos");
   const ordenados = useMemo(
     () => [...planos.dados].sort((a, b) => Number(b.ativo) - Number(a.ativo) || (a.ordem ?? 99) - (b.ordem ?? 99) || a.valor - b.valor),
     [planos.dados],
@@ -90,7 +92,7 @@ export default function Planos() {
         titulo="Planos de sócio"
         descricao={`Os planos que aparecem na aba Sócios da página. O torcedor paga o valor + ${pct}% de taxa de serviço.`}
         acoes={
-          <Botao icone="mais" onClick={() => setEditando("novo")}>
+          <Botao icone="mais" onClick={() => setEditando("novo")} data-tour="novo-plano">
             Novo plano
           </Botao>
         }
@@ -111,7 +113,7 @@ export default function Planos() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" data-tour="lista-planos">
           {ordenados.map((p) => (
             <Cartao key={p.id} className={cx("p-5 sm:p-6 flex flex-col relative", p.destaque && p.ativo && "border-primaria/50 ring-1 ring-primaria/30", !p.ativo && "opacity-60")}>
               <div className="flex items-start justify-between gap-2">

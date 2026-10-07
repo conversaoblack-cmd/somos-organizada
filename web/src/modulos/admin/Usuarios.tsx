@@ -8,6 +8,7 @@ import type { ComId, Membro, Papel } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { Aviso, Avatar, Botao, BotaoIcone, CabecalhoPagina, Campo, Cartao, cx, Interruptor, Modal, OpcoesCartao, Selecao, Selo, useToast } from "@/ui";
 import { ROTULO_PAPEL, usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import { BotaoCopiar, Confirmar, EstadoLista } from "./util";
 
 interface Convite {
@@ -44,6 +45,7 @@ export default function Usuarios() {
   const [convidar, setConvidar] = useState(false);
   const [editando, setEditando] = useState<ComId<Membro> | null>(null);
   const [link, setLink] = useState<Convite | null>(null);
+  useTourPagina("usuarios");
 
   async function reenviar(m: ComId<Membro>) {
     setReenviando(m.id);
@@ -70,13 +72,13 @@ export default function Usuarios() {
         titulo="Usuários do painel"
         descricao="Quem pode entrar no painel e o que cada um pode fazer."
         acoes={
-          <Botao icone="mais" onClick={() => setConvidar(true)}>
+          <Botao icone="mais" onClick={() => setConvidar(true)} data-tour="convidar-usuario">
             Convidar usuário
           </Botao>
         }
       />
 
-      <div className="grid sm:grid-cols-3 gap-3 mb-6">
+      <div className="grid sm:grid-cols-3 gap-3 mb-6" data-tour="papeis">
         {(["diretoria", "subsede", "portaria"] as Papel[]).map((p) => (
           <Cartao key={p} className="p-4">
             <p className="font-semibold">{ROTULO_PAPEL[p]}</p>
@@ -88,7 +90,7 @@ export default function Usuarios() {
       {membros.carregando || membros.erro || ordenados.length === 0 ? (
         <EstadoLista carregando={membros.carregando} erro={membros.erro} vazio icone="usuarios" tituloVazio="Nenhum usuário" />
       ) : (
-        <Cartao className="overflow-hidden">
+        <Cartao className="overflow-hidden" data-tour="lista-usuarios">
           <ul className="divide-y divide-linha">
             {ordenados.map((m) => (
               <li key={m.id} className={cx("flex items-center gap-3 px-4 py-3.5", !m.ativo && "opacity-60")}>

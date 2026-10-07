@@ -5,8 +5,10 @@ import { db } from "@/lib/firebase";
 import { cpfMascarado, dataHora, mascaraTelefone, moeda, relativo, ROTULO_STATUS_PEDIDO, soDigitos } from "@/lib/formatos";
 import type { ComId, Pedido, StatusPedido } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
-import { Abas, Aviso, CabecalhoPagina, Campo, Cartao, cx, Gaveta, Icone, Selecao, Selo } from "@/ui";
+import { Abas, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Gaveta, Icone, Selecao, Selo, useToast } from "@/ui";
+import { api, mensagemDeErro } from "@/lib/api";
 import { usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import { baixarCsv, BotaoCopiar, decimalBR, EstadoLista, Linha, normalizar, numeroWhatsapp, TOM_PEDIDO } from "./util";
 
 type PedidoPg = Pedido & { pagarme?: { orderId?: string; chargeId?: string } };
@@ -25,6 +27,7 @@ export default function Pedidos() {
   const [status, setStatus] = useState<"" | StatusPedido>("");
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState<ComId<PedidoPg> | null>(null);
+  useTourPagina("pedidos");
 
   const filtrados = useMemo(() => {
     const b = normalizar(busca.trim());
@@ -73,6 +76,7 @@ export default function Pedidos() {
             type="button"
             onClick={exportar}
             disabled={!filtrados.length}
+            data-tour="pedidos-exportar"
             className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2 disabled:opacity-50"
           >
             <Icone nome="download" className="size-4" /> Exportar CSV
@@ -80,7 +84,7 @@ export default function Pedidos() {
         }
       />
 
-      <div className="flex flex-col gap-3 mb-5">
+      <div className="flex flex-col gap-3 mb-5" data-tour="pedidos-filtros">
         <Abas
           valor={tipo}
           onChange={setTipo}
@@ -114,7 +118,7 @@ export default function Pedidos() {
           textoVazio={pedidos.dados.length ? "Mude os filtros ou a busca." : "Quando alguém comprar um ingresso ou virar sócio, o pedido aparece aqui."}
         />
       ) : (
-        <>
+        <div data-tour="pedidos-lista">
           <p className="text-sm text-texto-3 mb-3 numeros">
             {filtrados.length} {filtrados.length === 1 ? "pedido" : "pedidos"} · {moeda(somaPagos)} pagos
           </p>
@@ -177,7 +181,7 @@ export default function Pedidos() {
               </button>
             ))}
           </div>
-        </>
+        </div>
       )}
 
       <DetalhePedido p={aberto} fechar={() => setAberto(null)} />
@@ -186,7 +190,9 @@ export default function Pedidos() {
 }
 
 function DetalhePedido({ p, fechar }: { p: ComId<PedidoPg> | null; fechar: () => void }) {
-  const { torcida, nomeSede, base } = usePainel();
+  const { tid, torcida, nomeSede, base, demo } = usePainel();
+  const avisar = useToast();
+  const [simulando, setSimulando] = useState(false);
   if (!p) return <Gaveta aberto={false} fechar={fechar}>{null}</Gaveta>;
   const linkIngressos = p.chaveAcesso ? `${location.origin}/${torcida.slug}/ingressos/${p.id}?k=${p.chaveAcesso}` : null;
   const tel = soDigitos(p.comprador?.telefone ?? "");
@@ -201,6 +207,31 @@ function DetalhePedido({ p, fechar }: { p: ComId<PedidoPg> | null; fechar: () =>
           {ROTULO_STATUS_PEDIDO[p.status]}
         </Selo>
       </div>
+
+      {demo && p.status === "aguardando" && (
+        <div className="mb-5 rounded-2xl border border-info/30 bg-info/10 p-4">
+          <p className="text-sm font-semibold">Modo demonstração</p>
+          <p className="text-sm text-texto-2 mt-0.5 mb-3">Simule o Pix pago para ver o pedido confirmado e os ingressos gerados.</p>
+          <Botao
+            tamanho="sm"
+            icone="pix"
+            carregando={simulando}
+            onClick={async () => {
+              setSimulando(true);
+              try {
+                await api.simularDemo({ tid, acao: "pagar_pedido", pedidoId: p.id });
+                avisar("Pagamento simulado: pedido pago.", "sucesso");
+              } catch (e) {
+                avisar(mensagemDeErro(e), "erro");
+              } finally {
+                setSimulando(false);
+              }
+            }}
+          >
+            Simular pagamento
+          </Botao>
+        </div>
+      )}
 
       {p.motivo && (
         <Aviso tom={p.status === "falhou" ? "perigo" : "alerta"} titulo="Motivo informado pela Pagar.me" className="mb-5">

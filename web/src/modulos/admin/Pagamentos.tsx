@@ -7,6 +7,7 @@ import { dataHora, relativo } from "@/lib/formatos";
 import { useColecao } from "@/hooks/dados";
 import { Aviso, Botao, BotaoIcone, BotaoLink, CabecalhoPagina, Campo, Cartao, cx, Icone, Interruptor, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import { BotaoCopiar, Confirmar, EstadoLista } from "./util";
 
 const EVENTOS_WEBHOOK = [
@@ -70,8 +71,15 @@ function useMarcado(chave: string): [boolean, (v: boolean) => void] {
 }
 
 export default function Pagamentos() {
-  const { tid, torcida, base } = usePainel();
+  const { tid, torcida, base, demo } = usePainel();
+  useTourPagina("pagamentos");
   const pag = torcida.pagamentos ?? { configurado: false, pix: true, cartao: true };
+  const [sinalTrocar, setSinalTrocar] = useState(0);
+  const ambiente = !pag.configurado ? null : demo ? "demo" : pag.ambiente === "producao" ? "producao" : "teste";
+  const sairDaDemo = () => {
+    setSinalTrocar((n) => n + 1);
+    setTimeout(() => document.querySelector('[data-tour="passo-3"]')?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+  };
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
   const [carregandoUrl, setCarregandoUrl] = useState(false);
   const [dominioFeito, setDominioFeito] = useMarcado(`pagarme-dominio-${tid}`);
@@ -102,22 +110,33 @@ export default function Pagamentos() {
       />
 
       {/* Situação atual */}
-      <Cartao className={cx("p-5 sm:p-6 mb-8", pag.configurado ? (pag.ambiente === "producao" ? "border-sucesso/40" : "border-alerta/40") : "border-perigo/40")}>
+      <Cartao
+        data-tour="pag-status"
+        className={cx("p-5 sm:p-6 mb-6", ambiente === "producao" ? "border-sucesso/40" : ambiente === "demo" ? "border-info/40" : ambiente === "teste" ? "border-alerta/40" : "border-perigo/40")}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <span
             className={cx(
               "size-14 shrink-0 rounded-2xl grid place-items-center",
-              pag.configurado ? (pag.ambiente === "producao" ? "bg-sucesso/15 text-sucesso" : "bg-alerta/15 text-alerta") : "bg-perigo/12 text-perigo",
+              ambiente === "producao" ? "bg-sucesso/15 text-sucesso" : ambiente === "demo" ? "bg-info/15 text-info" : ambiente === "teste" ? "bg-alerta/15 text-alerta" : "bg-perigo/12 text-perigo",
             )}
           >
             <Icone nome={pag.configurado ? "checkCirculo" : "alerta"} className="size-7" />
           </span>
           <div className="flex-1 min-w-0">
             <p className="text-lg font-bold">
-              {!pag.configurado ? "Pagar.me não conectada" : pag.ambiente === "producao" ? "Vendendo de verdade" : "Conectada em modo de teste"}
+              {!ambiente
+                ? "Pagar.me não conectada"
+                : ambiente === "producao"
+                  ? "Vendendo de verdade"
+                  : ambiente === "demo"
+                    ? "Modo demonstração"
+                    : "Conectada em modo de teste"}
             </p>
             <p className="text-sm text-texto-2">
-              {!pag.configurado
+              {ambiente === "demo"
+                ? "Tudo funciona como se fosse de verdade, mas nenhum pagamento é real. Quando quiser vender, conecte a Pagar.me."
+                : !pag.configurado
                 ? "Siga os passos abaixo. Leva uns 15 minutos (fora o tempo de aprovação da Pagar.me)."
                 : pag.ambiente === "producao"
                   ? "As compras na página da torcida são cobradas de verdade."
@@ -126,7 +145,17 @@ export default function Pagamentos() {
           </div>
         </div>
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-          <Info rotulo="Ambiente">{pag.configurado ? (pag.ambiente === "producao" ? <Selo tom="sucesso">Produção</Selo> : <Selo tom="alerta">Teste</Selo>) : "—"}</Info>
+          <Info rotulo="Ambiente">
+            {ambiente === "producao" ? (
+              <Selo tom="sucesso">Produção</Selo>
+            ) : ambiente === "demo" ? (
+              <Selo tom="info">Demonstração</Selo>
+            ) : ambiente === "teste" ? (
+              <Selo tom="alerta">Teste</Selo>
+            ) : (
+              "—"
+            )}
+          </Info>
           <Info rotulo="Formas aceitas">
             {pag.configurado ? [pag.pix && "Pix", pag.cartao && "Cartão"].filter(Boolean).join(" + ") || "—" : "—"}
           </Info>
@@ -141,11 +170,13 @@ export default function Pagamentos() {
         </dl>
       </Cartao>
 
+      {(!pag.configurado || demo) && <CartaoDemo demo={demo} sair={sairDaDemo} />}
+
       <h2 className="text-xl font-bold mb-1">Passo a passo</h2>
       <p className="text-sm text-texto-2 mb-5">Faça na ordem. Você pode voltar aqui quando quiser.</p>
 
       <ol className="relative">
-        <Passo n={1} titulo="Crie a conta da torcida na Pagar.me" feito={pag.configurado}>
+        <Passo n={1} titulo="Crie a conta da torcida na Pagar.me" feito={pag.configurado && !demo}>
           <p>
             Entre em{" "}
             <a href="https://pagar.me" target="_blank" rel="noreferrer" className="text-primaria font-semibold hover:underline">
@@ -160,7 +191,7 @@ export default function Pagamentos() {
           <Dica>Informe a conta bancária da torcida: é para lá que a Pagar.me transfere o dinheiro das vendas.</Dica>
         </Passo>
 
-        <Passo n={2} titulo="Copie as duas chaves de acesso" feito={pag.configurado}>
+        <Passo n={2} titulo="Copie as duas chaves de acesso" feito={pag.configurado && !demo}>
           <p>
             No painel da Pagar.me, vá em <Caminho>Configurações</Caminho> → <Caminho>Chaves</Caminho>. Você vai ver duas chaves:
           </p>
@@ -185,6 +216,10 @@ export default function Pagamentos() {
               <p className="text-xs">
                 <code className="font-mono">sk_test_…</code> e <code className="font-mono">pk_test_…</code>. Compras de mentira, para experimentar.
               </p>
+              <p className="text-xs mt-1.5">
+                Exige conta na Pagar.me. No simulador oficial, Pix de até R$ 500 é aprovado e acima disso falha; Pix com divisão (split) não funciona no
+                simulador.
+              </p>
             </div>
             <div className="rounded-2xl border border-sucesso/30 bg-sucesso/8 p-3">
               <p className="font-semibold text-texto text-sm">Produção</p>
@@ -195,8 +230,8 @@ export default function Pagamentos() {
           </div>
         </Passo>
 
-        <Passo n={3} titulo="Cole as chaves aqui" feito={pag.configurado}>
-          <FormChaves configurado={pag.configurado} aoSalvar={(url) => setWebhookUrl(url)} />
+        <Passo n={3} titulo="Cole as chaves aqui" feito={pag.configurado && !demo}>
+          <FormChaves configurado={pag.configurado && !demo} sinalAbrir={sinalTrocar} aoSalvar={(url) => setWebhookUrl(url)} />
         </Passo>
 
         <Passo n={4} titulo="Libere o endereço do app para pagamentos com cartão" feito={dominioFeito}>
@@ -214,7 +249,9 @@ export default function Pagamentos() {
 
         <Passo n={5} titulo="Configure o webhook (aviso de pagamento)" feito={webhookOk}>
           <p>É por ele que a Pagar.me avisa na hora que um Pix foi pago ou que uma cobrança foi recusada.</p>
-          {!pag.configurado ? (
+          {demo ? (
+            <Aviso tom="info">No modo demonstração não precisa configurar: os pagamentos simulados confirmam na hora.</Aviso>
+          ) : !pag.configurado ? (
             <Aviso tom="info">A URL do webhook aparece aqui depois do passo 3.</Aviso>
           ) : carregandoUrl ? (
             <p className="text-sm text-texto-3">Buscando a URL...</p>
@@ -320,11 +357,14 @@ export default function Pagamentos() {
   );
 }
 
-function FormChaves({ configurado, aoSalvar }: { configurado: boolean; aoSalvar: (url: string) => void }) {
+function FormChaves({ configurado, aoSalvar, sinalAbrir }: { configurado: boolean; aoSalvar: (url: string) => void; sinalAbrir: number }) {
   const { tid, torcida } = usePainel();
   const avisar = useToast();
   const pag = torcida.pagamentos;
   const [aberto, setAberto] = useState(!configurado);
+  useEffect(() => {
+    if (sinalAbrir > 0) setAberto(true);
+  }, [sinalAbrir]);
   const [sk, setSk] = useState("");
   const [pk, setPk] = useState("");
   const [verSk, setVerSk] = useState(false);
@@ -337,7 +377,7 @@ function FormChaves({ configurado, aoSalvar }: { configurado: boolean; aoSalvar:
 
   const skLimpa = sk.trim();
   const pkLimpa = pk.trim();
-  const producao = skLimpa.startsWith("sk_") && !skLimpa.startsWith("sk_test_");
+  const producao = skLimpa.startsWith("sk_") && !skLimpa.startsWith("sk_test_") && !skLimpa.startsWith("sk_demo_");
 
   function validar(): boolean {
     setErro(null);
@@ -472,6 +512,81 @@ function FormChaves({ configurado, aoSalvar }: { configurado: boolean; aoSalvar:
   );
 }
 
+function chaveAleatoria(): string {
+  const letras = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const v = new Uint32Array(16);
+  crypto.getRandomValues(v);
+  return Array.from(v, (n) => letras[n % letras.length]).join("");
+}
+
+/** Cartão do modo demonstração: ativar (sem conta na Pagar.me) ou, já ativo, como testar e como sair. */
+function CartaoDemo({ demo, sair }: { demo: boolean; sair: () => void }) {
+  const { tid } = usePainel();
+  const avisar = useToast();
+  const [ativando, setAtivando] = useState(false);
+  const [confirmar, setConfirmar] = useState(false);
+  return (
+    <Cartao className="p-5 sm:p-6 mb-8 border-info/40" data-tour="pag-demo">
+      <div className="flex items-start gap-4">
+        <span className="size-12 shrink-0 rounded-2xl bg-info/15 text-info grid place-items-center">
+          <Icone nome="raio" className="size-6" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-lg font-bold">{demo ? "Você está no modo demonstração" : "Ainda não tem conta na Pagar.me? Teste tudo em modo demonstração"}</p>
+          <p className="text-sm text-texto-2 mt-1">
+            Compre ingressos, vire sócio, veja o dinheiro dividido com as subsedes — tudo de mentira, sem conta na Pagar.me. Nada é cobrado.
+          </p>
+        </div>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3 mt-4 text-sm">
+        <div className="rounded-2xl bg-superficie-2 border border-linha p-3">
+          <p className="font-semibold mb-1">Cartões de teste</p>
+          <p className="text-texto-2">
+            <code className="font-mono text-texto">4000 0000 0000 0010</code> → aprovado
+          </p>
+          <p className="text-texto-2">
+            <code className="font-mono text-texto">4000 0000 0000 0028</code> → recusado
+          </p>
+          <p className="text-xs text-texto-3 mt-1">Qualquer outro número é recusado. Validade e CVV: qualquer valor.</p>
+        </div>
+        <div className="rounded-2xl bg-superficie-2 border border-linha p-3">
+          <p className="font-semibold mb-1">Pix</p>
+          <p className="text-texto-2">Na tela do Pix e no detalhe do pedido aparece o botão “Simular pagamento”.</p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2 mt-4">
+        {demo ? (
+          <Botao variante="contorno" icone="cartao" onClick={sair}>
+            Sair da demonstração / conectar Pagar.me real
+          </Botao>
+        ) : (
+          <Botao icone="raio" carregando={ativando} onClick={() => setConfirmar(true)}>
+            Ativar modo demonstração
+          </Botao>
+        )}
+      </div>
+      <Confirmar
+        aberto={confirmar}
+        fechar={() => setConfirmar(false)}
+        titulo="Ativar o modo demonstração?"
+        rotulo="Ativar demonstração"
+        acao={async () => {
+          setAtivando(true);
+          try {
+            await api.salvarCredenciaisPagarme({ tid, chaveSecreta: `sk_demo_${chaveAleatoria()}`, chavePublica: `pk_demo_${chaveAleatoria()}`, pix: true, cartao: true });
+            avisar("Modo demonstração ativo. Nenhum pagamento é real.", "sucesso");
+          } finally {
+            setAtivando(false);
+          }
+        }}
+      >
+        Os pagamentos passam a ser simulados. Enquanto estiver assim, ninguém consegue pagar de verdade. Para vender, depois é só colar as chaves da Pagar.me
+        no passo 3.
+      </Confirmar>
+    </Cartao>
+  );
+}
+
 function PassoSplit({ configurado }: { configurado: boolean }) {
   const { tid, torcida, sedes, base } = usePainel();
   const avisar = useToast();
@@ -525,7 +640,30 @@ function PassoSplit({ configurado }: { configurado: boolean }) {
           </Botao>
         </div>
       ) : !configurado ? (
-        <Aviso tom="info">Primeiro conecte a Pagar.me (passo 3).</Aviso>
+        <Aviso tom="info">Primeiro conecte a Pagar.me (passo 3) ou ative o modo demonstração.</Aviso>
+      ) : pag?.ambiente === "demo" ? (
+        <div className="space-y-3">
+          <p>No modo demonstração não precisa de código: ative e teste como as subsedes recebem.</p>
+          {erro && <Aviso tom="perigo">{erro}</Aviso>}
+          <Botao
+            icone="check"
+            carregando={salvando}
+            onClick={async () => {
+              setErro(null);
+              setSalvando(true);
+              try {
+                await api.configurarSplit({ tid });
+                avisar("Divisão ativada (demonstração).", "sucesso");
+              } catch (e) {
+                setErro(mensagemDeErro(e));
+              } finally {
+                setSalvando(false);
+              }
+            }}
+          >
+            Ativar divisão (demonstração)
+          </Botao>
+        </div>
       ) : (
         <div className="space-y-3">
           <p>
@@ -567,7 +705,7 @@ function PassoSplit({ configurado }: { configurado: boolean }) {
 
 function Passo({ n, titulo, feito, ultimo, children }: { n: number; titulo: string; feito?: boolean; ultimo?: boolean; children: ReactNode }) {
   return (
-    <li className="relative pl-12 sm:pl-14 pb-8">
+    <li className="relative pl-12 sm:pl-14 pb-8" data-tour={`passo-${n}`}>
       {!ultimo && <span className={cx("absolute left-[17px] sm:left-[19px] top-10 bottom-0 w-px", feito ? "bg-primaria/50" : "bg-linha-forte")} aria-hidden="true" />}
       <span
         className={cx(

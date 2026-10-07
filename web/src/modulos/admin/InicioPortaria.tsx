@@ -7,11 +7,13 @@ import type { Evento } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { CabecalhoPagina, Cartao, Icone, Selo } from "@/ui";
 import { usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import { EstadoLista } from "./util";
 
 /** Tela inicial da portaria: atalho grande para o leitor e eventos de hoje. */
 export default function InicioPortaria() {
   const { tid, torcida, membro, nomeSede } = usePainel();
+  useTourPagina("inicio");
   const inicioHoje = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -39,6 +41,7 @@ export default function InicioPortaria() {
 
       <Link
         to={`/${torcida.slug}/portaria`}
+        data-tour="abrir-leitor"
         className="group relative block overflow-hidden rounded-[28px] bg-primaria text-sobre-primaria p-7 sm:p-9 shadow-[0_20px_60px_-25px_var(--color-primaria)] active:scale-[0.99] transition-transform"
       >
         <div className="absolute -right-10 -top-10 size-48 rounded-full bg-white/10" />
@@ -54,7 +57,7 @@ export default function InicioPortaria() {
         </div>
       </Link>
 
-      <h2 className="text-lg font-bold mt-10 mb-3">Eventos de hoje</h2>
+      <h2 className="text-lg font-bold mt-10 mb-3" data-tour="eventos-hoje">Eventos de hoje</h2>
       {eventos.carregando || eventos.erro ? (
         <EstadoLista carregando={eventos.carregando} erro={eventos.erro} vazio={false} tituloVazio="" />
       ) : hoje.length === 0 ? (

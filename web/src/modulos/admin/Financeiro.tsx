@@ -6,6 +6,7 @@ import type { Lancamento, Repasse } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { Abas, AreaTexto, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, Indicador, Modal, Selecao, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import { baixarCsv, Confirmar, decimalBR, EstadoLista, mesAtualSP, rotuloMes, textoMoeda } from "./util";
 
 /**
@@ -45,6 +46,7 @@ export default function Financeiro() {
   const [sedeFiltro, setSedeFiltro] = useState("");
   const [novoRepasse, setNovoRepasse] = useState<string | null>(null);
   const [limite, setLimite] = useState(50);
+  useTourPagina("financeiro");
 
   const principalId = torcida.sedePrincipalId;
   const resumo = useMemo(() => {
@@ -139,7 +141,7 @@ export default function Financeiro() {
         }
         acoes={
           ehDiretoria && (
-            <Botao icone="enviar" onClick={() => setNovoRepasse("")} disabled={!subsedes.length}>
+            <Botao icone="enviar" onClick={() => setNovoRepasse("")} disabled={!subsedes.length} data-tour="registrar-repasse">
               Registrar repasse
             </Botao>
           )
@@ -153,7 +155,7 @@ export default function Financeiro() {
       ) : (
         <>
           {ehDiretoria ? (
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6" data-tour="fin-resumo">
               <Indicador
                 rotulo="Valor base vendido"
                 icone="grafico"
@@ -166,7 +168,7 @@ export default function Financeiro() {
             </div>
           ) : (
             minha && (
-              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6" data-tour="fin-resumo">
                 <Indicador rotulo="Direto na sua conta" icone="checkCirculo" tom="sucesso" valor={moeda(minha.split)} detalhe="Split da Pagar.me (já é seu)" />
                 <Indicador
                   rotulo="Pela conta da torcida"
@@ -187,7 +189,7 @@ export default function Financeiro() {
           )}
 
           {ehDiretoria && (
-            <section className="mb-8">
+            <section className="mb-8" data-tour="fin-sedes">
               <h2 className="text-lg font-bold mb-3">Saldo por sede</h2>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                 {principal && (
@@ -232,7 +234,7 @@ export default function Financeiro() {
             </section>
           )}
 
-          <section>
+          <section data-tour="fin-extrato">
             <div className="flex flex-col lg:flex-row lg:items-end gap-3 justify-between mb-4">
               <div>
                 <h2 className="text-lg font-bold">Extrato</h2>

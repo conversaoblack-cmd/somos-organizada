@@ -5,6 +5,7 @@ import { api, mensagemDeErro } from "@/lib/api";
 import type { ComId, Sede } from "@/lib/tipos";
 import { Botao, BotaoIcone, CabecalhoPagina, Campo, Cartao, cx, Gaveta, Icone, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import { Confirmar, EstadoLista } from "./util";
 import { infoRecebedor, nomeBanco, SeloRecebedor } from "./recebedor";
 
@@ -27,11 +28,24 @@ const formDe = (s: ComId<Sede> | null, ordem: number): Form => ({
 });
 
 export default function Sedes() {
-  const { tid, sedes } = usePainel();
+  const { tid, sedes, demo } = usePainel();
   const avisar = useToast();
   const [editando, setEditando] = useState<ComId<Sede> | "nova" | null>(null);
   const [alternar, setAlternar] = useState<ComId<Sede> | null>(null);
   const [atualizando, setAtualizando] = useState<string | null>(null);
+  useTourPagina("sedes");
+
+  async function simularProvaDeVida(sedeId: string) {
+    setAtualizando(sedeId);
+    try {
+      await api.simularDemo({ tid, acao: "aprovar_recebedor", sedeId });
+      avisar("Prova de vida aprovada (demonstração). Conta ativa.", "sucesso");
+    } catch (e) {
+      avisar(mensagemDeErro(e), "erro");
+    } finally {
+      setAtualizando(null);
+    }
+  }
 
   async function atualizarRecebedor(sedeId: string) {
     setAtualizando(sedeId);
@@ -77,6 +91,12 @@ export default function Sedes() {
                   : "O responsável cadastra pelo painel da subsede, em Recebimentos. Sem ela, os eventos da subsede não podem ser publicados."}
               </p>
             </div>
+            {demo && s.recebedor && s.recebedor.status !== "active" && (
+              <Botao tamanho="sm" variante="suave" icone="raio" className="shrink-0" carregando={atualizando === s.id} onClick={() => simularProvaDeVida(s.id)}>
+                <span className="hidden sm:inline">Simular prova de vida aprovada</span>
+                <span className="sm:hidden">Simular</span>
+              </Botao>
+            )}
             {s.recebedor && (
               <Botao tamanho="sm" variante="fantasma" icone="atualizar" className="shrink-0" carregando={atualizando === s.id} onClick={() => atualizarRecebedor(s.id)}>
                 <span className="hidden sm:inline">Atualizar</span>
@@ -104,7 +124,7 @@ export default function Sedes() {
         titulo="Sedes"
         descricao="A sede principal fica com a taxa de serviço. Cada subsede recebe o valor dos próprios eventos direto na conta de recebimento dela (split) e, se configurado, as mensalidades dos seus sócios."
         acoes={
-          <Botao icone="mais" onClick={() => setEditando("nova")}>
+          <Botao icone="mais" onClick={() => setEditando("nova")} data-tour="nova-subsede">
             Nova subsede
           </Botao>
         }
@@ -112,7 +132,7 @@ export default function Sedes() {
       {sedes.length === 0 ? (
         <EstadoLista carregando={false} erro={null} vazio icone="casa" tituloVazio="Nenhuma sede cadastrada" />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6" data-tour="lista-sedes">
           {principal && <div className="grid grid-cols-1 gap-3">{item(principal)}</div>}
           <section>
             <h2 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-3">Subsedes ({subsedes.length})</h2>

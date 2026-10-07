@@ -4,13 +4,14 @@ import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { aplicarTema, TEMA_PAINEL } from "@/lib/tema";
-import type { Evento, Sede, Socio } from "@/lib/tipos";
-import { useColecao } from "@/hooks/dados";
+import type { AssinaturaSaas, Evento, FaturaSaas, Sede, Socio } from "@/lib/tipos";
+import { useColecao, useDocumento } from "@/hooks/dados";
 import { useMembro, useTorcida } from "@/hooks/torcida";
 import { LayoutPainel, type ItemMenu } from "@/componentes/LayoutPainel";
 import { Login } from "@/componentes/Login";
-import { Botao, Icone, TelaCarregando, Vazio } from "@/ui";
-import { CtxPainel, ROTULO_PAPEL, type ContextoPainel } from "./contexto";
+import { BotaoPassoAPasso, ProvedorTutorial } from "@/componentes/tutorial";
+import { Botao, BotaoLink, cx, Icone, TelaCarregando, Vazio } from "@/ui";
+import { CtxPainel, ROTULO_PAPEL, usePainel, type ContextoPainel } from "./contexto";
 import VisaoGeral from "./VisaoGeral";
 import Eventos, { DetalheEvento } from "./Eventos";
 import Pedidos from "./Pedidos";
@@ -23,6 +24,10 @@ import Personalizacao from "./Personalizacao";
 import Pagamentos from "./Pagamentos";
 import InicioPortaria from "./InicioPortaria";
 import Recebimentos from "./Recebimentos";
+import PrimeirosPassos, { usePrimeirosPassos } from "./PrimeirosPassos";
+import Publicar from "./Publicar";
+import PlanoSomos from "./PlanoSomos";
+import Dominio from "./Dominio";
 import { recebedorAtivo } from "./recebedor";
 
 function Centro({ children }: { children: ReactNode }) {
@@ -69,7 +74,11 @@ export default function PainelDiretoria() {
       </Centro>
     );
   }
-  return <PainelLogado uid={usuario.uid} membro={membro} />;
+  return (
+    <ProvedorTutorial>
+      <PainelLogado uid={usuario.uid} membro={membro} />
+    </ProvedorTutorial>
+  );
 }
 
 function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["membro"] }) {
@@ -78,6 +87,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
   const ehDiretoria = papel === "diretoria";
   const sedeEscopo = ehDiretoria ? null : membro.sedeId || null;
   const base = `/${torcida.slug}/admin`;
+  const demo = torcida.pagamentos?.ambiente === "demo";
 
   const sedesQ = useColecao<Sede>(collection(db, `torcidas/${tid}/sedes`), `sedes-${tid}`);
   const sedes = useMemo(
@@ -98,8 +108,11 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
     ehDiretoria ? query(collection(db, `torcidas/${tid}/eventos`), where("status", "==", "em_aprovacao")) : null,
     `aprovacao-${tid}-${ehDiretoria}`,
   );
+  const assinatura = useDocumento<AssinaturaSaas>(ehDiretoria ? `torcidas/${tid}/saas/assinatura` : null);
   const minhaSede = sedeEscopo ? sedes.find((s) => s.id === sedeEscopo) : undefined;
   const contaPendente = papel === "subsede" && !!minhaSede && !recebedorAtivo(minhaSede);
+  const primeirosPassos = usePrimeirosPassos({ tid, torcida, papel, sedeEscopo, sedes });
+  const passosPendentes = primeirosPassos.filter((i) => !i.feito && !i.opcional).length;
 
   const ctx: ContextoPainel = useMemo(
     () => ({
@@ -117,14 +130,18 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
       emAnalise: analise.dados.length,
       emAprovacao: aprovacao.dados.length,
       podePublicarNaSede: (id) => recebedorAtivo(sedes.find((s) => s.id === id)),
+      primeirosPassos,
+      assinatura: assinatura.dados,
+      demo,
     }),
-    [tid, torcida, uid, membro, papel, ehDiretoria, sedeEscopo, sedes, base, analise.dados.length, aprovacao.dados.length],
+    [tid, torcida, uid, membro, papel, ehDiretoria, sedeEscopo, sedes, base, analise.dados.length, aprovacao.dados.length, primeirosPassos, assinatura.dados, demo],
   );
 
   const menu: ItemMenu[] = useMemo(() => {
     if (papel === "portaria") return [{ para: base, rotulo: "Portaria", icone: "qr", fim: true }];
     const itens: (ItemMenu & { so?: boolean })[] = [
       { para: base, rotulo: "Visão geral", icone: "painel", fim: true },
+      { para: `${base}/primeiros-passos`, rotulo: "Primeiros passos", icone: "lista", contador: passosPendentes || undefined },
       { para: `${base}/eventos`, rotulo: "Eventos", icone: "calendario", contador: ehDiretoria ? aprovacao.dados.length : undefined },
       { para: `${base}/pedidos`, rotulo: "Pedidos e ingressos", icone: "ingresso" },
       { para: `${base}/socios`, rotulo: "Sócios", icone: "usuarios", contador: analise.dados.length },
@@ -135,9 +152,12 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
       { para: `${base}/usuarios`, rotulo: "Usuários do painel", icone: "chave", so: true },
       { para: `${base}/personalizacao`, rotulo: "Personalizar página", icone: "pincel", so: true },
       { para: `${base}/pagamentos`, rotulo: "Pagamentos", icone: "cartao", so: true, contador: torcida.pagamentos?.configurado ? undefined : 1 },
+      { para: `${base}/publicar`, rotulo: "Publicar site", icone: "raio", so: true, contador: torcida.publicada ? undefined : 1 },
+      { para: `${base}/plano`, rotulo: "Plano Somos Organizada", icone: "bandeira", so: true },
+      { para: `${base}/dominio`, rotulo: "Domínio", icone: "cadeado", so: true },
     ];
     return itens.filter((i) => !i.so || ehDiretoria);
-  }, [papel, base, ehDiretoria, analise.dados.length, aprovacao.dados.length, contaPendente, torcida.pagamentos?.configurado]);
+  }, [papel, base, ehDiretoria, analise.dados.length, aprovacao.dados.length, contaPendente, passosPendentes, torcida.pagamentos?.configurado, torcida.publicada]);
 
   const marca = (
     <div className="flex items-center gap-3">
@@ -166,17 +186,22 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
         menu={menu}
         usuario={{ nome: membro.nome || membro.email, detalhe: detalheUsuario }}
         acoesTopo={
-          <a
-            href={`/${torcida.slug}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2"
-          >
-            <Icone nome="externo" className="size-4" />
-            <span className="hidden sm:inline">Ver página</span>
-          </a>
+          <div className="flex items-center gap-2">
+            <BotaoPassoAPasso />
+            <a
+              href={`/${torcida.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2"
+              aria-label="Ver página da torcida"
+            >
+              <Icone nome="externo" className="size-4" />
+              <span className="hidden md:inline">Ver página</span>
+            </a>
+          </div>
         }
       >
+        <FaixasGlobais />
         {papel === "portaria" ? (
           <Routes>
             <Route path="*" element={<InicioPortaria />} />
@@ -184,6 +209,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
         ) : (
           <Routes>
             <Route index element={<VisaoGeral />} />
+            <Route path="primeiros-passos" element={<PrimeirosPassos />} />
             <Route path="eventos" element={<Eventos />} />
             <Route path="eventos/:eventoId" element={<DetalheEvento />} />
             <Route path="pedidos" element={<Pedidos />} />
@@ -195,6 +221,9 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
             <Route path="usuarios" element={soDiretoria(<Usuarios />)} />
             <Route path="personalizacao" element={soDiretoria(<Personalizacao />)} />
             <Route path="pagamentos" element={soDiretoria(<Pagamentos />)} />
+            <Route path="publicar" element={soDiretoria(<Publicar />)} />
+            <Route path="plano" element={soDiretoria(<PlanoSomos />)} />
+            <Route path="dominio" element={soDiretoria(<Dominio />)} />
             <Route path="*" element={<Navigate to={base} replace />} />
           </Routes>
         )}
@@ -202,3 +231,71 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
     </CtxPainel.Provider>
   );
 }
+
+/** Faixas no topo de todo o painel: demonstração, site fora do ar, mensalidade em atraso. */
+function FaixasGlobais() {
+  const { torcida, tid, ehDiretoria, base, assinatura, demo } = usePainel();
+  const fatura = useDocumento<FaturaSaas>(ehDiretoria && assinatura?.faturaAbertaId ? `torcidas/${tid}/faturasSaas/${assinatura.faturaAbertaId}` : null);
+  const faixas: ReactNode[] = [];
+
+  if (torcida.bloqueioSaas)
+    faixas.push(
+      <Faixa key="bloqueio" tom="perigo" icone="alerta" acao={ehDiretoria && <BotaoLink to={`${base}/plano`} tamanho="sm" variante="contorno">Regularizar</BotaoLink>}>
+        <strong>Site fora do ar por mensalidade em atraso.</strong> {ehDiretoria ? "Pague a fatura em aberto para voltar a vender." : "Fale com a diretoria."}
+      </Faixa>,
+    );
+  else if (ehDiretoria && assinatura?.situacao === "atrasada") {
+    const venc = fatura.dados?.vencimento?.toMillis();
+    const restam = venc ? Math.max(0, Math.ceil((venc + 7 * 86400_000 - Date.now()) / 86400_000)) : null;
+    faixas.push(
+      <Faixa key="atraso" tom="alerta" icone="relogio" acao={<BotaoLink to={`${base}/plano`} tamanho="sm" variante="contorno">Pagar agora</BotaoLink>}>
+        <strong>Mensalidade da plataforma em atraso.</strong>{" "}
+        {restam != null ? `Faltam ${restam} ${restam === 1 ? "dia" : "dias"} para o site sair do ar.` : "Pague para o site não sair do ar."}
+      </Faixa>,
+    );
+  }
+  if (demo)
+    faixas.push(
+      <Faixa key="demo" tom="info" icone="raio">
+        <strong>MODO DEMONSTRAÇÃO</strong> — nenhum pagamento é real.
+      </Faixa>,
+    );
+  if (!torcida.publicada && !torcida.bloqueioSaas)
+    faixas.push(
+      <Faixa
+        key="publicar"
+        tom="neutro"
+        icone="olho"
+        acao={ehDiretoria && <BotaoLink to={`${base}/publicar`} tamanho="sm" icone="raio">Publicar</BotaoLink>}
+      >
+        Seu site ainda não está no ar. Só a sua equipe consegue ver e testar.
+      </Faixa>,
+    );
+  if (!faixas.length) return null;
+  return <div className="space-y-2 mb-5 -mt-1">{faixas}</div>;
+}
+
+function Faixa({ tom, icone, acao, children }: { tom: "perigo" | "alerta" | "info" | "neutro"; icone: "alerta" | "relogio" | "raio" | "olho"; acao?: ReactNode; children: ReactNode }) {
+  return (
+    <div
+      role={tom === "perigo" ? "alert" : "status"}
+      className={cx(
+        "flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 rounded-2xl border px-4 py-3 text-sm",
+        tom === "perigo" && "bg-perigo/12 border-perigo/30",
+        tom === "alerta" && "bg-alerta/12 border-alerta/30",
+        tom === "info" && "bg-info/12 border-info/30",
+        tom === "neutro" && "bg-superficie border-linha-forte",
+      )}
+    >
+      <div className="flex items-start gap-2.5 flex-1 min-w-0">
+        <Icone
+          nome={icone}
+          className={cx("size-5 shrink-0", tom === "perigo" ? "text-perigo" : tom === "alerta" ? "text-alerta" : tom === "info" ? "text-info" : "text-texto-2")}
+        />
+        <p className="text-texto">{children}</p>
+      </div>
+      {acao && <div className="shrink-0 self-start sm:self-center">{acao}</div>}
+    </div>
+  );
+}
+

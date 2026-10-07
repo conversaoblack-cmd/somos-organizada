@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
-import type { ComId, Membro, Papel, Sede, Torcida } from "@/lib/tipos";
+import type { AssinaturaSaas, ComId, Membro, Papel, Sede, Torcida } from "@/lib/tipos";
+import type { ItemPrimeiroPasso } from "./PrimeirosPassos";
 
 export interface ContextoPainel {
   tid: string;
@@ -22,6 +23,12 @@ export interface ContextoPainel {
   emAprovacao: number;
   /** Regra do Firestore: evento de subsede só é publicado com a conta de recebimento ativa. */
   podePublicarNaSede: (sedeId: string | undefined | null) => boolean;
+  /** Primeiros passos com status calculado (diretoria e subsede). */
+  primeirosPassos: ItemPrimeiroPasso[];
+  /** Mensalidade Somos Organizada (só a diretoria lê). */
+  assinatura: ComId<AssinaturaSaas> | null;
+  /** Modo demonstração (chaves sk_demo_): nenhum pagamento é real. */
+  demo: boolean;
 }
 
 export const CtxPainel = createContext<ContextoPainel | null>(null);

@@ -8,9 +8,11 @@ import type { Plano, Tema, Torcida } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { AreaTexto, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, Interruptor, OpcoesCartao, useToast } from "@/ui";
 import { usePainel } from "./contexto";
+import { useTourPagina } from "./tours";
 import { numeroWhatsapp, SeletorImagem, semIndefinidos } from "./util";
 
 interface Form {
+  modulos: { eventos: boolean; socios: boolean };
   tema: Tema;
   textos: { titulo: string; subtitulo: string; sobre: string };
   contato: { whatsapp: string; instagram: string; email: string };
@@ -29,6 +31,7 @@ function formDe(t: Torcida): Form {
     textos: { titulo: t.textos?.titulo ?? t.nome, subtitulo: t.textos?.subtitulo ?? "", sobre: t.textos?.sobre ?? "" },
     contato: { whatsapp: whatsappParaCampo(t.contato?.whatsapp), instagram: t.contato?.instagram ?? "", email: t.contato?.email ?? "" },
     aprovacaoManualSocio: !!t.aprovacaoManualSocio,
+    modulos: { eventos: t.modulos?.eventos !== false, socios: t.modulos?.socios !== false },
     destinoMensalidade: t.destinoMensalidade ?? "sede_do_socio",
   };
 }
@@ -51,6 +54,8 @@ const PALETAS: { nome: string; tema: Pick<Tema, "corPrimaria" | "corSecundaria" 
 
 export default function Personalizacao() {
   const { tid, torcida } = usePainel();
+  useTourPagina("personalizacao");
+  const [confirmandoModulos, setConfirmandoModulos] = useState(false);
   const avisar = useToast();
   const [f, setF] = useState<Form>(() => formDe(torcida));
   const [salvando, setSalvando] = useState(false);
@@ -97,6 +102,7 @@ export default function Personalizacao() {
           email: f.contato.email.trim().toLowerCase(),
         },
         aprovacaoManualSocio: f.aprovacaoManualSocio,
+        modulos: f.modulos,
         destinoMensalidade: f.destinoMensalidade,
       });
       avisar("Página atualizada! As mudanças já estão no ar.", "sucesso");
@@ -131,7 +137,49 @@ export default function Personalizacao() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_400px] items-start">
         <div className="space-y-6 min-w-0">
-          <Secao titulo="Cores" descricao="Escolha uma paleta pronta ou ajuste cada cor.">
+          <Secao titulo="O que o site vai oferecer" descricao="Ligue pelo menos um. Dá para mudar quando quiser." tour="modulos">
+            <div className="space-y-5">
+              <Interruptor
+                ligado={f.modulos.eventos}
+                onChange={(v) => setF((x) => ({ ...x, modulos: { ...x.modulos, eventos: v } }))}
+                disabled={f.modulos.eventos && !f.modulos.socios}
+                rotulo="Venda de ingressos (Eventos)"
+                descricao="Caravanas, festas, jogos: o torcedor compra o ingresso pela página e recebe o QR Code."
+              />
+              <Interruptor
+                ligado={f.modulos.socios}
+                onChange={(v) => setF((x) => ({ ...x, modulos: { ...x.modulos, socios: v } }))}
+                disabled={f.modulos.socios && !f.modulos.eventos}
+                rotulo="Associação de sócios"
+                descricao="Planos mensais ou anuais, carteirinha digital e preço de sócio nos eventos."
+              />
+            </div>
+            {torcida.modulos === undefined && !alterado && (
+              <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-info/30 bg-info/10 p-4">
+                <p className="text-sm text-texto-2 flex-1">Confirme a escolha para concluir este passo (pode deixar os dois ligados).</p>
+                <Botao
+                  tamanho="sm"
+                  icone="check"
+                  carregando={confirmandoModulos}
+                  onClick={async () => {
+                    setConfirmandoModulos(true);
+                    try {
+                      await updateDoc(doc(db, `torcidas/${tid}`), { modulos: f.modulos });
+                      avisar("Módulos confirmados.", "sucesso");
+                    } catch (e) {
+                      avisar(mensagemDeErro(e), "erro");
+                    } finally {
+                      setConfirmandoModulos(false);
+                    }
+                  }}
+                >
+                  Confirmar módulos
+                </Botao>
+              </div>
+            )}
+          </Secao>
+
+          <Secao titulo="Cores" descricao="Escolha uma paleta pronta ou ajuste cada cor." tour="cores">
             <div className="flex flex-wrap gap-2 mb-5">
               {PALETAS.map((p) => (
                 <button
@@ -194,7 +242,7 @@ export default function Personalizacao() {
             )}
           </Secao>
 
-          <Secao titulo="Imagens">
+          <Secao titulo="Imagens" tour="imagens">
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-[180px_1fr]">
               <SeletorImagem
                 rotulo="Escudo / logo"
@@ -217,7 +265,7 @@ export default function Personalizacao() {
             </div>
           </Secao>
 
-          <Secao titulo="Textos">
+          <Secao titulo="Textos" tour="textos">
             <div className="space-y-4">
               <Campo rotulo="Título" value={f.textos.titulo} onChange={(v) => setF((x) => ({ ...x, textos: { ...x.textos, titulo: v } }))} maxLength={60} />
               <Campo
@@ -265,7 +313,7 @@ export default function Personalizacao() {
             </div>
           </Secao>
 
-          <Secao titulo="Regras de sócio">
+          <Secao titulo="Regras de sócio" tour="regras-socio">
             <Interruptor
               ligado={f.aprovacaoManualSocio}
               onChange={(v) => setF((x) => ({ ...x, aprovacaoManualSocio: v }))}
@@ -295,7 +343,7 @@ export default function Personalizacao() {
           </Secao>
         </div>
 
-        <div id="previa" className="xl:sticky xl:top-24 scroll-mt-20">
+        <div id="previa" className="xl:sticky xl:top-24 scroll-mt-20" data-tour="previa">
           <p className="text-sm font-semibold text-texto-2 mb-2 flex items-center gap-2">
             <Icone nome="olho" className="size-4" /> Prévia ao vivo
           </p>
@@ -320,9 +368,9 @@ export default function Personalizacao() {
   );
 }
 
-function Secao({ titulo, descricao, children }: { titulo: string; descricao?: string; children: ReactNode }) {
+function Secao({ titulo, descricao, children, tour }: { titulo: string; descricao?: string; children: ReactNode; tour?: string }) {
   return (
-    <Cartao className="p-5 sm:p-6">
+    <Cartao className="p-5 sm:p-6" data-tour={tour}>
       <h2 className="font-bold text-lg">{titulo}</h2>
       {descricao && <p className="text-sm text-texto-3 mt-0.5">{descricao}</p>}
       <div className="mt-4">{children}</div>
