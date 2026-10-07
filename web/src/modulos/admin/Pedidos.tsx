@@ -26,7 +26,8 @@ export default function Pedidos() {
   const [tipo, setTipo] = useState<"todos" | "ingresso" | "socio">("todos");
   const [status, setStatus] = useState<"" | StatusPedido>("");
   const [busca, setBusca] = useState("");
-  const [aberto, setAberto] = useState<ComId<PedidoPg> | null>(null);
+  const [abertoId, setAbertoId] = useState<string | null>(null);
+  const setAberto = (p: ComId<PedidoPg> | null) => setAbertoId(p?.id ?? null);
   useTourPagina("pedidos");
 
   const filtrados = useMemo(() => {
@@ -184,7 +185,7 @@ export default function Pedidos() {
         </div>
       )}
 
-      <DetalhePedido p={aberto} fechar={() => setAberto(null)} />
+      <DetalhePedido p={abertoId ? (pedidos.dados.find((x) => x.id === abertoId) ?? null) : null} fechar={() => setAberto(null)} />
     </div>
   );
 }

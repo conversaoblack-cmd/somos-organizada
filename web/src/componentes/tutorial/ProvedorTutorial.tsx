@@ -112,11 +112,14 @@ export function ProvedorTutorial({ children }: { children: ReactNode }) {
     if (!pedido) return;
     const r = registros.find((x) => x.id === pedido);
     if (!r) return;
-    const t = setTimeout(() => setAberto({ ...r, passos: passosVisiveis(r.passos) }), 500);
+    // espera a tela desenhar; não cancela quando o parâmetro some da URL
+    setTimeout(() => {
+      const atual = registrosRef.current.find((x) => x.id === r.id) ?? r;
+      setAberto({ ...atual, passos: passosVisiveis(atual.passos) });
+    }, 700);
     const novos = new URLSearchParams(params);
     novos.delete("tour");
     setParams(novos, { replace: true });
-    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedido, registros]);
 

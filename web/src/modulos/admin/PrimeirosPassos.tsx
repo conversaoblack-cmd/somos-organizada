@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { TEMA_PADRAO } from "@/lib/tema";
 import { Link } from "react-router";
 import { collection, limit, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -50,7 +51,8 @@ export function usePrimeirosPassos(args: { tid: string; torcida: ComId<Torcida>;
           chave: "personalizar",
           titulo: "Personalizar a página",
           descricao: "Cores, escudo, banner e textos da torcida.",
-          feito: !!(torcida.tema?.logoUrl || torcida.tema?.bannerUrl),
+          // escudo/banner enviados ou cores trocadas (as padrão são as do Brasil)
+          feito: !!(torcida.tema?.logoUrl || torcida.tema?.bannerUrl || (torcida.tema?.corPrimaria && torcida.tema.corPrimaria.toUpperCase() !== TEMA_PADRAO.corPrimaria)),
           para: "personalizacao?tour=admin-personalizacao",
           acao: "Personalizar",
         },
