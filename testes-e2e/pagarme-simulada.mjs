@@ -30,9 +30,20 @@ export function iniciar(porta = 4010) {
     const json = corpo ? JSON.parse(corpo) : undefined;
     const url = new URL(req.url, "http://x");
     const responder = (status, dados) => {
-      res.writeHead(status, { "Content-Type": "application/json" });
+      res.writeHead(status, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
       res.end(JSON.stringify(dados));
     };
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, GET" });
+      return res.end();
+    }
+    // Tokenização de cartão (navegador, autenticada só pela chave pública). Final 0002 = recusado.
+    if (req.method === "POST" && url.pathname === "/tokens") {
+      if (!String(url.searchParams.get("appId") ?? "").startsWith("pk_test_")) return responder(401, { message: "appId inválido" });
+      const numero = String(json?.card?.number ?? "");
+      if (numero.length < 13) return responder(422, { message: "The request is invalid.", errors: { "card.number": ["Número do cartão inválido"] } });
+      return responder(200, { id: numero.endsWith("0002") ? "tok_recusado" : id("token"), type: "card" });
+    }
 
     // Controle do teste: marca um pedido como pago (simula o cliente pagando o Pix)
     if (req.method === "POST" && url.pathname.startsWith("/__pagar/")) {

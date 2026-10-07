@@ -1,0 +1,107 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { aplicarTema, TEMA_PADRAO } from "@/lib/tema";
+import { definirContextoErros, registrarErro } from "@/lib/erros";
+import type { ComId, Membro, Socio, Torcida } from "@/lib/tipos";
+import { useDocumento, useUsuario } from "./dados";
+
+interface ContextoTorcida {
+  tid: string;
+  torcida: ComId<Torcida>;
+}
+
+const Ctx = createContext<ContextoTorcida | null>(null);
+
+/** Dentro das rotas /:slug/* — torcida já carregada e tema aplicado. */
+export function useTorcida(): ContextoTorcida {
+  const c = useContext(Ctx);
+  if (!c) throw new Error("useTorcida fora de <ProvedorTorcida>");
+  return c;
+}
+
+type EstadoSlug =
+  | { fase: "carregando" }
+  | { fase: "nao_encontrada" }
+  | { fase: "erro"; erro: Error }
+  | { fase: "ok"; tid: string; torcida: ComId<Torcida> };
+
+/** Resolve slug → torcida (tempo real) e aplica as cores da torcida na página. */
+export function useTorcidaPorSlug(slug: string | undefined): EstadoSlug {
+  const [estado, setEstado] = useState<EstadoSlug>({ fase: "carregando" });
+  useEffect(() => {
+    if (!slug) return;
+    let cancelar: (() => void) | undefined;
+    let ativo = true;
+    setEstado({ fase: "carregando" });
+    getDoc(doc(db, "slugs", slug.toLowerCase()))
+      .then((s) => {
+        if (!ativo) return;
+        const tid = s.get("torcidaId") as string | undefined;
+        if (!tid) return setEstado({ fase: "nao_encontrada" });
+        cancelar = onSnapshot(
+          doc(db, "torcidas", tid),
+          (t) => {
+            if (!t.exists()) return setEstado({ fase: "nao_encontrada" });
+            const torcida = { id: t.id, ...(t.data() as Torcida) };
+            setEstado({ fase: "ok", tid, torcida });
+          },
+          (erro) => setEstado({ fase: "erro", erro }),
+        );
+      })
+      .catch((erro) => {
+        registrarErro(erro, "slug");
+        if (ativo) setEstado({ fase: "erro", erro });
+      });
+    return () => {
+      ativo = false;
+      cancelar?.();
+    };
+  }, [slug]);
+  return estado;
+}
+
+export function ProvedorTorcida({
+  tid,
+  torcida,
+  aplicarCores = true,
+  children,
+}: {
+  tid: string;
+  torcida: ComId<Torcida>;
+  aplicarCores?: boolean;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    if (aplicarCores) aplicarTema(torcida.tema);
+    definirContextoErros(tid, torcida.slug);
+    document.title = torcida.nome;
+    return () => {
+      aplicarTema(TEMA_PADRAO);
+      definirContextoErros(null);
+    };
+  }, [tid, torcida, aplicarCores]);
+  return <Ctx.Provider value={{ tid, torcida }}>{children}</Ctx.Provider>;
+}
+
+/** Acesso do usuário logado ao painel desta torcida (null = sem acesso). */
+export function useMembro(tid: string | null) {
+  const u = useUsuario();
+  const caminho = tid && u && !u.isAnonymous ? `torcidas/${tid}/membros/${u.uid}` : null;
+  const r = useDocumento<Membro>(caminho);
+  const carregando = u === undefined || r.carregando;
+  return { membro: r.dados?.ativo ? r.dados : null, carregando, usuario: u };
+}
+
+/** Ficha de sócio do usuário logado nesta torcida. */
+export function useMinhaFicha(tid: string | null) {
+  const u = useUsuario();
+  const caminho = tid && u && !u.isAnonymous ? `torcidas/${tid}/socios/${u.uid}` : null;
+  const r = useDocumento<Socio>(caminho);
+  return { ficha: r.dados, carregando: u === undefined || r.carregando, usuario: u };
+}
+
+export const socioEmDia = (s: Socio | null | undefined) =>
+  !!s && s.status === "ativo" && !!s.validoAte && s.validoAte.toMillis() > Date.now();
+
+export { TEMA_PADRAO };

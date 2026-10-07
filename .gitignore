@@ -1,6 +1,6 @@
 node_modules/
 dist/
-lib/
+functions/lib/
 .env
 .env.*
 !.env.example
@@ -10,3 +10,4 @@ firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
 .secret.local
+!web/.env.emulador

@@ -1,0 +1,353 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { signInAnonymously } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { api, mensagemDeErro } from "@/lib/api";
+import type { ComId, Evento, Sede } from "@/lib/tipos";
+import { cpfValido, dataExtensa, emailValido, hora, moeda, soDigitos, telefoneValido, mascaraCpf, mascaraTelefone } from "@/lib/formatos";
+import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
+import { useUsuario } from "@/hooks/dados";
+import { Login } from "@/componentes/Login";
+import { Aviso, Botao, Campo, Carregando, Contador, Etapas, Icone, Modal, OpcoesCartao, Selo, cx } from "@/ui";
+import { LinhaValor } from "./comum";
+import { disponibilidade } from "./CartaoEvento";
+import { cartaoVazio, FormCartao, prepararCartao, validarCartao, type EstadoCartao } from "./FormCartao";
+
+type Cotacao = Awaited<ReturnType<typeof api.cotarIngresso>>;
+interface Titular {
+  nome: string;
+  cpf: string;
+}
+
+const ETAPAS = ["Ingressos", "Titulares", "Pagamento"];
+
+/** Checkout faseado de ingressos. Mostrado dentro da página do evento. */
+export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }) {
+  const { tid, torcida } = useTorcida();
+  const navegar = useNavigate();
+  const usuario = useUsuario();
+  const { ficha } = useMinhaFicha(tid);
+  const [cot, setCot] = useState<Cotacao | null>(null);
+  const [erroCot, setErroCot] = useState<string | null>(null);
+  const [etapa, setEtapa] = useState(0);
+  const [qtd, setQtd] = useState(1);
+  const [titulares, setTitulares] = useState<Titular[]>([{ nome: "", cpf: "" }]);
+  const [comprador, setComprador] = useState({ nome: "", email: "", cpf: "", telefone: "" });
+  const [metodo, setMetodo] = useState<"pix" | "cartao">(torcida.pagamentos.pix ? "pix" : "cartao");
+  const [cartao, setCartao] = useState<EstadoCartao>(cartaoVazio);
+  const [erros, setErros] = useState<Record<string, string>>({});
+  const [enviando, setEnviando] = useState(false);
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null);
+  const [loginAberto, setLoginAberto] = useState(false);
+
+  const uidLogado = usuario && !usuario.isAnonymous ? usuario.uid : null;
+
+  // Cotação (recalcula ao entrar/sair da conta de sócio)
+  useEffect(() => {
+    let ativo = true;
+    setCot(null);
+    api
+      .cotarIngresso({ tid, eventoId: evento.id })
+      .then((c) => ativo && setCot(c))
+      .catch((e) => ativo && setErroCot(mensagemDeErro(e)));
+    return () => {
+      ativo = false;
+    };
+  }, [tid, evento.id, uidLogado]);
+
+  const socioPreco = cot?.socio && !cot.socio.jaUsou ? cot.socio : null;
+
+  // Pré-preenche com os dados do sócio logado
+  useEffect(() => {
+    if (!ficha) return;
+    setComprador((c) => ({
+      nome: c.nome || ficha.nome,
+      email: c.email || ficha.email,
+      cpf: c.cpf || mascaraCpf(ficha.cpf),
+      telefone: c.telefone || mascaraTelefone(ficha.telefone),
+    }));
+  }, [ficha]);
+  useEffect(() => {
+    if (socioPreco) {
+      setTitulares((t) => [{ nome: socioPreco.nome, cpf: mascaraCpf(socioPreco.cpf) }, ...t.slice(1)]);
+    }
+  }, [socioPreco?.cpf]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setTitulares((t) => Array.from({ length: qtd }, (_, i) => t[i] ?? { nome: "", cpf: "" }));
+  }, [qtd]);
+
+  const itens = useMemo(() => {
+    if (!cot) return [];
+    return titulares.map((t, i) => {
+      const ehSocio = !!socioPreco && i === 0 && soDigitos(t.cpf) === socioPreco.cpf;
+      return { ehSocio, base: ehSocio ? cot.valorSocio : cot.valorPublico, taxa: ehSocio ? cot.taxaSocio : cot.taxaPublico };
+    });
+  }, [cot, titulares, socioPreco]);
+  const totalBase = itens.reduce((s, i) => s + i.base, 0);
+  const totalTaxa = itens.reduce((s, i) => s + i.taxa, 0);
+  const total = totalBase + totalTaxa;
+
+  const disp = disponibilidade(evento);
+  const maxQtd = Math.max(1, Math.min(cot?.limitePorPedido ?? 6, cot?.disponiveis ?? 99));
+  const vendaEncerrada = !!evento.vendaAte && evento.vendaAte.toMillis() < Date.now();
+  const bloqueado = disp.esgotado || vendaEncerrada || !torcida.pagamentos.configurado || torcida.status === "suspensa";
+
+  function validarTitulares() {
+    const e: Record<string, string> = {};
+    const vistos = new Set<string>();
+    titulares.forEach((t, i) => {
+      if (t.nome.trim().split(/\s+/).length < 2) e[`t${i}nome`] = "Nome e sobrenome do titular.";
+      const c = soDigitos(t.cpf);
+      if (!cpfValido(c)) e[`t${i}cpf`] = "CPF inválido.";
+      else if (vistos.has(c)) e[`t${i}cpf`] = "Cada ingresso precisa de um CPF diferente.";
+      vistos.add(c);
+    });
+    if (comprador.nome.trim().length < 3) e.cnome = "Informe seu nome.";
+    if (!emailValido(comprador.email)) e.cemail = "E-mail inválido.";
+    if (!cpfValido(comprador.cpf)) e.ccpf = "CPF inválido.";
+    if (!telefoneValido(comprador.telefone)) e.ctel = "Telefone com DDD.";
+    setErros(e);
+    if (Object.keys(e).length) {
+      requestAnimationFrame(() => document.querySelector("[data-erro]")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+    }
+    return !Object.keys(e).length;
+  }
+
+  async function pagar() {
+    setErroEnvio(null);
+    if (metodo === "cartao") {
+      const e = validarCartao(cartao);
+      setErros(e);
+      if (Object.keys(e).length) return;
+    }
+    setEnviando(true);
+    try {
+      if (!auth.currentUser) await signInAnonymously(auth);
+      const dadosCartao = metodo === "cartao" ? await prepararCartao(torcida.pagamentos.chavePublica!, cartao) : undefined;
+      const r = await api.criarPedidoIngresso({
+        tid,
+        eventoId: evento.id,
+        metodo,
+        comprador: { nome: comprador.nome.trim(), email: comprador.email.trim(), cpf: soDigitos(comprador.cpf), telefone: soDigitos(comprador.telefone) },
+        titulares: titulares.map((t) => ({ nome: t.nome.trim(), cpf: soDigitos(t.cpf) })),
+        cartao: dadosCartao,
+      });
+      navegar(`/${torcida.slug}/pedido/${r.pedidoId}`);
+    } catch (e) {
+      setErroEnvio(mensagemDeErro(e));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  if (erroCot) return <Aviso tom="perigo">{erroCot}</Aviso>;
+  if (!cot) return <Carregando texto="Calculando valores..." />;
+
+  if (bloqueado) {
+    return (
+      <Aviso tom="alerta" titulo={disp.esgotado ? "Ingressos esgotados" : vendaEncerrada ? "Vendas encerradas" : "Vendas indisponíveis no momento"}>
+        {disp.esgotado ? "Fique de olho: ingressos podem voltar se alguma reserva expirar." : "Fale com a diretoria pelos canais oficiais."}
+      </Aviso>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Etapas etapas={ETAPAS} atual={etapa} />
+
+      {etapa === 0 && (
+        <div className="space-y-5 animate-surgir">
+          {/* Sócio x público */}
+          {socioPreco ? (
+            <div className="flex items-center gap-3 rounded-2xl border border-primaria/40 bg-primaria/10 p-4">
+              <Icone nome="escudo" className="size-6 text-primaria shrink-0" />
+              <div className="text-sm">
+                <p className="font-semibold">Preço de sócio liberado</p>
+                <p className="text-texto-2">Seu ingresso sai por {moeda(cot.valorSocio)}. Acompanhantes pagam o valor público.</p>
+              </div>
+            </div>
+          ) : cot.socio?.jaUsou ? (
+            <Aviso tom="info">Você já usou o preço de sócio neste evento. Novos ingressos saem pelo valor público.</Aviso>
+          ) : uidLogado && ficha ? (
+            <Aviso tom="alerta" titulo="Sua associação não está em dia">
+              Regularize a mensalidade na sua conta para pagar {moeda(cot.valorSocio)}.
+            </Aviso>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setLoginAberto(true)}
+              className="w-full flex items-center gap-3 rounded-2xl border border-dashed border-linha-forte p-4 text-left hover:border-primaria transition-colors"
+            >
+              <Icone nome="escudo" className="size-6 text-primaria shrink-0" />
+              <span className="text-sm flex-1">
+                <span className="font-semibold block">É sócio? Pague {moeda(cot.valorSocio)}</span>
+                <span className="text-texto-2">Entre na sua conta para liberar o preço de sócio.</span>
+              </span>
+              <Icone nome="chevronDireita" className="size-5 text-texto-3" />
+            </button>
+          )}
+
+          <div className="flex items-center justify-between gap-4 rounded-2xl bg-superficie-2 p-4">
+            <div>
+              <p className="font-semibold">Quantidade</p>
+              <p className="text-sm text-texto-3">
+                Máx. {maxQtd} por compra{cot.disponiveis != null && cot.disponiveis <= 30 ? ` · restam ${cot.disponiveis}` : ""}
+              </p>
+            </div>
+            <Contador valor={qtd} onChange={setQtd} min={1} max={maxQtd} rotulo="Quantidade de ingressos" />
+          </div>
+
+          <div className="space-y-2 rounded-2xl border border-linha p-4">
+            {itens.map((it, i) => (
+              <LinhaValor key={i} rotulo={`Ingresso ${i + 1} · ${it.ehSocio ? "Sócio" : "Público"}`} valor={moeda(it.base)} />
+            ))}
+            <LinhaValor rotulo={`Taxa de serviço (${cot.pct}%)`} valor={moeda(totalTaxa)} sutil />
+            <LinhaValor rotulo="Total" valor={moeda(total)} forte />
+          </div>
+          <Botao largo tamanho="lg" iconeDireita="setaDireita" onClick={() => setEtapa(1)}>
+            Continuar
+          </Botao>
+        </div>
+      )}
+
+      {etapa === 1 && (
+        <div className="space-y-5 animate-surgir">
+          <Aviso tom="info">Ingresso nominal e intransferível: o nome e o CPF do titular são conferidos na entrada, com documento com foto.</Aviso>
+          {titulares.map((t, i) => {
+            const travado = !!socioPreco && i === 0;
+            return (
+              <fieldset key={i} className="rounded-2xl border border-linha p-4 space-y-3">
+                <legend className="px-2 text-sm font-semibold flex items-center gap-2">
+                  Ingresso {i + 1} {itens[i]?.ehSocio ? <Selo tom="primaria">Sócio</Selo> : <Selo>Público</Selo>}
+                </legend>
+                <Campo
+                  rotulo="Nome completo do titular"
+                  value={t.nome}
+                  disabled={travado}
+                  onChange={(v) => setTitulares((l) => l.map((x, j) => (j === i ? { ...x, nome: v } : x)))}
+                  erro={erros[`t${i}nome`]}
+                  autoComplete={i === 0 ? "name" : "off"}
+                />
+                <Campo
+                  rotulo="CPF do titular"
+                  mascara="cpf"
+                  value={t.cpf}
+                  disabled={travado}
+                  onChange={(v) => setTitulares((l) => l.map((x, j) => (j === i ? { ...x, cpf: v } : x)))}
+                  erro={erros[`t${i}cpf`]}
+                  dica={travado ? "Preço de sócio vale para o ingresso no seu nome." : undefined}
+                />
+              </fieldset>
+            );
+          })}
+
+          <fieldset className="rounded-2xl border border-linha p-4 space-y-3">
+            <legend className="px-2 text-sm font-semibold">Quem está comprando</legend>
+            {!uidLogado && (
+              <button
+                type="button"
+                className="text-sm text-primaria font-semibold"
+                onClick={() => setComprador((c) => ({ ...c, nome: titulares[0].nome, cpf: titulares[0].cpf }))}
+              >
+                Usar os dados do ingresso 1
+              </button>
+            )}
+            <Campo rotulo="Nome" value={comprador.nome} onChange={(v) => setComprador({ ...comprador, nome: v })} erro={erros.cnome} autoComplete="name" />
+            <Campo
+              rotulo="E-mail"
+              type="email"
+              value={comprador.email}
+              onChange={(v) => setComprador({ ...comprador, email: v })}
+              erro={erros.cemail}
+              autoComplete="email"
+              dica="Usado para identificar sua compra."
+            />
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Campo rotulo="CPF" mascara="cpf" value={comprador.cpf} onChange={(v) => setComprador({ ...comprador, cpf: v })} erro={erros.ccpf} />
+              <Campo rotulo="Celular (WhatsApp)" mascara="telefone" value={comprador.telefone} onChange={(v) => setComprador({ ...comprador, telefone: v })} erro={erros.ctel} autoComplete="tel" />
+            </div>
+          </fieldset>
+
+          <div className="flex gap-3">
+            <Botao aria-label="Voltar" className="shrink-0 px-4 sm:px-7" variante="contorno" tamanho="lg" onClick={() => setEtapa(0)} icone="setaEsquerda">
+              <span className="hidden sm:inline">Voltar</span>
+            </Botao>
+            <Botao largo tamanho="lg" iconeDireita="setaDireita" onClick={() => validarTitulares() && setEtapa(2)}>
+              Ir para pagamento
+            </Botao>
+          </div>
+        </div>
+      )}
+
+      {etapa === 2 && (
+        <div className="space-y-5 animate-surgir">
+          <OpcoesCartao
+            nome="Forma de pagamento"
+            valor={metodo}
+            onChange={setMetodo}
+            opcoes={[
+              ...(torcida.pagamentos.pix
+                ? [{ valor: "pix" as const, titulo: "Pix", descricao: "Aprovação na hora", icone: "pix" as const, extra: <Selo tom="sucesso" className="mt-2">Recomendado</Selo> }]
+                : []),
+              ...(torcida.pagamentos.cartao ? [{ valor: "cartao" as const, titulo: "Cartão de crédito", descricao: "À vista", icone: "cartao" as const }] : []),
+            ]}
+          />
+          {metodo === "cartao" && <FormCartao valor={cartao} onChange={setCartao} erros={erros} />}
+
+          <div className="rounded-2xl bg-superficie-2 p-4 space-y-2">
+            <p className="font-semibold">{evento.nome}</p>
+            <p className="text-sm text-texto-2">
+              {dataExtensa(evento.data)} · {hora(evento.data)}
+              {sede ? ` · ${sede.nome}` : ""}
+            </p>
+            <div className="pt-2 space-y-1.5">
+              <LinhaValor rotulo={`${qtd} ingresso${qtd > 1 ? "s" : ""}`} valor={moeda(totalBase)} />
+              <LinhaValor rotulo={`Taxa de serviço (${cot.pct}%)`} valor={moeda(totalTaxa)} sutil />
+              <LinhaValor rotulo="Total" valor={moeda(total)} forte />
+            </div>
+          </div>
+
+          {erroEnvio && <Aviso tom="perigo" titulo="Pagamento não concluído">{erroEnvio}</Aviso>}
+
+          <div className="flex gap-3">
+            <Botao aria-label="Voltar" className="shrink-0 px-4 sm:px-7" variante="contorno" tamanho="lg" onClick={() => setEtapa(1)} icone="setaEsquerda" disabled={enviando}>
+              <span className="hidden sm:inline">Voltar</span>
+            </Botao>
+            <Botao largo tamanho="lg" carregando={enviando} icone={metodo === "pix" ? "pix" : "cadeado"} onClick={pagar}>
+              {metodo === "pix" ? "Gerar Pix" : "Pagar"} {moeda(total)}
+            </Botao>
+          </div>
+          {torcida.pagamentos.ambiente === "teste" && (
+            <p className={cx("text-xs text-center text-alerta")}>Ambiente de teste: nenhuma cobrança real será feita.</p>
+          )}
+        </div>
+      )}
+
+      <Modal aberto={loginAberto} fechar={() => setLoginAberto(false)} largura="max-w-md">
+        <EntrarSocio aoEntrar={() => setLoginAberto(false)} />
+      </Modal>
+    </div>
+  );
+}
+
+function EntrarSocio({ aoEntrar }: { aoEntrar: () => void }) {
+  const u = useUsuario();
+  const { torcida } = useTorcida();
+  useEffect(() => {
+    if (u && !u.isAnonymous) aoEntrar();
+  }, [u, aoEntrar]);
+  return (
+    <div className="-mx-6 -my-4 [&>div]:border-0 [&>div]:bg-transparent">
+      <Login
+        titulo="Entrar como sócio"
+        subtitulo={`Use o e-mail da sua associação na ${torcida.nome}.`}
+        rodape={
+          <a href={`/${torcida.slug}?aba=socios`} className="font-semibold text-primaria">
+            Ainda não é sócio? Conheça os planos
+          </a>
+        }
+      />
+    </div>
+  );
+}
