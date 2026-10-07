@@ -157,6 +157,7 @@ export const api = {
         geral: Stats;
         mes: Stats;
         mensalidadeSaas: number;
+        contrato: { mensalidadeSaas: number; diaVencimento: number; observacoes: string };
         chamadosAbertos: number;
       }[];
       historico: Stats[];

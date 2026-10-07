@@ -121,6 +121,11 @@ export const resumoPlataforma = onCall(async (req) => {
         geral: geral.data() ?? {},
         mes: doMes.data() ?? {},
         mensalidadeSaas: contrato.get("mensalidadeSaas") ?? 0,
+        contrato: {
+          mensalidadeSaas: contrato.get("mensalidadeSaas") ?? 0,
+          diaVencimento: contrato.get("diaVencimento") ?? 10,
+          observacoes: contrato.get("observacoes") ?? "",
+        },
         chamadosAbertos: chamados.data().count,
       };
     }),

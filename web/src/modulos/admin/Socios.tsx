@@ -174,9 +174,9 @@ export default function Socios() {
               </tbody>
             </table>
           </Cartao>
-          <div className="md:hidden grid gap-2">
+          <div className="md:hidden grid grid-cols-1 gap-2">
             {filtrados.map((s) => (
-              <button key={s.id} type="button" onClick={() => setAbertoId(s.id)} className="text-left">
+              <button key={s.id} type="button" onClick={() => setAbertoId(s.id)} className="text-left min-w-0 w-full">
                 <Cartao className="p-4 flex items-center gap-3 active:bg-superficie-2">
                   <Avatar nome={s.nome} />
                   <div className="min-w-0 flex-1">

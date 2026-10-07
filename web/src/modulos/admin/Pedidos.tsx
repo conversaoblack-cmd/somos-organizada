@@ -154,9 +154,9 @@ export default function Pedidos() {
             </table>
           </Cartao>
           {/* Cartões (celular) */}
-          <div className="md:hidden grid gap-2">
+          <div className="md:hidden grid grid-cols-1 gap-2">
             {filtrados.map((p) => (
-              <button key={p.id} type="button" onClick={() => setAberto(p)} className="text-left">
+              <button key={p.id} type="button" onClick={() => setAberto(p)} className="text-left min-w-0 w-full">
                 <Cartao className="p-4 flex items-center gap-3 active:bg-superficie-2">
                   <span className={cx("size-10 shrink-0 rounded-xl grid place-items-center", p.tipo === "ingresso" ? "bg-primaria/12 text-primaria" : "bg-secundaria/15 text-secundaria")}>
                     <Icone nome={p.tipo === "ingresso" ? "ingresso" : "estrela"} className="size-5" />

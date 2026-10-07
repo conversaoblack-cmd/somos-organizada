@@ -86,7 +86,7 @@ export default function Dashboard() {
                 valor={
                   <span>
                     {kpi.ativas}
-                    <span className="text-base font-semibold text-texto-3"> ativas</span>
+                    <span className="text-base font-semibold text-texto-3"> {kpi.ativas === 1 ? "ativa" : "ativas"}</span>
                   </span>
                 }
                 detalhe={`${kpi.implantacao} em implantação${kpi.suspensas ? ` · ${kpi.suspensas} suspensas` : ""}`}

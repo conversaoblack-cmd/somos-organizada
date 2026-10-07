@@ -111,7 +111,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
               </Link>
             </Cartao>
             <CartaoTaxa tid={id} atual={torcida.taxaServicoPct} aoSalvar={recarregar} />
-            <CartaoContrato tid={id} mensalidadeAtual={linha?.mensalidadeSaas ?? 0} aoSalvar={recarregar} />
+            <CartaoContrato tid={id} mensalidadeAtual={linha?.mensalidadeSaas ?? 0} contrato={linha?.contrato} aoSalvar={recarregar} />
           </div>
         </div>
       )}
@@ -237,10 +237,26 @@ function CartaoTaxa({ tid, atual, aoSalvar }: { tid: string; atual: number; aoSa
   );
 }
 
-function CartaoContrato({ tid, mensalidadeAtual, aoSalvar }: { tid: string; mensalidadeAtual: number; aoSalvar: () => Promise<void> }) {
+function CartaoContrato({
+  tid,
+  mensalidadeAtual,
+  contrato,
+  aoSalvar,
+}: {
+  tid: string;
+  mensalidadeAtual: number;
+  contrato?: { diaVencimento: number; observacoes: string };
+  aoSalvar: () => Promise<void>;
+}) {
   const [mensalidade, setMensalidade] = useState(textoMoeda(mensalidadeAtual));
-  const [dia, setDia] = useState("10");
-  const [obs, setObs] = useState("");
+  const [dia, setDia] = useState(String(contrato?.diaVencimento ?? 10));
+  const [obs, setObs] = useState(contrato?.observacoes ?? "");
+  useEffect(() => {
+    if (contrato) {
+      setDia(String(contrato.diaVencimento));
+      setObs(contrato.observacoes);
+    }
+  }, [contrato?.diaVencimento, contrato?.observacoes]); // eslint-disable-line react-hooks/exhaustive-deps
   const [salvando, setSalvando] = useState(false);
   const avisar = useToast();
   useEffect(() => setMensalidade(textoMoeda(mensalidadeAtual)), [mensalidadeAtual]);
@@ -269,9 +285,7 @@ function CartaoContrato({ tid, mensalidadeAtual, aoSalvar }: { tid: string; mens
         <Campo rotulo="Dia de vencimento" inputMode="numeric" value={dia} onChange={(v) => setDia(v.replace(/\D/g, "").slice(0, 2))} erro={erroDia} />
         <AreaTexto className="sm:col-span-2" rotulo="Observações" value={obs} onChange={(e) => setObs(e.target.value)} maxLength={1000} placeholder="Condições, desconto de implantação, contato financeiro…" />
       </div>
-      <p className="text-xs text-texto-3 mt-3">
-        O servidor só devolve a mensalidade atual; dia de vencimento e observações são regravados com o que estiver aqui ao salvar.
-      </p>
+      <p className="text-xs text-texto-3 mt-3">O contrato é cobrado por fora do sistema. Estes dados servem de controle interno da equipe.</p>
       <Botao className="mt-4" onClick={salvar} carregando={salvando} disabled={!!erroDia} icone="check">
         Salvar contrato
       </Botao>

@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { collection, documentId, limit, orderBy, query, Timestamp, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { dataExtensa, diaDoMes, hora, mesAbrev, moeda, relativo, ROTULO_STATUS_SOCIO } from "@/lib/formatos";
-import type { Evento, Lancamento, Pedido, Socio, Stats, StatusSocio } from "@/lib/tipos";
+import type { Evento, Lancamento, Pedido, Repasse, Socio, Stats, StatusSocio } from "@/lib/tipos";
 import { useColecao, useDocumento } from "@/hooks/dados";
 import { Aviso, BotaoLink, CabecalhoPagina, Cartao, Carregando, Icone, Indicador, Selo } from "@/ui";
 import { usePainel } from "./contexto";
@@ -51,7 +51,7 @@ function useResumoDiretoria(ativo: boolean): Resumo {
 }
 
 /** Números da subsede: calculados a partir dos lançamentos e sócios da própria sede. */
-function useResumoSubsede(sedeId: string | null): Resumo & { socios: (Socio & { id: string })[] } {
+function useResumoSubsede(sedeId: string | null): Resumo & { socios: (Socio & { id: string })[]; saldo: number } {
   const { tid } = usePainel();
   const meses = useMemo(() => ultimosMeses(6), []);
   const mes = meses[meses.length - 1]!;
@@ -62,6 +62,10 @@ function useResumoSubsede(sedeId: string | null): Resumo & { socios: (Socio & { 
   const socios = useColecao<Socio>(
     sedeId ? query(collection(db, `torcidas/${tid}/socios`), where("sedeId", "==", sedeId)) : null,
     `socios-sede-${tid}-${sedeId}`,
+  );
+  const repasses = useColecao<Repasse>(
+    sedeId ? query(collection(db, `torcidas/${tid}/repasses`), where("sedeId", "==", sedeId)) : null,
+    `repasses-sede-${tid}-${sedeId}`,
   );
   return useMemo(() => {
     const soma = (filtro: (l: Lancamento) => boolean) => lanc.dados.filter(filtro).reduce((s, l) => s + l.valor, 0);
@@ -84,8 +88,9 @@ function useResumoSubsede(sedeId: string | null): Resumo & { socios: (Socio & { 
       carregando: lanc.carregando || socios.carregando,
       erro: lanc.erro || socios.erro,
       socios: socios.dados,
+      saldo: soma(base) - repasses.dados.reduce((s, r) => s + r.valor, 0),
     };
-  }, [lanc, socios, mes, meses]);
+  }, [lanc, socios, repasses, mes, meses]);
 }
 
 export default function VisaoGeral() {
@@ -191,7 +196,13 @@ export default function VisaoGeral() {
               detalhe={`Total arrecadado: ${moeda(r.geral.taxaServico)}`}
             />
           ) : (
-            <Indicador rotulo="A receber da diretoria" icone="dinheiro" tom="sucesso" valor={<Link to={`${base}/financeiro`} className="hover:underline">Ver extrato</Link>} detalhe="Saldo e repasses no Financeiro" />
+            <Indicador
+              rotulo="A receber da diretoria"
+              icone="dinheiro"
+              tom={sub.saldo > 0 ? "alerta" : "sucesso"}
+              valor={r.carregando ? "…" : moeda(sub.saldo)}
+              detalhe={<Link to={`${base}/financeiro`} className="hover:underline">Ver extrato e repasses →</Link>}
+            />
           )}
           <Indicador
             rotulo="Ingressos vendidos"
