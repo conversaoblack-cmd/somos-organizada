@@ -24,7 +24,11 @@ export const PLATAFORMA_EMAILS = defineString("PLATAFORMA_EMAILS", { default: "c
 // Com 1 vCPU x 20 instâncias por função o deploy estoura a cota de projeto novo. Aqui: 1 vCPU,
 // até 4 instâncias, cada uma atendendo 80 requisições simultâneas (o trabalho é quase todo I/O:
 // Firestore e Pagar.me). ~320 compras em paralelo por função usando só 4 vCPU de cota.
-setGlobalOptions({ region: REGIAO, maxInstances: 4, cpu: 1, concurrency: 80, memory: "512MiB" });
+// Projeto novo no Google Cloud tem cota baixa de CPU por região (soma de cpu × máximo de instâncias).
+// Padrão enxuto (2 instâncias × 80 pedidos simultâneos cada) e mais fôlego só onde o torcedor está:
+// compra, pagamento, carteirinha e portaria (ESCALA_PUBLICA).
+setGlobalOptions({ region: REGIAO, maxInstances: 2, cpu: 1, concurrency: 80, memory: "512MiB" });
+export const ESCALA_PUBLICA = { maxInstances: 5 } as const;
 
 /** Regras de negócio padrão. Cada torcida pode sobrescrever algumas no próprio documento. */
 export const PADROES = {

@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
-import { EMAIL_API_KEY, MASTER_KEY, QR_HMAC, PADROES } from "../config";
+import { EMAIL_API_KEY, MASTER_KEY, QR_HMAC, PADROES, ESCALA_PUBLICA } from "../config";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { lerQr, igualSeguro } from "../util/cripto";
 import { cpfValido, endereco, mascararCpf, pessoa, soDigitos, texto, umDe } from "../util/validacao";
@@ -107,7 +107,7 @@ export async function aplicarRespostaPedido(tid: string, pedidoId: string, pg: P
  * Checkout de ingressos. Login anônimo é aceito (compra sem cadastro);
  * se o usuário for sócio ativo, o ingresso dele sai pelo preço de sócio.
  */
-export const criarPedidoIngresso = onCall({ secrets: segredos }, async (req) => {
+export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, async (req) => {
   const uid = exigirLogin(req, { permitirAnonimo: true });
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
@@ -222,7 +222,7 @@ export const criarPedidoIngresso = onCall({ secrets: segredos }, async (req) => 
 });
 
 /** Prévia de preço para o checkout mostrar (o valor final é sempre recalculado em criarPedidoIngresso). */
-export const cotarIngresso = onCall(async (req) => {
+export const cotarIngresso = onCall({ ...ESCALA_PUBLICA }, async (req) => {
   const uid = req.auth?.uid;
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
@@ -261,7 +261,7 @@ export const cotarIngresso = onCall(async (req) => {
  * Consulta o pedido direto na Pagar.me. Serve de rede de segurança quando o webhook atrasa
  * ou não foi configurado: o botão "Já paguei" do checkout chama isto.
  */
-export const verificarPedido = onCall({ secrets: segredos }, async (req) => {
+export const verificarPedido = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, async (req) => {
   const uid = exigirLogin(req, { permitirAnonimo: true });
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
@@ -283,7 +283,7 @@ export const verificarPedido = onCall({ secrets: segredos }, async (req) => {
 });
 
 /** Acesso aos ingressos pelo link enviado ao comprador (funciona em qualquer aparelho, sem login). */
-export const ingressosDoPedido = onCall(async (req) => {
+export const ingressosDoPedido = onCall({ ...ESCALA_PUBLICA }, async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
   const pedidoId = texto(d.pedidoId, "pedido", { max: 40 });
@@ -316,7 +316,7 @@ export const ingressosDoPedido = onCall(async (req) => {
  * Portaria: valida o QR (ou CPF) e dá baixa na entrada em transação, então o mesmo
  * ingresso não passa duas vezes nem com dois leitores ao mesmo tempo.
  */
-export const validarEntrada = onCall({ secrets: [QR_HMAC] }, async (req) => {
+export const validarEntrada = onCall({ secrets: [QR_HMAC], ...ESCALA_PUBLICA }, async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
   const eventoId = texto(d.eventoId, "evento", { max: 40 });

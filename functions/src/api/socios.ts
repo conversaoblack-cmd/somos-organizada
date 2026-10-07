@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
-import { EMAIL_API_KEY, MASTER_KEY, QR_HMAC, PADROES } from "../config";
+import { EMAIL_API_KEY, MASTER_KEY, QR_HMAC, PADROES, ESCALA_PUBLICA } from "../config";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { gerarQr } from "../util/cripto";
 import { cpfValido, endereco, soDigitos, telefoneBR, texto, umDe, type Pessoa } from "../util/validacao";
@@ -155,7 +155,7 @@ export async function sincronizarFaturas(tid: string, socio: Socio, pg: Pagarme)
  * Adesão de sócio: grava a ficha, trava o CPF na torcida e inicia o pagamento.
  * Pix e cartão: cobrança por ciclo gerada pelo sistema (cartão salvo na Pagar.me).
  */
-export const aderirSocio = onCall({ secrets: segredos }, async (req) => {
+export const aderirSocio = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, async (req) => {
   const uid = exigirLogin(req);
   const email = String(req.auth?.token.email ?? "").toLowerCase();
   if (!email) throw new HttpsError("failed-precondition", "Sua conta precisa ter e-mail.");
@@ -280,7 +280,7 @@ export const cancelarAssinatura = onCall({ secrets: [MASTER_KEY] }, async (req) 
 });
 
 /** QR assinado da carteirinha digital (verificável na portaria). */
-export const minhaCarteirinha = onCall({ secrets: [QR_HMAC] }, async (req) => {
+export const minhaCarteirinha = onCall({ secrets: [QR_HMAC], ...ESCALA_PUBLICA }, async (req) => {
   const uid = exigirLogin(req);
   const tid = texto((req.data ?? {}).tid, "torcida", { max: 40 });
   const s = (await refs.socio(tid, uid).get()).data() as Socio | undefined;

@@ -1,6 +1,6 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
-import { EMAIL_API_KEY, MASTER_KEY, QR_HMAC, PADROES } from "../config";
+import { EMAIL_API_KEY, MASTER_KEY, QR_HMAC, PADROES, ESCALA_PUBLICA } from "../config";
 import { refs, FieldValue } from "../util/firebase";
 import { igualSeguro } from "../util/cripto";
 import { pagarmeDaTorcida, type PrivadoPagarme } from "../pagarme/credenciais";
@@ -22,7 +22,7 @@ interface EventoPg {
  * O corpo do webhook NÃO é confiável (a Pagar.me não assina): ele só diz "algo mudou".
  * O estado real é sempre buscado na API com a chave da própria torcida.
  */
-export const pagarmeWebhook = onRequest({ secrets: [MASTER_KEY, QR_HMAC, EMAIL_API_KEY], memory: "256MiB" }, async (req, res) => {
+export const pagarmeWebhook = onRequest({ secrets: [MASTER_KEY, QR_HMAC, EMAIL_API_KEY], memory: "256MiB", ...ESCALA_PUBLICA }, async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).send("Método não permitido");
     return;

@@ -132,10 +132,20 @@ npm --prefix web run build
 
 passo "Deploy (pode levar alguns minutos na primeira vez)"
 echo "Se o Firebase perguntar se pode dar ao Storage acesso de leitura ao Firestore, responda Y."
+# Projeto novo: o Google limita CPU por região e o deploy atualiza tudo ao mesmo tempo. Se alguma function
+# esbarrar na cota ("Quota exceeded for total allowable CPU"), espera e reenvia só as functions.
 if ! firebase deploy --project "$PROJETO"; then
-  aviso "O primeiro deploy de functions às vezes falha enquanto o Google termina de liberar as permissões. Tentando de novo em 60s..."
-  sleep 60
-  firebase deploy --project "$PROJETO"
+  OK=0
+  for TENTATIVA in 1 2; do
+    aviso "Algumas functions não subiram (cota de CPU do Google ou permissões ainda liberando). Tentando de novo em 90s ($TENTATIVA/2)..."
+    sleep 90
+    if firebase deploy --only functions --project "$PROJETO"; then OK=1; break; fi
+  done
+  if [ "$OK" != "1" ]; then
+    aviso "Ainda faltou function. Rode o script de novo daqui a alguns minutos."
+    aviso "Se repetir, peça aumento de cota: console.cloud.google.com/iam-admin/quotas → filtre 'Total CPU allocation' em southamerica-east1."
+    exit 1
+  fi
 fi
 
 passo "Pronto!"

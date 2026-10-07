@@ -6,7 +6,7 @@
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
-import { URL_APP, WEB_API_KEY } from "../config";
+import { URL_APP, WEB_API_KEY, ESCALA_PUBLICA } from "../config";
 import { auth, db, FieldValue, Timestamp } from "../util/firebase";
 import { cpfValido, soDigitos } from "../util/validacao";
 
@@ -41,7 +41,7 @@ async function senhaConfere(email: string, senha: string): Promise<boolean> {
   throw new HttpsError("unavailable", "Não foi possível entrar com CPF agora. Use o seu e-mail.");
 }
 
-export const entrarComCpf = onCall(async (req) => {
+export const entrarComCpf = onCall({ ...ESCALA_PUBLICA }, async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;
   const cpf = soDigitos(d.cpf);
   const senha = typeof d.senha === "string" ? d.senha : "";
