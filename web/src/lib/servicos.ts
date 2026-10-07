@@ -30,6 +30,12 @@ const URL_TOKENS = import.meta.env.VITE_PAGARME_TOKENS_URL || "https://api.pagar
  * Exige o domínio do app cadastrado no painel da Pagar.me da torcida.
  */
 export async function tokenizarCartao(chavePublica: string, c: CartaoDigitado): Promise<string> {
+  // Modo demonstração: nada sai do navegador. Segue o simulador oficial da Pagar.me:
+  // 4000000000000010 aprova; qualquer outro número é recusado (ex.: 4000000000000028).
+  if (chavePublica.startsWith("pk_demo_")) {
+    const n = soDigitos(c.numero);
+    return `tok_demo_${n === "4000000000000010" ? "aprovado" : "recusado"}_${n.slice(-4)}`;
+  }
   const [mes, ano] = c.validade.split("/");
   const r = await fetch(`${URL_TOKENS}?appId=${encodeURIComponent(chavePublica)}`, {
     method: "POST",

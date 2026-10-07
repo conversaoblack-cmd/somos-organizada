@@ -5,7 +5,8 @@
 //   subsede4@brasil.test   → subsede 4º Distrito (conta de recebimento ativa)
 //   subsede7@brasil.test   → subsede 7º Distrito (sem conta de recebimento; evento aguardando aprovação)
 //   portaria@brasil.test   → portaria
-//   socio@brasil.test      → sócio ativo (Pix)
+//   socio@brasil.test      → sócio ativo (Pix) · anual@brasil.test → sócio no cartão salvo
+//   diretor@furiajovem.test → pedido de cadastro da torcida "Fúria Jovem" aguardando aprovação
 import { initializeApp as adminApp } from "firebase-admin/app";
 import { getAuth as adminAuth } from "firebase-admin/auth";
 import { getFirestore as adminDb, Timestamp as AdminTs, FieldValue } from "firebase-admin/firestore";
@@ -193,6 +194,23 @@ await addDoc(collection(d.db, `torcidas/${tid}/eventos`), {
     data: em(-12, 16), valorSocio: 9000, valorPublico: 12000, capacidade: 100, vendidos: 0, reservados: 0, status: "publicado",
   });
   await updateDoc(passado, { status: "encerrado" });
+}
+
+// Site publicado no plano "Torcida grande" (gera a 1ª fatura da mensalidade Somos Organizada)
+await aDb.doc("plataforma/publico").set({ pix: { chave: "financeiro@somosorganizada.com.br", nome: "Somos Organizada", cidade: "Salvador" } });
+await d.chamar("publicarSite", { tid, plano: "grande" });
+
+// Pedido de cadastro de outra torcida aguardando a aprovação da equipe
+{
+  await aAuth.createUser({ email: "diretor@furiajovem.test", password: SENHA, emailVerified: true, displayName: "Paulo Fúria" });
+  const b = navegador();
+  await signInWithEmailAndPassword(b.auth, "diretor@furiajovem.test", SENHA);
+  await b.chamar("solicitarTorcida", {
+    nomeTorcida: "Fúria Jovem", slug: "furia-jovem", clube: "Esporte Clube Bahia", estimativaSocios: 1200, quantidadeSubsedes: 6,
+    responsavel: { nome: "Paulo Fúria Santos", cpf: "39053344705", telefone: "71988776655", cargo: "Presidente" },
+    entidade: { tipo: "cnpj", cnpj: "11222333000181", razaoSocial: "Associação Torcida Fúria Jovem", emailFinanceiro: "financeiro@furiajovem.test" },
+    endereco: { cep: "40050000", logradouro: "Avenida Sete de Setembro", numero: "100", bairro: "Centro", cidade: "Salvador", uf: "BA" },
+  });
 }
 
 // ── Vendas de demonstração ─────────────────────────────────

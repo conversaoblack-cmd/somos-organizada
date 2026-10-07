@@ -18,6 +18,13 @@ export interface Torcida {
   nome: string;
   slug: string;
   status: StatusTorcida;
+  /** Site no ar. Antes disso só a equipe da torcida vê a página (e pode fazer compras de teste). */
+  publicada?: boolean;
+  /** Módulos ligados. Ausente = ligado. */
+  modulos?: { eventos?: boolean; socios?: boolean };
+  /** Mensalidade da plataforma em atraso (> 7 dias): site e vendas fora do ar. */
+  bloqueioSaas?: boolean;
+  suspensaPor?: "saas" | string;
   taxaServicoPct: number;
   aprovacaoManualSocio: boolean;
   destinoMensalidade: "sede_do_socio" | "principal";
@@ -27,7 +34,7 @@ export interface Torcida {
   contato?: { whatsapp?: string; email?: string; instagram?: string };
   pagamentos: {
     configurado: boolean;
-    ambiente?: "teste" | "producao";
+    ambiente?: "teste" | "producao" | "demo";
     chavePublica?: string;
     pix: boolean;
     cartao: boolean;
@@ -268,3 +275,62 @@ export interface Faq {
   publico?: "torcedor" | "diretoria" | "todos";
   ordem?: number;
 }
+
+export type PlanoSaas = "pequena" | "grande" | "gigante";
+
+/** plataforma/publico */
+export interface ConfigPlataforma {
+  planos?: Partial<Record<PlanoSaas, { nome?: string; valor?: number }>>;
+  limiteGigante?: number;
+  pix?: { chave?: string; nome?: string; cidade?: string };
+}
+
+/** torcidas/{tid}/saas/assinatura */
+export interface AssinaturaSaas {
+  plano: "pequena" | "grande";
+  diaVencimento: number;
+  proximoVencimento: Timestamp;
+  situacao: "em_dia" | "aberta" | "atrasada" | "bloqueada";
+  faturaAbertaId?: string | null;
+  criadaEm: Timestamp;
+}
+
+/** torcidas/{tid}/faturasSaas/{AAAA-MM-DD} */
+export interface FaturaSaas {
+  competencia: string;
+  plano: PlanoSaas;
+  valor: number;
+  sociosAtivos: number;
+  vencimento: Timestamp;
+  status: "aberta" | "paga" | "cancelada";
+  pixCopiaECola: string | null;
+  txid: string;
+  criadaEm: Timestamp;
+  informadoPagamentoEm?: Timestamp;
+  pagaEm?: Timestamp;
+}
+
+/** solicitacoes/{id} — cadastro de torcida feito pela página principal */
+export interface SolicitacaoTorcida {
+  uid: string;
+  email: string;
+  status: "pendente" | "aprovada" | "recusada";
+  nomeTorcida: string;
+  slug: string;
+  clube?: string;
+  estimativaSocios?: number;
+  quantidadeSubsedes?: number;
+  responsavel: { nome: string; cpf: string; telefone: string; cargo: string };
+  entidade: { tipo: "cnpj" | "sem_cnpj"; cnpj?: string; razaoSocial?: string; emailFinanceiro: string };
+  endereco: Endereco;
+  motivo?: string;
+  torcidaId?: string;
+  criadoEm: Timestamp;
+}
+
+/** Valores padrão (o servidor usa plataforma/publico quando houver). Centavos. */
+export const PLANOS_SAAS_PADRAO: Record<PlanoSaas, { nome: string; valor: number; descricao: string }> = {
+  pequena: { nome: "Torcida pequena", valor: 50000, descricao: "Para torcidas em crescimento." },
+  grande: { nome: "Torcida grande", valor: 100000, descricao: "Para torcidas com várias subsedes." },
+  gigante: { nome: "Torcida gigante", valor: 150000, descricao: "Automático acima de 3.000 sócios ativos." },
+};

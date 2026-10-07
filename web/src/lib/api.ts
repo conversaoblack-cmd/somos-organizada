@@ -151,6 +151,39 @@ export const api = {
     }
   >("validarEntrada"),
 
+  // ── Modo demonstração ────────────────────────────────
+  simularDemo: chamar<
+    { tid: string; acao: "pagar_pedido" | "aprovar_recebedor"; pedidoId?: string; sedeId?: string },
+    { status?: string; recebedor?: RecebedorSede }
+  >("simularDemo"),
+
+  // ── Site e mensalidade Somos Organizada ──────────────
+  publicarSite: chamar<{ tid: string; plano?: "pequena" | "grande" }, { publicada: boolean }>("publicarSite"),
+  despublicarSite: chamar<{ tid: string }, { publicada: boolean }>("despublicarSite"),
+  alterarPlanoSaas: chamar<{ tid: string; plano: "pequena" | "grande" }, { plano: string }>("alterarPlanoSaas"),
+  informarPagamentoSaas: chamar<{ tid: string; faturaId: string }, { ok: boolean }>("informarPagamentoSaas"),
+  confirmarFaturaSaas: chamar<{ tid: string; faturaId: string }, { ok: boolean }>("confirmarFaturaSaas"),
+  executarRotinaSaas: chamar<{ agora?: number }, { faturasGeradas: number; bloqueadas: number }>("executarRotinaSaas"),
+
+  // ── Cadastro de torcida (página principal) ───────────
+  slugDisponivel: chamar<{ slug: string }, { disponivel: boolean; motivo?: string }>("slugDisponivel"),
+  solicitarTorcida: chamar<
+    {
+      nomeTorcida: string;
+      slug: string;
+      clube?: string;
+      estimativaSocios?: number;
+      quantidadeSubsedes?: number;
+      responsavel: { nome: string; cpf: string; telefone: string; cargo: string };
+      entidade: { tipo: "cnpj" | "sem_cnpj"; cnpj?: string; razaoSocial?: string; emailFinanceiro?: string };
+      endereco: Endereco;
+    },
+    { solicitacaoId: string; status: string }
+  >("solicitarTorcida"),
+  avaliarSolicitacao: chamar<{ id: string; aprovar: boolean; motivo?: string }, { status: string; torcidaId?: string; slug?: string }>(
+    "avaliarSolicitacao",
+  ),
+
   // ── Plataforma ───────────────────────────────────────
   reivindicarPlataforma: chamar<Record<string, never>, { ok: boolean }>("reivindicarPlataforma"),
   criarTorcida: chamar<
@@ -175,14 +208,23 @@ export const api = {
         nome: string;
         slug: string;
         status: StatusTorcida;
-        pagamentos: { configurado: boolean; ambiente: "teste" | "producao" | null; webhookRecebidoEm: number | null };
+        pagamentos: { configurado: boolean; ambiente: "teste" | "producao" | "demo" | null; webhookRecebidoEm: number | null };
         geral: Stats;
         mes: Stats;
         mensalidadeSaas: number;
         contrato: { mensalidadeSaas: number; diaVencimento: number; observacoes: string };
         chamadosAbertos: number;
+        publicada: boolean;
+        modulos: { eventos: boolean; socios: boolean };
+        saas: {
+          plano: "pequena" | "grande";
+          situacao: "em_dia" | "aberta" | "atrasada" | "bloqueada";
+          bloqueada: boolean;
+          faturasAbertas: { id: string; valor: number; plano: string; vencimento: number | null; informadoPagamentoEm: number | null }[];
+        } | null;
       }[];
       historico: Stats[];
+      solicitacoesPendentes: number;
     }
   >("resumoPlataforma"),
   diagnosticoTorcida: chamar<{ tid: string }, DiagnosticoTorcida>("diagnosticoTorcida"),
