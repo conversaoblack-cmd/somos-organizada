@@ -91,7 +91,7 @@ export default function Pedidos() {
             { valor: "socio", rotulo: "Sócios", icone: "estrela" },
           ]}
         />
-        <div className="grid gap-3 sm:grid-cols-[1fr_240px]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_240px]">
           <Campo value={busca} onChange={setBusca} placeholder="Nome, e-mail, CPF, evento ou nº do pedido" icone="busca" aria-label="Buscar pedidos" />
           <Selecao value={status} onChange={(e) => setStatus(e.target.value as StatusPedido | "")} aria-label="Filtrar por situação">
             <option value="">Todas as situações</option>

@@ -73,13 +73,13 @@
   /* Textura sutil de fundo usada nos heros */
   .grade-fundo {
     background-image:
-      linear-gradient(var(--color-linha) 1px, transparent 1px),
-      linear-gradient(90deg, var(--color-linha) 1px, transparent 1px);
+      linear-gradient(color-mix(in oklab, var(--cor-texto) 11%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--cor-texto) 11%, transparent) 1px, transparent 1px);
     background-size: 48px 48px;
     mask-image: radial-gradient(ellipse at top, black 30%, transparent 75%);
   }
   .brilho-primaria {
-    background: radial-gradient(60% 60% at 50% 0%, color-mix(in oklab, var(--color-primaria) 35%, transparent), transparent 70%);
+    background: radial-gradient(60% 60% at 50% 0%, color-mix(in oklab, var(--cor-primaria) 35%, transparent), transparent 70%);
   }
   .rolagem-fina { scrollbar-width: thin; scrollbar-color: var(--color-linha-forte) transparent; }
   .sem-rolagem { scrollbar-width: none; }

@@ -107,7 +107,7 @@ export default function Socios() {
             ...STATUS.map((s) => ({ valor: s, rotulo: ROTULO_STATUS_SOCIO[s], contador: contagem[s] ?? 0 })),
           ]}
         />
-        <div className="grid gap-3 sm:grid-cols-[1fr_260px]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_260px]">
           <Campo value={busca} onChange={setBusca} placeholder="Nome, CPF, matrícula ou e-mail" icone="busca" aria-label="Buscar sócios" />
           {ehDiretoria && (
             <Selecao value={sede} onChange={(e) => setSede(e.target.value)} aria-label="Filtrar por sede">

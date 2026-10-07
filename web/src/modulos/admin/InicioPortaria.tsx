@@ -60,7 +60,7 @@ export default function InicioPortaria() {
       ) : hoje.length === 0 ? (
         <Cartao className="p-5 text-texto-2 text-sm">Nenhum evento publicado para hoje.</Cartao>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {hoje.map((e) => (
             <ItemEvento key={e.id} e={e} sede={nomeSede(e.sedeId)} destaque />
           ))}
@@ -70,7 +70,7 @@ export default function InicioPortaria() {
       {proximos.length > 0 && (
         <>
           <h2 className="text-lg font-bold mt-10 mb-3">Próximos eventos</h2>
-          <div className="grid gap-3">
+          <div className="grid grid-cols-1 gap-3">
             {proximos.map((e) => (
               <ItemEvento key={e.id} e={e} sede={nomeSede(e.sedeId)} />
             ))}
@@ -98,9 +98,10 @@ function ItemEvento({ e, sede, destaque }: { e: Evento & { id: string }; sede: s
       </div>
       <div className="text-right shrink-0">
         {destaque && <Selo tom="sucesso" ponto>Hoje</Selo>}
-        <p className="text-xs text-texto-3 mt-1 numeros">
-          {e.entradas ?? 0}/{e.vendidos} entradas
+        <p className="text-sm font-semibold mt-1 numeros leading-none">
+          {e.entradas ?? 0}/{e.vendidos}
         </p>
+        <p className="text-[11px] text-texto-3">entradas</p>
       </div>
     </Cartao>
   );

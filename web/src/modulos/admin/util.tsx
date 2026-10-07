@@ -92,8 +92,15 @@ export async function enviarImagem(pasta: string, arquivo: File, prefixo = "img"
   const ext = arquivo.type === "image/png" ? "png" : arquivo.type === "image/webp" ? "webp" : "jpg";
   const caminho = `${pasta}/${prefixo}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
   const r = refStorage(storage, caminho);
-  await uploadBytes(r, arquivo, { contentType: arquivo.type, cacheControl: "public, max-age=31536000" });
-  return getDownloadURL(r);
+  try {
+    await uploadBytes(r, arquivo, { contentType: arquivo.type, cacheControl: "public, max-age=31536000" });
+    return await getDownloadURL(r);
+  } catch (e) {
+    const codigo = (e as { code?: string }).code ?? "";
+    if (codigo === "storage/unauthorized") throw new Error("Sem permissão para enviar a imagem. Confira se seu usuário está ativo e tente de novo.");
+    if (codigo === "storage/retry-limit-exceeded" || codigo === "storage/canceled") throw new Error("O envio não terminou. Verifique a conexão e tente de novo.");
+    throw e;
+  }
 }
 
 /** Remove chaves com undefined (o Firestore não aceita undefined). */

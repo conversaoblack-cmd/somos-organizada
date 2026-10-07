@@ -3,7 +3,7 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function logado() { return request.auth != null; }
-    function plataforma() { return logado() && request.auth.token.plataforma == true; }
+    function plataforma() { return logado() && request.auth.token.get('plataforma', false) == true; }
     function membroAtivo(tid) {
       return logado() && firestore.exists(/databases/(default)/documents/torcidas/$(tid)/membros/$(request.auth.uid))
         && firestore.get(/databases/(default)/documents/torcidas/$(tid)/membros/$(request.auth.uid)).data.ativo == true;

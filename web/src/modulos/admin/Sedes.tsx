@@ -77,11 +77,11 @@ export default function Sedes() {
         <EstadoLista carregando={false} erro={null} vazio icone="casa" tituloVazio="Nenhuma sede cadastrada" />
       ) : (
         <div className="space-y-6">
-          {principal && <div className="grid gap-3">{item(principal)}</div>}
+          {principal && <div className="grid grid-cols-1 gap-3">{item(principal)}</div>}
           <section>
             <h2 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-3">Subsedes ({subsedes.length})</h2>
             {subsedes.length ? (
-              <div className="grid gap-3">{subsedes.map(item)}</div>
+              <div className="grid grid-cols-1 gap-3">{subsedes.map(item)}</div>
             ) : (
               <Cartao className="p-5 text-sm text-texto-2">Nenhuma subsede ainda. Crie distritos, bairros ou cidades onde a torcida tem núcleo.</Cartao>
             )}
@@ -199,7 +199,7 @@ function FormSede({
         }}
       >
         <Campo rotulo="Nome" value={f.nome} onChange={(v) => set("nome", v)} erro={erro} placeholder="Ex.: 4º Distrito · Subúrbio" maxLength={80} />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo rotulo="Bairro" value={f.bairro} onChange={(v) => set("bairro", v)} maxLength={80} />
           <Campo rotulo="Cidade" value={f.cidade} onChange={(v) => set("cidade", v)} maxLength={80} />
         </div>

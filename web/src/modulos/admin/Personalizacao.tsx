@@ -113,6 +113,10 @@ export default function Personalizacao() {
         titulo="Personalizar página"
         descricao="Cores, imagens, textos e regras da página pública da torcida."
         acoes={
+          <>
+          <a href="#previa" className="xl:hidden inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3">
+            <Icone nome="olho" className="size-4" /> Ver prévia
+          </a>
           <a
             href={`/${torcida.slug}`}
             target="_blank"
@@ -121,10 +125,11 @@ export default function Personalizacao() {
           >
             <Icone nome="externo" className="size-4" /> Ver página
           </a>
+          </>
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_400px] items-start">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_400px] items-start">
         <div className="space-y-6 min-w-0">
           <Secao titulo="Cores" descricao="Escolha uma paleta pronta ou ajuste cada cor.">
             <div className="flex flex-wrap gap-2 mb-5">
@@ -144,7 +149,7 @@ export default function Personalizacao() {
                 </button>
               ))}
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {CORES.map((c) => {
                 const v = f.tema[c.chave];
                 const ok = corValida(v);
@@ -190,7 +195,7 @@ export default function Personalizacao() {
           </Secao>
 
           <Secao titulo="Imagens">
-            <div className="grid gap-5 sm:grid-cols-[180px_1fr]">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-[180px_1fr]">
               <SeletorImagem
                 rotulo="Escudo / logo"
                 url={f.tema.logoUrl}
@@ -233,7 +238,7 @@ export default function Personalizacao() {
           </Secao>
 
           <Secao titulo="Contato">
-            <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
               <Campo
                 rotulo="WhatsApp"
                 mascara="telefone"
@@ -283,7 +288,7 @@ export default function Personalizacao() {
           </Secao>
         </div>
 
-        <div className="xl:sticky xl:top-24">
+        <div id="previa" className="xl:sticky xl:top-24 scroll-mt-20">
           <p className="text-sm font-semibold text-texto-2 mb-2 flex items-center gap-2">
             <Icone nome="olho" className="size-4" /> Prévia ao vivo
           </p>
@@ -292,7 +297,7 @@ export default function Personalizacao() {
       </div>
 
       {alterado && (
-        <div className="fixed bottom-0 inset-x-0 lg:left-[272px] z-30 border-t border-linha bg-fundo/90 backdrop-blur px-4 sm:px-6 py-3 animate-deslizar">
+        <div className="fixed bottom-0 inset-x-0 lg:left-[272px] z-30 border-t border-linha bg-fundo/90 backdrop-blur pl-4 sm:pl-6 pr-20 py-3 animate-deslizar">
           <div className="max-w-[1400px] flex items-center gap-3 justify-end">
             <p className="text-sm text-texto-2 mr-auto hidden sm:block">Você tem alterações não salvas.</p>
             <Botao variante="fantasma" onClick={() => setF(formDe(torcida))} disabled={salvando}>
@@ -317,6 +322,15 @@ function Secao({ titulo, descricao, children }: { titulo: string; descricao?: st
     </Cartao>
   );
 }
+
+// Na prévia, as variáveis --color-* derivadas ficam presas ao :root; use as --cor-* direto.
+const BRILHO = "radial-gradient(60% 60% at 50% 0%, color-mix(in oklab, var(--cor-primaria) 35%, transparent), transparent 70%)";
+const GRADE = {
+  backgroundImage:
+    "linear-gradient(color-mix(in oklab, var(--cor-texto) 11%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--cor-texto) 11%, transparent) 1px, transparent 1px)",
+  backgroundSize: "32px 32px",
+  maskImage: "radial-gradient(ellipse at top, black 30%, transparent 75%)",
+};
 
 /** Mini-mockup da página pública com as cores aplicadas só dentro do container. */
 function Previa({ f }: { f: Form }) {
@@ -349,8 +363,8 @@ function Previa({ f }: { f: Form }) {
             {f.tema.bannerUrl ? (
               <img src={f.tema.bannerUrl} alt="" className="absolute inset-0 size-full object-cover" />
             ) : (
-              <div className="absolute inset-0 brilho-primaria">
-                <div className="absolute inset-0 grade-fundo" />
+              <div className="absolute inset-0" style={{ background: BRILHO }}>
+                <div className="absolute inset-0" style={GRADE} />
               </div>
             )}
             <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-fundo" />
@@ -392,7 +406,7 @@ function Previa({ f }: { f: Form }) {
           {aba === "eventos" ? (
             <>
               <div className="rounded-cartao border border-linha bg-superficie overflow-hidden">
-                <div className="h-24 brilho-primaria relative">
+                <div className="h-24 relative" style={{ background: BRILHO }}>
                   <span className="absolute top-3 left-3 rounded-xl bg-fundo/80 backdrop-blur px-2.5 py-1.5 text-center leading-none">
                     <span className="block text-base font-bold">18</span>
                     <span className="block text-[10px] font-semibold text-texto-2 mt-0.5">OUT</span>

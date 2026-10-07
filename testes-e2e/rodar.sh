@@ -18,5 +18,5 @@ PLATAFORMA_EMAILS=equipe@somos.test
 EOF
 
 cd "$RAIZ"
-firebase emulators:exec --project demo-somos --only auth,firestore,functions,storage \
+env -u JAVA_TOOL_OPTIONS firebase emulators:exec --project demo-somos --only auth,firestore,functions,storage \
   "node --test --test-concurrency=1 testes-e2e/fluxo.test.mjs"

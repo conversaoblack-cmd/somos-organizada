@@ -111,7 +111,7 @@ export default function Planos() {
           }
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {ordenados.map((p) => (
             <Cartao key={p.id} className={cx("p-5 sm:p-6 flex flex-col relative", p.destaque && p.ativo && "border-primaria/50 ring-1 ring-primaria/30", !p.ativo && "opacity-60")}>
               <div className="flex items-start justify-between gap-2">
@@ -292,7 +292,7 @@ function FormPlano({ plano, proximaOrdem, fechar }: { plano: ComId<Plano> | "nov
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 items-start">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 items-start">
           <Campo rotulo="Valor do plano" mascara="moeda" value={f.valor} onChange={(v) => set("valor", v)} erro={erros.valor} placeholder="0,00" />
           <div className="rounded-2xl border border-linha bg-superficie p-4 sm:mt-7">
             <p className="text-xs text-texto-3">Torcedor paga</p>

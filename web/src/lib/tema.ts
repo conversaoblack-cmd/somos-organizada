@@ -52,7 +52,7 @@ export function aplicarTema(tema: Partial<Tema> | undefined, alvo: HTMLElement =
   alvo.style.setProperty("--cor-sobre-primaria", corSobre(primaria));
   alvo.style.setProperty("--cor-sobre-secundaria", corSobre(secundaria));
   alvo.style.colorScheme = luminancia(fundo) < 0.4 ? "dark" : "light";
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", fundo);
+  if (alvo === document.documentElement) document.querySelector('meta[name="theme-color"]')?.setAttribute("content", fundo);
 }
 
 /** Avisos para a diretoria quando a combinação de cores fica ilegível. */

@@ -22,7 +22,7 @@ cleanup() { kill $(jobs -p) 2>/dev/null || true; }
 trap cleanup EXIT
 
 node "$RAIZ/testes-e2e/pagarme-servidor.mjs" > "$LOGS/pagarme.log" 2>&1 &
-(cd "$RAIZ" && firebase emulators:start --project demo-somos --only auth,firestore,functions,storage > "$LOGS/emuladores.log" 2>&1) &
+(cd "$RAIZ" && env -u JAVA_TOOL_OPTIONS firebase emulators:start --project demo-somos --only auth,firestore,functions,storage > "$LOGS/emuladores.log" 2>&1) &
 
 echo "Aguardando emuladores..."
 for i in $(seq 1 120); do

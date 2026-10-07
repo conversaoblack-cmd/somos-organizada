@@ -125,7 +125,7 @@ export default function Eventos() {
             contador: contagem[s] ?? 0,
           }))}
         />
-        <div className="grid gap-3 sm:grid-cols-[1fr_260px]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_260px]">
           <Campo value={busca} onChange={setBusca} placeholder="Buscar por nome ou local" icone="busca" aria-label="Buscar eventos" />
           {ehDiretoria && (
             <Selecao value={sede} onChange={(e) => setSede(e.target.value)} aria-label="Filtrar por sede">
@@ -161,7 +161,7 @@ export default function Eventos() {
           {filtrados.futuros.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-3">Próximos</h2>
-              <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                 {filtrados.futuros.map((e) => (
                   <CartaoEvento key={e.id} e={e} sede={nomeSede(e.sedeId)} para={`${base}/eventos/${e.id}`} editar={() => setEditando(e)} />
                 ))}
@@ -171,7 +171,7 @@ export default function Eventos() {
           {filtrados.passados.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-3">Já aconteceram</h2>
-              <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                 {filtrados.passados.map((e) => (
                   <CartaoEvento key={e.id} e={e} sede={nomeSede(e.sedeId)} para={`${base}/eventos/${e.id}`} editar={() => setEditando(e)} passado />
                 ))}
@@ -421,11 +421,11 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
             </option>
           ))}
         </Selecao>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo rotulo="Data e hora" type="datetime-local" value={f.data} onChange={(v) => set("data", v)} erro={erros.data} />
           <Campo rotulo="Local" value={f.local} onChange={(v) => set("local", v)} placeholder="Ex.: Sede Central" maxLength={120} />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo
             rotulo="Valor para sócio"
             mascara="moeda"
@@ -448,7 +448,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<Evento> | "novo" | null;
         <Aviso tom="info">
           A taxa de serviço de {pct}% é somada ao valor e fica no caixa da diretoria. O valor do ingresso vai para a sede organizadora.
         </Aviso>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo
             rotulo="Capacidade (opcional)"
             inputMode="numeric"

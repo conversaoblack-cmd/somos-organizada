@@ -6,7 +6,7 @@ import type { Lancamento, Repasse } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { Abas, AreaTexto, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, Indicador, Modal, Selecao, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
-import { baixarCsv, Confirmar, decimalBR, EstadoLista, mesAtualSP, rotuloMes } from "./util";
+import { baixarCsv, Confirmar, decimalBR, EstadoLista, mesAtualSP, rotuloMes, textoMoeda } from "./util";
 
 interface ResumoSede {
   sedeId: string;
@@ -171,7 +171,7 @@ export default function Financeiro() {
           {ehDiretoria && (
             <section className="mb-8">
               <h2 className="text-lg font-bold mb-3">Saldo por sede</h2>
-              <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                 {principal && (
                   <Cartao className="p-5 border-primaria/30">
                     <div className="flex items-center justify-between gap-2">
@@ -347,9 +347,12 @@ function ModalRepasse({ sedeInicial, saldos, fechar }: { sedeInicial: string; sa
   const { tid, uid, sedes, nomeSede, torcida } = usePainel();
   const avisar = useToast();
   const opcoes = sedes.filter((s) => s.id !== torcida.sedePrincipalId);
-  const [sedeId, setSedeId] = useState(sedeInicial || opcoes[0]?.id || "");
+  // Sem sede escolhida, sugere a subsede com maior saldo a receber.
+  const sugerida = [...opcoes].sort((a, b) => (saldos[b.id] ?? 0) - (saldos[a.id] ?? 0))[0]?.id ?? "";
+  const [sedeId, setSedeId] = useState(sedeInicial || sugerida);
   const saldo = saldos[sedeId] ?? 0;
-  const [valor, setValor] = useState(() => (saldo > 0 ? (saldo / 100).toFixed(2).replace(".", ",") : ""));
+  const sugerirValor = (id: string) => ((saldos[id] ?? 0) > 0 ? textoMoeda(saldos[id]) : "");
+  const [valor, setValor] = useState(() => sugerirValor(sedeInicial || sugerida));
   const [competencia, setCompetencia] = useState("");
   const [observacao, setObservacao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -381,7 +384,14 @@ function ModalRepasse({ sedeInicial, saldos, fechar }: { sedeInicial: string; sa
       }
     >
       <div className="space-y-4">
-        <Selecao rotulo="Subsede" value={sedeId} onChange={(e) => setSedeId(e.target.value)}>
+        <Selecao
+          rotulo="Subsede"
+          value={sedeId}
+          onChange={(e) => {
+            setSedeId(e.target.value);
+            setValor(sugerirValor(e.target.value));
+          }}
+        >
           {opcoes.map((s) => (
             <option key={s.id} value={s.id}>
               {s.nome}

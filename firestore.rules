@@ -8,7 +8,7 @@ service cloud.firestore {
 
     function logado() { return request.auth != null; }
     function anonimo() { return logado() && request.auth.token.firebase.sign_in_provider == 'anonymous'; }
-    function plataforma() { return logado() && request.auth.token.plataforma == true; }
+    function plataforma() { return logado() && request.auth.token.get('plataforma', false) == true; }
 
     function membro(tid) {
       return logado() && exists(/databases/$(database)/documents/torcidas/$(tid)/membros/$(request.auth.uid))

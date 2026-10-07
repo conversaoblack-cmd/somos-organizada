@@ -144,6 +144,7 @@ export interface Pedido {
   socioUid?: string;
   planoId?: string;
   renovacao?: boolean;
+  pagarme?: { orderId?: string; chargeId?: string | null };
   pix?: { qrCode: string; qrCodeUrl?: string; expiraEm: Timestamp };
   expiraEm?: Timestamp;
   criadoEm: Timestamp;

@@ -9,6 +9,7 @@ import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, updateDoc, addDoc, collection, Timestamp } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator, httpsCallable } from "firebase/functions";
+import { getStorage, connectStorageEmulator, ref as sRef, uploadBytes } from "firebase/storage";
 import { iniciar, chamadas } from "./pagarme-simulada.mjs";
 
 const PROJETO = "demo-somos";
@@ -32,7 +33,10 @@ function navegador(nome) {
   const fns = getFunctions(app, REGIAO);
   connectFunctionsEmulator(fns, "127.0.0.1", 5001);
   const chamar = async (nomeFn, dados) => (await httpsCallable(fns, nomeFn)(dados)).data;
-  return { auth, db, chamar };
+  const storage = getStorage(app, "demo-somos.appspot.com");
+  connectStorageEmulator(storage, "127.0.0.1", 9199);
+  const enviar = (caminho) => uploadBytes(sRef(storage, caminho), PNG, { contentType: "image/png" });
+  return { auth, db, chamar, enviar };
 }
 
 async function webhook(tid, token, corpo) {
@@ -47,6 +51,7 @@ const negado = async (promessa) => {
 };
 
 const ctx = {};
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
 
 before(async () => {
   pagarme = await iniciar(4010);
@@ -368,4 +373,15 @@ test("12. diretoria convida usuário de subsede com escopo limitado", async () =
   }));
   // não mexe em credenciais
   await assert.rejects(b.chamar("salvarCredenciaisPagarme", { tid: ctx.tid, chaveSecreta: "sk_test_x123456789", chavePublica: "pk_test_x123456789" }), /permissão/);
+});
+
+test("13. Storage: sócio envia a própria foto; estranhos são barrados", async () => {
+  await ctx.socio.enviar(`suporte/${ctx.socioUid}/print.png`);
+  await ctx.socio.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.png`);
+  await assert.rejects(ctx.torcedor.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.png`));
+  await assert.rejects(ctx.torcedor.enviar(`torcidas/${ctx.tid}/publico/marca/hack.png`));
+  // Regras que consultam o Firestore (diretoria enviando banner/logo) dependem do acesso
+  // cruzado Storage→Firestore do emulador, que não funciona em todo ambiente (ex.: sem IPv6).
+  // Rode com STORAGE_CRUZADO=1 onde funcionar; em produção é validado no primeiro upload.
+  if (process.env.STORAGE_CRUZADO === "1") await ctx.dir.enviar(`torcidas/${ctx.tid}/publico/marca/banner.png`);
 });

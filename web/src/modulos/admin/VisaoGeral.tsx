@@ -160,7 +160,7 @@ export default function VisaoGeral() {
       {!ehDiretoria && !sedeEscopo && <Aviso tom="alerta" titulo="Usuário sem sede">Peça para a diretoria vincular seu usuário a uma subsede.</Aviso>}
 
       {pendencias.length > 0 && (
-        <div className="grid gap-3 mb-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 mb-6 lg:grid-cols-2">
           {pendencias.map((p) => (
             <Aviso key={p.titulo} tom={p.tom} titulo={p.titulo} acao={<BotaoLink to={p.para} tamanho="sm" variante="contorno" iconeDireita="setaDireita">{p.acao}</BotaoLink>}>
               {p.texto}
@@ -213,7 +213,7 @@ export default function VisaoGeral() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr] mt-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr] mt-4">
         <Cartao className="p-5 sm:p-6 min-w-0">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
@@ -262,7 +262,7 @@ export default function VisaoGeral() {
         </Cartao>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 mt-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mt-4">
         <Cartao className="p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold">Próximos eventos</h2>
