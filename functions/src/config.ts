@@ -14,9 +14,11 @@ export const URL_APP = defineString("URL_APP", { default: "https://somosorganiza
 /** E-mails (separados por vírgula) que podem reivindicar acesso ao painel da plataforma. */
 export const PLATAFORMA_EMAILS = defineString("PLATAFORMA_EMAILS", { default: "conversaoblack@gmail.com" });
 
-// CPU fracionada (perfil "gcf_gen1") + teto de instâncias: cabe na cota de CPU por região
-// de projetos novos no Cloud Run (com 1 vCPU x 20 instâncias por função, o deploy estoura a cota).
-setGlobalOptions({ region: REGIAO, maxInstances: 10, cpu: "gcf_gen1", memory: "512MiB" });
+// Cota de CPU por região do Cloud Run = soma de (vCPU x máx. instâncias) de todas as funções.
+// Com 1 vCPU x 20 instâncias por função o deploy estoura a cota de projeto novo. Aqui: 1 vCPU,
+// até 4 instâncias, cada uma atendendo 80 requisições simultâneas (o trabalho é quase todo I/O:
+// Firestore e Pagar.me). ~320 compras em paralelo por função usando só 4 vCPU de cota.
+setGlobalOptions({ region: REGIAO, maxInstances: 4, cpu: 1, concurrency: 80, memory: "512MiB" });
 
 /** Regras de negócio padrão. Cada torcida pode sobrescrever algumas no próprio documento. */
 export const PADROES = {
