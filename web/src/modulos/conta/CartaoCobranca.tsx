@@ -23,7 +23,8 @@ export const valorMensalidade = (ficha: Socio, torcida: Torcida) =>
 
 /**
  * Houve recusa no cartão que ainda não foi resolvida?
- * Considera a falha quando é mais recente que o último pagamento de mensalidade (ou o sócio está inadimplente).
+ * Considera a falha quando é mais recente que o último pagamento e a última atualização da ficha (troca de cartão),
+ * ou quando o sócio está inadimplente.
  */
 export function useFalhaCobranca(tid: string, ficha: ComId<Socio>) {
   const pedidos = usePedidosDoSocio(tid, ficha.uid);
@@ -32,7 +33,9 @@ export function useFalhaCobranca(tid: string, ficha: ComId<Socio>) {
   if (ficha.status === "inadimplente") return true;
   const ultimoPago = pedidos.dados.find((p) => p.tipo === "socio" && p.status === "pago");
   const pagoEm = paraData(ultimoPago?.pagoEm ?? ultimoPago?.criadoEm)?.getTime() ?? 0;
-  return falha > pagoEm;
+  // Trocar o cartão atualiza a ficha: depois disso o aviso some até uma nova recusa.
+  const fichaAtualizada = paraData(ficha.atualizadoEm)?.getTime() ?? 0;
+  return falha > Math.max(pagoEm, fichaAtualizada);
 }
 
 /** Modal com o formulário de cartão: troca o cartão salvo e, se a mensalidade estiver em aberto, já cobra nele. */

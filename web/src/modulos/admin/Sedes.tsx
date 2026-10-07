@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { mensagemDeErro } from "@/lib/api";
+import { api, mensagemDeErro } from "@/lib/api";
 import type { ComId, Sede } from "@/lib/tipos";
 import { Botao, BotaoIcone, CabecalhoPagina, Campo, Cartao, cx, Gaveta, Icone, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
 import { Confirmar, EstadoLista } from "./util";
+import { infoRecebedor, nomeBanco, SeloRecebedor } from "./recebedor";
 
 interface Form {
   nome: string;
@@ -30,6 +31,19 @@ export default function Sedes() {
   const avisar = useToast();
   const [editando, setEditando] = useState<ComId<Sede> | "nova" | null>(null);
   const [alternar, setAlternar] = useState<ComId<Sede> | null>(null);
+  const [atualizando, setAtualizando] = useState<string | null>(null);
+
+  async function atualizarRecebedor(sedeId: string) {
+    setAtualizando(sedeId);
+    try {
+      const r = await api.atualizarRecebedor({ tid, sedeId });
+      avisar(`Conta de recebimento: ${infoRecebedor(r.recebedor).rotulo}.`, "sucesso");
+    } catch (e) {
+      avisar(mensagemDeErro(e), "erro");
+    } finally {
+      setAtualizando(null);
+    }
+  }
   const proximaOrdem = Math.max(0, ...sedes.map((s) => s.ordem ?? 0)) + 1;
   const principal = sedes.find((s) => s.tipo === "principal");
   const subsedes = sedes.filter((s) => s.tipo !== "principal");
@@ -50,6 +64,24 @@ export default function Sedes() {
             <Icone nome="usuario" className="size-4" /> {s.responsavel}
           </p>
         )}
+        {s.tipo !== "principal" && (
+          <div className="mt-3 rounded-2xl border border-linha bg-superficie-2 px-3 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="text-xs text-texto-3">Conta de recebimento</span>
+            <SeloRecebedor r={s.recebedor} />
+            {s.recebedor ? (
+              <span className="text-xs text-texto-2 min-w-0 truncate">
+                {s.recebedor.nomeTitular} · {nomeBanco(s.recebedor.banco.codigo)} ag. {s.recebedor.banco.agencia} · conta {s.recebedor.banco.conta}
+              </span>
+            ) : (
+              <span className="text-xs text-texto-3">O responsável cadastra pelo painel da subsede, em Recebimentos.</span>
+            )}
+            {s.recebedor && (
+              <Botao tamanho="sm" variante="fantasma" icone="atualizar" className="ml-auto h-8" carregando={atualizando === s.id} onClick={() => atualizarRecebedor(s.id)}>
+                Atualizar
+              </Botao>
+            )}
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {s.tipo !== "principal" && (
@@ -66,7 +98,7 @@ export default function Sedes() {
     <div className="max-w-4xl">
       <CabecalhoPagina
         titulo="Sedes"
-        descricao="A sede principal fica com a taxa de serviço. Cada subsede recebe o valor dos próprios eventos e, se configurado, as mensalidades dos seus sócios."
+        descricao="A sede principal fica com a taxa de serviço. Cada subsede recebe o valor dos próprios eventos direto na conta de recebimento dela (split) e, se configurado, as mensalidades dos seus sócios."
         acoes={
           <Botao icone="mais" onClick={() => setEditando("nova")}>
             Nova subsede

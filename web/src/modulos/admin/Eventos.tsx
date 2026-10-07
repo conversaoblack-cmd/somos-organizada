@@ -20,6 +20,7 @@ import {
   Gaveta,
   Icone,
   Indicador,
+  Modal,
   Selecao,
   Selo,
   useToast,
@@ -630,15 +631,20 @@ const TOM_INGRESSO: Record<Ingresso["status"], Tom> = { valido: "sucesso", usado
 
 export function DetalheEvento() {
   const { eventoId = "" } = useParams();
-  const { tid, torcida, ehDiretoria, sedeEscopo, nomeSede, base, pct } = usePainel();
+  const { tid, uid, torcida, ehDiretoria, sedeEscopo, nomeSede, base, pct, podePublicarNaSede } = usePainel();
   const navegar = useNavigate();
   const avisar = useToast();
-  const ev = useDocumento<Evento>(`torcidas/${tid}/eventos/${eventoId}`);
+  const ev = useDocumento<EventoAdm>(`torcidas/${tid}/eventos/${eventoId}`);
   const [editando, setEditando] = useState(false);
   const [excluir, setExcluir] = useState(false);
+  const [aprovar, setAprovar] = useState(false);
+  const [devolver, setDevolver] = useState(false);
+  const [enviar, setEnviar] = useState(false);
+  const [motivo, setMotivo] = useState("");
   const [busca, setBusca] = useState("");
   const e = ev.dados;
-  const podeEditar = !!e && (ehDiretoria || e.sedeId === sedeEscopo);
+  const podeEditarFn = usePodeEditar();
+  const podeEditar = !!e && podeEditarFn(e);
 
   const ingressos = useColecao<Ingresso>(
     !e
@@ -671,6 +677,9 @@ export function DetalheEvento() {
   const receitaBase = validos.reduce((s, i) => s + (i.valorBase ?? 0), 0);
   const qtdSocio = validos.filter((i) => i.tipo === "socio").length;
   const podeExcluir = e.vendidos === 0 && e.reservados === 0;
+  const refEvento = doc(db, `torcidas/${tid}/eventos/${e.id}`);
+  const contaAtiva = podePublicarNaSede(e.sedeId);
+  const daSubsede = e.sedeId !== torcida.sedePrincipalId;
 
   return (
     <div>
@@ -735,6 +744,63 @@ export function DetalheEvento() {
           </div>
         </div>
       </Cartao>
+
+      {/* Fluxo de aprovação */}
+      {ehDiretoria && e.status === "em_aprovacao" && (
+        <Cartao className="p-5 sm:p-6 mb-4 border-alerta/40">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            <span className="size-12 shrink-0 rounded-2xl grid place-items-center bg-alerta/15 text-alerta">
+              <Icone nome="relogio" className="size-6" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold">{nomeSede(e.sedeId)} enviou este evento para aprovação</p>
+              <p className="text-sm text-texto-2 mt-0.5">
+                Confira nome, data, preços e descrição. Ao aprovar, o evento aparece na página e as vendas começam.
+                {daSubsede && contaAtiva && " O valor dos ingressos cai direto na conta da subsede; a taxa de serviço vai para a torcida."}
+              </p>
+              {!contaAtiva && (
+                <p className="text-sm text-alerta mt-2">
+                  Não dá para aprovar ainda: a subsede não tem conta de recebimento ativa. Peça para o responsável dela cadastrar em “Recebimentos” no painel
+                  da subsede.
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Botao variante="contorno" tamanho="sm" icone="setaEsquerda" onClick={() => setDevolver(true)}>
+                Devolver para ajustes
+              </Botao>
+              <Botao tamanho="sm" icone="check" onClick={() => setAprovar(true)} disabled={!contaAtiva} title={contaAtiva ? undefined : "Subsede sem conta de recebimento ativa"}>
+                Aprovar e publicar
+              </Botao>
+            </div>
+          </div>
+        </Cartao>
+      )}
+      {!ehDiretoria && e.status === "em_aprovacao" && (
+        <Aviso tom="info" titulo="Aguardando aprovação da diretoria" className="mb-4">
+          Você ainda pode editar. Quando a diretoria aprovar, o evento é publicado e só ela poderá alterar.
+          {!contaAtiva && " Atenção: sem conta de recebimento ativa a diretoria não consegue aprovar."}
+        </Aviso>
+      )}
+      {e.status === "rascunho" && e.motivoDevolucao && (
+        <Aviso tom="alerta" titulo="Devolvido pela diretoria para ajustes" className="mb-4">
+          <span className="whitespace-pre-line">{e.motivoDevolucao}</span>
+          {e.devolvidoEm && <span className="block text-xs text-texto-3 mt-1">{dataHora(e.devolvidoEm)}</span>}
+        </Aviso>
+      )}
+      {!ehDiretoria && e.status === "rascunho" && podeEditar && (
+        <Cartao className="p-4 sm:p-5 mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <p className="text-sm text-texto-2 flex-1">Este evento é um rascunho. Quando estiver pronto, envie para a diretoria aprovar e publicar.</p>
+          <Botao tamanho="sm" icone="enviar" onClick={() => setEnviar(true)}>
+            Enviar para aprovação
+          </Botao>
+        </Cartao>
+      )}
+      {!ehDiretoria && !podeEditar && e.sedeId === sedeEscopo && (
+        <Aviso tom="info" titulo="Somente leitura" className="mb-4">
+          {e.status === "publicado" ? "Publicado pela diretoria" : `Evento ${ROTULO_STATUS_EVENTO[e.status].toLowerCase()}`}; para alterar, fale com a diretoria.
+        </Aviso>
+      )}
 
       <Cartao className="p-4 sm:p-5 mb-4">
         <p className="text-sm font-semibold mb-2">Link para divulgar</p>
@@ -802,6 +868,67 @@ export function DetalheEvento() {
       </Cartao>
 
       <FormEvento evento={editando ? e : null} fechar={() => setEditando(false)} />
+      <Confirmar
+        aberto={aprovar}
+        fechar={() => setAprovar(false)}
+        titulo="Aprovar e publicar?"
+        rotulo="Aprovar e publicar"
+        acao={async () => {
+          await updateDoc(refEvento, { status: "publicado", aprovadoEm: serverTimestamp(), aprovadoPor: uid, motivoDevolucao: deleteField() });
+          avisar("Evento aprovado e publicado.", "sucesso");
+        }}
+      >
+        “{e.nome}” aparece na página da torcida e começa a vender. Depois de publicado, só a diretoria pode alterar.
+      </Confirmar>
+      <Confirmar
+        aberto={enviar}
+        fechar={() => setEnviar(false)}
+        titulo="Enviar para aprovação?"
+        rotulo="Enviar"
+        acao={async () => {
+          await updateDoc(refEvento, { status: "em_aprovacao", motivoDevolucao: deleteField() });
+          avisar("Enviado! A diretoria vai conferir e publicar.", "sucesso");
+        }}
+      >
+        A diretoria vai conferir os dados de “{e.nome}” e publicar. Enquanto isso, você ainda pode editar.
+      </Confirmar>
+      <Modal
+        aberto={devolver}
+        fechar={() => setDevolver(false)}
+        titulo="Devolver para ajustes"
+        descricao="O evento volta a ser rascunho e a subsede vê o motivo."
+        rodape={
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Botao variante="fantasma" onClick={() => setDevolver(false)}>
+              Cancelar
+            </Botao>
+            <Botao
+              icone="setaEsquerda"
+              disabled={motivo.trim().length < 5}
+              onClick={async () => {
+                try {
+                  await updateDoc(refEvento, { status: "rascunho", motivoDevolucao: motivo.trim(), devolvidoEm: serverTimestamp() });
+                  avisar("Evento devolvido para a subsede.", "sucesso");
+                  setDevolver(false);
+                  setMotivo("");
+                } catch (err) {
+                  avisar(mensagemDeErro(err), "erro");
+                }
+              }}
+            >
+              Devolver
+            </Botao>
+          </div>
+        }
+      >
+        <AreaTexto
+          rotulo="O que precisa ser ajustado?"
+          value={motivo}
+          onChange={(ev2) => setMotivo(ev2.target.value)}
+          maxLength={500}
+          placeholder="Ex.: o preço para sócio está acima do combinado; ajuste a descrição com o horário de saída."
+        />
+      </Modal>
       <Confirmar
         aberto={excluir}
         fechar={() => setExcluir(false)}

@@ -172,12 +172,12 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
                   <Icone nome="pix" className="size-4 text-primaria" /> Pix a cada ciclo
                 </span>
               ) : (
-                <span className="inline-flex items-start gap-1.5 text-right">
-                  <Icone nome="cartao" className="size-4 text-primaria shrink-0 mt-1" />
-                  <span>
+                <span className="block text-right">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icone nome="cartao" className="size-4 text-primaria shrink-0" />
                     Cartão <span className="font-mono">•••• {final}</span>
-                    <span className="block text-xs font-medium text-texto-3">cobrança automática a cada período</span>
                   </span>
+                  <span className="block text-xs font-medium text-texto-3">cobrança automática a cada período</span>
                 </span>
               )}
             </Linha>

@@ -143,6 +143,9 @@ export async function confirmarPedidoPago(tid: string, pedidoId: string, pg: PgP
       status: novoStatus,
       validoAte: Timestamp.fromDate(validoAte),
       cobrancaAbertaId: null,
+      // pagamento confirmado: some o aviso de "cobrança recusada"
+      ultimaFalhaCobranca: FieldValue.delete(),
+      motivoFalhaCobranca: FieldValue.delete(),
       atualizadoEm: FieldValue.serverTimestamp(),
     };
     if (primeiraAdesao) {
