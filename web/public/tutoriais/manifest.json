@@ -1,1 +1,30 @@
-{ "ids": [] }
+{
+  "ids": [
+    "admin-dominio",
+    "admin-evento-detalhe",
+    "admin-eventos",
+    "admin-eventos-criar",
+    "admin-financeiro",
+    "admin-pagamentos",
+    "admin-pedidos",
+    "admin-personalizacao",
+    "admin-plano-somos",
+    "admin-planos",
+    "admin-primeiros-passos",
+    "admin-publicado",
+    "admin-sedes",
+    "admin-socios",
+    "admin-usuarios",
+    "admin-visao-geral",
+    "portaria-inicio",
+    "subsede-evento-detalhe",
+    "subsede-eventos",
+    "subsede-eventos-criar",
+    "subsede-financeiro",
+    "subsede-pedidos",
+    "subsede-primeiros-passos",
+    "subsede-recebimentos",
+    "subsede-socios",
+    "subsede-visao-geral"
+  ]
+}
