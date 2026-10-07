@@ -15,11 +15,25 @@ import type { Evento, Ingresso, Pedido, Sede, Socio, Torcida } from "../dominio/
 
 const segredos = [MASTER_KEY, QR_HMAC];
 
-export async function torcidaVendendo(tid: string): Promise<Torcida> {
-  const t = (await refs.torcida(tid).get()).data() as Torcida | undefined;
+/**
+ * Torcida apta a vender. Antes de o site ser publicado, só a equipe da própria torcida (membros do
+ * painel) consegue comprar — para testar. Módulo desligado (eventos ou sócios) bloqueia a venda.
+ */
+export async function torcidaVendendo(
+  tid: string,
+  opcoes: { uid?: string; modulo?: "eventos" | "socios"; permitirNaoPublicada?: boolean } = {},
+): Promise<Torcida> {
+  const t = (await refs.torcida(tid).get()).data() as (Torcida & { publicada?: boolean; modulos?: { eventos?: boolean; socios?: boolean } }) | undefined;
   if (!t) throw new HttpsError("not-found", "Torcida não encontrada.");
   if (t.status === "suspensa") throw new HttpsError("failed-precondition", "Vendas temporariamente indisponíveis.");
   if (!t.pagamentos?.configurado) throw new HttpsError("failed-precondition", "Esta torcida ainda não ativou os pagamentos.");
+  if (opcoes.modulo && t.modulos?.[opcoes.modulo] === false) {
+    throw new HttpsError("failed-precondition", opcoes.modulo === "eventos" ? "Venda de ingressos desativada." : "Associação de sócios desativada.");
+  }
+  if (t.publicada !== true && !opcoes.permitirNaoPublicada) {
+    const membro = opcoes.uid ? (await refs.membro(tid, opcoes.uid).get()).data() : undefined;
+    if (!membro?.ativo) throw new HttpsError("failed-precondition", "O site desta torcida ainda não foi publicado.");
+  }
   return t;
 }
 
@@ -105,7 +119,7 @@ export const criarPedidoIngresso = onCall({ secrets: segredos }, async (req) => 
     throw new HttpsError("invalid-argument", "Cada ingresso precisa de um CPF diferente (ingresso é intransferível).");
   }
 
-  const torcida = await torcidaVendendo(tid);
+  const torcida = await torcidaVendendo(tid, { uid, modulo: "eventos" });
   const pct = torcida.taxaServicoPct ?? PADROES.taxaServicoPct;
 
   // Sócio ativo?

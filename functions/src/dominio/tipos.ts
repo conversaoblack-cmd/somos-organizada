@@ -29,7 +29,7 @@ export interface Torcida {
   contato?: { whatsapp?: string; email?: string; instagram?: string };
   pagamentos: {
     configurado: boolean;
-    ambiente?: "teste" | "producao";
+    ambiente?: "teste" | "producao" | "demo";
     chavePublica?: string;
     pix: boolean;
     cartao: boolean;

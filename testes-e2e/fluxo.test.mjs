@@ -190,6 +190,39 @@ test("3b. subsede: convite, conta de recebimento com prova de vida, evento aprov
   await negado(updateDoc(doc(sub.db, `torcidas/${ctx.tid}/eventos/${ev.id}`), { valorPublico: 1 }));
 });
 
+test("3c. site só vende depois de publicado; publicar escolhe o plano e gera a 1ª fatura no Pix", async () => {
+  await aDb.doc("plataforma/publico").set({ pix: { chave: "financeiro@somosorganizada.test", nome: "Somos Organizada", cidade: "Salvador" } });
+  const visitante = navegador("visitante-antes");
+  await signInAnonymously(visitante.auth);
+  await assert.rejects(
+    visitante.chamar("criarPedidoIngresso", {
+      tid: ctx.tid, eventoId: ctx.evento, metodo: "pix",
+      comprador: { nome: "Antes Da Hora", email: "a@x.test", cpf: "11144477735", telefone: "71999990000" },
+      titulares: [{ nome: "Antes Da Hora", cpf: "11144477735" }],
+    }),
+    /ainda não foi publicado/,
+  );
+  // módulos: a diretoria pode ligar/desligar eventos e sócios
+  await updateDoc(doc(ctx.dir.db, `torcidas/${ctx.tid}`), { modulos: { eventos: true, socios: true } });
+  await assert.rejects(ctx.sub.chamar("publicarSite", { tid: ctx.tid, plano: "pequena" }), /permissão/);
+  const r = await ctx.dir.chamar("publicarSite", { tid: ctx.tid, plano: "pequena" });
+  assert.equal(r.publicada, true);
+  const faturas = await aDb.collection(`torcidas/${ctx.tid}/faturasSaas`).get();
+  assert.equal(faturas.size, 1);
+  const f = faturas.docs[0];
+  assert.equal(f.get("valor"), 50000);
+  assert.equal(f.get("status"), "aberta");
+  assert.match(f.get("pixCopiaECola"), /^000201.*br\.gov\.bcb\.pix.*5406500\.00/);
+  const venc = f.get("vencimento").toMillis();
+  assert.ok(venc > Date.now() + 6 * 86400_000 && venc < Date.now() + 8 * 86400_000);
+  ctx.faturaSaas = f.id;
+  ctx.vencSaas = venc;
+  const t = await aDb.doc(`torcidas/${ctx.tid}`).get();
+  assert.equal(t.get("status"), "ativa");
+  // sócio comum não lê as faturas da plataforma
+  await negado(getDoc(doc(visitante.db, `torcidas/${ctx.tid}/faturasSaas/${f.id}`)));
+});
+
 test("4. torcedor sem cadastro compra no Pix; webhook confirma e emite ingresso com QR", async () => {
   const b = navegador("torcedor");
   await signInAnonymously(b.auth);
@@ -435,6 +468,126 @@ test("12. usuário de subsede tem escopo limitado", async () => {
   // não mexe em credenciais nem no split
   await assert.rejects(b.chamar("salvarCredenciaisPagarme", { tid: ctx.tid, chaveSecreta: "sk_test_x123456789", chavePublica: "pk_test_x123456789" }), /permissão/);
   await assert.rejects(b.chamar("configurarSplit", { tid: ctx.tid, recebedorPrincipalId: "rp_x123" }), /permissão/);
+});
+
+test("14. mensalidade Somos Organizada: 7 dias de atraso derrubam o site; confirmação do Pix reativa", async () => {
+  // diretoria avisa que pagou, mas a equipe ainda não confirmou
+  await ctx.dir.chamar("informarPagamentoSaas", { tid: ctx.tid, faturaId: ctx.faturaSaas });
+  await assert.rejects(ctx.dir.chamar("confirmarFaturaSaas", { tid: ctx.tid, faturaId: ctx.faturaSaas }), /equipe Somos Organizada/);
+  // 8 dias depois do vencimento, a rotina bloqueia
+  const r = await ctx.plat.chamar("executarRotinaSaas", { agora: ctx.vencSaas + 8 * 86400_000 });
+  assert.equal(r.bloqueadas, 1);
+  let t = await aDb.doc(`torcidas/${ctx.tid}`).get();
+  assert.equal(t.get("status"), "suspensa");
+  assert.equal(t.get("bloqueioSaas"), true);
+  await assert.rejects(
+    ctx.torcedor.chamar("criarPedidoIngresso", {
+      tid: ctx.tid, eventoId: ctx.evento, metodo: "pix",
+      comprador: { nome: "Torcedor Teste", email: "torcedor@x.test", cpf: "11144477735", telefone: "71999990000" },
+      titulares: [{ nome: "Torcedor Teste", cpf: "11144477735" }],
+    }),
+    /indisponíveis/,
+  );
+  await assert.rejects(ctx.dir.chamar("publicarSite", { tid: ctx.tid }), /atraso/);
+  // a equipe confirma o Pix: volta ao ar
+  await ctx.plat.chamar("confirmarFaturaSaas", { tid: ctx.tid, faturaId: ctx.faturaSaas });
+  t = await aDb.doc(`torcidas/${ctx.tid}`).get();
+  assert.equal(t.get("status"), "ativa");
+  assert.equal(t.get("bloqueioSaas"), false);
+  const resumo = await ctx.plat.chamar("resumoPlataforma", {});
+  assert.equal(resumo.torcidas.find((x) => x.id === ctx.tid).saas.plano, "pequena");
+});
+
+test("15. cadastro pela página principal: diretor solicita, equipe aprova, torcida nasce em implantação", async () => {
+  const u = await aAuth.createUser({ email: "novo.diretor@x.test", password: SENHA, emailVerified: true });
+  const b = navegador("novo-diretor");
+  await signInWithEmailAndPassword(b.auth, "novo.diretor@x.test", SENHA);
+  const disp = await b.chamar("slugDisponivel", { slug: "furia-azul" });
+  assert.equal(disp.disponivel, true);
+  const dados = {
+    nomeTorcida: "Fúria Azul", slug: "furia-azul", clube: "Esporte Clube Exemplo", estimativaSocios: 800, quantidadeSubsedes: 3,
+    responsavel: { nome: "Diretor Novo da Silva", cpf: "52998224725", telefone: "71988887777", cargo: "Presidente" },
+    entidade: { tipo: "cnpj", cnpj: "11.222.333/0001-81", razaoSocial: "Associação Fúria Azul", emailFinanceiro: "fin@furia.test" },
+    endereco: { cep: "40000000", logradouro: "Rua A", numero: "1", bairro: "Centro", cidade: "Salvador", uf: "BA" },
+  };
+  await assert.rejects(b.chamar("solicitarTorcida", { ...dados, entidade: { ...dados.entidade, cnpj: "11222333000100" } }), /CNPJ/);
+  const sol = await b.chamar("solicitarTorcida", dados);
+  assert.equal(sol.status, "pendente");
+  // endereço fica reservado
+  assert.equal((await b.chamar("slugDisponivel", { slug: "furia-azul" })).disponivel, false);
+  await assert.rejects(b.chamar("solicitarTorcida", { ...dados, slug: "furia-azul-2" }), /em análise/);
+  // diretor vê o próprio pedido; diretor não aprova a si mesmo
+  assert.equal((await getDoc(doc(b.db, `solicitacoes/${sol.solicitacaoId}`))).get("status"), "pendente");
+  await assert.rejects(b.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true }), /equipe Somos Organizada/);
+  const ap = await ctx.plat.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true });
+  assert.equal(ap.slug, "furia-azul");
+  const t = await aDb.doc(`torcidas/${ap.torcidaId}`).get();
+  assert.equal(t.get("status"), "implantacao");
+  assert.equal(t.get("publicada"), false);
+  const membro = await aDb.doc(`torcidas/${ap.torcidaId}/membros/${u.uid}`).get();
+  assert.equal(membro.get("papel"), "diretoria");
+  ctx.demo = { tid: ap.torcidaId, dir: b };
+});
+
+test("16. modo demonstração: torcida sem Pagar.me vende ingresso (Pix simulado) e sócio no cartão de teste, com split", async () => {
+  const { tid, dir } = ctx.demo;
+  await assert.rejects(dir.chamar("salvarCredenciaisPagarme", { tid, chaveSecreta: "sk_demo_abc123456", chavePublica: "pk_test_abc123456" }), /mesmo ambiente/);
+  const cred = await dir.chamar("salvarCredenciaisPagarme", { tid, chaveSecreta: "sk_demo_abc123456", chavePublica: "pk_demo_abc123456" });
+  assert.equal(cred.ambiente, "demo");
+  const sp = await dir.chamar("configurarSplit", { tid }); // demonstração: recebedor principal automático
+  assert.equal(sp.splitAtivo, true);
+  const t0 = (await aDb.doc(`torcidas/${tid}`).get()).data();
+  // subsede da demonstração com conta de recebimento simulada
+  const sede = await addDoc(collection(dir.db, `torcidas/${tid}/sedes`), { nome: "Zona Norte", tipo: "subsede", ativa: true, ordem: 1 });
+  const conv = await dir.chamar("convidarMembro", { tid, email: "zn@furia.test", nome: "Coord ZN", papel: "subsede", sedeId: sede.id });
+  await aAuth.updateUser(conv.uid, { password: SENHA });
+  const zn = navegador("demo-zn");
+  await signInWithEmailAndPassword(zn.auth, "zn@furia.test", SENHA);
+  const cad = await zn.chamar("cadastrarRecebedor", { tid, dados: {
+    nome: "Coordenador Zona Norte", email: "zn@furia.test", cpf: "39053344705", nascimento: "1990-01-01", nomeMae: "Mae da Zona",
+    rendaMensal: 300000, profissao: "Autônomo", telefone: "71988880000",
+    endereco: { cep: "40000000", logradouro: "Rua Z", numero: "9", bairro: "Norte", cidade: "Salvador", uf: "BA" },
+    banco: { codigo: "260", agencia: "0001", conta: "1234567", contaDv: "8", tipo: "checking" },
+  } });
+  assert.equal(cad.recebedor.status, "registration");
+  const kyc = await zn.chamar("simularDemo", { tid, acao: "aprovar_recebedor" });
+  assert.equal(kyc.recebedor.status, "active");
+  const ev = await addDoc(collection(zn.db, `torcidas/${tid}/eventos`), {
+    nome: "Caravana demo", sedeId: sede.id, data: Timestamp.fromMillis(Date.now() + 5 * 86400_000),
+    valorSocio: 2000, valorPublico: 3000, vendidos: 0, reservados: 0, status: "em_aprovacao",
+  });
+  await updateDoc(ev, { status: "publicado" }).catch(() => undefined); // subsede não publica
+  await updateDoc(doc(dir.db, `torcidas/${tid}/eventos/${ev.id}`), { status: "publicado" });
+  await setDoc(doc(dir.db, `torcidas/${tid}/planos/mensal`), { nome: "Mensal", valor: 1500, intervalo: "mes", intervaloQtd: 1, pix: true, cartao: true, ativo: true });
+  await dir.chamar("publicarSite", { tid, plano: "grande" });
+  assert.equal(t0.pagamentos.ambiente, "demo");
+
+  // torcedor compra no Pix e "paga" pelo simulador
+  const tor = navegador("demo-torcedor");
+  await signInAnonymously(tor.auth);
+  const p = await tor.chamar("criarPedidoIngresso", {
+    tid, eventoId: ev.id, metodo: "pix",
+    comprador: { nome: "Torcedor Demo", email: "td@x.test", cpf: "11144477735", telefone: "71999990000" },
+    titulares: [{ nome: "Torcedor Demo", cpf: "11144477735" }],
+  });
+  assert.equal(p.status, "aguardando");
+  const sim = await tor.chamar("simularDemo", { tid, acao: "pagar_pedido", pedidoId: p.pedidoId });
+  assert.equal(sim.status, "pago");
+  const pedido = await aDb.doc(`torcidas/${tid}/pedidos/${p.pedidoId}`).get();
+  assert.equal(pedido.get("status"), "pago");
+  assert.equal(pedido.get("liquidacao"), "split");
+
+  // sócio no cartão de teste: 4000000000000028 recusa, 4000000000000010 aprova (tokens gerados pelo navegador)
+  const s = navegador("demo-socio");
+  await createUserWithEmailAndPassword(s.auth, "socio@furia.test", SENHA);
+  const dadosSocio = { nome: "Sócio Demo", cpf: "86288366757", telefone: "71977770000", nascimento: "1999-09-09",
+    endereco: { cep: "40000000", logradouro: "Rua S", numero: "1", bairro: "Norte", cidade: "Salvador", uf: "BA" } };
+  await assert.rejects(s.chamar("aderirSocio", { tid, planoId: "mensal", sedeId: sede.id, metodo: "cartao", cartao: { token: "tok_demo_recusado_0028" }, dados: dadosSocio }), /recusado/i);
+  const ok = await s.chamar("atualizarCartao", { tid, cartao: { token: "tok_demo_aprovado_0010" } });
+  assert.equal(ok.status, "ativo");
+
+  // simulador nunca funciona em torcida com Pagar.me de verdade
+  await assert.rejects(ctx.torcedor.chamar("simularDemo", { tid: ctx.tid, acao: "pagar_pedido", pedidoId: "x" }), /demonstração/);
 });
 
 test("13. Storage: sócio envia a própria foto; estranhos são barrados", async () => {

@@ -13,6 +13,7 @@ import { cpfValido, emailValido, mascararCpf, soDigitos, telefoneBR, texto, umDe
 import { exigirMembro } from "../dominio/permissoes";
 import { RECEBEDOR_ATIVO } from "../dominio/split";
 import { pagarmeDaTorcida } from "../pagarme/credenciais";
+import { RECEBEDOR_PRINCIPAL_DEMO } from "../pagarme/demo";
 import { PagarmeErro, type Pagarme } from "../pagarme/cliente";
 import type { RecebedorSede, Sede, Torcida } from "../dominio/tipos";
 
@@ -65,7 +66,11 @@ export const configurarSplit = onCall({ secrets: [MASTER_KEY] }, async (req) => 
     await refs.torcida(tid).update({ "pagamentos.splitAtivo": false });
     return { splitAtivo: false };
   }
-  const rp = texto(d.recebedorPrincipalId, "recebedor principal", { min: 5, max: 60 });
+  const torcidaAtual = (await refs.torcida(tid).get()).data() as Torcida | undefined;
+  const rp =
+    torcidaAtual?.pagamentos?.ambiente === "demo" && !d.recebedorPrincipalId
+      ? RECEBEDOR_PRINCIPAL_DEMO
+      : texto(d.recebedorPrincipalId, "recebedor principal", { min: 5, max: 60 });
   if (!/^rp_[A-Za-z0-9]+$/.test(rp)) throw new HttpsError("invalid-argument", "O código do recebedor começa com rp_.");
   const pg = await pagarmeDaTorcida(tid);
   try {

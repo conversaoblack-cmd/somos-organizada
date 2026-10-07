@@ -4,6 +4,9 @@ import { avancarCiclo, calcularMensalidade, calcularPedidoIngresso, taxaServico 
 import { cifrar, decifrar, gerarQr, lerQr, codigoLegivel } from "../src/util/cripto";
 import { cpfValido, mascararCpf, slugValido, telefoneBR } from "../src/util/validacao";
 import { statusAposPagamento } from "../src/dominio/processamento";
+import { crc16, pixCopiaECola } from "../src/util/pix";
+import { dividir, subsedePodeVender } from "../src/dominio/split";
+import { planoEfetivo } from "../src/api/saas";
 
 const CHAVE = "a".repeat(64);
 const SOCIO = { nome: "Sócio Teste", cpf: "52998224725" };
@@ -88,4 +91,33 @@ test("status do sócio após pagamento", () => {
   assert.equal(statusAposPagamento("inadimplente", true), "ativo");
   assert.equal(statusAposPagamento("suspenso", false), "suspenso");
   assert.equal(statusAposPagamento("em_analise", false), "em_analise");
+});
+
+test("Pix copia e cola: CRC16 do exemplo oficial do Banco Central e payload com valor", () => {
+  const exemplo = "00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Fulano de Tal6008BRASILIA62070503***6304";
+  assert.equal(crc16(exemplo), "1D3D");
+  const p = pixCopiaECola({ chave: "pix@somos.test", valorCentavos: 100000, nome: "Somos Organizada", cidade: "Salvador", txid: "SOabc20261107" });
+  assert.match(p, /^000201/);
+  assert.ok(p.includes("54071000.00"));
+  assert.equal(p.slice(-4), crc16(p.slice(0, -4)));
+});
+
+test("split: subsede ativa recebe o valor do ingresso, torcida recebe a taxa", () => {
+  const torcida = { pagamentos: { splitAtivo: true, recebedorPrincipalId: "rp_torcida" } } as never;
+  const ativa = { tipo: "subsede", recebedor: { id: "rp_sub", status: "active" } } as never;
+  const pendente = { tipo: "subsede", recebedor: { id: "rp_sub", status: "registration" } } as never;
+  const principal = { tipo: "principal" } as never;
+  const d = dividir(torcida, ativa, 5000, 500);
+  assert.equal(d.liquidacao, "split");
+  assert.deepEqual(d.split!.map((r) => [r.recipient_id, r.amount, r.options.liable, r.options.charge_processing_fee]), [["rp_sub", 5000, true, true], ["rp_torcida", 500, false, false]]);
+  assert.equal(dividir(torcida, principal, 5000, 500).split, undefined);
+  assert.equal(subsedePodeVender(torcida, pendente), false);
+  assert.equal(subsedePodeVender(torcida, principal), true);
+  assert.equal(subsedePodeVender({ pagamentos: {} } as never, ativa), false);
+});
+
+test("plano da plataforma: gigante acima de 3.000 sócios ativos", () => {
+  assert.equal(planoEfetivo("pequena", 3000, 3000), "pequena");
+  assert.equal(planoEfetivo("pequena", 3001, 3000), "gigante");
+  assert.equal(planoEfetivo("grande", 120, 3000), "grande");
 });

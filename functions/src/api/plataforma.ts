@@ -20,29 +20,34 @@ export const reivindicarPlataforma = onCall(async (req) => {
   return { ok: true };
 });
 
-export const criarTorcida = onCall(async (req) => {
-  const quem = exigirPlataforma(req);
-  const d = (req.data ?? {}) as Record<string, unknown>;
-  const nome = texto(d.nome, "nome da torcida", { min: 2, max: 80 });
-  const slug = texto(d.slug, "endereço", { min: 3, max: 40 }).toLowerCase();
-  if (!slugValido(slug)) throw new HttpsError("invalid-argument", "Endereço inválido: use letras minúsculas, números e hífen.");
-  const diretor = (d.diretor ?? {}) as Record<string, unknown>;
-  const emailDiretor = texto(diretor.email, "e-mail do diretor", { max: 64 }).toLowerCase();
-  if (!emailValido(emailDiretor)) throw new HttpsError("invalid-argument", "E-mail do diretor inválido.");
-  const nomeDiretor = texto(diretor.nome, "nome do diretor", { min: 2, max: 64 });
-  const nomeSede = texto(d.nomeSedePrincipal, "sede principal", { max: 80, obrigatorio: false }) || "Sede principal";
-  const mensalidade = Number(d.mensalidadeSaas ?? 0);
-
+/**
+ * Cria a torcida (loja) com sede principal e o primeiro usuário de diretoria.
+ * Se o endereço estiver reservado por uma solicitação de cadastro, só essa solicitação pode usá-lo.
+ */
+export async function criarTorcidaInterno(args: {
+  nome: string;
+  slug: string;
+  nomeSedePrincipal?: string;
+  diretor: { nome: string; email: string };
+  criadoPor: string;
+  mensalidadeSaas?: number;
+  solicitacaoId?: string;
+}) {
+  const { nome, slug, diretor, criadoPor } = args;
   const tRef = db.collection("torcidas").doc();
   const sedeRef = refs.sedes(tRef.id).doc();
   await db.runTransaction(async (tx) => {
     const sSnap = await tx.get(refs.slug(slug));
-    if (sSnap.exists) throw new HttpsError("already-exists", "Este endereço já está em uso.");
+    if (sSnap.exists && !(args.solicitacaoId && sSnap.get("solicitacaoId") === args.solicitacaoId)) {
+      throw new HttpsError("already-exists", "Este endereço já está em uso.");
+    }
     tx.set(refs.slug(slug), { torcidaId: tRef.id });
-    const torcida: Torcida = {
+    const torcida: Torcida & { publicada: boolean; modulos: { eventos: boolean; socios: boolean } } = {
       nome,
       slug,
       status: "implantacao",
+      publicada: false,
+      modulos: { eventos: true, socios: true },
       taxaServicoPct: PADROES.taxaServicoPct,
       aprovacaoManualSocio: false,
       destinoMensalidade: "sede_do_socio",
@@ -54,17 +59,32 @@ export const criarTorcida = onCall(async (req) => {
       criadoEm: Timestamp.now(),
     };
     tx.set(tRef, torcida);
-    tx.set(sedeRef, { nome: nomeSede, tipo: "principal", ativa: true, ordem: 0, criadoEm: FieldValue.serverTimestamp() });
+    tx.set(sedeRef, { nome: args.nomeSedePrincipal || "Sede principal", tipo: "principal", ativa: true, ordem: 0, criadoEm: FieldValue.serverTimestamp() });
     tx.set(refs.contrato(tRef.id), {
-      mensalidadeSaas: Number.isFinite(mensalidade) ? Math.round(mensalidade) : 0,
-      criadoPor: quem,
+      mensalidadeSaas: Number.isFinite(args.mensalidadeSaas) ? Math.round(args.mensalidadeSaas ?? 0) : 0,
+      criadoPor,
       criadoEm: FieldValue.serverTimestamp(),
     });
   });
-  const acesso = await concederAcesso({
-    tid: tRef.id, email: emailDiretor, nome: nomeDiretor, papel: "diretoria", convidadoPor: quem,
-  });
+  const acesso = await concederAcesso({ tid: tRef.id, email: diretor.email, nome: diretor.nome, papel: "diretoria", convidadoPor: criadoPor });
   return { torcidaId: tRef.id, slug, linkDefinirSenha: acesso.linkDefinirSenha };
+}
+
+export const criarTorcida = onCall(async (req) => {
+  const quem = exigirPlataforma(req);
+  const d = (req.data ?? {}) as Record<string, unknown>;
+  const nome = texto(d.nome, "nome da torcida", { min: 2, max: 80 });
+  const slug = texto(d.slug, "endereço", { min: 3, max: 40 }).toLowerCase();
+  if (!slugValido(slug)) throw new HttpsError("invalid-argument", "Endereço inválido: use letras minúsculas, números e hífen.");
+  const diretor = (d.diretor ?? {}) as Record<string, unknown>;
+  const emailDiretor = texto(diretor.email, "e-mail do diretor", { max: 64 }).toLowerCase();
+  if (!emailValido(emailDiretor)) throw new HttpsError("invalid-argument", "E-mail do diretor inválido.");
+  const nomeDiretor = texto(diretor.nome, "nome do diretor", { min: 2, max: 64 });
+  const nomeSede = texto(d.nomeSedePrincipal, "sede principal", { max: 80, obrigatorio: false }) || "Sede principal";
+  return criarTorcidaInterno({
+    nome, slug, nomeSedePrincipal: nomeSede, diretor: { nome: nomeDiretor, email: emailDiretor }, criadoPor: quem,
+    mensalidadeSaas: Number(d.mensalidadeSaas ?? 0),
+  });
 });
 
 export const atualizarTorcidaPlataforma = onCall(async (req) => {
@@ -101,13 +121,15 @@ export const resumoPlataforma = onCall(async (req) => {
   const torcidas = await db.collection("torcidas").get();
   const linhas = await Promise.all(
     torcidas.docs.map(async (t) => {
-      const [geral, doMes, contrato, chamados] = await Promise.all([
+      const [geral, doMes, contrato, chamados, assinatura, faturasAbertas] = await Promise.all([
         refs.statsGeral(t.id).get(),
         refs.statsMes(t.id, mes).get(),
         refs.contrato(t.id).get(),
         db.collection("suporte").where("torcidaId", "==", t.id).where("status", "==", "aberto").count().get(),
+        db.doc(`torcidas/${t.id}/saas/assinatura`).get(),
+        db.collection(`torcidas/${t.id}/faturasSaas`).where("status", "==", "aberta").get(),
       ]);
-      const dados = t.data() as Torcida;
+      const dados = t.data() as Torcida & { publicada?: boolean; modulos?: { eventos?: boolean; socios?: boolean }; bloqueioSaas?: boolean };
       return {
         id: t.id,
         nome: dados.nome,
@@ -121,6 +143,22 @@ export const resumoPlataforma = onCall(async (req) => {
         geral: geral.data() ?? {},
         mes: doMes.data() ?? {},
         mensalidadeSaas: contrato.get("mensalidadeSaas") ?? 0,
+        publicada: dados.publicada === true,
+        modulos: { eventos: dados.modulos?.eventos !== false, socios: dados.modulos?.socios !== false },
+        saas: assinatura.exists
+          ? {
+              plano: assinatura.get("plano"),
+              situacao: assinatura.get("situacao"),
+              bloqueada: dados.bloqueioSaas === true,
+              faturasAbertas: faturasAbertas.docs.map((f) => ({
+                id: f.id,
+                valor: f.get("valor"),
+                plano: f.get("plano"),
+                vencimento: f.get("vencimento")?.toMillis?.() ?? null,
+                informadoPagamentoEm: f.get("informadoPagamentoEm")?.toMillis?.() ?? null,
+              })),
+            }
+          : null,
         contrato: {
           mensalidadeSaas: contrato.get("mensalidadeSaas") ?? 0,
           diaVencimento: contrato.get("diaVencimento") ?? 10,
@@ -130,8 +168,11 @@ export const resumoPlataforma = onCall(async (req) => {
       };
     }),
   );
-  const historico = await db.collection("plataforma/stats/meses").orderBy("mes", "desc").limit(12).get();
-  return { mes, torcidas: linhas, historico: historico.docs.map((h) => h.data()) };
+  const [historico, solicitacoes] = await Promise.all([
+    db.collection("plataforma/stats/meses").orderBy("mes", "desc").limit(12).get(),
+    db.collection("solicitacoes").where("status", "==", "pendente").count().get(),
+  ]);
+  return { mes, torcidas: linhas, historico: historico.docs.map((h) => h.data()), solicitacoesPendentes: solicitacoes.data().count };
 });
 
 /**

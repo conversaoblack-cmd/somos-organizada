@@ -111,7 +111,7 @@ export const atualizarCartao = onCall({ secrets: segredos }, async (req) => {
   const uid = exigirLogin(req);
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
-  const torcida = await torcidaVendendo(tid);
+  const torcida = await torcidaVendendo(tid, { permitirNaoPublicada: true });
   const socio = (await refs.socio(tid, uid).get()).data() as Socio | undefined;
   if (!socio) throw new HttpsError("not-found", "Ficha de sócio não encontrada.");
   try {
@@ -173,7 +173,7 @@ export const aderirSocio = onCall({ secrets: segredos }, async (req) => {
     throw new HttpsError("invalid-argument", "Foto inválida.");
   }
 
-  const torcida = await torcidaVendendo(tid);
+  const torcida = await torcidaVendendo(tid, { uid, modulo: "socios" });
   const [planoSnap, sedeSnap] = await Promise.all([refs.plano(tid, planoId).get(), refs.sede(tid, sedeId).get()]);
   const plano = planoSnap.data() as Plano | undefined;
   if (!plano?.ativo) throw new HttpsError("failed-precondition", "Plano indisponível.");
@@ -232,7 +232,7 @@ export const aderirSocio = onCall({ secrets: segredos }, async (req) => {
 export const pagarMensalidade = onCall({ secrets: segredos }, async (req) => {
   const uid = exigirLogin(req);
   const tid = texto((req.data ?? {}).tid, "torcida", { max: 40 });
-  const torcida = await torcidaVendendo(tid);
+  const torcida = await torcidaVendendo(tid, { permitirNaoPublicada: true });
   const socio = (await refs.socio(tid, uid).get()).data() as Socio | undefined;
   if (!socio) throw new HttpsError("not-found", "Ficha de sócio não encontrada.");
   if (socio.cobrancaAbertaId) {

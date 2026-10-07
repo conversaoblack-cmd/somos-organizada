@@ -23,8 +23,9 @@ export const salvarCredenciaisPagarme = onCall({ secrets: [MASTER_KEY] }, async 
   const pk = texto(d.chavePublica, "chave pública", { min: 10, max: 200 });
   if (!sk.startsWith("sk_")) throw new HttpsError("invalid-argument", "A chave secreta começa com sk_. Confira se não copiou a chave pública.");
   if (!pk.startsWith("pk_")) throw new HttpsError("invalid-argument", "A chave pública começa com pk_.");
-  if (sk.startsWith("sk_test_") !== pk.startsWith("pk_test_")) {
-    throw new HttpsError("invalid-argument", "As duas chaves precisam ser do mesmo ambiente (as duas de teste ou as duas de produção).");
+  const demo = sk.startsWith("sk_demo_");
+  if (sk.startsWith("sk_test_") !== pk.startsWith("pk_test_") || demo !== pk.startsWith("pk_demo_")) {
+    throw new HttpsError("invalid-argument", "As duas chaves precisam ser do mesmo ambiente (as duas de teste, de produção ou de demonstração).");
   }
   const pix = d.pix !== false;
   const cartao = d.cartao !== false;
@@ -33,7 +34,7 @@ export const salvarCredenciaisPagarme = onCall({ secrets: [MASTER_KEY] }, async 
 
   const cliente = new Pagarme(sk);
   try {
-    await cliente.testar();
+    if (!demo) await cliente.testar(); // no modo demonstração não há Pagar.me para consultar
   } catch (e) {
     if (e instanceof PagarmeErro && (e.status === 401 || e.status === 403)) {
       throw new HttpsError("invalid-argument", "A Pagar.me recusou esta chave secreta. Copie novamente no painel da Pagar.me.");

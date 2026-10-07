@@ -124,7 +124,8 @@ export interface PgFatura {
 export class Pagarme {
   constructor(private readonly chaveSecreta: string) {}
 
-  get ambiente(): "teste" | "producao" {
+  get ambiente(): "teste" | "producao" | "demo" {
+    if (this.chaveSecreta.startsWith("sk_demo_")) return "demo";
     return this.chaveSecreta.startsWith("sk_test_") ? "teste" : "producao";
   }
 
