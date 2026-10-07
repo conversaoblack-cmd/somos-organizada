@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import type { Endereco } from "@/lib/tipos";
 import { buscarCep, bandeiraCartao, tokenizarCartao } from "@/lib/servicos";
 import { soDigitos } from "@/lib/formatos";
-import { Campo, Icone, Selecao } from "@/ui";
+import { useTorcida } from "@/hooks/torcida";
+import { Botao, Campo, Icone, Selecao } from "@/ui";
 
 const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
 
@@ -79,6 +80,20 @@ export function FormCartao({ valor, onChange, erros }: { valor: EstadoCartao; on
   const set = (k: keyof EstadoCartao) => (v: string) => onChange({ ...atual.current, [k]: v });
   const setEnd = (k: keyof Endereco) => (v: string) => onChange({ ...atual.current, endereco: { ...(atual.current.endereco ?? {}), [k]: v } });
   const bandeira = bandeiraCartao(valor.numero);
+  const demo = useTorcida().torcida.pagamentos?.ambiente === "demo";
+
+  // Cartões do simulador oficial da Pagar.me (modo demonstração)
+  const cartaoTeste = (numero: string) =>
+    onChange({
+      ...atual.current,
+      numero: numero.replace(/(\d{4})(?=\d)/g, "$1 "),
+      nome: "CLIENTE TESTE",
+      validade: "12/30",
+      cvv: "123",
+      cep: "40000-000",
+      numeroEndereco: "100",
+      endereco: { cep: "40000000", logradouro: "Rua de Teste", bairro: "Centro", cidade: "Salvador", uf: "BA" },
+    });
 
   async function cep(v: string) {
     onChange({ ...atual.current, cep: v });
@@ -92,6 +107,15 @@ export function FormCartao({ valor, onChange, erros }: { valor: EstadoCartao; on
 
   return (
     <div className="space-y-3">
+      {demo && (
+        <div className="rounded-2xl border border-alerta/25 bg-alerta/12 p-3 space-y-2">
+          <p className="text-xs text-alerta font-semibold">Demonstração: use um cartão de teste da Pagar.me</p>
+          <div className="flex flex-wrap gap-2">
+            <Botao tamanho="sm" variante="contorno" type="button" onClick={() => cartaoTeste("4000000000000010")}>Cartão que aprova</Botao>
+            <Botao tamanho="sm" variante="contorno" type="button" onClick={() => cartaoTeste("4000000000000028")}>Cartão que recusa</Botao>
+          </div>
+        </div>
+      )}
       <Campo
         rotulo="Número do cartão"
         mascara="cartao"

@@ -75,6 +75,8 @@ function TelaPix({ pedido }: { pedido: Pedido & { id: string } }) {
   const { tid, torcida } = useTorcida();
   const avisar = useToast();
   const [verificando, setVerificando] = useState(false);
+  const [simulando, setSimulando] = useState(false);
+  const demo = torcida.pagamentos?.ambiente === "demo";
   const { restante, texto } = useContagem(pedido.pix!.expiraEm.toMillis());
 
   async function copiar() {
@@ -92,8 +94,32 @@ function TelaPix({ pedido }: { pedido: Pedido & { id: string } }) {
     }
   }
 
+  async function simularPagamento() {
+    setSimulando(true);
+    try {
+      await api.simularDemo({ tid, acao: "pagar_pedido", pedidoId: pedido.id });
+    } catch (e) {
+      avisar(mensagemDeErro(e), "erro");
+    } finally {
+      setSimulando(false);
+    }
+  }
+
   return (
     <div className="space-y-6 animate-surgir">
+      {demo && (
+        <Aviso
+          tom="alerta"
+          titulo="Demonstração"
+          acao={
+            <Botao tamanho="sm" icone="pix" carregando={simulando} onClick={simularPagamento} disabled={restante <= 0}>
+              Simular pagamento do Pix
+            </Botao>
+          }
+        >
+          Este QR Code não é real. Toque no botão para simular o cliente pagando.
+        </Aviso>
+      )}
       <div className="text-center">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-primaria">Pague com Pix</p>
         <h1 className="text-3xl font-bold mt-2 numeros">{moeda(pedido.total)}</h1>

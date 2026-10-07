@@ -1,3 +1,4 @@
+import { moduloAtivo } from "./Portao";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
@@ -239,7 +240,7 @@ export default function CheckoutSocio() {
 
   // ── Estados especiais ─────────────────────────────────
   if (planos.carregando || carregandoFicha) return <Moldura><Carregando /></Moldura>;
-  if (!planos.dados.length) {
+  if (!planos.dados.length || !moduloAtivo(torcida, "socios")) {
     return (
       <Moldura>
         <Vazio icone="escudo" titulo="Associação ainda não disponível" acao={<BotaoLink to={`/${torcida.slug}`}>Voltar</BotaoLink>}>

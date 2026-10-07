@@ -8,6 +8,7 @@ import { CabecalhoTorcida, RodapeTorcida, useEventosPublicos, usePlanosAtivos, u
 import { Calendario, chaveDia } from "./Calendario";
 import { CartaoEvento, disponibilidade } from "./CartaoEvento";
 import { CheckoutIngresso } from "./CheckoutIngresso";
+import { moduloAtivo, torcidaBloqueada } from "./Portao";
 
 type Aba = "eventos" | "socios";
 
@@ -16,7 +17,9 @@ export default function PaginaTorcida() {
   const { eventoId } = useParams();
   const [params, setParams] = useSearchParams();
   const navegar = useNavigate();
-  const aba: Aba = params.get("aba") === "socios" ? "socios" : "eventos";
+  const temEventos = moduloAtivo(torcida, "eventos");
+  const temSocios = moduloAtivo(torcida, "socios");
+  const aba: Aba = !temEventos ? "socios" : !temSocios ? "eventos" : params.get("aba") === "socios" ? "socios" : "eventos";
   const eventos = useEventosPublicos(tid);
   const sedes = useSedes(tid);
   const sedePorId = useMemo(() => new Map(sedes.dados.map((s) => [s.id, s])), [sedes.dados]);
@@ -55,6 +58,7 @@ export default function PaginaTorcida() {
           <h1 className="font-display uppercase text-[40px] leading-[0.95] sm:text-6xl lg:text-7xl tracking-tight max-w-4xl">{titulo}</h1>
           {torcida.textos?.subtitulo && <p className="mt-4 text-texto-2 text-base sm:text-lg max-w-2xl">{torcida.textos.subtitulo}</p>}
 
+          {temEventos && temSocios && (
           <div className="mt-8 sm:mt-10">
             <Abas
               grande
@@ -67,17 +71,13 @@ export default function PaginaTorcida() {
               ]}
             />
           </div>
+          )}
         </div>
       </section>
 
-      {torcida.status === "suspensa" && (
+      {torcida.status === "suspensa" && !torcidaBloqueada(torcida) && (
         <div className="mx-auto max-w-6xl w-full px-4 sm:px-6 mt-6">
           <Aviso tom="alerta" titulo="Vendas temporariamente pausadas">Fale com a diretoria pelos canais oficiais.</Aviso>
-        </div>
-      )}
-      {torcida.pagamentos.ambiente === "teste" && torcida.pagamentos.configurado && (
-        <div className="mx-auto max-w-6xl w-full px-4 sm:px-6 mt-6">
-          <Aviso tom="alerta">Página em modo de teste: os pagamentos não são reais.</Aviso>
         </div>
       )}
 
@@ -92,7 +92,7 @@ export default function PaginaTorcida() {
       <RodapeTorcida />
 
       <Gaveta
-        aberto={!!eventoId}
+        aberto={!!eventoId && temEventos}
         fechar={() => navegar(`/${torcida.slug}`)}
         titulo={eventoAberto?.nome ?? "Evento"}
         largura="sm:max-w-2xl"

@@ -3,9 +3,11 @@ import { Route, Routes, useParams, useLocation } from "react-router";
 import { ProvedorTorcida, useTorcidaPorSlug } from "./hooks/torcida";
 import { registrarErro } from "./lib/erros";
 import { BotaoLink, TelaCarregando, Vazio } from "./ui";
+import { PortaoTorcida } from "./modulos/publico/Portao";
 
 const Inicio = lazy(() => import("./modulos/inicio/Inicio"));
 const Entrar = lazy(() => import("./modulos/inicio/Entrar"));
+const Cadastro = lazy(() => import("./modulos/inicio/Cadastro"));
 const PainelPlataforma = lazy(() => import("./modulos/plataforma/PainelPlataforma"));
 const PaginaTorcida = lazy(() => import("./modulos/publico/PaginaTorcida"));
 const CheckoutSocio = lazy(() => import("./modulos/publico/CheckoutSocio"));
@@ -53,8 +55,7 @@ function RotasTorcida() {
     );
   }
   const painel = /^\/[^/]+\/(admin|portaria)/.test(pathname);
-  return (
-    <ProvedorTorcida tid={estado.tid} torcida={estado.torcida} aplicarCores={!painel}>
+  const rotas = (
       <Routes>
         <Route index element={<PaginaTorcida />} />
         <Route path="evento/:eventoId" element={<PaginaTorcida />} />
@@ -67,6 +68,10 @@ function RotasTorcida() {
         <Route path="portaria" element={<Portaria />} />
         <Route path="*" element={<PaginaTorcida />} />
       </Routes>
+  );
+  return (
+    <ProvedorTorcida tid={estado.tid} torcida={estado.torcida} aplicarCores={!painel}>
+      {painel ? rotas : <PortaoTorcida>{rotas}</PortaoTorcida>}
       {!/portaria/.test(pathname) && <SuporteFlutuante />}
     </ProvedorTorcida>
   );
@@ -79,6 +84,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<Inicio />} />
           <Route path="/entrar" element={<Entrar />} />
+          <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/plataforma/*" element={<PainelPlataforma />} />
           <Route path="/:slug/*" element={<RotasTorcida />} />
         </Routes>
