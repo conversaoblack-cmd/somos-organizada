@@ -8,10 +8,15 @@ import { Abas, AreaTexto, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icon
 import { usePainel } from "./contexto";
 import { baixarCsv, Confirmar, decimalBR, EstadoLista, mesAtualSP, rotuloMes, textoMoeda } from "./util";
 
+/**
+ * Por sede. ingressos/socios = valor base que caiu na conta da TORCIDA (entra no repasse);
+ * split = valor base que já caiu direto na conta da subsede (não entra no repasse).
+ */
 interface ResumoSede {
   sedeId: string;
   ingressos: number;
   socios: number;
+  split: number;
   taxa: number;
   repassado: number;
 }
@@ -45,13 +50,14 @@ export default function Financeiro() {
   const resumo = useMemo(() => {
     const m = new Map<string, ResumoSede>();
     const pegar = (id: string) => {
-      if (!m.has(id)) m.set(id, { sedeId: id, ingressos: 0, socios: 0, taxa: 0, repassado: 0 });
+      if (!m.has(id)) m.set(id, { sedeId: id, ingressos: 0, socios: 0, split: 0, taxa: 0, repassado: 0 });
       return m.get(id)!;
     };
     for (const s of sedes) if (ehDiretoria || s.id === sedeEscopo) pegar(s.id);
     for (const l of lanc.dados) {
       const r = pegar(l.sedeId);
       if (l.natureza === "taxa") r.taxa += l.valor;
+      else if (l.liquidacao === "split") r.split += l.valor;
       else if (l.origem === "ingresso") r.ingressos += l.valor;
       else r.socios += l.valor;
     }
@@ -61,7 +67,8 @@ export default function Financeiro() {
 
   const subsedes = resumo.filter((r) => r.sedeId !== principalId);
   const principal = resumo.find((r) => r.sedeId === principalId);
-  const totalBase = resumo.reduce((s, r) => s + r.ingressos + r.socios, 0);
+  const totalBase = resumo.reduce((s, r) => s + r.ingressos + r.socios + r.split, 0);
+  const totalSplit = resumo.reduce((s, r) => s + r.split, 0);
   const totalTaxa = resumo.reduce((s, r) => s + r.taxa, 0);
   const totalRepassado = resumo.reduce((s, r) => s + r.repassado, 0);
   const aRepassar = subsedes.reduce((s, r) => s + Math.max(0, r.ingressos + r.socios - r.repassado), 0);
@@ -95,13 +102,14 @@ export default function Financeiro() {
     if (aba === "lancamentos") {
       baixarCsv(
         `extrato-${sufixo}`,
-        ["Data", "Competência", "Sede", "Origem", "Natureza", "Descrição", "Valor", "Referência"],
+        ["Data", "Competência", "Sede", "Origem", "Natureza", "Liquidação", "Descrição", "Valor", "Referência"],
         lancFiltrados.map((l) => [
           dataHora(l.criadoEm),
           l.competencia,
           nomeSede(l.sedeId),
           l.origem === "ingresso" ? "Ingresso" : "Sócio",
           l.natureza === "taxa" ? "Taxa de serviço" : "Valor base",
+          l.liquidacao === "split" ? "Direto na subsede (split)" : "Conta da torcida",
           l.descricao,
           decimalBR(l.valor),
           l.referencia,
@@ -126,7 +134,7 @@ export default function Financeiro() {
         titulo={ehDiretoria ? "Financeiro e repasses" : "Financeiro da sede"}
         descricao={
           ehDiretoria
-            ? "O dinheiro cai na conta Pagar.me da diretoria. Aqui você vê quanto é de cada subsede e registra o que já foi repassado."
+            ? "Com o split ativo, o valor dos eventos de cada subsede cai direto na conta dela. O resto cai na conta Pagar.me da torcida: aqui você vê quanto disso é de cada subsede e registra o que já repassou."
             : "Quanto a sua sede gerou, o que a diretoria já repassou e o saldo a receber."
         }
         acoes={
@@ -146,23 +154,33 @@ export default function Financeiro() {
         <>
           {ehDiretoria ? (
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
-              <Indicador rotulo="Valor base vendido" icone="grafico" valor={moeda(totalBase)} detalhe="Ingressos + mensalidades" />
+              <Indicador
+                rotulo="Valor base vendido"
+                icone="grafico"
+                valor={moeda(totalBase)}
+                detalhe={totalSplit ? `${moeda(totalSplit)} direto nas subsedes (split)` : "Ingressos + mensalidades"}
+              />
               <Indicador rotulo="Taxa de serviço" icone="dinheiro" tom="sucesso" valor={moeda(totalTaxa)} detalhe="Caixa da diretoria" />
               <Indicador rotulo="Já repassado" icone="enviar" tom="info" valor={moeda(totalRepassado)} detalhe="Registrado no painel" />
-              <Indicador rotulo="A repassar" icone="alerta" tom={aRepassar > 0 ? "alerta" : "sucesso"} valor={moeda(aRepassar)} detalhe="Soma dos saldos das subsedes" />
+              <Indicador rotulo="A repassar" icone="alerta" tom={aRepassar > 0 ? "alerta" : "sucesso"} valor={moeda(aRepassar)} detalhe="Só o que caiu na conta da torcida" />
             </div>
           ) : (
             minha && (
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                <Indicador rotulo="Ingressos" icone="ingresso" valor={moeda(minha.ingressos)} detalhe="Eventos da sua sede" />
-                <Indicador rotulo="Mensalidades" icone="estrela" valor={moeda(minha.socios)} detalhe="Sócios da sua sede" />
-                <Indicador rotulo="Já recebido" icone="checkCirculo" tom="info" valor={moeda(minha.repassado)} detalhe="Repasses da diretoria" />
+                <Indicador rotulo="Direto na sua conta" icone="checkCirculo" tom="sucesso" valor={moeda(minha.split)} detalhe="Split da Pagar.me (já é seu)" />
+                <Indicador
+                  rotulo="Pela conta da torcida"
+                  icone="dinheiro"
+                  valor={moeda(minha.ingressos + minha.socios)}
+                  detalhe={`Ingressos ${moeda(minha.ingressos)} · sócios ${moeda(minha.socios)}`}
+                />
+                <Indicador rotulo="Já repassado" icone="enviar" tom="info" valor={moeda(minha.repassado)} detalhe="Repasses da diretoria" />
                 <Indicador
                   rotulo="Saldo a receber"
                   icone="dinheiro"
                   tom={minha.ingressos + minha.socios - minha.repassado > 0 ? "alerta" : "sucesso"}
                   valor={moeda(minha.ingressos + minha.socios - minha.repassado)}
-                  detalhe="Gerado − recebido"
+                  detalhe={minha.ingressos + minha.socios - minha.repassado < 0 ? "A diretoria repassou a mais" : "Pela conta da torcida − já repassado"}
                 />
               </div>
             )
@@ -194,11 +212,16 @@ export default function Financeiro() {
                       <p className="font-semibold truncate">{nomeSede(r.sedeId)}</p>
                       <p className={cx("text-2xl font-bold numeros mt-3", saldo > 0 ? "text-alerta" : saldo < 0 ? "text-perigo" : "")}>{moeda(saldo)}</p>
                       <p className="text-xs text-texto-3">{saldo > 0 ? "A repassar" : saldo < 0 ? "Repassado a mais" : "Em dia"}</p>
-                      <dl className="mt-4 grid grid-cols-3 gap-2 text-xs">
+                      <p className="text-[11px] text-texto-3 uppercase tracking-wide mt-4 mb-1.5">Pela conta da torcida</p>
+                      <dl className="grid grid-cols-3 gap-2 text-xs">
                         <ValorMini rotulo="Ingressos" valor={r.ingressos} />
                         <ValorMini rotulo="Sócios" valor={r.socios} />
                         <ValorMini rotulo="Repassado" valor={r.repassado} />
                       </dl>
+                      <p className="mt-3 text-xs flex items-center justify-between gap-2 rounded-xl border border-sucesso/25 bg-sucesso/8 px-2.5 py-2">
+                        <span className="text-texto-2">Recebido direto pela subsede (split)</span>
+                        <span className="font-semibold numeros">{moeda(r.split)}</span>
+                      </p>
                       <Botao tamanho="sm" variante="suave" icone="enviar" className="mt-4 self-start" onClick={() => setNovoRepasse(r.sedeId)}>
                         Registrar repasse
                       </Botao>
@@ -270,8 +293,12 @@ export default function Financeiro() {
                           <p className="text-sm font-medium truncate">{l.descricao}</p>
                           <p className="text-xs text-texto-3 truncate">
                             {dataCurta(l.criadoEm)} · {nomeSede(l.sedeId)} · {l.natureza === "taxa" ? "Taxa de serviço" : "Valor base"}
+                            {l.liquidacao === "split" && <span className="sm:hidden"> · direto na subsede</span>}
                           </p>
                         </div>
+                        <span className="hidden sm:block shrink-0">
+                          {l.liquidacao === "split" ? <Selo tom="sucesso">Direto na subsede</Selo> : <Selo>Conta da torcida</Selo>}
+                        </span>
                         <span className={cx("font-semibold numeros shrink-0", l.valor < 0 && "text-perigo")}>{moeda(l.valor)}</span>
                       </li>
                     ))}

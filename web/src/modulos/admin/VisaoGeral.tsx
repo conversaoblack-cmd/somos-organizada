@@ -88,13 +88,14 @@ function useResumoSubsede(sedeId: string | null): Resumo & { socios: (Socio & { 
       carregando: lanc.carregando || socios.carregando,
       erro: lanc.erro || socios.erro,
       socios: socios.dados,
-      saldo: soma(base) - repasses.dados.reduce((s, r) => s + r.valor, 0),
+      // O que caiu direto na conta da subsede (split) não entra no repasse.
+      saldo: soma((l) => base(l) && l.liquidacao !== "split") - repasses.dados.reduce((s, r) => s + r.valor, 0),
     };
   }, [lanc, socios, repasses, mes, meses]);
 }
 
 export default function VisaoGeral() {
-  const { tid, torcida, ehDiretoria, sedeEscopo, nomeSede, base, emAnalise, membro } = usePainel();
+  const { tid, torcida, ehDiretoria, sedeEscopo, nomeSede, base, emAnalise, emAprovacao, membro, sedes, podePublicarNaSede } = usePainel();
   const dir = useResumoDiretoria(ehDiretoria);
   const sub = useResumoSubsede(ehDiretoria ? null : sedeEscopo);
   const r = ehDiretoria ? dir : sub;
@@ -139,6 +140,25 @@ export default function VisaoGeral() {
     pendencias.push({ tom: "alerta", titulo: "Webhook nunca recebido", texto: "Sem o webhook, pagamentos por Pix podem demorar a confirmar. Confira o passo 5 em Pagamentos.", para: `${base}/pagamentos`, acao: "Ver instruções" });
   if (ehDiretoria && pag?.configurado && pag.ambiente === "teste")
     pendencias.push({ tom: "info", titulo: "Pagar.me em modo de teste", texto: "As vendas não são reais. Quando estiver tudo certo, cole as chaves de produção.", para: `${base}/pagamentos`, acao: "Ir para Pagamentos" });
+  if (ehDiretoria && emAprovacao > 0)
+    pendencias.push({
+      tom: "alerta",
+      titulo: `${emAprovacao} ${emAprovacao === 1 ? "evento aguardando" : "eventos aguardando"} aprovação`,
+      texto: "Subsedes enviaram eventos para você conferir e publicar.",
+      para: `${base}/eventos?status=em_aprovacao`,
+      acao: "Revisar eventos",
+    });
+  const minhaSede = sedeEscopo ? sedes.find((s) => s.id === sedeEscopo) : undefined;
+  if (!ehDiretoria && minhaSede && !podePublicarNaSede(sedeEscopo))
+    pendencias.push({
+      tom: "alerta",
+      titulo: minhaSede.recebedor ? "Conta de recebimento pendente" : "Cadastre a conta de recebimento",
+      texto: minhaSede.recebedor
+        ? "A conta ainda não está ativa. Sem ela a diretoria não consegue aprovar seus eventos."
+        : "É nela que caem as vendas dos eventos da sua subsede. Sem ela a diretoria não consegue aprovar seus eventos.",
+      para: `${base}/recebimentos`,
+      acao: "Ir para Recebimentos",
+    });
   if (emAnalise > 0)
     pendencias.push({ tom: "info", titulo: `${emAnalise} ${emAnalise === 1 ? "sócio aguardando" : "sócios aguardando"} aprovação`, texto: "Pagamento confirmado, falta só a sua aprovação.", para: `${base}/socios?status=em_analise`, acao: "Revisar sócios" });
 

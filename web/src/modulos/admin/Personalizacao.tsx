@@ -274,14 +274,21 @@ export default function Personalizacao() {
             />
             <div className="mt-6">
               <p className="text-[15px] font-medium mb-1">Para onde vai a mensalidade</p>
-              <p className="text-sm text-texto-3 mb-3">Define em qual extrato entra o valor base das mensalidades. A taxa de serviço sempre fica com a diretoria.</p>
+              <p className="text-sm text-texto-3 mb-3">Define quem recebe o valor do plano. A taxa de serviço sempre fica com a torcida.</p>
               <OpcoesCartao
                 nome="Destino da mensalidade"
+                colunas={1}
                 valor={f.destinoMensalidade}
                 onChange={(v) => setF((x) => ({ ...x, destinoMensalidade: v }))}
                 opcoes={[
-                  { valor: "sede_do_socio", titulo: "Sede do sócio", descricao: "Cada subsede recebe as mensalidades dos seus sócios.", icone: "casa" },
-                  { valor: "principal", titulo: "Sede principal", descricao: "Todas as mensalidades ficam com a diretoria.", icone: "escudo" },
+                  {
+                    valor: "sede_do_socio",
+                    titulo: "Sede do sócio",
+                    descricao:
+                      "O valor do plano cai direto na conta da subsede do sócio quando ela tiver conta de recebimento ativa. Senão, cai na conta da torcida e entra no repasse.",
+                    icone: "casa",
+                  },
+                  { valor: "principal", titulo: "Sede principal", descricao: "Todas as mensalidades ficam na conta da torcida.", icone: "escudo" },
                 ]}
               />
             </div>

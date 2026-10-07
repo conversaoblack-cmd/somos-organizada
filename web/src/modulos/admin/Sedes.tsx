@@ -56,7 +56,7 @@ export default function Sedes() {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold">{s.nome}</p>
-          {s.tipo === "principal" ? <Selo tom="primaria">Sede principal</Selo> : s.ativa === false ? <Selo>Desativada</Selo> : <Selo tom="sucesso">Ativa</Selo>}
+          {s.tipo === "principal" ? <Selo tom="primaria">Sede principal</Selo> : s.ativa === false ? <Selo tom="perigo">Desativada</Selo> : null}
         </div>
         <p className="text-sm text-texto-3 mt-0.5">{[s.bairro, s.cidade].filter(Boolean).join(" · ") || "Endereço não informado"}</p>
         {s.responsavel && (
@@ -65,19 +65,21 @@ export default function Sedes() {
           </p>
         )}
         {s.tipo !== "principal" && (
-          <div className="mt-3 rounded-2xl border border-linha bg-superficie-2 px-3 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <span className="text-xs text-texto-3">Conta de recebimento</span>
-            <SeloRecebedor r={s.recebedor} />
-            {s.recebedor ? (
-              <span className="text-xs text-texto-2 min-w-0 truncate">
-                {s.recebedor.nomeTitular} · {nomeBanco(s.recebedor.banco.codigo)} ag. {s.recebedor.banco.agencia} · conta {s.recebedor.banco.conta}
-              </span>
-            ) : (
-              <span className="text-xs text-texto-3">O responsável cadastra pelo painel da subsede, em Recebimentos.</span>
-            )}
+          <div className="mt-3 rounded-2xl border border-linha bg-superficie-2 px-3 py-2.5 flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-texto-3">Conta de recebimento</span>
+                <SeloRecebedor r={s.recebedor} />
+              </div>
+              <p className="text-xs mt-1 text-texto-2">
+                {s.recebedor
+                  ? `${s.recebedor.nomeTitular} · ${nomeBanco(s.recebedor.banco.codigo)} · ag. ${s.recebedor.banco.agencia} · conta ${s.recebedor.banco.conta}`
+                  : "O responsável cadastra pelo painel da subsede, em Recebimentos. Sem ela, os eventos da subsede não podem ser publicados."}
+              </p>
+            </div>
             {s.recebedor && (
-              <Botao tamanho="sm" variante="fantasma" icone="atualizar" className="ml-auto h-8" carregando={atualizando === s.id} onClick={() => atualizarRecebedor(s.id)}>
-                Atualizar
+              <Botao tamanho="sm" variante="fantasma" icone="atualizar" className="shrink-0" carregando={atualizando === s.id} onClick={() => atualizarRecebedor(s.id)}>
+                <span className="hidden sm:inline">Atualizar</span>
               </Botao>
             )}
           </div>
@@ -85,9 +87,11 @@ export default function Sedes() {
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {s.tipo !== "principal" && (
-          <Botao tamanho="sm" variante="fantasma" onClick={() => setAlternar(s)} className="hidden sm:inline-flex">
-            {s.ativa === false ? "Reativar" : "Desativar"}
-          </Botao>
+          <span className="hidden sm:block">
+            <Botao tamanho="sm" variante="fantasma" onClick={() => setAlternar(s)}>
+              {s.ativa === false ? "Reativar" : "Desativar"}
+            </Botao>
+          </span>
         )}
         <BotaoIcone icone="lapis" rotulo={`Editar ${s.nome}`} onClick={() => setEditando(s)} />
       </div>

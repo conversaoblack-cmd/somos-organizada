@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
 import { emailValido } from "@/lib/formatos";
 import type { ComId, Membro, Papel } from "@/lib/tipos";
@@ -9,6 +10,26 @@ import { Aviso, Avatar, Botao, BotaoIcone, CabecalhoPagina, Campo, Cartao, cx, I
 import { ROTULO_PAPEL, usePainel } from "./contexto";
 import { BotaoCopiar, Confirmar, EstadoLista } from "./util";
 
+interface Convite {
+  nome: string;
+  email: string;
+  link: string;
+  emailEnviado: boolean;
+}
+
+/**
+ * Gera o convite (acesso + link para definir a senha) e dispara o e-mail automático do Firebase,
+ * que leva a pessoa de volta ao painel desta torcida depois de criar a senha.
+ */
+async function enviarConvite(args: { tid: string; slug: string; nome: string; email: string; papel: Papel; sedeId?: string }): Promise<Convite> {
+  const { tid, slug, nome, email, papel, sedeId } = args;
+  const r = await api.convidarMembro({ tid, nome, email, papel, ...(papel !== "diretoria" && sedeId ? { sedeId } : {}) });
+  const emailEnviado = await sendPasswordResetEmail(auth, email, { url: `${location.origin}/${slug}/admin` })
+    .then(() => true)
+    .catch(() => false);
+  return { nome, email, link: r.linkDefinirSenha, emailEnviado };
+}
+
 const DESCRICAO_PAPEL: Record<Papel, string> = {
   diretoria: "Acesso total: finanças, pagamentos, sócios, planos e usuários.",
   subsede: "Só a própria sede: eventos, sócios, pedidos e extrato dela.",
@@ -16,11 +37,24 @@ const DESCRICAO_PAPEL: Record<Papel, string> = {
 };
 
 export default function Usuarios() {
-  const { tid, uid, nomeSede } = usePainel();
+  const { tid, uid, nomeSede, torcida } = usePainel();
+  const avisar = useToast();
+  const [reenviando, setReenviando] = useState<string | null>(null);
   const membros = useColecao<Membro>(collection(db, `torcidas/${tid}/membros`), `membros-${tid}`);
   const [convidar, setConvidar] = useState(false);
   const [editando, setEditando] = useState<ComId<Membro> | null>(null);
-  const [link, setLink] = useState<{ nome: string; email: string; link: string } | null>(null);
+  const [link, setLink] = useState<Convite | null>(null);
+
+  async function reenviar(m: ComId<Membro>) {
+    setReenviando(m.id);
+    try {
+      setLink(await enviarConvite({ tid, slug: torcida.slug, nome: m.nome || m.email, email: m.email, papel: m.papel, sedeId: m.sedeId }));
+    } catch (e) {
+      avisar(mensagemDeErro(e), "erro");
+    } finally {
+      setReenviando(null);
+    }
+  }
 
   const ordenados = useMemo(
     () =>
@@ -73,6 +107,14 @@ export default function Usuarios() {
                   <Selo tom={m.papel === "diretoria" ? "primaria" : m.papel === "subsede" ? "info" : "neutro"}>{ROTULO_PAPEL[m.papel]}</Selo>
                   {!m.ativo && <Selo tom="perigo">Sem acesso</Selo>}
                 </div>
+                {m.ativo && m.id !== uid && (
+                  <BotaoIcone
+                    icone={reenviando === m.id ? "relogio" : "enviar"}
+                    rotulo={`Reenviar convite para ${m.nome || m.email}`}
+                    disabled={!!reenviando}
+                    onClick={() => reenviar(m)}
+                  />
+                )}
                 <BotaoIcone icone="lapis" rotulo={`Editar ${m.nome}`} onClick={() => setEditando(m)} />
               </li>
             ))}
@@ -83,12 +125,19 @@ export default function Usuarios() {
       <ModalConvite aberto={convidar} fechar={() => setConvidar(false)} sucesso={(r) => setLink(r)} />
       {editando && <ModalEditar m={editando} fechar={() => setEditando(null)} />}
 
-      <Modal aberto={!!link} fechar={() => setLink(null)} titulo="Convite criado" descricao={link ? `Envie este link para ${link.nome} definir a senha.` : undefined}>
+      <Modal aberto={!!link} fechar={() => setLink(null)} titulo="Convite enviado" descricao={link ? `${link.nome} já tem acesso ao painel.` : undefined}>
         {link && (
           <div className="space-y-4">
-            <Aviso tom="sucesso" titulo={`${link.nome} já tem acesso`}>
-              Ao abrir o link, a pessoa cria a senha e depois entra com o e-mail <strong className="text-texto">{link.email}</strong>.
-            </Aviso>
+            {link.emailEnviado ? (
+              <Aviso tom="sucesso" titulo="E-mail enviado">
+                Enviamos um e-mail para <strong className="text-texto">{link.email}</strong> com o link para criar a senha. Se não chegar em alguns minutos (confira o
+                spam), use o link abaixo.
+              </Aviso>
+            ) : (
+              <Aviso tom="alerta" titulo="Não conseguimos enviar o e-mail automático">
+                Envie o link abaixo para <strong className="text-texto">{link.email}</strong> pelo WhatsApp ou copie e mande como preferir.
+              </Aviso>
+            )}
             <div className="rounded-2xl border border-linha bg-superficie-2 p-3 text-xs font-mono break-all text-texto-2 max-h-28 overflow-y-auto">{link.link}</div>
             <div className="flex flex-col sm:flex-row gap-2">
               <BotaoCopiar texto={link.link} rotulo="Copiar link" variante="contorno" className="h-11 flex-1" />
@@ -109,7 +158,7 @@ export default function Usuarios() {
   );
 }
 
-function ModalConvite({ aberto, fechar, sucesso }: { aberto: boolean; fechar: () => void; sucesso: (r: { nome: string; email: string; link: string }) => void }) {
+function ModalConvite({ aberto, fechar, sucesso }: { aberto: boolean; fechar: () => void; sucesso: (r: Convite) => void }) {
   const { tid, sedes, torcida } = usePainel();
   const avisar = useToast();
   const [nome, setNome] = useState("");
@@ -137,14 +186,7 @@ function ModalConvite({ aberto, fechar, sucesso }: { aberto: boolean; fechar: ()
     if (papel === "subsede" && !sedeId) return setErro("Escolha a subsede deste usuário.");
     setEnviando(true);
     try {
-      const r = await api.convidarMembro({
-        tid,
-        nome: nome.trim(),
-        email: email.trim().toLowerCase(),
-        papel,
-        ...(papel !== "diretoria" && sedeId ? { sedeId } : {}),
-      });
-      sucesso({ nome: nome.trim(), email: email.trim().toLowerCase(), link: r.linkDefinirSenha });
+      sucesso(await enviarConvite({ tid, slug: torcida.slug, nome: nome.trim(), email: email.trim().toLowerCase(), papel, sedeId }));
       avisar("Usuário convidado.", "sucesso");
       fechar();
     } catch (e) {

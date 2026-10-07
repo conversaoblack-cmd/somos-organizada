@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router";
 import { collection, limit, orderBy, query, type Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
@@ -19,6 +20,8 @@ const EVENTOS_WEBHOOK = [
   "invoice.paid",
   "invoice.payment_failed",
   "subscription.canceled",
+  "recipient.created",
+  "recipient.updated",
 ];
 
 interface LogWebhook {
@@ -244,7 +247,11 @@ export default function Pagamentos() {
           )}
         </Passo>
 
-        <Passo n={6} titulo="Faça uma compra de teste" feito={webhookOk && pag.ambiente === "producao"} ultimo>
+        <Passo n={6} titulo="Divisão com as subsedes (split)" feito={!!pag.splitAtivo}>
+          <PassoSplit configurado={pag.configurado} />
+        </Passo>
+
+        <Passo n={7} titulo="Faça uma compra de teste" feito={webhookOk && pag.ambiente === "producao"} ultimo>
           <p>
             Crie um evento de <strong>R$ 1,00</strong> (pode ser rascunho e depois publicado), abra a página da torcida e compre com Pix e com cartão.
           </p>
@@ -462,6 +469,99 @@ function FormChaves({ configurado, aoSalvar }: { configurado: boolean; aoSalvar:
         {configurado && " A URL do webhook não muda."}
       </Confirmar>
     </form>
+  );
+}
+
+function PassoSplit({ configurado }: { configurado: boolean }) {
+  const { tid, torcida, sedes, base } = usePainel();
+  const avisar = useToast();
+  const pag = torcida.pagamentos;
+  const [rp, setRp] = useState(pag?.recebedorPrincipalId ?? "");
+  const [erro, setErro] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [desativar, setDesativar] = useState(false);
+  const subsedes = sedes.filter((s) => s.tipo === "subsede" && s.ativa !== false);
+  const ativas = subsedes.filter((s) => s.recebedor?.status === "active").length;
+
+  async function ativar() {
+    setErro(null);
+    const v = rp.trim();
+    if (!/^rp_[A-Za-z0-9]+$/.test(v)) return setErro("O código do recebedor começa com rp_ (ex.: rp_AbC123...).");
+    setSalvando(true);
+    try {
+      const r = await api.configurarSplit({ tid, recebedorPrincipalId: v });
+      avisar(r.nome ? `Divisão ativada. Recebedor principal: ${r.nome}.` : "Divisão de pagamentos ativada.", "sucesso");
+    } catch (e) {
+      setErro(mensagemDeErro(e));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <>
+      <p>
+        Com a divisão ativa, cada subsede recebe o valor dos ingressos dos <strong>próprios eventos</strong> direto na conta bancária dela, e a taxa de serviço vai
+        inteira para a torcida. A Pagar.me divide na hora da venda — ninguém precisa repassar à mão.
+      </p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>
+          Disponível para contas <strong>PSP</strong> da Pagar.me. Confirme com o atendimento da Pagar.me que o split está liberado na sua conta.
+        </li>
+        <li>Cada subsede vira um “recebedor” da sua conta. Quem cadastra é o responsável da subsede, no painel dele (Recebimentos), com prova de vida.</li>
+        <li>Eventos da sede principal continuam caindo inteiros na conta da torcida.</li>
+      </ul>
+      {pag?.splitAtivo ? (
+        <div className="space-y-3">
+          <Aviso tom="sucesso" titulo="Divisão ativa">
+            Recebedor principal: <code className="font-mono text-texto">{pag.recebedorPrincipalId}</code>. {ativas} de {subsedes.length}{" "}
+            {subsedes.length === 1 ? "subsede tem" : "subsedes têm"} conta de recebimento ativa.{" "}
+            <Link to={`${base}/sedes`} className="underline">
+              Ver sedes
+            </Link>
+          </Aviso>
+          <Botao variante="perigo" tamanho="sm" icone="xCirculo" onClick={() => setDesativar(true)}>
+            Desativar divisão
+          </Botao>
+        </div>
+      ) : !configurado ? (
+        <Aviso tom="info">Primeiro conecte a Pagar.me (passo 3).</Aviso>
+      ) : (
+        <div className="space-y-3">
+          <p>
+            No painel da Pagar.me, abra o menu <Caminho>Recebedores</Caminho>. O <strong>recebedor principal</strong> é o da própria conta da torcida (normalmente o
+            primeiro da lista, com o CNPJ/CPF de vocês). Copie o código que começa com <code className="font-mono text-texto">rp_</code>.
+          </p>
+          <Campo
+            rotulo="ID do recebedor principal"
+            value={rp}
+            onChange={(v) => setRp(v.trim())}
+            placeholder="rp_..."
+            className="[&_input]:font-mono"
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {erro && <Aviso tom="perigo">{erro}</Aviso>}
+          <Botao icone="check" onClick={ativar} carregando={salvando}>
+            Ativar divisão
+          </Botao>
+        </div>
+      )}
+      <Confirmar
+        aberto={desativar}
+        fechar={() => setDesativar(false)}
+        titulo="Desativar a divisão com as subsedes?"
+        rotulo="Desativar"
+        perigo
+        acao={async () => {
+          await api.configurarSplit({ tid, desativar: true });
+          avisar("Divisão de pagamentos desativada.", "sucesso");
+        }}
+      >
+        Os eventos das subsedes <strong className="text-texto">param de vender</strong> até a divisão ser ativada de novo (o valor delas só pode cair na conta de
+        recebimento de cada uma). Eventos da sede principal continuam normalmente.
+      </Confirmar>
+    </>
   );
 }
 
