@@ -40,17 +40,37 @@ export interface PgItem {
   code: string;
 }
 
+/** Regra de split (somente contas PSP). Valores "flat" em centavos; a soma deve fechar o total. */
+export interface PgSplit {
+  amount: number;
+  type: "flat";
+  recipient_id: string;
+  options: { liable: boolean; charge_processing_fee: boolean; charge_remainder_fee: boolean };
+}
+
 export type PgPagamento =
-  | { payment_method: "pix"; pix: { expires_in?: number; expires_at?: string } }
+  | { payment_method: "pix"; pix: { expires_in?: number; expires_at?: string }; split?: PgSplit[] }
   | {
       payment_method: "credit_card";
       credit_card: {
         installments: number;
         statement_descriptor?: string;
-        card_token: string;
-        card: { billing_address: PgEndereco };
+        /** Cartão novo (token do navegador) ou cartão salvo do cliente (card_id). */
+        card_token?: string;
+        card?: { billing_address: PgEndereco };
+        card_id?: string;
+        recurrence_cycle?: "first" | "subsequent";
       };
+      split?: PgSplit[];
     };
+
+export interface PgRecebedor {
+  id: string;
+  name?: string;
+  status: string;
+  code?: string;
+  kyc_details?: { status?: string; status_reason?: string };
+}
 
 export interface PgTransacao {
   id: string;
@@ -137,7 +157,8 @@ export class Pagarme {
   criarPedido(corpo: {
     code: string;
     items: PgItem[];
-    customer: PgCustomer;
+    customer?: PgCustomer;
+    customer_id?: string;
     payments: PgPagamento[];
     metadata?: Record<string, string>;
     closed?: boolean;
@@ -171,6 +192,27 @@ export class Pagarme {
   }
   cancelarAssinatura(id: string) {
     return this.req<PgAssinatura>("DELETE", `/subscriptions/${encodeURIComponent(id)}`, { cancel_pending_invoices: true });
+  }
+  criarCliente(c: PgCustomer) {
+    return this.req<{ id: string }>("POST", "/customers", c);
+  }
+  /** Salva o cartão (a partir do token gerado no navegador) para cobranças futuras. */
+  criarCartao(customerId: string, token: string, billing_address: PgEndereco) {
+    return this.req<{ id: string; last_four_digits?: string; brand?: string; status?: string }>(
+      "POST",
+      `/customers/${encodeURIComponent(customerId)}/cards`,
+      { token, billing_address },
+    );
+  }
+  criarRecebedor(corpo: Record<string, unknown>) {
+    return this.req<PgRecebedor>("POST", "/recipients", corpo);
+  }
+  obterRecebedor(id: string) {
+    return this.req<PgRecebedor>("GET", `/recipients/${encodeURIComponent(id)}`);
+  }
+  /** Link (e QR) da prova de vida do recebedor. */
+  linkKyc(id: string) {
+    return this.req<{ url: string; base64_qrcode?: string; expires_at?: string }>("POST", `/recipients/${encodeURIComponent(id)}/kyc_link`, {});
   }
   obterFatura(id: string) {
     return this.req<PgFatura>("GET", `/invoices/${encodeURIComponent(id)}`);

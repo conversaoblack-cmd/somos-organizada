@@ -50,8 +50,10 @@ service cloud.firestore {
 
       match /sedes/{sedeId} {
         allow read: if true;
-        allow create: if diretoria(tid) && request.resource.data.tipo == 'subsede';
-        allow update: if diretoria(tid) && request.resource.data.tipo == resource.data.tipo;
+        // "recebedor" (conta de recebimento na Pagar.me) só é gravado pelo servidor
+        allow create: if diretoria(tid) && request.resource.data.tipo == 'subsede' && !('recebedor' in request.resource.data);
+        allow update: if diretoria(tid) && request.resource.data.tipo == resource.data.tipo
+          && request.resource.data.get('recebedor', null) == resource.data.get('recebedor', null);
         allow delete: if false; // desativar com ativa=false para não quebrar histórico
       }
 
@@ -66,21 +68,40 @@ service cloud.firestore {
       }
 
       match /eventos/{eventoId} {
+        // Subsede cria e edita só rascunho / "em aprovação". Publicar é da diretoria, e evento de
+        // subsede só pode ser publicado com a conta de recebimento (split) da subsede ativa.
+        function sedeDoEvento(sedeId) {
+          return get(/databases/$(database)/documents/torcidas/$(tid)/sedes/$(sedeId)).data;
+        }
+        function podePublicar(sedeId) {
+          return sedeDoEvento(sedeId).tipo == 'principal'
+            || sedeDoEvento(sedeId).get('recebedor', {}).get('status', '') == 'active';
+        }
+        function statusPermitido(d, sedeId) {
+          return (papel(tid) == 'diretoria' && d.status in ['rascunho', 'em_aprovacao', 'publicado', 'encerrado', 'cancelado']
+                   && (d.status != 'publicado' || podePublicar(sedeId)))
+            || (papel(tid) == 'subsede' && d.status in ['rascunho', 'em_aprovacao']);
+        }
+        function valoresValidos(d) {
+          return d.valorSocio is int && d.valorPublico is int && d.valorSocio >= 0 && d.valorPublico > 0;
+        }
+
         allow read: if resource.data.status in ['publicado', 'encerrado'] || gestor(tid) || plataforma();
         allow create: if daMinhaSede(tid, request.resource.data.sedeId)
           && request.resource.data.vendidos == 0 && request.resource.data.reservados == 0
-          && request.resource.data.valorSocio is int && request.resource.data.valorPublico is int
-          && request.resource.data.valorSocio >= 0 && request.resource.data.valorPublico > 0
-          && request.resource.data.status in ['rascunho', 'publicado'];
+          && valoresValidos(request.resource.data)
+          && statusPermitido(request.resource.data, request.resource.data.sedeId);
         // contadores (vendidos, reservados, entradas) são do servidor
         allow update: if daMinhaSede(tid, resource.data.sedeId)
           && daMinhaSede(tid, request.resource.data.sedeId)
           && request.resource.data.vendidos == resource.data.vendidos
           && request.resource.data.reservados == resource.data.reservados
           && request.resource.data.get('entradas', 0) == resource.data.get('entradas', 0)
-          && request.resource.data.valorSocio is int && request.resource.data.valorPublico is int
-          && request.resource.data.status in ['rascunho', 'publicado', 'encerrado', 'cancelado'];
-        allow delete: if daMinhaSede(tid, resource.data.sedeId) && resource.data.vendidos == 0 && resource.data.reservados == 0;
+          && valoresValidos(request.resource.data)
+          && statusPermitido(request.resource.data, request.resource.data.sedeId)
+          && (papel(tid) == 'diretoria' || resource.data.status in ['rascunho', 'em_aprovacao']);
+        allow delete: if daMinhaSede(tid, resource.data.sedeId) && resource.data.vendidos == 0 && resource.data.reservados == 0
+          && (papel(tid) == 'diretoria' || resource.data.status in ['rascunho', 'em_aprovacao']);
       }
 
       match /socios/{uid} {

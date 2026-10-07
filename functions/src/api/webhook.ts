@@ -8,6 +8,7 @@ import { motivoRecusa, type Pagarme } from "../pagarme/cliente";
 import { calcularMensalidade } from "../dominio/precos";
 import { confirmarFaturaSocio, confirmarPedidoPago, encerrarPedidoNaoPago, estornarPedido } from "../dominio/processamento";
 import type { Socio, Torcida } from "../dominio/tipos";
+import { sincronizarRecebedor } from "./recebedores";
 
 interface EventoPg {
   id?: string;
@@ -109,6 +110,14 @@ async function processar(tid: string, tipo: string, evento: EventoPg, pg: Pagarm
       return "fatura_falhou";
     }
     return `fatura_${fatura.status}`;
+  }
+
+  if (tipo.startsWith("recipient.")) {
+    if (!data.id) return "sem_recebedor";
+    const sedes = await refs.sedes(tid).where("recebedor.id", "==", data.id).limit(1).get();
+    if (sedes.empty) return "recebedor_externo";
+    const r = await sincronizarRecebedor(tid, sedes.docs[0].id, pg);
+    return `recebedor_${r?.status ?? "?"}`;
   }
 
   if (tipo === "subscription.canceled") {

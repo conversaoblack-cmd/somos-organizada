@@ -128,14 +128,66 @@ test("3. diretoria personaliza a página, cria subsede, plano e evento (regras d
     nome: "Sócio Infantil", valor: 500, intervalo: "mes", intervaloQtd: 1, pix: true, cartao: false, ativo: true, ordem: 2,
   });
 
-  const ev = await addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), {
+  // contadores de venda são do servidor (testado num evento da sede principal)
+  const evP = await addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), {
+    nome: "Reunião geral", sedeId: ctx.sedePrincipal, data: Timestamp.fromMillis(Date.now() + 3 * 86400_000),
+    valorSocio: 0, valorPublico: 100, vendidos: 0, reservados: 0, status: "publicado",
+  });
+  await negado(updateDoc(evP, { vendidos: 99 }));
+});
+
+test("3b. subsede: convite, conta de recebimento com prova de vida, evento aprovado pela diretoria", async () => {
+  const dir = ctx.dir;
+  // split da torcida: recebedor principal precisa existir e estar ativo
+  await assert.rejects(dir.chamar("configurarSplit", { tid: ctx.tid, recebedorPrincipalId: "rp_naoexiste" }), /Pagar\.me|recebedor/i);
+  const sp = await dir.chamar("configurarSplit", { tid: ctx.tid, recebedorPrincipalId: "rp_principal" });
+  assert.equal(sp.splitAtivo, true);
+
+  // diretoria convida o diretor da subsede
+  const conv = await dir.chamar("convidarMembro", { tid: ctx.tid, email: "subsede4@brasil.test", nome: "Coordenador 4º", papel: "subsede", sedeId: ctx.subsede });
+  await aAuth.updateUser(conv.uid, { password: SENHA });
+  const sub = navegador("subsede");
+  await signInWithEmailAndPassword(sub.auth, "subsede4@brasil.test", SENHA);
+  ctx.sub = sub;
+
+  // diretoria NÃO cadastra recebedor da subsede (antifraude); ninguém grava "recebedor" pelo navegador
+  const dadosRecebedor = {
+    nome: "Coordenador Quarto Distrito", email: "subsede4@brasil.test", cpf: "52998224725", nascimento: "1985-04-10",
+    nomeMae: "Maria do Distrito", rendaMensal: 350000, profissao: "Comerciante", telefone: "71999990004",
+    endereco: { cep: "40000000", logradouro: "Rua do Distrito", numero: "4", bairro: "Periperi", cidade: "Salvador", uf: "BA" },
+    banco: { codigo: "341", agencia: "1234", conta: "56789", contaDv: "0", tipo: "checking" },
+  };
+  await assert.rejects(dir.chamar("cadastrarRecebedor", { tid: ctx.tid, dados: dadosRecebedor }), /permissão/);
+  await negado(updateDoc(doc(dir.db, `torcidas/${ctx.tid}/sedes/${ctx.subsede}`), { recebedor: { id: "rp_hacker", status: "active" } }));
+
+  // subsede cria evento e envia para aprovação; não consegue publicar sozinha
+  const ev = await addDoc(collection(sub.db, `torcidas/${ctx.tid}/eventos`), {
     nome: "Caravana Final", descricao: "Ônibus + ingresso", sedeId: ctx.subsede, local: "Arena",
     data: Timestamp.fromMillis(Date.now() + 7 * 86400_000), valorSocio: 4000, valorPublico: 5000,
-    capacidade: 3, vendidos: 0, reservados: 0, status: "publicado",
+    capacidade: 3, vendidos: 0, reservados: 0, status: "em_aprovacao",
   });
   ctx.evento = ev.id;
-  // contadores de venda são do servidor
-  await negado(updateDoc(doc(b.db, `torcidas/${ctx.tid}/eventos/${ctx.evento}`), { vendidos: 99 }));
+  await negado(updateDoc(doc(sub.db, `torcidas/${ctx.tid}/eventos/${ev.id}`), { status: "publicado" }));
+  // diretoria também não publica enquanto a conta da subsede não estiver ativa
+  await negado(updateDoc(doc(dir.db, `torcidas/${ctx.tid}/eventos/${ev.id}`), { status: "publicado" }));
+
+  // subsede cadastra a conta de recebimento → precisa da prova de vida
+  const cad = await sub.chamar("cadastrarRecebedor", { tid: ctx.tid, dados: dadosRecebedor });
+  assert.equal(cad.recebedor.status, "registration");
+  assert.match(cad.recebedor.kycUrl, /^https:\/\/www\.pagar\.me\/kyc\//);
+  assert.equal(cad.recebedor.documentoMascarado, "***.982.247-**");
+  ctx.recebedorSubsede = cad.recebedor.id;
+
+  // titular faz a prova de vida; a Pagar.me ativa e avisa por webhook
+  await fetch(`http://127.0.0.1:4010/__recebedor/${cad.recebedor.id}`, { method: "POST" });
+  assert.equal(await webhook(ctx.tid, ctx.webhookToken, { id: "hook_rp1", type: "recipient.updated", data: { id: cad.recebedor.id } }), 200);
+  const sede = await aDb.doc(`torcidas/${ctx.tid}/sedes/${ctx.subsede}`).get();
+  assert.equal(sede.get("recebedor").status, "active");
+
+  // agora a diretoria aprova (publica)
+  await updateDoc(doc(dir.db, `torcidas/${ctx.tid}/eventos/${ev.id}`), { status: "publicado" });
+  // depois de publicado, a subsede não altera mais o evento
+  await negado(updateDoc(doc(sub.db, `torcidas/${ctx.tid}/eventos/${ev.id}`), { valorPublico: 1 }));
 });
 
 test("4. torcedor sem cadastro compra no Pix; webhook confirma e emite ingresso com QR", async () => {
@@ -159,6 +211,11 @@ test("4. torcedor sem cadastro compra no Pix; webhook confirma e emite ingresso 
   const enviado = chamadas.findLast((c) => c.caminho === "/orders" && c.metodo === "POST").corpo;
   assert.deepEqual(enviado.items.map((i) => i.amount), [5000, 500]);
   assert.equal(enviado.code, r.pedidoId);
+  // split: R$50 para a subsede (paga tarifas e chargeback), R$5 para a torcida
+  assert.deepEqual(
+    enviado.payments[0].split.map((x) => [x.recipient_id, x.amount, x.options.liable, x.options.charge_processing_fee]),
+    [[ctx.recebedorSubsede, 5000, true, true], ["rp_principal", 500, false, false]],
+  );
 
   // webhook com token errado é recusado
   assert.equal(await webhook(ctx.tid, "token-errado", { id: "hook_x", type: "order.paid", data: { id: "x" } }), 401);
@@ -190,6 +247,7 @@ test("4. torcedor sem cadastro compra no Pix; webhook confirma e emite ingresso 
   const taxa = await aDb.doc(`torcidas/${ctx.tid}/lancamentos/${r.pedidoId}_taxa`).get();
   assert.equal(base.get("sedeId"), ctx.subsede);
   assert.equal(base.get("valor"), 5000);
+  assert.equal(base.get("liquidacao"), "split"); // já caiu na conta da subsede: nada a repassar
   assert.equal(taxa.get("sedeId"), ctx.sedePrincipal);
   assert.equal(taxa.get("valor"), 500);
 
@@ -237,6 +295,9 @@ test("7. adesão de sócio no Pix → ativo com matrícula; carteirinha com QR",
   assert.equal(ficha.get("status"), "pendente_pagamento");
   const pedido = await getDoc(doc(b.db, `torcidas/${ctx.tid}/pedidos/${r.pedidoId}`));
   assert.equal(pedido.get("total"), 1100); // R$10 + 10%
+  assert.equal(pedido.get("liquidacao"), "split");
+  const pedidoSocioPg = chamadas.findLast((c) => c.caminho === "/orders" && c.metodo === "POST").corpo;
+  assert.deepEqual(pedidoSocioPg.payments[0].split.map((x) => x.amount), [1000, 100]);
 
   // o sócio não consegue se autoaprovar pelo navegador
   await negado(updateDoc(doc(b.db, `torcidas/${ctx.tid}/socios/${ctx.socioUid}`), { status: "ativo" }));
@@ -313,23 +374,29 @@ test("9. portaria: QR libera uma vez, segunda leitura acusa uso, QR forjado é b
   await assert.rejects(ctx.torcedor.chamar("validarEntrada", { tid: ctx.tid, eventoId: ctx.evento, qr: ctx.qrPublico }), /permissão|login/i);
 });
 
-test("10. sócio no cartão: assinatura recorrente e fatura paga ativam o sócio", async () => {
+test("10. sócio no cartão: cartão salvo, 1ª cobrança na hora e troca de cartão", async () => {
   const b = navegador("socio-cartao");
   await createUserWithEmailAndPassword(b.auth, "cartao@x.test", SENHA);
-  const r = await b.chamar("aderirSocio", {
-    tid: ctx.tid, planoId: "mensal", sedeId: ctx.sedePrincipal, metodo: "cartao",
-    cartao: { token: "tok_ok" },
-    dados: { nome: "Sócia Cartão", cpf: "39053344705", telefone: "71977776666", nascimento: "1995-01-20",
-      endereco: { cep: "40000000", logradouro: "Rua C", numero: "5", bairro: "Pituba", cidade: "Salvador", uf: "BA" } },
-  });
-  assert.equal(r.modo, "assinatura");
-  assert.equal(r.status, "ativo");
-  const sub = chamadas.findLast((c) => c.caminho === "/subscriptions").corpo;
-  assert.deepEqual(sub.items.map((i) => i.pricing_scheme.price), [1000, 100]);
-  assert.equal(sub.interval, "month");
+  const dados = { nome: "Sócia Cartão", cpf: "39053344705", telefone: "71977776666", nascimento: "1995-01-20",
+    endereco: { cep: "40000000", logradouro: "Rua C", numero: "5", bairro: "Pituba", cidade: "Salvador", uf: "BA" } };
+  // cartão recusado: não ativa
+  await assert.rejects(
+    b.chamar("aderirSocio", { tid: ctx.tid, planoId: "mensal", sedeId: ctx.sedePrincipal, metodo: "cartao", cartao: { token: "tok_recusado" }, dados }),
+    /recusado/i,
+  );
+  // troca para um cartão bom: cobra na hora e ativa
+  const t = await b.chamar("atualizarCartao", { tid: ctx.tid, cartao: { token: "tok_ok" } });
+  assert.equal(t.cobrado, true);
+  assert.equal(t.status, "ativo");
+  const ordem = chamadas.findLast((c) => c.caminho === "/orders" && c.metodo === "POST").corpo;
+  assert.ok(ordem.customer_id);
+  assert.ok(ordem.payments[0].credit_card.card_id);
+  assert.equal(ordem.payments[0].credit_card.recurrence_cycle, "first");
+  assert.equal(ordem.payments[0].split, undefined); // sede principal: tudo na conta da torcida
   const ficha = await getDoc(doc(b.db, `torcidas/${ctx.tid}/socios/${b.auth.currentUser.uid}`));
   assert.equal(ficha.get("matricula"), "000002");
-  assert.equal(ficha.get("pagarme").cartaoFinal, "4242");
+  assert.equal(ficha.get("metodo"), "cartao");
+  assert.equal(ficha.get("pagarme").cartaoFinal, "1111");
 });
 
 test("11. KPIs e diagnóstico da plataforma sem vazar dados sensíveis", async () => {
@@ -355,14 +422,8 @@ test("11. KPIs e diagnóstico da plataforma sem vazar dados sensíveis", async (
   await assert.rejects(ctx.dir.chamar("resumoPlataforma", {}), /equipe Somos Organizada/);
 });
 
-test("12. diretoria convida usuário de subsede com escopo limitado", async () => {
-  const r = await ctx.dir.chamar("convidarMembro", {
-    tid: ctx.tid, email: "subsede4@brasil.test", nome: "Coordenador 4º", papel: "subsede", sedeId: ctx.subsede,
-  });
-  assert.ok(r.linkDefinirSenha);
-  await aAuth.updateUser(r.uid, { password: SENHA });
-  const b = navegador("subsede");
-  await signInWithEmailAndPassword(b.auth, "subsede4@brasil.test", SENHA);
+test("12. usuário de subsede tem escopo limitado", async () => {
+  const b = ctx.sub;
   // vê o sócio da própria subsede
   const socio = await getDoc(doc(b.db, `torcidas/${ctx.tid}/socios/${ctx.socioUid}`));
   assert.equal(socio.get("nome"), "Sócio Teste");
@@ -371,8 +432,9 @@ test("12. diretoria convida usuário de subsede com escopo limitado", async () =
     nome: "Evento indevido", sedeId: ctx.sedePrincipal, data: Timestamp.now(), valorSocio: 0, valorPublico: 100,
     vendidos: 0, reservados: 0, status: "rascunho",
   }));
-  // não mexe em credenciais
+  // não mexe em credenciais nem no split
   await assert.rejects(b.chamar("salvarCredenciaisPagarme", { tid: ctx.tid, chaveSecreta: "sk_test_x123456789", chavePublica: "pk_test_x123456789" }), /permissão/);
+  await assert.rejects(b.chamar("configurarSplit", { tid: ctx.tid, recebedorPrincipalId: "rp_x123" }), /permissão/);
 });
 
 test("13. Storage: sócio envia a própria foto; estranhos são barrados", async () => {

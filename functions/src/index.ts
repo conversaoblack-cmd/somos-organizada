@@ -8,7 +8,9 @@ export {
   cancelarAssinatura,
   minhaCarteirinha,
   alterarStatusSocio,
+  atualizarCartao,
 } from "./api/socios";
+export { configurarSplit, cadastrarRecebedor, atualizarRecebedor } from "./api/recebedores";
 export { salvarCredenciaisPagarme, obterWebhookUrl, convidarMembro, atualizarMembro } from "./api/torcida";
 export {
   reivindicarPlataforma,

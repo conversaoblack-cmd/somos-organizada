@@ -35,11 +35,37 @@ export interface Torcida {
     cartao: boolean;
     webhookRecebidoEm?: Timestamp;
     descritorFatura?: string;
+    /** Recebedor (rp_...) da conta da torcida. Com ele, vendas de subsede são divididas (split). */
+    recebedorPrincipalId?: string;
+    splitAtivo?: boolean;
   };
   criadoEm: Timestamp;
 }
 
-export type StatusEvento = "rascunho" | "publicado" | "encerrado" | "cancelado";
+/** Status do recebedor na Pagar.me: registration, affiliation, active, refused, suspended, blocked, inactive. */
+export interface RecebedorSede {
+  id: string;
+  status: string;
+  kycStatus?: string | null;
+  nomeTitular: string;
+  documentoMascarado: string;
+  banco: { codigo: string; agencia: string; conta: string };
+  kycUrl?: string | null;
+  kycExpiraEm?: string | null;
+  cadastradoPor: string;
+  atualizadoEm: Timestamp;
+}
+
+export interface Sede {
+  nome: string;
+  tipo: "principal" | "subsede";
+  ativa: boolean;
+  recebedor?: RecebedorSede;
+}
+
+export type Liquidacao = "split" | "torcida";
+
+export type StatusEvento = "rascunho" | "em_aprovacao" | "publicado" | "encerrado" | "cancelado";
 
 export interface Evento {
   nome: string;
@@ -94,7 +120,10 @@ export interface Socio {
   validoAte?: Timestamp | null;
   cobrancaAbertaId?: string | null;
   assinaturaCancelada?: boolean;
-  pagarme?: { subscriptionId?: string; cartaoFinal?: string; cartaoBandeira?: string };
+  /** customerId/cardId: cartão salvo para a cobrança recorrente feita pelo próprio sistema. subscriptionId: legado. */
+  pagarme?: { customerId?: string; cardId?: string; subscriptionId?: string; cartaoFinal?: string; cartaoBandeira?: string };
+  ultimaFalhaCobranca?: Timestamp;
+  motivoFalhaCobranca?: string;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
@@ -123,6 +152,8 @@ export interface Pedido {
   planoId?: string;
   renovacao?: boolean;
   pagarme?: { orderId?: string; chargeId?: string };
+  /** split = valor base caiu direto no recebedor da subsede; torcida = caiu na conta da torcida. */
+  liquidacao?: Liquidacao;
   pix?: { qrCode: string; qrCodeUrl?: string; expiraEm: Timestamp };
   expiraEm?: Timestamp;
   criadoEm: Timestamp;

@@ -8,10 +8,11 @@ import { calcularMensalidade } from "../dominio/precos";
 import { exigirEscopoSede, exigirLogin, exigirMembro } from "../dominio/permissoes";
 import { confirmarFaturaSocio, contarMudancaStatus } from "../dominio/processamento";
 import { pagarmeDaTorcida } from "../pagarme/credenciais";
-import { clientePg, descritor, enderecoPg } from "../pagarme/montagem";
+import { clientePg, enderecoPg } from "../pagarme/montagem";
+import { dividir } from "../dominio/split";
 import { PagarmeErro, type Pagarme } from "../pagarme/cliente";
 import { aplicarRespostaPedido, pagamentoPg, torcidaVendendo } from "./ingressos";
-import type { Pedido, Plano, Socio, StatusSocio, Torcida } from "../dominio/tipos";
+import type { Pedido, Plano, Sede, Socio, StatusSocio, Torcida } from "../dominio/tipos";
 
 const segredos = [MASTER_KEY, QR_HMAC];
 const ATIVOS: StatusSocio[] = ["ativo", "em_analise", "inadimplente", "suspenso"];
@@ -20,19 +21,29 @@ function pessoaDoSocio(s: Socio): Pessoa {
   return { nome: s.nome, email: s.email, cpf: s.cpf, telefone: s.telefone };
 }
 
-/** Cria um pedido Pix (ou cartão avulso) para um ciclo da mensalidade do sócio. */
+/**
+ * Cria a cobrança de um ciclo da mensalidade: Pix, ou cartão salvo do sócio (recorrência feita pelo
+ * próprio sistema, porque a assinatura da Pagar.me não aceita split). Com a torcida no modo
+ * "sede do sócio" e a subsede com recebedor ativo, o valor do plano vai direto para a subsede.
+ */
 export async function criarCobrancaSocio(args: {
   tid: string;
   torcida: Torcida;
   socio: Socio;
   metodo: "pix" | "cartao";
-  dadosPagamento?: Record<string, unknown>;
   renovacao: boolean;
   expiraSeg: number;
 }) {
   const { tid, torcida, socio, metodo, renovacao, expiraSeg } = args;
   const pct = torcida.taxaServicoPct ?? PADROES.taxaServicoPct;
   const valores = calcularMensalidade(socio.valorPlano, pct);
+  const cardId = socio.pagarme?.cardId;
+  if (metodo === "cartao" && (!cardId || !socio.pagarme?.customerId)) {
+    throw new HttpsError("failed-precondition", "Nenhum cartão salvo. Cadastre um cartão.");
+  }
+  const sede =
+    torcida.destinoMensalidade === "sede_do_socio" ? ((await refs.sede(tid, socio.sedeId).get()).data() as Sede | undefined) : undefined;
+  const divisao = dividir(torcida, sede, valores.valorBase, valores.taxa);
   const pedidoRef = refs.pedidos(tid).doc();
   const expiraEm = new Date(Date.now() + expiraSeg * 1000);
   const pedido: Pedido = {
@@ -46,6 +57,7 @@ export async function criarCobrancaSocio(args: {
     socioUid: socio.uid,
     planoId: socio.planoId,
     renovacao,
+    liquidacao: divisao.liquidacao,
     expiraEm: Timestamp.fromDate(expiraEm),
     criadoEm: Timestamp.now(),
   };
@@ -58,15 +70,66 @@ export async function criarCobrancaSocio(args: {
   const resposta = await pg.criarPedido({
     code: pedidoRef.id,
     items,
-    customer: clientePg(pessoaDoSocio(socio), socio.uid, socio.endereco),
-    payments: [pagamentoPg(metodo, torcida, args.dadosPagamento ?? {}, expiraSeg)],
+    ...(metodo === "cartao"
+      ? { customer_id: socio.pagarme!.customerId }
+      : { customer: clientePg(pessoaDoSocio(socio), socio.uid, socio.endereco) }),
+    payments: [
+      pagamentoPg(metodo, torcida, {}, expiraSeg, {
+        split: divisao.split,
+        cartaoSalvo: metodo === "cartao" ? { cardId: cardId!, ciclo: socio.matricula ? "subsequent" : "first" } : undefined,
+      }),
+    ],
     metadata: { torcidaId: tid, pedidoId: pedidoRef.id, tipo: "socio", socioUid: socio.uid },
   });
   const resultado = await aplicarRespostaPedido(tid, pedidoRef.id, resposta, expiraEm);
   return { pedidoId: pedidoRef.id, resultado };
 }
 
-/** Confere as faturas da assinatura na Pagar.me e aplica as pagas (idempotente). */
+/** Cria (ou reaproveita) o cliente do sócio na Pagar.me e salva o cartão tokenizado no navegador. */
+async function salvarCartao(tid: string, socio: Socio, cartao: Record<string, unknown>, enderecoPadrao: Socio["endereco"]): Promise<Socio> {
+  const torcida = (await refs.torcida(tid).get()).data() as Torcida;
+  if (!torcida.pagamentos?.cartao) throw new HttpsError("failed-precondition", "Cartão indisponível nesta torcida.");
+  const token = texto(cartao.token, "token do cartão", { max: 80 });
+  const cobranca = endereco(cartao.endereco ?? enderecoPadrao);
+  const pg = await pagarmeDaTorcida(tid);
+  let customerId = socio.pagarme?.customerId;
+  if (!customerId) customerId = (await pg.criarCliente(clientePg(pessoaDoSocio(socio), socio.uid, socio.endereco))).id;
+  const card = await pg.criarCartao(customerId, token, enderecoPg(cobranca));
+  const pagarme = {
+    ...(socio.pagarme ?? {}),
+    customerId,
+    cardId: card.id,
+    cartaoFinal: card.last_four_digits ?? null,
+    cartaoBandeira: card.brand ?? null,
+  };
+  await refs.socio(tid, socio.uid).update({ pagarme, metodo: "cartao", atualizadoEm: FieldValue.serverTimestamp() });
+  return { ...socio, metodo: "cartao", pagarme: pagarme as Socio["pagarme"] };
+}
+
+/** Sócio troca o cartão. Se estiver com mensalidade vencida/pendente, já cobra no cartão novo. */
+export const atualizarCartao = onCall({ secrets: segredos }, async (req) => {
+  const uid = exigirLogin(req);
+  const d = (req.data ?? {}) as Record<string, unknown>;
+  const tid = texto(d.tid, "torcida", { max: 40 });
+  const torcida = await torcidaVendendo(tid);
+  const socio = (await refs.socio(tid, uid).get()).data() as Socio | undefined;
+  if (!socio) throw new HttpsError("not-found", "Ficha de sócio não encontrada.");
+  try {
+    const ficha = await salvarCartao(tid, socio, (d.cartao ?? {}) as Record<string, unknown>, socio.endereco);
+    const emDia = socio.status === "ativo" && !!socio.validoAte && socio.validoAte.toMillis() > Date.now();
+    if (emDia || socio.status === "suspenso" || socio.status === "cancelado") return { cobrado: false, status: socio.status };
+    const r = await criarCobrancaSocio({ tid, torcida, socio: ficha, metodo: "cartao", renovacao: !!socio.matricula, expiraSeg: PADROES.pixExpiraSegundos });
+    if (typeof r.resultado === "object") throw new HttpsError("aborted", `Cartão recusado: ${r.resultado.falhou}`);
+    const atual = (await refs.socio(tid, uid).get()).data() as Socio;
+    return { cobrado: true, status: atual.status };
+  } catch (e) {
+    if (e instanceof HttpsError) throw e;
+    if (e instanceof PagarmeErro) throw new HttpsError("unavailable", `Cartão não aceito: ${e.message}`);
+    throw new HttpsError("internal", "Não foi possível atualizar o cartão.");
+  }
+});
+
+/** Assinaturas antigas da Pagar.me (legado): confere as faturas e aplica as pagas (idempotente). */
 export async function sincronizarFaturas(tid: string, socio: Socio, pg: Pagarme) {
   const subId = socio.pagarme?.subscriptionId;
   if (!subId) return { pagas: 0 };
@@ -85,7 +148,7 @@ export async function sincronizarFaturas(tid: string, socio: Socio, pg: Pagarme)
 
 /**
  * Adesão de sócio: grava a ficha, trava o CPF na torcida e inicia o pagamento.
- * Pix = cobrança por ciclo gerada pelo sistema. Cartão = assinatura recorrente na Pagar.me.
+ * Pix e cartão: cobrança por ciclo gerada pelo sistema (cartão salvo na Pagar.me).
  */
 export const aderirSocio = onCall({ secrets: segredos }, async (req) => {
   const uid = exigirLogin(req);
@@ -150,41 +213,11 @@ export const aderirSocio = onCall({ secrets: segredos }, async (req) => {
       return { modo: "pedido", pedidoId: r.pedidoId, status: typeof r.resultado === "string" ? r.resultado : "falhou" };
     }
 
-    // Cartão: assinatura recorrente na Pagar.me (cobra o 1º ciclo na hora)
-    const cartao = (d.cartao ?? {}) as Record<string, unknown>;
-    if (!torcida.pagamentos.cartao) throw new HttpsError("failed-precondition", "Cartão indisponível nesta torcida.");
-    const pg = await pagarmeDaTorcida(tid);
-    const items = [{ description: `Sócio · ${plano.nome}`.slice(0, 256), quantity: 1, pricing_scheme: { price: valores.valorBase } }];
-    if (valores.taxa > 0) items.push({ description: "Taxa de serviço", quantity: 1, pricing_scheme: { price: valores.taxa } });
-    const assinatura = await pg.criarAssinatura({
-      code: `${uid}-${Date.now().toString(36)}`.slice(0, 52),
-      payment_method: "credit_card",
-      interval: plano.intervalo === "ano" ? "year" : "month",
-      interval_count: plano.intervaloQtd,
-      billing_type: "prepaid",
-      installments: 1,
-      statement_descriptor: torcida.pagamentos.descritorFatura || descritor(torcida.nome),
-      customer: clientePg(pessoaDoSocio(socio), uid, end),
-      card_token: texto(cartao.token, "token do cartão", { max: 80 }),
-      card: { billing_address: enderecoPg(endereco(cartao.endereco ?? end)) },
-      items,
-      metadata: { torcidaId: tid, socioUid: uid, planoId },
-    });
-    await refs.socio(tid, uid).update({
-      pagarme: {
-        subscriptionId: assinatura.id,
-        cartaoFinal: assinatura.card?.last_four_digits ?? null,
-        cartaoBandeira: assinatura.card?.brand ?? null,
-      },
-    });
-    if (assinatura.status === "failed" || assinatura.status === "canceled") {
-      throw new HttpsError("aborted", "Cartão recusado. Confira os dados ou use outro cartão.");
-    }
-    const sync = await sincronizarFaturas(tid, { ...socio, pagarme: { subscriptionId: assinatura.id } }, pg);
-    if (sync.ultimaStatus === "failed") {
-      await pg.cancelarAssinatura(assinatura.id).catch(() => undefined);
-      throw new HttpsError("aborted", "Cartão recusado. Confira os dados ou use outro cartão.");
-    }
+    // Cartão: salva o cartão do sócio na Pagar.me e cobra o 1º ciclo na hora.
+    // Os próximos ciclos são cobrados pela rotina diária no mesmo cartão.
+    const fichaComCartao = await salvarCartao(tid, socio, (d.cartao ?? {}) as Record<string, unknown>, end);
+    const r = await criarCobrancaSocio({ tid, torcida, socio: fichaComCartao, metodo: "cartao", renovacao: false, expiraSeg: PADROES.pixExpiraSegundos });
+    if (typeof r.resultado === "object") throw new HttpsError("aborted", `Cartão recusado: ${r.resultado.falhou}`);
     const atualizado = (await refs.socio(tid, uid).get()).data() as Socio;
     return { modo: "assinatura", status: atualizado.status };
   } catch (e) {

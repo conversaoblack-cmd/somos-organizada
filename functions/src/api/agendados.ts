@@ -91,6 +91,35 @@ export const rotinaSocios = onSchedule(
       }
     }
 
+    // 1b) Renovação no cartão salvo: cobra no vencimento; se recusar, tenta de novo a cada dia por até 15 dias
+    const cartaoAVencer = await db
+      .collectionGroup("socios")
+      .where("metodo", "==", "cartao")
+      .where("validoAte", "<=", Timestamp.fromMillis(agora + dias(1)))
+      .get();
+    for (const doc of cartaoAVencer.docs) {
+      const s = doc.data() as Socio;
+      if (!["ativo", "inadimplente"].includes(s.status) || s.assinaturaCancelada) continue;
+      if (!s.pagarme?.cardId || s.pagarme.subscriptionId) continue; // sem cartão salvo, ou assinatura legada
+      if (s.validoAte && s.validoAte.toMillis() < agora - dias(15)) continue;
+      const tid = torcidaDe(doc.ref);
+      const t = await torcida(tid);
+      if (!t || t.status === "suspensa" || !t.pagamentos?.configurado || !t.pagamentos.cartao) continue;
+      if (s.cobrancaAbertaId) {
+        const aberto = (await refs.pedido(tid, s.cobrancaAbertaId).get()).data() as Pedido | undefined;
+        if (aberto?.status === "aguardando" || aberto?.status === "criando") continue;
+      }
+      try {
+        const r = await criarCobrancaSocio({ tid, torcida: t, socio: s, metodo: "cartao", renovacao: true, expiraSeg: PADROES.pixExpiraSegundos });
+        if (typeof r.resultado === "object") {
+          await doc.ref.update({ ultimaFalhaCobranca: FieldValue.serverTimestamp(), motivoFalhaCobranca: r.resultado.falhou });
+        }
+      } catch (e) {
+        logger.error("Falha na renovação no cartão", { tid, uid: s.uid, erro: String(e) });
+        await doc.ref.update({ ultimaFalhaCobranca: FieldValue.serverTimestamp(), motivoFalhaCobranca: String(e).slice(0, 200) }).catch(() => undefined);
+      }
+    }
+
     // 2) Vencidos além da carência → inadimplente (ou cancelado, se pediu cancelamento)
     const vencidos = await db
       .collectionGroup("socios")

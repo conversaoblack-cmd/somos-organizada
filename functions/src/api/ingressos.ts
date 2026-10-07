@@ -9,8 +9,9 @@ import { exigirLogin, exigirMembro } from "../dominio/permissoes";
 import { confirmarPedidoPago, encerrarPedidoNaoPago } from "../dominio/processamento";
 import { pagarmeDaTorcida } from "../pagarme/credenciais";
 import { clientePg, descritor, enderecoPg } from "../pagarme/montagem";
-import { motivoRecusa, PagarmeErro, type PgPagamento, type PgPedido } from "../pagarme/cliente";
-import type { Evento, Ingresso, Pedido, Socio, Torcida } from "../dominio/tipos";
+import { motivoRecusa, PagarmeErro, type PgPagamento, type PgPedido, type PgSplit } from "../pagarme/cliente";
+import { dividir, subsedePodeVender } from "../dominio/split";
+import type { Evento, Ingresso, Pedido, Sede, Socio, Torcida } from "../dominio/tipos";
 
 const segredos = [MASTER_KEY, QR_HMAC];
 
@@ -22,22 +23,38 @@ export async function torcidaVendendo(tid: string): Promise<Torcida> {
   return t;
 }
 
-export function pagamentoPg(metodo: "pix" | "cartao", torcida: Torcida, dados: Record<string, unknown>, expiraSeg: number): PgPagamento {
+export function pagamentoPg(
+  metodo: "pix" | "cartao",
+  torcida: Torcida,
+  dados: Record<string, unknown>,
+  expiraSeg: number,
+  opcoes: { split?: PgSplit[]; cartaoSalvo?: { cardId: string; ciclo: "first" | "subsequent" } } = {},
+): PgPagamento {
+  const split = opcoes.split?.length ? opcoes.split : undefined;
   if (metodo === "pix") {
     if (!torcida.pagamentos.pix) throw new HttpsError("failed-precondition", "Pix indisponível nesta torcida.");
-    return { payment_method: "pix", pix: { expires_in: expiraSeg } };
+    return { payment_method: "pix", pix: { expires_in: expiraSeg }, split };
   }
   if (!torcida.pagamentos.cartao) throw new HttpsError("failed-precondition", "Cartão indisponível nesta torcida.");
+  const statement_descriptor = torcida.pagamentos.descritorFatura || descritor(torcida.nome);
+  if (opcoes.cartaoSalvo) {
+    return {
+      payment_method: "credit_card",
+      credit_card: { installments: 1, statement_descriptor, card_id: opcoes.cartaoSalvo.cardId, recurrence_cycle: opcoes.cartaoSalvo.ciclo },
+      split,
+    };
+  }
   const cartao = (dados.cartao ?? {}) as Record<string, unknown>;
   const token = texto(cartao.token, "token do cartão", { max: 80 });
   return {
     payment_method: "credit_card",
     credit_card: {
       installments: 1,
-      statement_descriptor: torcida.pagamentos.descritorFatura || descritor(torcida.nome),
+      statement_descriptor,
       card_token: token,
       card: { billing_address: enderecoPg(endereco(cartao.endereco)) },
     },
+    split,
   };
 }
 
@@ -124,8 +141,13 @@ export const criarPedidoIngresso = onCall({ secrets: segredos }, async (req) => 
     if (ev.capacidade && (ev.vendidos ?? 0) + (ev.reservados ?? 0) + titulares.length > ev.capacidade) {
       throw new HttpsError("resource-exhausted", "Ingressos esgotados (ou reservados em compras em andamento).");
     }
+    const sede = (await tx.get(refs.sede(tid, ev.sedeId))).data() as Sede | undefined;
+    if (!subsedePodeVender(torcida, sede)) {
+      throw new HttpsError("failed-precondition", "As vendas deste evento ainda não foram liberadas: a conta de recebimento da subsede não está ativa.");
+    }
     const c = calcularPedidoIngresso({ evento: ev, titulares, socio, socioJaUsouPreco, pct });
     if (c.total <= 0) throw new HttpsError("failed-precondition", "Evento sem valor configurado.");
+    const divisao = dividir(torcida, sede, c.valorBase, c.taxa);
     tx.update(evRef, { reservados: FieldValue.increment(titulares.length) });
     const pedido: Pedido = {
       tipo: "ingresso",
@@ -140,11 +162,12 @@ export const criarPedidoIngresso = onCall({ secrets: segredos }, async (req) => 
       eventoId,
       eventoNome: ev.nome,
       itens: c.itens,
+      liquidacao: divisao.liquidacao,
       expiraEm: Timestamp.fromDate(expiraEm),
       criadoEm: Timestamp.now(),
     };
     tx.set(pedidoRef, pedido);
-    return { ...c, eventoNome: ev.nome };
+    return { ...c, eventoNome: ev.nome, split: divisao.split };
   });
 
   try {
@@ -160,7 +183,7 @@ export const criarPedidoIngresso = onCall({ secrets: segredos }, async (req) => 
       code: pedidoRef.id,
       items,
       customer: clientePg(comprador, uid),
-      payments: [pagamentoPg(metodo, torcida, d, PADROES.pixExpiraSegundos)],
+      payments: [pagamentoPg(metodo, torcida, d, PADROES.pixExpiraSegundos, { split: calc.split })],
       metadata: { torcidaId: tid, pedidoId: pedidoRef.id, tipo: "ingresso" },
     });
     const resultado = await aplicarRespostaPedido(tid, pedidoRef.id, resposta, expiraEm);

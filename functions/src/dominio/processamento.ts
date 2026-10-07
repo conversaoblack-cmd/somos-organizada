@@ -8,7 +8,7 @@ import { gerarQr, codigoLegivel, tokenAleatorio } from "../util/cripto";
 import { competencia } from "../util/datas";
 import { avancarCiclo } from "./precos";
 import { pagoIntegral, type PgPedido, type PgFatura } from "../pagarme/cliente";
-import type { Evento, Ingresso, Pedido, Socio, StatusSocio, Torcida } from "./tipos";
+import type { Evento, Ingresso, Liquidacao, Pedido, Socio, StatusSocio, Torcida } from "./tipos";
 
 type Tx = FirebaseFirestore.Transaction;
 
@@ -20,10 +20,12 @@ interface Lancamento {
   valor: number;
   competencia: string;
   descricao: string;
+  /** split = já caiu na conta da subsede pela Pagar.me; torcida = caiu na conta da torcida. */
+  liquidacao?: Liquidacao;
 }
 
 function lancar(tx: Tx, tid: string, id: string, l: Lancamento) {
-  tx.set(refs.lancamento(tid, id), { ...l, criadoEm: FieldValue.serverTimestamp() });
+  tx.set(refs.lancamento(tid, id), { liquidacao: "torcida", ...l, criadoEm: FieldValue.serverTimestamp() });
 }
 
 function somarStats(tx: Tx, tid: string, mes: string, campos: Record<string, number>) {
@@ -110,7 +112,7 @@ export async function confirmarPedidoPago(tid: string, pedidoId: string, pg: PgP
 
       lancar(tx, tid, `${pedidoId}_base`, {
         origem: "ingresso", referencia: pedidoId, sedeId: ev.sedeId, natureza: "base",
-        valor: p.valorBase, competencia: mes, descricao: `Ingressos · ${ev.nome}`,
+        valor: p.valorBase, competencia: mes, descricao: `Ingressos · ${ev.nome}`, liquidacao: p.liquidacao,
       });
       lancar(tx, tid, `${pedidoId}_taxa`, {
         origem: "ingresso", referencia: pedidoId, sedeId: torcida.sedePrincipalId, natureza: "taxa",
@@ -153,7 +155,7 @@ export async function confirmarPedidoPago(tid: string, pedidoId: string, pg: PgP
     const sedeBase = torcida.destinoMensalidade === "principal" ? torcida.sedePrincipalId : s.sedeId;
     lancar(tx, tid, `${pedidoId}_base`, {
       origem: "socio", referencia: pedidoId, sedeId: sedeBase, natureza: "base",
-      valor: p.valorBase, competencia: mes, descricao: `Mensalidade · ${s.planoNome} · ${s.nome}`,
+      valor: p.valorBase, competencia: mes, descricao: `Mensalidade · ${s.planoNome} · ${s.nome}`, liquidacao: p.liquidacao,
     });
     lancar(tx, tid, `${pedidoId}_taxa`, {
       origem: "socio", referencia: pedidoId, sedeId: torcida.sedePrincipalId, natureza: "taxa",
@@ -258,7 +260,7 @@ export async function estornarPedido(tid: string, pedidoId: string) {
     }
     lancar(tx, tid, `${pedidoId}_estorno_base`, {
       origem: p.tipo, referencia: pedidoId, sedeId: sedeBase, natureza: "base",
-      valor: -p.valorBase, competencia: mes, descricao: "Estorno",
+      valor: -p.valorBase, competencia: mes, descricao: "Estorno", liquidacao: p.liquidacao,
     });
     lancar(tx, tid, `${pedidoId}_estorno_taxa`, {
       origem: p.tipo, referencia: pedidoId, sedeId: torcida.sedePrincipalId, natureza: "taxa",
