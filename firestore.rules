@@ -1,0 +1,182 @@
+rules_version = '2';
+
+// Princípio: dinheiro, status de sócio, ingressos e credenciais só são escritos pelo servidor
+// (Cloud Functions). O navegador escreve apenas conteúdo editorial da diretoria
+// (eventos, planos, sedes, aparência) e mensagens de suporte.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() { return request.auth != null; }
+    function anonimo() { return logado() && request.auth.token.firebase.sign_in_provider == 'anonymous'; }
+    function plataforma() { return logado() && request.auth.token.plataforma == true; }
+
+    function membro(tid) {
+      return logado() && exists(/databases/$(database)/documents/torcidas/$(tid)/membros/$(request.auth.uid))
+        && get(/databases/$(database)/documents/torcidas/$(tid)/membros/$(request.auth.uid)).data.ativo == true;
+    }
+    function papel(tid) {
+      return get(/databases/$(database)/documents/torcidas/$(tid)/membros/$(request.auth.uid)).data.papel;
+    }
+    function sedeDoMembro(tid) {
+      return get(/databases/$(database)/documents/torcidas/$(tid)/membros/$(request.auth.uid)).data.get('sedeId', '');
+    }
+    function diretoria(tid) { return membro(tid) && papel(tid) == 'diretoria'; }
+    function gestor(tid) { return membro(tid) && papel(tid) in ['diretoria', 'subsede']; }
+    function daMinhaSede(tid, sedeId) {
+      return diretoria(tid) || (membro(tid) && papel(tid) == 'subsede' && sedeDoMembro(tid) == sedeId);
+    }
+    function apenas(campos) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos); }
+    function corValida(c) { return c is string && c.matches('^#[0-9A-Fa-f]{6}$'); }
+
+    match /slugs/{slug} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /torcidas/{tid} {
+      allow read: if true; // página pública (nome, tema, chave pública Pagar.me, status)
+      // Diretoria edita só aparência, textos, contato e regras de sócio. Status, taxa e pagamentos: servidor.
+      allow update: if diretoria(tid)
+        && apenas(['tema', 'textos', 'contato', 'aprovacaoManualSocio', 'destinoMensalidade'])
+        && (!('tema' in request.resource.data) || (
+          corValida(request.resource.data.tema.corPrimaria) && corValida(request.resource.data.tema.corSecundaria)
+          && corValida(request.resource.data.tema.corFundo) && corValida(request.resource.data.tema.corTexto)))
+        && request.resource.data.destinoMensalidade in ['sede_do_socio', 'principal'];
+      allow create, delete: if false;
+
+      match /privado/{doc} {
+        allow read, write: if false; // credenciais cifradas e contrato: somente servidor
+      }
+
+      match /sedes/{sedeId} {
+        allow read: if true;
+        allow create: if diretoria(tid) && request.resource.data.tipo == 'subsede';
+        allow update: if diretoria(tid) && request.resource.data.tipo == resource.data.tipo;
+        allow delete: if false; // desativar com ativa=false para não quebrar histórico
+      }
+
+      match /planos/{planoId} {
+        allow read: if true;
+        allow create, update: if diretoria(tid)
+          && request.resource.data.valor is int && request.resource.data.valor >= 100
+          && request.resource.data.intervalo in ['mes', 'ano']
+          && request.resource.data.intervaloQtd is int && request.resource.data.intervaloQtd >= 1 && request.resource.data.intervaloQtd <= 12
+          && request.resource.data.ativo is bool;
+        allow delete: if false;
+      }
+
+      match /eventos/{eventoId} {
+        allow read: if resource.data.status in ['publicado', 'encerrado'] || gestor(tid) || plataforma();
+        allow create: if daMinhaSede(tid, request.resource.data.sedeId)
+          && request.resource.data.vendidos == 0 && request.resource.data.reservados == 0
+          && request.resource.data.valorSocio is int && request.resource.data.valorPublico is int
+          && request.resource.data.valorSocio >= 0 && request.resource.data.valorPublico > 0
+          && request.resource.data.status in ['rascunho', 'publicado'];
+        // contadores (vendidos, reservados, entradas) são do servidor
+        allow update: if daMinhaSede(tid, resource.data.sedeId)
+          && daMinhaSede(tid, request.resource.data.sedeId)
+          && request.resource.data.vendidos == resource.data.vendidos
+          && request.resource.data.reservados == resource.data.reservados
+          && request.resource.data.get('entradas', 0) == resource.data.get('entradas', 0)
+          && request.resource.data.valorSocio is int && request.resource.data.valorPublico is int
+          && request.resource.data.status in ['rascunho', 'publicado', 'encerrado', 'cancelado'];
+        allow delete: if daMinhaSede(tid, resource.data.sedeId) && resource.data.vendidos == 0 && resource.data.reservados == 0;
+      }
+
+      match /socios/{uid} {
+        allow read: if (logado() && request.auth.uid == uid)
+          || diretoria(tid) || (gestor(tid) && resource.data.sedeId == sedeDoMembro(tid));
+        allow write: if false;
+      }
+
+      match /cpfs/{cpf} { allow read, write: if false; }
+
+      match /pedidos/{pedidoId} {
+        allow read: if (logado() && resource.data.uid == request.auth.uid)
+          || diretoria(tid) || (gestor(tid) && resource.data.sedeId == sedeDoMembro(tid));
+        allow write: if false;
+      }
+
+      match /ingressos/{ingressoId} {
+        allow read: if (logado() && resource.data.uid == request.auth.uid)
+          || diretoria(tid) || (membro(tid) && resource.data.sedeId == sedeDoMembro(tid));
+        allow write: if false;
+      }
+
+      match /lancamentos/{id} {
+        allow read: if diretoria(tid) || (gestor(tid) && resource.data.sedeId == sedeDoMembro(tid));
+        allow write: if false;
+      }
+
+      // Repasses: diretoria registra o que já transferiu para cada subsede.
+      match /repasses/{id} {
+        allow read: if diretoria(tid) || (gestor(tid) && resource.data.sedeId == sedeDoMembro(tid));
+        allow create: if diretoria(tid) && request.resource.data.valor is int && request.resource.data.valor > 0
+          && request.resource.data.registradoPor == request.auth.uid;
+        allow update: if diretoria(tid) && apenas(['comprovanteUrl', 'observacao', 'status']);
+        allow delete: if false;
+      }
+
+      match /stats/{id} {
+        allow read: if gestor(tid) || plataforma();
+        allow write: if false;
+      }
+
+      match /membros/{uid} {
+        allow read: if (logado() && request.auth.uid == uid) || diretoria(tid) || plataforma();
+        allow write: if false; // via convidarMembro / atualizarMembro
+      }
+
+      match /webhooks/{id} {
+        allow read: if diretoria(tid) || plataforma();
+        allow write: if false;
+      }
+    }
+
+    match /usuarios/{uid}/acessos/{tid} {
+      allow read: if logado() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ── Suporte ──────────────────────────────────────────────
+    match /suporte/{chamadoId} {
+      allow read: if plataforma() || (logado() && resource.data.uid == request.auth.uid);
+      allow create: if logado() && !anonimo()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'aberto'
+        && request.resource.data.assunto is string && request.resource.data.assunto.size() <= 140;
+      allow update: if plataforma()
+        || (logado() && resource.data.uid == request.auth.uid && apenas(['status', 'atualizadoEm', 'naoLidasPlataforma'])
+            && request.resource.data.status in ['aberto', 'resolvido']);
+
+      match /mensagens/{mid} {
+        allow read: if plataforma()
+          || (logado() && get(/databases/$(database)/documents/suporte/$(chamadoId)).data.uid == request.auth.uid);
+        allow create: if request.resource.data.texto is string && request.resource.data.texto.size() <= 4000 && (
+          (plataforma() && request.resource.data.autor == 'plataforma')
+          || (logado() && get(/databases/$(database)/documents/suporte/$(chamadoId)).data.uid == request.auth.uid
+              && request.resource.data.autor == 'usuario'));
+        allow update, delete: if false;
+      }
+    }
+
+    match /faq/{id} {
+      allow read: if true;
+      allow write: if plataforma();
+    }
+
+    // Erros capturados no navegador (alimentam a janela de depuração do suporte)
+    match /logsErro/{id} {
+      allow create: if request.resource.data.mensagem is string && request.resource.data.mensagem.size() <= 2000
+        && request.resource.data.get('stack', '').size() <= 6000
+        && request.resource.data.keys().hasOnly(['torcidaId', 'uid', 'mensagem', 'stack', 'url', 'navegador', 'versao', 'contexto', 'criadoEm']);
+      allow read: if plataforma();
+      allow update, delete: if false;
+    }
+
+    match /plataforma/{doc=**} {
+      allow read: if plataforma();
+      allow write: if false;
+    }
+  }
+}

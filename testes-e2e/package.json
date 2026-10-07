@@ -1,0 +1,12 @@
+{
+  "name": "somos-organizada-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bash rodar.sh"
+  },
+  "devDependencies": {
+    "firebase": "^12.4.0",
+    "firebase-admin": "^13.6.0"
+  }
+}

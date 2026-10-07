@@ -1,11 +1,5 @@
 {
-  "projects": { "default": "brasil-estrutura" },
-  "targets": {
-    "brasil-estrutura": {
-      "hosting": {
-        "organizada": ["organizada"],
-        "calendario-organizada": ["calendario-organizada"]
-      }
-    }
+  "projects": {
+    "default": "somos-organizada"
   }
 }

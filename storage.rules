@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function logado() { return request.auth != null; }
+    function plataforma() { return logado() && request.auth.token.plataforma == true; }
+    function membroAtivo(tid) {
+      return logado() && firestore.exists(/databases/(default)/documents/torcidas/$(tid)/membros/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/torcidas/$(tid)/membros/$(request.auth.uid)).data.ativo == true;
+    }
+    function papel(tid) {
+      return firestore.get(/databases/(default)/documents/torcidas/$(tid)/membros/$(request.auth.uid)).data.papel;
+    }
+    function imagem(maxMb) {
+      return request.resource.size < maxMb * 1024 * 1024 && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    // Logo, banner e imagens de evento: públicos, editados pela diretoria/subsede
+    match /torcidas/{tid}/publico/{arquivo=**} {
+      allow read: if true;
+      allow write: if membroAtivo(tid) && papel(tid) in ['diretoria', 'subsede'] && imagem(5);
+    }
+
+    // Foto 3x4 do sócio: o próprio sócio envia; diretoria e portaria consultam
+    match /torcidas/{tid}/socios/{uid}/{arquivo} {
+      allow read: if (logado() && request.auth.uid == uid) || membroAtivo(tid) || plataforma();
+      allow write: if logado() && request.auth.uid == uid && imagem(3);
+    }
+
+    // Anexos de suporte (prints)
+    match /suporte/{uid}/{arquivo} {
+      allow read: if (logado() && request.auth.uid == uid) || plataforma();
+      allow write: if logado() && request.auth.uid == uid && imagem(5);
+    }
+  }
+}
