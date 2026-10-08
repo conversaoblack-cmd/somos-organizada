@@ -19,12 +19,14 @@ nunca uma pasta local.
 ## Desenho das functions (não volte a espalhar)
 
 Cada function é um serviço do Cloud Run e todas dividem a mesma cota de CPU da região. Com 39 functions
-separadas o deploy estourava a cota e deixava metade fora do ar (403/429). Por isso são só **5**:
+separadas o deploy estourava a cota e deixava metade fora do ar (403/429). Por isso são só **6**:
 
 - `api`: porta única de todas as chamadas do painel e do site. O front chama `httpsCallable("api")` com
   `{ acao, dados }` e `functions/src/api/central.ts` repassa para o handler (mapa `ACOES`).
   **Ação nova = handler `onCall` no módulo + uma linha no `ACOES`.** Não exporte no `index.ts`.
-- `pagarmeWebhook` (HTTP, recebe a Pagar.me) e as agendadas `expirarPedidos`, `rotinaSocios`, `rotinaSaas`.
+- `pagarmeWebhook` (HTTP, recebe a Pagar.me), `previaLink` (HTTP: o Hosting manda `/{torcida}`, `/{torcida}/e/{codigo}`
+  e `/{torcida}/evento/{id}` para ela, que devolve o app.html com título, imagem e preço para a prévia do WhatsApp)
+  e as agendadas `expirarPedidos`, `rotinaSocios`, `rotinaSaas`.
 
 O `implantar.sh` lista as functions publicadas que não existem mais no código e só apaga se o dono digitar
 `sim` (ou `REMOVER_ANTIGAS=1`).
@@ -54,6 +56,8 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   script no navegador; Lighthouse 100 nas 4 notas). O sistema (cadastro, entrar, torcidas, painéis) é o
   `web/app.html`; o Hosting manda para ele tudo que não é `/`. Não importe Firebase nem React no
   `landing/cliente.ts`. Torcida de exemplo no botão do topo: `VITE_SLUG_DEMO=<endereço>` em `web/.env.production.local`.
+- Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável
+  pelas regras). Padrão de UX e próximas melhorias: `docs/UX.md` (leia antes de mexer em tela).
 - Estrutura: `functions/` (back-end), `web/` (front-end), `firestore.rules`, `storage.rules`, `scripts/`
   (implantar e verificar), `testes-e2e/` (emuladores + Pagar.me simulada), `docs/IMPLANTACAO.md` (guia completo).
 - Arquivos locais que **não** vão para o Git e são recriados pelo `implantar.sh`: `functions/.env` e

@@ -10,6 +10,7 @@ const Entrar = lazy(() => import("./modulos/inicio/Entrar"));
 const Cadastro = lazy(() => import("./modulos/inicio/Cadastro"));
 const PainelPlataforma = lazy(() => import("./modulos/plataforma/PainelPlataforma"));
 const PaginaTorcida = lazy(() => import("./modulos/publico/PaginaTorcida"));
+const PaginaEvento = lazy(() => import("./modulos/publico/PaginaEvento"));
 const CheckoutSocio = lazy(() => import("./modulos/publico/CheckoutSocio"));
 const PaginaPedido = lazy(() => import("./modulos/publico/PaginaPedido"));
 const IngressosDoPedido = lazy(() => import("./modulos/publico/IngressosDoPedido"));
@@ -58,7 +59,8 @@ function RotasTorcida() {
   const rotas = (
       <Routes>
         <Route index element={<PaginaTorcida />} />
-        <Route path="evento/:eventoId" element={<PaginaTorcida />} />
+        <Route path="e/:codigo" element={<PaginaEvento />} />
+        <Route path="evento/:eventoId" element={<PaginaEvento />} />
         <Route path="associar" element={<CheckoutSocio />} />
         <Route path="associar/:planoId" element={<CheckoutSocio />} />
         <Route path="pedido/:pedidoId" element={<PaginaPedido />} />

@@ -152,7 +152,7 @@ export default function SuporteFlutuante() {
           onClick={() => setAberto(true)}
           aria-label={naoVistos.length ? `Ajuda — ${naoVistos.length} resposta(s) nova(s) da equipe` : "Ajuda"}
           aria-haspopup="dialog"
-          className="fixed bottom-5 right-5 z-40 size-12 rounded-full bg-primaria text-sobre-primaria shadow-[0_10px_30px_-8px_rgba(0,0,0,.6)] grid place-items-center hover:brightness-110 active:scale-95 transition"
+          className="fixed bottom-[calc(1.25rem+var(--folga-inferior,0px))] right-5 z-40 size-12 rounded-full bg-primaria text-sobre-primaria shadow-[0_10px_30px_-8px_rgba(0,0,0,.6)] grid place-items-center hover:brightness-110 active:scale-95 transition"
         >
           <Icone nome="chat" className="size-6" />
           {naoVistos.length > 0 && (

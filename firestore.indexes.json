@@ -339,6 +339,20 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "eventos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "codigo",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

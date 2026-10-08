@@ -5,6 +5,9 @@ import { db } from "@/lib/firebase";
 import { mensagemDeErro } from "@/lib/api";
 import { centavosDeTexto, cpfMascarado, dataExtensa, dataHora, diaDoMes, hora, mesAbrev, moeda, taxa } from "@/lib/formatos";
 import type { ComId, Evento, Ingresso, StatusEvento } from "@/lib/tipos";
+import { linkEvento, novoCodigoEvento } from "@/lib/eventos";
+import { QrCode } from "@/ui/qr";
+import QRCodeLib from "qrcode";
 import { useColecao, useDocumento } from "@/hooks/dados";
 import {
   AreaTexto,
@@ -405,6 +408,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
       if (!existente) {
         await addDoc(collection(db, `torcidas/${tid}/eventos`), {
           ...dados,
+          codigo: novoCodigoEvento(),
           ...(f.imagemUrl ? { imagemUrl: f.imagemUrl } : {}),
           vendidos: 0,
           reservados: 0,
@@ -657,6 +661,16 @@ export function DetalheEvento() {
   const podeEditarFn = usePodeEditar();
   useTourPagina("evento-detalhe");
   const podeEditar = !!e && podeEditarFn(e);
+  const [qrAberto, setQrAberto] = useState(false);
+
+  // Evento criado antes do link curto: ganha o código na primeira vez que alguém com permissão abre
+  useEffect(() => {
+    if (e && !e.codigo && podeEditar) {
+      updateDoc(doc(db, `torcidas/${tid}/eventos/${eventoId}`), { codigo: novoCodigoEvento() }).catch(() => {
+        /* sem permissão para editar agora: o link antigo (/evento/id) continua valendo */
+      });
+    }
+  }, [e, podeEditar, tid, eventoId]);
 
   const ingressos = useColecao<Ingresso>(
     !e
@@ -684,7 +698,7 @@ export function DetalheEvento() {
       </Vazio>
     );
 
-  const linkPublico = `${location.origin}/${torcida.slug}/evento/${e.id}`;
+  const linkPublico = linkEvento(torcida.slug, e);
   const validos = ingressos.dados.filter((i) => i.status !== "cancelado");
   const receitaBase = validos.reduce((s, i) => s + (i.valorBase ?? 0), 0);
   const qtdSocio = validos.filter((i) => i.tipo === "socio").length;
@@ -817,22 +831,61 @@ export function DetalheEvento() {
       </div>
 
       <Cartao className="p-4 sm:p-5 mb-4" data-tour="evento-link">
-        <p className="text-sm font-semibold mb-2">Link para divulgar</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <p className="text-sm font-semibold">Link direto do evento</p>
+          {e.codigo && (
+            <span className="text-xs text-texto-3">
+              Código <strong className="font-mono text-texto-2 tracking-wider">{e.codigo.toUpperCase()}</strong>
+            </span>
+          )}
+        </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <code className="flex-1 min-w-0 truncate rounded-xl bg-superficie-2 border border-linha px-3 h-9 leading-9 text-sm text-texto-2">{linkPublico}</code>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <BotaoCopiar texto={linkPublico} rotulo="Copiar link" />
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(`${e.nome} — ${dataExtensa(e.data)}, ${hora(e.data)}. Garanta seu ingresso: ${linkPublico}`)}`}
+              href={`https://wa.me/?text=${encodeURIComponent(`*${e.nome}*\n${dataExtensa(e.data)}, ${hora(e.data)}${e.local ? ` · ${e.local}` : ""}\nGaranta seu ingresso: ${linkPublico}`)}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
             >
               <Icone nome="whatsapp" className="size-4" /> WhatsApp
             </a>
+            <button
+              type="button"
+              onClick={() => setQrAberto(true)}
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
+            >
+              <Icone nome="qr" className="size-4" /> QR Code
+            </button>
           </div>
         </div>
+        <p className="text-xs text-texto-3 mt-2">Quem abre o link cai direto na página deste evento, pronta para comprar.</p>
       </Cartao>
+      <Modal
+        aberto={qrAberto}
+        fechar={() => setQrAberto(false)}
+        titulo="QR Code do evento"
+        descricao="Para cartaz, faixa ou tela: quem apontar a câmera cai direto na compra."
+        largura="max-w-sm"
+      >
+        <QrCode valor={linkPublico} className="w-full" />
+        <p className="text-center text-sm text-texto-2 mt-3 break-all">{linkPublico.replace(/^https?:\/\//, "")}</p>
+        <Botao
+          largo
+          className="mt-4"
+          icone="download"
+          onClick={async () => {
+            const url = await QRCodeLib.toDataURL(linkPublico, { width: 1200, margin: 2, errorCorrectionLevel: "M" });
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `qr-${torcida.slug}-${e.codigo ?? e.id}.png`;
+            a.click();
+          }}
+        >
+          Baixar imagem
+        </Botao>
+      </Modal>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4" data-tour="evento-numeros">
         <Indicador rotulo="Vendidos" icone="ingresso" tom="primaria" valor={e.vendidos} detalhe={e.capacidade ? `de ${e.capacidade} lugares` : "Sem limite de lugares"} />

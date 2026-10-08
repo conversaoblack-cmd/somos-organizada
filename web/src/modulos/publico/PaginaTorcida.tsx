@@ -1,29 +1,25 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { socioEmDia, useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import type { ComId, Plano, Sede } from "@/lib/tipos";
-import { dataExtensa, hora, moeda, periodicidadeCurta, taxa } from "@/lib/formatos";
-import { Abas, Aviso, BotaoLink, cx, Esqueleto, Gaveta, Icone, Selo, Vazio } from "@/ui";
+import { dataExtensa, moeda, periodicidadeCurta, taxa } from "@/lib/formatos";
+import { Abas, Aviso, BotaoLink, cx, Esqueleto, Icone, Vazio } from "@/ui";
 import { CabecalhoTorcida, RodapeTorcida, useEventosPublicos, usePlanosAtivos, useSedes } from "./comum";
 import { Calendario, chaveDia } from "./Calendario";
 import { CartaoEvento, disponibilidade } from "./CartaoEvento";
-import { CheckoutIngresso } from "./CheckoutIngresso";
 import { moduloAtivo, torcidaBloqueada } from "./Portao";
 
 type Aba = "eventos" | "socios";
 
 export default function PaginaTorcida() {
   const { tid, torcida } = useTorcida();
-  const { eventoId } = useParams();
   const [params, setParams] = useSearchParams();
-  const navegar = useNavigate();
   const temEventos = moduloAtivo(torcida, "eventos");
   const temSocios = moduloAtivo(torcida, "socios");
   const aba: Aba = !temEventos ? "socios" : !temSocios ? "eventos" : params.get("aba") === "socios" ? "socios" : "eventos";
   const eventos = useEventosPublicos(tid);
   const sedes = useSedes(tid);
   const sedePorId = useMemo(() => new Map(sedes.dados.map((s) => [s.id, s])), [sedes.dados]);
-  const eventoAberto = eventoId ? eventos.dados.find((e) => e.id === eventoId) : undefined;
 
   const trocarAba = (a: Aba) => {
     setParams(a === "eventos" ? {} : { aba: a }, { replace: true });
@@ -91,22 +87,6 @@ export default function PaginaTorcida() {
 
       <RodapeTorcida />
 
-      <Gaveta
-        aberto={!!eventoId && temEventos}
-        fechar={() => navegar(`/${torcida.slug}`)}
-        titulo={eventoAberto?.nome ?? "Evento"}
-        largura="sm:max-w-2xl"
-      >
-        {eventos.carregando ? (
-          <Esqueleto className="h-64" />
-        ) : !eventoAberto ? (
-          <Vazio icone="calendario" titulo="Evento indisponível">
-            Este evento não está mais à venda ou o link está incorreto.
-          </Vazio>
-        ) : (
-          <DetalheEvento evento={eventoAberto} sede={sedePorId.get(eventoAberto.sedeId)} />
-        )}
-      </Gaveta>
     </div>
   );
 }
@@ -228,64 +208,6 @@ function AbaEventos({
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function DetalheEvento({ evento, sede }: { evento: ReturnType<typeof useEventosPublicos>["dados"][number]; sede?: Sede }) {
-  const { torcida } = useTorcida();
-  const pct = torcida.taxaServicoPct;
-  return (
-    <div className="space-y-6">
-      <div className="relative -mx-6 -mt-6 h-48 sm:h-56 overflow-hidden bg-superficie-2">
-        {evento.imagemUrl ? (
-          <img src={evento.imagemUrl} alt="" className="absolute inset-0 size-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 brilho-primaria">
-            <div className="absolute inset-0 grade-fundo" />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-fundo to-transparent" />
-        <div className="absolute bottom-4 left-6 right-6">
-          {sede && <Selo tom="primaria">{sede.nome}</Selo>}
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-3">
-        <InfoLinha icone="calendario" titulo={dataExtensa(evento.data)} sub={hora(evento.data)} />
-        <InfoLinha icone="local" titulo={evento.local || "Local a confirmar"} sub={sede?.bairro} />
-      </div>
-      {evento.descricao && <p className="text-texto-2 leading-relaxed whitespace-pre-line">{evento.descricao}</p>}
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-primaria/40 bg-primaria/10 p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-primaria">Sócio</p>
-          <p className="text-2xl font-bold numeros mt-1">{evento.valorSocio ? moeda(evento.valorSocio) : "Grátis"}</p>
-          {evento.valorSocio > 0 && <p className="text-xs text-texto-3">+ {moeda(taxa(evento.valorSocio, pct))} de taxa</p>}
-        </div>
-        <div className="rounded-2xl border border-linha bg-superficie-2 p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-texto-3">Público</p>
-          <p className="text-2xl font-bold numeros mt-1">{moeda(evento.valorPublico)}</p>
-          <p className="text-xs text-texto-3">+ {moeda(taxa(evento.valorPublico, pct))} de taxa</p>
-        </div>
-      </div>
-
-      <div className="pt-2 border-t border-linha">
-        <h3 className="text-lg font-bold mt-4 mb-4">Comprar ingresso</h3>
-        <CheckoutIngresso evento={evento} sede={sede} />
-      </div>
-    </div>
-  );
-}
-
-function InfoLinha({ icone, titulo, sub }: { icone: "calendario" | "local"; titulo: string; sub?: string }) {
-  return (
-    <div className="flex gap-3 rounded-2xl bg-superficie-2 p-3.5">
-      <Icone nome={icone} className="size-5 text-primaria shrink-0 mt-0.5" />
-      <div className="min-w-0">
-        <p className="font-semibold text-sm leading-snug line-clamp-2">{titulo.charAt(0).toUpperCase() + titulo.slice(1)}</p>
-        {sub && <p className="text-xs text-texto-3 truncate mt-0.5">{sub}</p>}
       </div>
     </div>
   );

@@ -134,6 +134,18 @@ test("3. diretoria personaliza a página, cria subsede, plano e evento (regras d
     valorSocio: 0, valorPublico: 100, vendidos: 0, reservados: 0, status: "publicado",
   });
   await negado(updateDoc(evP, { vendidos: 99 }));
+
+  // link direto (/torcida/e/codigo): código válido na criação, ganho depois por evento antigo e nunca trocado
+  const base = { nome: "Caravana", sedeId: ctx.sedePrincipal, data: Timestamp.fromMillis(Date.now() + 5 * 86400_000), valorSocio: 1000, valorPublico: 2000, vendidos: 0, reservados: 0, status: "publicado" };
+  await negado(addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), { ...base, codigo: "ABC123" }));
+  await negado(addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), { ...base, codigo: "abc10o" }));
+  const evC = await addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), { ...base, codigo: "k7p2qx" });
+  await negado(updateDoc(evC, { codigo: "m3n4pq" }));
+  await updateDoc(evP, { codigo: "r5s6tu" });
+  // o torcedor (sem login) acha o evento publicado pelo código
+  const anon = navegador("anonimo-codigo");
+  const achado = await getDocs(query(collection(anon.db, `torcidas/${ctx.tid}/eventos`), where("codigo", "==", "k7p2qx"), where("status", "in", ["publicado", "encerrado"])));
+  assert.equal(achado.docs[0]?.id, evC.id);
 });
 
 test("3b. subsede: convite, conta de recebimento com prova de vida, evento aprovado pela diretoria", async () => {

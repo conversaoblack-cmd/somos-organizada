@@ -98,6 +98,8 @@ export type StatusEvento = "rascunho" | "em_aprovacao" | "publicado" | "encerrad
 
 export interface Evento {
   nome: string;
+  /** Código curto do link direto (/{torcida}/e/{codigo}); eventos antigos podem não ter. */
+  codigo?: string;
   descricao?: string;
   sedeId: string;
   data: Timestamp;

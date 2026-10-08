@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import type { ComId, Evento, Sede } from "@/lib/tipos";
 import { diaDoMes, hora, mesAbrev, moedaCurta, dataExtensa } from "@/lib/formatos";
 import { cx, Icone, Selo } from "@/ui";
+import { caminhoEvento } from "@/lib/eventos";
 
 export function disponibilidade(e: Evento): { restantes: number | null; esgotado: boolean; poucos: boolean } {
   if (!e.capacidade) return { restantes: null, esgotado: false, poucos: false };
@@ -14,7 +15,7 @@ export function CartaoEvento({ evento, sede, slug, destaque }: { evento: ComId<E
   const vendaEncerrada = !!evento.vendaAte && evento.vendaAte.toMillis() < Date.now();
   return (
     <Link
-      to={`/${slug}/evento/${evento.id}`}
+      to={caminhoEvento(slug, evento)}
       className={cx(
         "group relative flex overflow-hidden rounded-cartao border border-linha bg-superficie transition-all",
         "hover:border-primaria/60 hover:-translate-y-0.5 hover:shadow-[0_20px_50px_-25px_var(--color-primaria)]",

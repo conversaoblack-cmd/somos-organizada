@@ -108,11 +108,18 @@ service cloud.firestore {
         function valoresValidos(d) {
           return d.valorSocio is int && d.valorPublico is int && d.valorSocio >= 0 && d.valorPublico > 0;
         }
+        // Código do link direto (/torcida/e/codigo): 6 caracteres sem ambíguos; uma vez dado, não muda.
+        function codigoValido(d) {
+          return !('codigo' in d) || (d.codigo is string && d.codigo.matches('^[a-hjkmnp-z2-9]{6}$'));
+        }
+        function codigoMantido() {
+          return request.resource.data.get('codigo', '') == resource.data.get('codigo', '') || !('codigo' in resource.data);
+        }
 
         allow read: if resource.data.status in ['publicado', 'encerrado'] || gestor(tid) || plataforma();
         allow create: if daMinhaSede(tid, request.resource.data.sedeId)
           && request.resource.data.vendidos == 0 && request.resource.data.reservados == 0
-          && valoresValidos(request.resource.data)
+          && valoresValidos(request.resource.data) && codigoValido(request.resource.data)
           && statusPermitido(request.resource.data, request.resource.data.sedeId);
         // contadores (vendidos, reservados, entradas) são do servidor
         allow update: if daMinhaSede(tid, resource.data.sedeId)
@@ -120,7 +127,7 @@ service cloud.firestore {
           && request.resource.data.vendidos == resource.data.vendidos
           && request.resource.data.reservados == resource.data.reservados
           && request.resource.data.get('entradas', 0) == resource.data.get('entradas', 0)
-          && valoresValidos(request.resource.data)
+          && valoresValidos(request.resource.data) && codigoValido(request.resource.data) && codigoMantido()
           && statusPermitido(request.resource.data, request.resource.data.sedeId)
           && (papel(tid) == 'diretoria' || resource.data.status in ['rascunho', 'em_aprovacao']);
         allow delete: if daMinhaSede(tid, resource.data.sedeId) && resource.data.vendidos == 0 && resource.data.reservados == 0

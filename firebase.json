@@ -39,6 +39,43 @@
         }
       },
       {
+        "source": "/entrar",
+        "destination": "/app.html"
+      },
+      {
+        "source": "/cadastro",
+        "destination": "/app.html"
+      },
+      {
+        "source": "/plataforma",
+        "destination": "/app.html"
+      },
+      {
+        "source": "/plataforma/**",
+        "destination": "/app.html"
+      },
+      {
+        "source": "/*",
+        "function": {
+          "functionId": "previaLink",
+          "region": "southamerica-east1"
+        }
+      },
+      {
+        "source": "/*/e/*",
+        "function": {
+          "functionId": "previaLink",
+          "region": "southamerica-east1"
+        }
+      },
+      {
+        "source": "/*/evento/*",
+        "function": {
+          "functionId": "previaLink",
+          "region": "southamerica-east1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/app.html"
       }
