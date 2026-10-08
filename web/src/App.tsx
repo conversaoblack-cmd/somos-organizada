@@ -1,4 +1,4 @@
-import { lazy, Suspense, Component, useEffect, type ReactNode } from "react";
+import { lazy, Suspense, Component, Fragment, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useParams, useLocation } from "react-router";
 import { noHostPlataforma, plataformaSeparada, urlPlataforma } from "./lib/hosts";
 import { ProvedorTorcida, useTorcidaPorSlug } from "./hooks/torcida";
@@ -8,6 +8,7 @@ import { PortaoTorcida } from "./modulos/publico/Portao";
 
 const Entrar = lazy(() => import("./modulos/inicio/Entrar"));
 const Cadastro = lazy(() => import("./modulos/inicio/Cadastro"));
+const Verificar = lazy(() => import("./modulos/inicio/Verificar"));
 const PainelPlataforma = lazy(() => import("./modulos/plataforma/PainelPlataforma"));
 const PaginaTorcida = lazy(() => import("./modulos/publico/PaginaTorcida"));
 const PaginaEvento = lazy(() => import("./modulos/publico/PaginaEvento"));
@@ -19,8 +20,8 @@ const PainelDiretoria = lazy(() => import("./modulos/admin/PainelDiretoria"));
 const Portaria = lazy(() => import("./modulos/portaria/Portaria"));
 const SuporteFlutuante = lazy(() => import("./componentes/SuporteFlutuante"));
 
-class LimiteDeErro extends Component<{ children: ReactNode }, { erro: Error | null }> {
-  state = { erro: null as Error | null };
+class LimiteDeErro extends Component<{ children: ReactNode }, { erro: Error | null; tentativa: number }> {
+  state = { erro: null as Error | null, tentativa: 0 };
   static getDerivedStateFromError(erro: Error) {
     return { erro };
   }
@@ -31,13 +32,30 @@ class LimiteDeErro extends Component<{ children: ReactNode }, { erro: Error | nu
     if (this.state.erro) {
       return (
         <div className="min-h-dvh grid place-items-center px-6">
-          <Vazio icone="alerta" titulo="Algo deu errado nesta tela" acao={<button className="underline" onClick={() => location.reload()}>Recarregar</button>}>
-            O erro já foi registrado para a nossa equipe. Se continuar, use o botão de ajuda.
+          <Vazio
+            icone="alerta"
+            titulo="Algo deu errado nesta tela"
+            acao={
+              <div className="flex flex-col items-center gap-2">
+                {/* refaz a tela sem recarregar: o passo da compra/cadastro fica guardado e volta igual */}
+                <button
+                  className="h-11 px-5 rounded-2xl bg-primaria text-sobre-primaria font-semibold"
+                  onClick={() => this.setState((s) => ({ erro: null, tentativa: s.tentativa + 1 }))}
+                >
+                  Tentar de novo
+                </button>
+                <button className="min-h-11 px-3 text-sm text-texto-2 underline" onClick={() => location.reload()}>
+                  Recarregar a página
+                </button>
+              </div>
+            }
+          >
+            Você não perde o que já preencheu. O erro foi registrado para a nossa equipe; se continuar, use o botão de ajuda.
           </Vazio>
         </div>
       );
     }
-    return this.props.children;
+    return <Fragment key={this.state.tentativa}>{this.props.children}</Fragment>;
   }
 }
 
@@ -105,6 +123,7 @@ function Rotas() {
       <Route path="/" element={<IrPara url="/" />} />
       <Route path="/entrar" element={<Entrar />} />
       <Route path="/cadastro" element={<Cadastro />} />
+      <Route path="/verificar" element={<Verificar />} />
       <Route
         path="/plataforma/*"
         element={plataformaSeparada ? <IrPara url={urlPlataforma(pathname.replace(/^\/plataforma/, "") + search)} /> : <PainelPlataforma />}

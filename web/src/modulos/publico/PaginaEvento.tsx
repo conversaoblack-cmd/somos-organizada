@@ -13,7 +13,7 @@ import type { ComId, Evento, Sede } from "@/lib/tipos";
 import { dataExtensa, hora, moeda, taxa } from "@/lib/formatos";
 import { linkEvento } from "@/lib/eventos";
 import { Aviso, BotaoLink, cx, Esqueleto, Icone, Selo, Vazio } from "@/ui";
-import { CabecalhoTorcida, RodapeTorcida, useSedes } from "./comum";
+import { CabecalhoTorcida, RodapeTorcida, SemConexao, useSedes } from "./comum";
 import { disponibilidade } from "./CartaoEvento";
 import { CheckoutIngresso } from "./CheckoutIngresso";
 import { moduloAtivo } from "./Portao";
@@ -25,16 +25,19 @@ function useEventoPublico(tid: string, codigo?: string, eventoId?: string) {
     `evento-codigo-${tid}-${codigo ?? "-"}`,
   );
   const porId = useDocumento<Evento>(!codigo && eventoId ? `torcidas/${tid}/eventos/${eventoId}` : null);
-  if (codigo) return { carregando: porCodigo.carregando, evento: (porCodigo.dados[0] as ComId<Evento> | undefined) ?? null };
+  // Internet ruim não é "evento não encontrado" (o link do WhatsApp cai aqui): a tela oferece tentar de novo
+  const caiu = (x: { semConexao?: boolean; erro: Error | null }) =>
+    !!x.semConexao || (!!x.erro && ((x.erro as Error & { code?: string }).code === "unavailable" || !navigator.onLine));
+  if (codigo) return { carregando: porCodigo.carregando, semConexao: caiu(porCodigo), evento: (porCodigo.dados[0] as ComId<Evento> | undefined) ?? null };
   const e = porId.dados;
   // Rascunho ou evento de outra pessoa: as regras negam a leitura e a página trata como inexistente
-  return { carregando: porId.carregando, evento: e && (e.status === "publicado" || e.status === "encerrado") ? e : null };
+  return { carregando: porId.carregando, semConexao: caiu(porId), evento: e && (e.status === "publicado" || e.status === "encerrado") ? e : null };
 }
 
 export default function PaginaEvento() {
   const { tid, torcida } = useTorcida();
   const { codigo, eventoId } = useParams();
-  const { carregando, evento } = useEventoPublico(tid, codigo, eventoId);
+  const { carregando, semConexao, evento } = useEventoPublico(tid, codigo, eventoId);
   const sedes = useSedes(tid);
   const sede = useMemo(() => (evento ? sedes.dados.find((s) => s.id === evento.sedeId) : undefined), [evento, sedes.dados]);
 
@@ -52,6 +55,12 @@ export default function PaginaEvento() {
             <Esqueleto className="h-10 w-2/3" />
             <Esqueleto className="h-40" />
           </div>
+        ) : !evento && semConexao ? (
+          <div className="mx-auto max-w-xl px-4 py-20">
+            <SemConexao tentarDeNovo={() => location.reload()}>
+              Não conseguimos abrir o evento agora. Confira a internet e toque em “Tentar de novo”.
+            </SemConexao>
+          </div>
         ) : !evento || !moduloAtivo(torcida, "eventos") ? (
           <div className="mx-auto max-w-xl px-4 py-20">
             <Vazio
@@ -59,7 +68,7 @@ export default function PaginaEvento() {
               titulo="Evento não encontrado"
               acao={
                 <BotaoLink to={`/${torcida.slug}`} variante="contorno" icone="setaEsquerda">
-                  Ver os eventos da {torcida.nome}
+                  Ver todos os eventos
                 </BotaoLink>
               }
             >
@@ -81,7 +90,8 @@ function ConteudoEvento({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }
   const d = disponibilidade(evento);
   const jaFoi = evento.status === "encerrado" || evento.data.toMillis() < Date.now() - 6 * 3600_000;
   const vendaEncerrada = !!evento.vendaAte && evento.vendaAte.toMillis() < Date.now();
-  const menorPreco = evento.valorSocio > 0 ? Math.min(evento.valorSocio, evento.valorPublico) : evento.valorPublico;
+  // Barra fixa: o preço que quem chega pelo link vai pagar (público); o de sócio aparece à parte, como sócio
+  const socioPagaMenos = moduloAtivo(torcida, "socios") && evento.valorSocio < evento.valorPublico;
   const link = linkEvento(torcida.slug, evento);
 
   // Barra fixa de compra no celular, escondida quando o formulário já está visível
@@ -124,7 +134,7 @@ function ConteudoEvento({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }
       <section className="relative overflow-hidden border-b border-linha">
         {evento.imagemUrl ? (
           <>
-            <img src={evento.imagemUrl} alt="" className="absolute inset-0 size-full object-cover" />
+            <img src={evento.imagemUrl} alt="" fetchPriority="high" decoding="async" width={1280} height={480} className="absolute inset-0 size-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-fundo via-fundo/80 to-fundo/30" />
           </>
         ) : (
@@ -134,26 +144,24 @@ function ConteudoEvento({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }
           </>
         )}
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-6 pb-8 sm:pt-8 sm:pb-12">
-          <Link to={`/${torcida.slug}`} className="inline-flex items-center gap-1.5 text-sm text-texto-2 hover:text-texto">
+          <Link to={`/${torcida.slug}`} className="inline-flex items-center gap-1.5 min-h-11 -my-2 text-sm text-texto-2 hover:text-texto">
             <Icone nome="setaEsquerda" className="size-4" /> Todos os eventos
           </Link>
           <div className="mt-16 sm:mt-24 flex flex-wrap gap-2">
             {sede && <Selo tom="primaria">{sede.nome}</Selo>}
             {jaFoi ? <Selo>Já aconteceu</Selo> : d.esgotado ? <Selo tom="perigo">Esgotado</Selo> : d.poucos ? <Selo tom="alerta">Últimos {d.restantes} lugares</Selo> : null}
           </div>
-          <h1 className="font-display uppercase text-[34px] leading-[0.98] sm:text-6xl tracking-tight mt-3 max-w-4xl text-balance">{evento.nome}</h1>
+          <h1 className="font-display uppercase text-[34px] leading-[1.08] sm:text-6xl tracking-tight mt-3 max-w-4xl text-balance break-words">{evento.nome}</h1>
           <p className="mt-3 text-texto-2 text-lg">
             {dataExtensa(evento.data).replace(/^./, (c) => c.toUpperCase())} · {hora(evento.data)}
           </p>
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl w-full px-4 sm:px-6 py-8 sm:py-10 grid gap-8 lg:grid-cols-[1fr_440px] items-start">
+      <div className="mx-auto max-w-6xl w-full px-4 sm:px-6 py-8 sm:py-10 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_440px] items-start">
         <div className="space-y-6 min-w-0">
-          <div className="grid sm:grid-cols-2 gap-3">
-            <InfoLinha icone="calendario" titulo={dataExtensa(evento.data)} sub={`Às ${hora(evento.data)}`} />
-            <InfoLinha icone="local" titulo={evento.local || "Local a confirmar"} sub={sede?.bairro} />
-          </div>
+          {/* A data já está no topo (título do evento); aqui só o local */}
+          <InfoLinha icone="local" titulo={evento.local || "Local a confirmar"} sub={sede?.bairro} />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-primaria/40 bg-primaria/10 p-4">
@@ -192,7 +200,7 @@ function ConteudoEvento({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }
           </button>
         </div>
 
-        <section ref={compra} id="comprar" className="scroll-mt-24 lg:sticky lg:top-24 rounded-cartao border border-linha bg-superficie p-5 sm:p-6" aria-labelledby="titulo-comprar">
+        <section ref={compra} id="comprar" className="min-w-0 scroll-mt-24 lg:sticky lg:top-24 rounded-cartao border border-linha bg-superficie p-5 sm:p-6" aria-labelledby="titulo-comprar">
           <h2 id="titulo-comprar" className="text-lg font-bold mb-4">
             {jaFoi ? "Evento encerrado" : "Comprar ingresso"}
           </h2>
@@ -219,10 +227,15 @@ function ConteudoEvento({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }
           aria-hidden={compraVisivel}
         >
           <div className="min-w-0">
-            <p className="text-xs text-texto-3">A partir de</p>
-            <p className="font-bold numeros">{menorPreco ? moeda(menorPreco) : "Grátis"}</p>
+            <p className="font-bold numeros leading-tight">
+              {evento.valorPublico ? moeda(evento.valorPublico) : "Grátis"}
+              {evento.valorPublico > 0 && <span className="text-xs font-normal text-texto-3"> + taxa</span>}
+            </p>
+            {socioPagaMenos && (
+              <p className="text-xs text-texto-3 truncate">{evento.valorSocio ? `Sócio paga ${moeda(evento.valorSocio)}` : "Sócio não paga"}</p>
+            )}
           </div>
-          <a href="#comprar" tabIndex={compraVisivel ? -1 : 0} className="ml-auto inline-flex items-center justify-center gap-2 h-12 px-6 rounded-2xl bg-primaria text-sobre-primaria font-bold">
+          <a href="#comprar" tabIndex={compraVisivel ? -1 : 0} className="ml-auto shrink-0 inline-flex items-center justify-center gap-2 h-12 px-5 rounded-2xl bg-primaria text-sobre-primaria font-bold">
             Comprar ingresso
           </a>
         </div>

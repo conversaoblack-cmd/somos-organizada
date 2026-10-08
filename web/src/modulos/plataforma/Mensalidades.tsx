@@ -173,7 +173,7 @@ export default function Mensalidades() {
                   aria-pressed={filtro === f}
                   onClick={() => setFiltro(f)}
                   className={cx(
-                    "h-9 px-3.5 rounded-xl text-sm font-semibold border transition-colors",
+                    "h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold border transition-colors",
                     filtro === f ? "bg-primaria text-sobre-primaria border-primaria" : "border-linha text-texto-2 hover:text-texto hover:bg-superficie-2",
                   )}
                 >

@@ -47,7 +47,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
 
   return (
     <>
-      <Link to={rp("/torcidas")} className="inline-flex items-center gap-1.5 text-sm text-texto-2 hover:text-texto mb-4">
+      <Link to={rp("/torcidas")} className="inline-flex items-center gap-1.5 min-h-11 sm:min-h-0 text-sm text-texto-2 hover:text-texto mb-4">
         <Icone nome="setaEsquerda" className="size-4" /> Torcidas
       </Link>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
@@ -74,7 +74,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a href={pagina} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2">
+          <a href={pagina} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2">
             <Icone nome="externo" className="size-4" /> Abrir página pública
           </a>
           <a
@@ -82,7 +82,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
             target="_blank"
             rel="noreferrer"
             title="Só para visualizar: a equipe da plataforma não tem login na diretoria."
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2"
+            className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2"
           >
             <Icone nome="externo" className="size-4" /> Abrir painel da diretoria
           </a>

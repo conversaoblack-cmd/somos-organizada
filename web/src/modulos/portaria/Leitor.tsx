@@ -20,10 +20,10 @@ const TEXTO_FALHA: Record<Falha, { titulo: string; texto: string }> = {
     titulo: "A câmera está bloqueada",
     texto: "",
   },
-  sem_camera: { titulo: "Nenhuma câmera encontrada", texto: "Este aparelho não tem câmera disponível. Use a digitação do CPF ou do QR abaixo." },
+  sem_camera: { titulo: "Nenhuma câmera encontrada", texto: "Este aparelho não tem câmera disponível. Use a aba “Digitar CPF / QR”, acima." },
   inseguro: { titulo: "Câmera indisponível neste endereço", texto: "O navegador só libera a câmera em páginas seguras (https). Abra o link oficial da portaria." },
   ocupada: { titulo: "A câmera está em uso", texto: "Feche outros apps que usam a câmera (WhatsApp, câmera, chamadas) e toque em Tentar de novo." },
-  outra: { titulo: "Não foi possível abrir a câmera", texto: "Toque em Tentar de novo. Se continuar, use a digitação." },
+  outra: { titulo: "Não foi possível abrir a câmera", texto: "Toque em Tentar de novo. Se continuar, use a aba “Digitar CPF / QR”, acima." },
 };
 
 /** Instruções para liberar a câmera, conforme o aparelho. */
@@ -52,7 +52,7 @@ function ComoLiberar() {
   );
 }
 
-export function Leitor({ pausado, aoLer, aoFalhar }: { pausado: boolean; aoLer: (texto: string) => void; aoFalhar?: () => void }) {
+export function Leitor({ pausado, aoLer, aoFalhar }: { pausado: boolean; aoLer: (texto: string) => void; aoFalhar?: (motivo: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
   const aoLerRef = useRef(aoLer);
@@ -104,7 +104,7 @@ export function Leitor({ pausado, aoLer, aoFalhar }: { pausado: boolean; aoLer: 
         if (tipo === "outra") registrarErro(e, "portaria: câmera");
         setFalha(tipo);
         setEstado("falha");
-        aoFalharRef.current?.();
+        aoFalharRef.current?.(TEXTO_FALHA[tipo].titulo);
       });
     return () => {
       vivo = false;
@@ -180,7 +180,7 @@ export function Leitor({ pausado, aoLer, aoFalhar }: { pausado: boolean; aoLer: 
           <p className="mt-4 text-lg font-bold">{info.titulo}</p>
           {falha === "permissao" ? (
             <div className="mt-1 max-w-xs">
-              <p className="text-sm text-texto-2">Você pode continuar pela digitação logo abaixo. Para usar a câmera:</p>
+              <p className="text-sm text-texto-2">Você pode continuar pela aba “Digitar CPF / QR”, acima. Para usar a câmera:</p>
               <ComoLiberar />
             </div>
           ) : (

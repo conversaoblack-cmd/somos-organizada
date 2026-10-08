@@ -654,6 +654,15 @@ test("17. conta do torcedor: ingresso no CPF do sócio aparece no painel dele; l
   // 5 tentativas por CPF a cada 15 min, contando também os acertos (o contador não zera no acerto)
   for (let i = 0; i < 4; i++) await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: "errada-123" }), /incorretos/);
   await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: SENHA }), /Muitas tentativas/);
+
+  // "Esqueci minha senha" com CPF: manda o link ao e-mail da conta e mostra só o e-mail mascarado
+  // mesma resposta com ou sem conta (não revela quem é sócio); o link vai para o e-mail cadastrado
+  assert.deepEqual(await visitante.chamar("redefinirSenhaPorCpf", { tid, cpf: "862.883.667-57" }), { enviado: true });
+  // CPF sem conta: mesma resposta, sem e-mail (não revela quem tem cadastro)
+  assert.deepEqual(await visitante.chamar("redefinirSenhaPorCpf", { tid, cpf: "12345678909" }), { enviado: true });
+  await assert.rejects(visitante.chamar("redefinirSenhaPorCpf", { tid, cpf: "123" }), /CPF inválido/);
+  // mesmo limite do login por CPF
+  await assert.rejects(visitante.chamar("redefinirSenhaPorCpf", { tid, cpf: "11144477735" }), /Muitas tentativas/);
 });
 
 test("18. segurança: convite não toma conta existente; estorno só com confirmação da Pagar.me; sócio cancelado não volta sozinho", async () => {

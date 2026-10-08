@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { esquecer, useLembrado } from "@/hooks/lembrado";
 import { useNavigate } from "react-router";
 import { createUserWithEmailAndPassword, EmailAuthProvider, linkWithCredential, signInAnonymously, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { api, mensagemDeErro } from "@/lib/api";
+import { api, ehErroDeConexao, mensagemDeErro } from "@/lib/api";
 import type { ComId, Evento, Sede } from "@/lib/tipos";
 import { cpfValido, dataExtensa, emailValido, hora, moeda, soDigitos, telefoneValido, mascaraCpf, mascaraTelefone } from "@/lib/formatos";
 import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import { useUsuario } from "@/hooks/dados";
 import { Login } from "@/componentes/Login";
 import { Aviso, Botao, Campo, Carregando, Contador, Etapas, Icone, Modal, OpcoesCartao, Selo, cx } from "@/ui";
-import { LinhaValor } from "./comum";
+import { LinhaValor, rolarParaErro, useTrocaDeEtapa } from "./comum";
 import { disponibilidade } from "./CartaoEvento";
 import { cartaoVazio, FormCartao, prepararCartao, validarCartao, type EstadoCartao } from "./FormCartao";
 
@@ -28,12 +29,29 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
   const usuario = useUsuario();
   const { ficha } = useMinhaFicha(tid);
   const [cot, setCot] = useState<Cotacao | null>(null);
-  const [erroCot, setErroCot] = useState<string | null>(null);
-  const [etapa, setEtapa] = useState(0);
-  const [qtd, setQtd] = useState(1);
-  const [titulares, setTitulares] = useState<Titular[]>([{ nome: "", cpf: "" }]);
-  const [comprador, setComprador] = useState({ nome: "", email: "", cpf: "", telefone: "" });
-  const [metodo, setMetodo] = useState<"pix" | "cartao">(torcida.pagamentos.pix ? "pix" : "cartao");
+  const [erroCot, setErroCot] = useState<{ mensagem: string; conexao: boolean } | null>(null);
+  const [tentativaCot, setTentativaCot] = useState(0);
+  // Passo e dados da compra sobrevivem a recarregar a página (sem senha nem cartão)
+  const chaveCompra = `compra:${tid}:${evento.id}`;
+  const [lembrado, setLembrado] = useLembrado(chaveCompra, {
+    etapa: 0,
+    qtd: 1,
+    titulares: [{ nome: "", cpf: "" }] as Titular[],
+    comprador: { nome: "", email: "", cpf: "", telefone: "" },
+    metodo: (torcida.pagamentos.pix ? "pix" : "cartao") as "pix" | "cartao",
+  });
+  const { qtd, titulares, comprador, metodo } = lembrado;
+  // o passo de pagamento exige conta: ao recarregar, só volta para ele depois de confirmar o login
+  const [etapa, setEtapaEstado] = useState(Math.min(lembrado.etapa, 1));
+  const setEtapa = (n: number) => {
+    setEtapaEstado(n);
+    setLembrado((l) => ({ ...l, etapa: n }));
+  };
+  const setQtd = (v: number | ((n: number) => number)) => setLembrado((l) => ({ ...l, qtd: typeof v === "function" ? v(l.qtd) : v }));
+  const setTitulares = (v: Titular[] | ((t: Titular[]) => Titular[])) => setLembrado((l) => ({ ...l, titulares: typeof v === "function" ? v(l.titulares) : v }));
+  const setComprador = (v: typeof comprador | ((c: typeof comprador) => typeof comprador)) =>
+    setLembrado((l) => ({ ...l, comprador: typeof v === "function" ? v(l.comprador) : v }));
+  const setMetodo = (m: "pix" | "cartao") => setLembrado((l) => ({ ...l, metodo: m }));
   const [cartao, setCartao] = useState<EstadoCartao>(cartaoVazio);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [enviando, setEnviando] = useState(false);
@@ -41,21 +59,29 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
   const [loginAberto, setLoginAberto] = useState(false);
   const [senha, setSenha] = useState("");
   const [criandoConta, setCriandoConta] = useState(false);
+  const topo = useRef<HTMLDivElement>(null);
+  const tituloPasso = useRef<HTMLHeadingElement>(null);
+  useTrocaDeEtapa(etapa, topo, tituloPasso);
 
   const uidLogado = usuario && !usuario.isAnonymous ? usuario.uid : null;
+  useEffect(() => {
+    if (uidLogado && lembrado.etapa === 2 && etapa === 1) setEtapaEstado(2);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uidLogado]);
 
   // Cotação (recalcula ao entrar/sair da conta de sócio)
   useEffect(() => {
     let ativo = true;
     setCot(null);
+    setErroCot(null);
     api
       .cotarIngresso({ tid, eventoId: evento.id })
       .then((c) => ativo && setCot(c))
-      .catch((e) => ativo && setErroCot(mensagemDeErro(e)));
+      .catch((e) => ativo && setErroCot({ mensagem: mensagemDeErro(e), conexao: ehErroDeConexao(e) }));
     return () => {
       ativo = false;
     };
-  }, [tid, evento.id, uidLogado]);
+  }, [tid, evento.id, uidLogado, tentativaCot]);
 
   const socioPreco = cot?.socio && !cot.socio.jaUsou ? cot.socio : null;
 
@@ -115,9 +141,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
     if (!cpfValido(comprador.cpf)) e.ccpf = "CPF inválido.";
     if (!telefoneValido(comprador.telefone)) e.ctel = "Telefone com DDD.";
     setErros(e);
-    if (Object.keys(e).length) {
-      requestAnimationFrame(() => document.querySelector("[data-erro]")?.scrollIntoView({ behavior: "smooth", block: "center" }));
-    }
+    if (Object.keys(e).length) rolarParaErro();
     return !Object.keys(e).length;
   }
 
@@ -130,6 +154,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
     if (uidLogado) return setEtapa(2);
     if (senha.length < 8) {
       setErros((e) => ({ ...e, senha: "Crie uma senha com pelo menos 8 caracteres." }));
+      rolarParaErro();
       return;
     }
     setCriandoConta(true);
@@ -152,6 +177,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
               ? "E-mail inválido."
               : mensagemDeErro(err),
       }));
+      rolarParaErro();
     } finally {
       setCriandoConta(false);
     }
@@ -162,7 +188,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
     if (metodo === "cartao") {
       const e = validarCartao(cartao);
       setErros(e);
-      if (Object.keys(e).length) return;
+      if (Object.keys(e).length) return rolarParaErro();
     }
     setEnviando(true);
     try {
@@ -176,6 +202,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
         titulares: titulares.map((t) => ({ nome: t.nome.trim(), cpf: soDigitos(t.cpf) })),
         cartao: dadosCartao,
       });
+      esquecer(chaveCompra);
       navegar(`/${torcida.slug}/pedido/${r.pedidoId}`);
     } catch (e) {
       setErroEnvio(mensagemDeErro(e));
@@ -184,8 +211,22 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
     }
   }
 
-  if (erroCot) return <Aviso tom="perigo">{erroCot}</Aviso>;
-  if (!cot) return <Carregando texto="Calculando valores..." />;
+  if (erroCot) {
+    return (
+      <Aviso
+        tom={erroCot.conexao ? "alerta" : "perigo"}
+        titulo={erroCot.conexao ? "Sem conexão" : "Não conseguimos calcular os valores"}
+        acao={
+          <Botao tamanho="sm" icone="atualizar" onClick={() => setTentativaCot((n) => n + 1)}>
+            Tentar de novo
+          </Botao>
+        }
+      >
+        {erroCot.conexao ? "Confira a internet e toque em “Tentar de novo”." : erroCot.mensagem}
+      </Aviso>
+    );
+  }
+  if (!cot) return <Carregando texto="Calculando valores…" />;
 
   if (bloqueado) {
     return (
@@ -196,8 +237,12 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
   }
 
   return (
-    <div className="space-y-6">
+    <div ref={topo} className="space-y-6 min-w-0 scroll-mt-24">
       <Etapas etapas={ETAPAS} atual={etapa} />
+      {/* Recebe o foco a cada troca de passo (o leitor de tela anuncia onde a pessoa está) */}
+      <h3 ref={tituloPasso} tabIndex={-1} className="sr-only">
+        Passo {etapa + 1} de {ETAPAS.length}: {ETAPAS[etapa]}
+      </h3>
 
       {etapa === 0 && (
         <div className="space-y-5 animate-surgir">
@@ -260,7 +305,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
           {titulares.map((t, i) => {
             const travado = !!socioPreco && i === 0;
             return (
-              <fieldset key={i} className="rounded-2xl border border-linha p-4 space-y-3">
+              <fieldset key={i} className="min-w-0 rounded-2xl border border-linha p-4 space-y-3">
                 <legend className="px-2 text-sm font-semibold flex items-center gap-2">
                   Ingresso {i + 1} {itens[i]?.ehSocio ? <Selo tom="primaria">Sócio</Selo> : <Selo>Público</Selo>}
                 </legend>
@@ -285,19 +330,19 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
             );
           })}
 
-          <fieldset className="rounded-2xl border border-linha p-4 space-y-3">
+          <fieldset className="min-w-0 rounded-2xl border border-linha p-4 space-y-3">
             <legend className="px-2 text-sm font-semibold">Quem está comprando</legend>
             {!uidLogado && (
               <button
                 type="button"
-                className="text-sm text-primaria-texto font-semibold"
+                className="inline-flex items-center min-h-11 text-sm text-primaria-texto font-semibold"
                 onClick={() => setComprador((c) => ({ ...c, nome: titulares[0].nome, cpf: titulares[0].cpf }))}
               >
                 Usar os dados do ingresso 1
               </button>
             )}
             {!uidLogado && (
-              <button type="button" className="block text-sm text-texto-2" onClick={() => setLoginAberto(true)}>
+              <button type="button" className="flex items-center min-h-11 text-sm text-texto-2" onClick={() => setLoginAberto(true)}>
                 Já tem conta? <span className="font-semibold text-primaria-texto">Entrar</span>
               </button>
             )}
@@ -312,7 +357,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
               disabled={!!uidLogado && !!usuario?.email && comprador.email === usuario.email}
               dica={uidLogado ? "Os ingressos ficam na sua conta." : "Será o login da sua conta."}
             />
-            <div className="grid sm:grid-cols-2 gap-3">
+            <div className="grid sm:grid-cols-2 gap-3 [&>*]:min-w-0">
               <Campo rotulo="CPF" mascara="cpf" value={comprador.cpf} onChange={(v) => setComprador({ ...comprador, cpf: v })} erro={erros.ccpf} />
               <Campo rotulo="Celular (WhatsApp)" mascara="telefone" value={comprador.telefone} onChange={(v) => setComprador({ ...comprador, telefone: v })} erro={erros.ctel} autoComplete="tel" />
             </div>
@@ -334,7 +379,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
             <Botao aria-label="Voltar" className="shrink-0 px-4 sm:px-7" variante="contorno" tamanho="lg" onClick={() => setEtapa(0)} icone="setaEsquerda">
               <span className="hidden sm:inline">Voltar</span>
             </Botao>
-            <Botao largo tamanho="lg" iconeDireita="setaDireita" carregando={criandoConta} onClick={avancarParaPagamento}>
+            <Botao largo tamanho="lg" className="min-w-0 px-4 sm:px-7" iconeDireita="setaDireita" carregando={criandoConta} onClick={avancarParaPagamento}>
               Ir para pagamento
             </Botao>
           </div>
@@ -349,7 +394,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
             onChange={setMetodo}
             opcoes={[
               ...(torcida.pagamentos.pix
-                ? [{ valor: "pix" as const, titulo: "Pix", descricao: "Aprovação na hora", icone: "pix" as const, extra: <Selo tom="sucesso" className="mt-2">Recomendado</Selo> }]
+                ? [{ valor: "pix" as const, titulo: "Pix", descricao: "Aprovação na hora", icone: "pix" as const, extra: <Selo tom="primaria" className="mt-2">Recomendado</Selo> }]
                 : []),
               ...(torcida.pagamentos.cartao ? [{ valor: "cartao" as const, titulo: "Cartão de crédito", descricao: "À vista", icone: "cartao" as const }] : []),
             ]}
@@ -375,7 +420,15 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
             <Botao aria-label="Voltar" className="shrink-0 px-4 sm:px-7" variante="contorno" tamanho="lg" onClick={() => setEtapa(1)} icone="setaEsquerda" disabled={enviando}>
               <span className="hidden sm:inline">Voltar</span>
             </Botao>
-            <Botao largo tamanho="lg" carregando={enviando} icone={metodo === "pix" ? "pix" : "cadeado"} onClick={pagar}>
+            <Botao
+              largo
+              tamanho="lg"
+              className="min-w-0 px-4 sm:px-7 whitespace-normal leading-tight text-center"
+              carregando={enviando}
+              disabled={metodo === "cartao" && !!cartao.buscandoCep}
+              icone={metodo === "pix" ? "pix" : "cadeado"}
+              onClick={pagar}
+            >
               {metodo === "pix" ? "Gerar Pix" : "Pagar"} {moeda(total)}
             </Botao>
           </div>

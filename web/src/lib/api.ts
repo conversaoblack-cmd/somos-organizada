@@ -211,6 +211,9 @@ export const api = {
 
   // ── Cadastro de torcida (página principal) ───────────
   entrarComCpf: chamar<{ cpf: string; senha: string }, { email: string }>("entrarComCpf"),
+  redefinirSenhaPorCpf: chamar<{ tid?: string; cpf: string }, { enviado: true }>("redefinirSenhaPorCpf"),
+  /** E-mail de confirmação com a nossa identidade e link para /verificar (enviado: false = usar o do Firebase). */
+  enviarConfirmacaoEmail: chamar<{ continuar: string }, { enviado: boolean; jaConfirmado?: boolean }>("enviarConfirmacaoEmail"),
   slugDisponivel: chamar<{ slug: string }, { disponivel: boolean; motivo?: string }>("slugDisponivel"),
   solicitarTorcida: chamar<
     {

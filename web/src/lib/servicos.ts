@@ -22,6 +22,15 @@ export interface CartaoDigitado {
   cvv: string;
 }
 
+const MSG_SEM_INTERNET = "Sem internet. Confira a conexão e toque de novo.";
+const MSG_CARTAO_RECUSADO = "Confira número, validade e código (CVV) do cartão, ou pague no Pix.";
+const MSG_CARTAO_INSTAVEL = "Não conseguimos conferir o cartão agora. Toque de novo em instantes ou pague no Pix.";
+
+/** Erro com `code` para o `mensagemDeErro` e o `ehErroDeConexao` (lib/api) tratarem como os do Firebase. */
+function erroCartao(mensagem: string, code: string) {
+  return Object.assign(new Error(mensagem), { code });
+}
+
 const URL_TOKENS = import.meta.env.VITE_PAGARME_TOKENS_URL || "https://api.pagar.me/core/v5/tokens";
 
 /**
@@ -37,24 +46,32 @@ export async function tokenizarCartao(chavePublica: string, c: CartaoDigitado): 
     return `tok_demo_${n === "4000000000000010" ? "aprovado" : "recusado"}_${n.slice(-4)}`;
   }
   const [mes, ano] = c.validade.split("/");
-  const r = await fetch(`${URL_TOKENS}?appId=${encodeURIComponent(chavePublica)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      type: "card",
-      card: {
-        number: soDigitos(c.numero),
-        holder_name: c.nome.trim().toUpperCase(),
-        exp_month: Number(mes),
-        exp_year: Number(ano?.length === 2 ? `20${ano}` : ano),
-        cvv: soDigitos(c.cvv),
-      },
-    }),
-  });
+  let r: Response;
+  try {
+    r = await fetch(`${URL_TOKENS}?appId=${encodeURIComponent(chavePublica)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(20_000),
+      body: JSON.stringify({
+        type: "card",
+        card: {
+          number: soDigitos(c.numero),
+          holder_name: c.nome.trim().toUpperCase(),
+          exp_month: Number(mes),
+          exp_year: Number(ano?.length === 2 ? `20${ano}` : ano),
+          cvv: soDigitos(c.cvv),
+        },
+      }),
+    });
+  } catch {
+    // Sem sinal, sinal fraco ou demora demais: nunca "Failed to fetch" na tela
+    throw erroCartao(MSG_SEM_INTERNET, "unavailable");
+  }
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.id) {
-    const detalhe = j?.errors ? Object.values(j.errors as Record<string, string[]>).flat()[0] : j?.message;
-    throw new Error(detalhe ? `Cartão inválido: ${detalhe}` : "Não foi possível validar o cartão. Confira os dados.");
+    // A Pagar.me responde em inglês: não repassamos o texto dela ao torcedor
+    if (r.status >= 500 || r.status === 429) throw erroCartao(MSG_CARTAO_INSTAVEL, "unavailable");
+    throw erroCartao(MSG_CARTAO_RECUSADO, "invalid-argument");
   }
   return j.id as string;
 }

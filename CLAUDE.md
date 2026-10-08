@@ -56,6 +56,9 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   script no navegador; Lighthouse 100 nas 4 notas). O sistema (cadastro, entrar, torcidas, painéis) é o
   `web/app.html`; o Hosting manda para ele tudo que não é `/`. Não importe Firebase nem React no
   `landing/cliente.ts`. Torcida de exemplo no botão do topo: `VITE_SLUG_DEMO=<endereço>` em `web/.env.production.local`.
+- Confirmação de e-mail: o e-mail sai pelo nosso provedor (ação `enviarConfirmacaoEmail`) com link para
+  `/verificar`, que confirma e continua o cadastro na mesma aba; sem provedor, cai no e-mail padrão do Firebase.
+  Cadastro e compras lembram o passo (recarregar volta para onde parou).
 - Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável
   pelas regras). Padrão de UX e próximas melhorias: `docs/UX.md` (leia antes de mexer em tela).
 - Skills de UX/UI instaladas em `.claude/skills/` (carregam sozinhas em qualquer sessão). Para mexer em tela,

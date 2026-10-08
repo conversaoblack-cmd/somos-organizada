@@ -52,8 +52,8 @@ export function Calendario({
   const noMesAtual = mes.getFullYear() === mesAtual.getFullYear() && mes.getMonth() === mesAtual.getMonth();
 
   return (
-    <div className="rounded-cartao border border-linha bg-superficie p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-cartao border border-linha bg-superficie p-2 sm:p-5">
+      <div className="flex items-center justify-between mb-3 px-1 sm:px-0">
         <BotaoIcone
           icone="chevronEsquerda"
           rotulo="Mês anterior"
@@ -80,7 +80,7 @@ export function Calendario({
           </span>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0 sm:gap-1">
         {celulas.map((d, i) => {
           if (!d) return <span key={i} />;
           const k = chaveDia(d);
@@ -96,7 +96,7 @@ export function Calendario({
               aria-pressed={sel}
               aria-label={`${d.getDate()}${qtd ? `, ${qtd} evento${qtd > 1 ? "s" : ""}` : ""}`}
               className={cx(
-                "relative aspect-square rounded-xl text-sm font-semibold grid place-items-center transition-all numeros",
+                "relative aspect-square min-h-11 rounded-xl text-sm font-semibold grid place-items-center transition-all numeros",
                 sel
                   ? "bg-primaria text-sobre-primaria scale-105 shadow-lg"
                   : qtd

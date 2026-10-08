@@ -1,13 +1,21 @@
 import { useMemo, useState } from "react";
-import { addDoc, collection, query, serverTimestamp, where } from "firebase/firestore";
+import { collection, doc, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { centavosDeTexto, dataCurta, dataHora, moeda } from "@/lib/formatos";
-import type { Lancamento, Repasse } from "@/lib/tipos";
+import type { ComId, Lancamento, Repasse } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { Abas, AreaTexto, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, Indicador, Modal, Selecao, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
-import { baixarCsv, Confirmar, decimalBR, EstadoLista, mesAtualSP, rotuloMes, textoMoeda } from "./util";
+import { baixarCsv, Confirmar, decimalBR, EstadoLista, mesAtualSP, numero, rotuloMes, textoMoeda, ValorKpi } from "./util";
+
+/** Uma venda no extrato: o valor do ingresso/mensalidade e a taxa de serviço juntos numa linha só. */
+interface LinhaExtrato {
+  chave: string;
+  base?: ComId<Lancamento>;
+  taxa?: ComId<Lancamento>;
+  criadoEm: number;
+}
 
 /**
  * Por sede. ingressos/socios = valor base que caiu na conta da TORCIDA (entra no repasse);
@@ -89,6 +97,22 @@ export default function Financeiro() {
         .sort((a, b) => (b.criadoEm?.toMillis() ?? 0) - (a.criadoEm?.toMillis() ?? 0)),
     [lanc.dados, mes, sedeFiltro],
   );
+  // Junta base + taxa da mesma venda (mesma referência e mesmo sinal: estorno fica em linha própria).
+  const linhasExtrato = useMemo(() => {
+    const m = new Map<string, LinhaExtrato>();
+    for (const l of lancFiltrados) {
+      const chave = `${l.referencia || l.id}|${l.valor < 0 ? "-" : "+"}`;
+      const linha = m.get(chave) ?? { chave, criadoEm: l.criadoEm?.toMillis() ?? 0 };
+      if (l.natureza === "taxa" && !linha.taxa) linha.taxa = l;
+      else if (l.natureza !== "taxa" && !linha.base) linha.base = l;
+      else {
+        m.set(`${chave}|${l.id}`, { chave: `${chave}|${l.id}`, criadoEm: l.criadoEm?.toMillis() ?? 0, [l.natureza === "taxa" ? "taxa" : "base"]: l });
+        continue;
+      }
+      m.set(chave, linha);
+    }
+    return [...m.values()].sort((a, b) => b.criadoEm - a.criadoEm);
+  }, [lancFiltrados]);
   const compRepasse = (r: Repasse) => r.competencia || (r.criadoEm ? mesAtualSP(r.criadoEm.toDate()) : "");
   const repFiltrados = useMemo(
     () =>
@@ -104,14 +128,14 @@ export default function Financeiro() {
     if (aba === "lancamentos") {
       baixarCsv(
         `extrato-${sufixo}`,
-        ["Data", "Competência", "Sede", "Origem", "Natureza", "Liquidação", "Descrição", "Valor", "Referência"],
+        ["Data", "Mês", "Sede", "Origem", "Tipo de valor", "Onde caiu o dinheiro", "Descrição", "Valor", "Referência"],
         lancFiltrados.map((l) => [
           dataHora(l.criadoEm),
           l.competencia,
           nomeSede(l.sedeId),
           l.origem === "ingresso" ? "Ingresso" : "Sócio",
-          l.natureza === "taxa" ? "Taxa de serviço" : "Valor base",
-          l.liquidacao === "split" ? "Direto na subsede (split)" : "Conta da torcida",
+          l.natureza === "taxa" ? "Taxa de serviço" : l.origem === "ingresso" ? "Valor do ingresso" : "Valor da mensalidade",
+          l.liquidacao === "split" ? "Direto na conta da subsede" : "Conta da torcida",
           l.descricao,
           decimalBR(l.valor),
           l.referencia,
@@ -120,7 +144,7 @@ export default function Financeiro() {
     } else {
       baixarCsv(
         `repasses-${sufixo}`,
-        ["Data", "Competência", "Sede", "Valor", "Observação"],
+        ["Data", "Mês de referência", "Sede", "Valor", "Observação"],
         repFiltrados.map((r) => [dataHora(r.criadoEm), r.competencia ?? "", nomeSede(r.sedeId), decimalBR(r.valor), r.observacao ?? ""]),
       );
     }
@@ -136,7 +160,7 @@ export default function Financeiro() {
         titulo={ehDiretoria ? "Financeiro e repasses" : "Financeiro da sede"}
         descricao={
           ehDiretoria
-            ? "Com o split ativo, o valor dos eventos de cada subsede cai direto na conta dela. O resto cai na conta Pagar.me da torcida: aqui você vê quanto disso é de cada subsede e registra o que já repassou."
+            ? "Com a divisão direta ativa, o valor dos eventos de cada subsede cai direto na conta dela. O resto cai na conta Pagar.me da torcida: aqui você vê quanto disso é de cada subsede e registra o que já repassou."
             : "Quanto a sua sede gerou, o que a diretoria já repassou e o saldo a receber."
         }
         acoes={
@@ -150,6 +174,8 @@ export default function Financeiro() {
 
       {erro ? (
         <EstadoLista carregando={false} erro={erro} vazio={false} tituloVazio="" />
+      ) : lanc.semConexao || repasses.semConexao ? (
+        <EstadoLista carregando={false} erro={null} semConexao vazio={false} tituloVazio="" />
       ) : carregando ? (
         <EstadoLista carregando vazio={false} erro={null} tituloVazio="" />
       ) : (
@@ -157,32 +183,48 @@ export default function Financeiro() {
           {ehDiretoria ? (
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6" data-tour="fin-resumo">
               <Indicador
-                rotulo="Valor base vendido"
+                rotulo="Vendido (sem a taxa)"
                 icone="grafico"
-                valor={moeda(totalBase)}
-                detalhe={totalSplit ? `${moeda(totalSplit)} direto nas subsedes (split)` : "Ingressos + mensalidades"}
+                valor={<ValorKpi>{moeda(totalBase)}</ValorKpi>}
+                detalhe={totalSplit ? `${moeda(totalSplit)} direto nas contas das subsedes` : "Ingressos + mensalidades"}
               />
-              <Indicador rotulo="Taxa de serviço" icone="dinheiro" tom="sucesso" valor={moeda(totalTaxa)} detalhe="Caixa da diretoria" />
-              <Indicador rotulo="Já repassado" icone="enviar" tom="info" valor={moeda(totalRepassado)} detalhe="Registrado no painel" />
-              <Indicador rotulo="A repassar" icone="alerta" tom={aRepassar > 0 ? "alerta" : "sucesso"} valor={moeda(aRepassar)} detalhe="Só o que caiu na conta da torcida" />
+              <Indicador rotulo="Taxa de serviço" icone="dinheiro" tom="sucesso" valor={<ValorKpi>{moeda(totalTaxa)}</ValorKpi>} detalhe="Caixa da diretoria" />
+              <Indicador rotulo="Já repassado" icone="enviar" tom="info" valor={<ValorKpi>{moeda(totalRepassado)}</ValorKpi>} detalhe="Registrado no painel" />
+              <Indicador
+                rotulo="A repassar"
+                icone="alerta"
+                tom={aRepassar > 0 ? "alerta" : "sucesso"}
+                valor={<ValorKpi>{moeda(aRepassar)}</ValorKpi>}
+                detalhe="Só o que caiu na conta da torcida"
+              />
             </div>
           ) : (
             minha && (
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6" data-tour="fin-resumo">
-                <Indicador rotulo="Direto na sua conta" icone="checkCirculo" tom="sucesso" valor={moeda(minha.split)} detalhe="Split da Pagar.me (já é seu)" />
+                <Indicador
+                  rotulo="Direto na sua conta"
+                  icone="checkCirculo"
+                  tom="sucesso"
+                  valor={<ValorKpi>{moeda(minha.split)}</ValorKpi>}
+                  detalhe="Dividido na hora pela Pagar.me (já é seu)"
+                />
                 <Indicador
                   rotulo="Pela conta da torcida"
                   icone="dinheiro"
-                  valor={moeda(minha.ingressos + minha.socios)}
+                  valor={<ValorKpi>{moeda(minha.ingressos + minha.socios)}</ValorKpi>}
                   detalhe={`Ingressos ${moeda(minha.ingressos)} · sócios ${moeda(minha.socios)}`}
                 />
-                <Indicador rotulo="Já repassado" icone="enviar" tom="info" valor={moeda(minha.repassado)} detalhe="Repasses da diretoria" />
+                <Indicador rotulo="Já repassado" icone="enviar" tom="info" valor={<ValorKpi>{moeda(minha.repassado)}</ValorKpi>} detalhe="Repasses da diretoria" />
                 <Indicador
                   rotulo="Saldo a receber"
                   icone="dinheiro"
                   tom={minha.ingressos + minha.socios - minha.repassado > 0 ? "alerta" : "sucesso"}
-                  valor={moeda(minha.ingressos + minha.socios - minha.repassado)}
-                  detalhe={minha.ingressos + minha.socios - minha.repassado < 0 ? "A diretoria repassou a mais" : "Pela conta da torcida − já repassado"}
+                  valor={<ValorKpi>{moeda(minha.ingressos + minha.socios - minha.repassado)}</ValorKpi>}
+                  detalhe={
+                    minha.ingressos + minha.socios - minha.repassado < 0
+                      ? "A diretoria já passou mais do que a sua sede tinha a receber"
+                      : "Pela conta da torcida, menos o que já foi repassado"
+                  }
                 />
               </div>
             )
@@ -198,7 +240,7 @@ export default function Financeiro() {
                       <p className="font-semibold truncate">{nomeSede(principal.sedeId)}</p>
                       <Selo tom="primaria">Principal</Selo>
                     </div>
-                    <p className="text-2xl font-bold numeros mt-3">{moeda(principal.ingressos + principal.socios + principal.taxa)}</p>
+                    <p className="text-xl sm:text-2xl font-bold numeros mt-3 break-words">{moeda(principal.ingressos + principal.socios + principal.taxa)}</p>
                     <p className="text-xs text-texto-3">Fica no caixa da diretoria</p>
                     <dl className="mt-4 grid grid-cols-3 gap-2 text-xs">
                       <ValorMini rotulo="Ingressos" valor={principal.ingressos} />
@@ -212,16 +254,18 @@ export default function Financeiro() {
                   return (
                     <Cartao key={r.sedeId} className="p-5 flex flex-col">
                       <p className="font-semibold truncate">{nomeSede(r.sedeId)}</p>
-                      <p className={cx("text-2xl font-bold numeros mt-3", saldo > 0 ? "text-alerta" : saldo < 0 ? "text-perigo" : "")}>{moeda(saldo)}</p>
-                      <p className="text-xs text-texto-3">{saldo > 0 ? "A repassar" : saldo < 0 ? "Repassado a mais" : "Em dia"}</p>
-                      <p className="text-[11px] text-texto-3 uppercase tracking-wide mt-4 mb-1.5">Pela conta da torcida</p>
+                      <p className={cx("text-xl sm:text-2xl font-bold numeros mt-3 break-words", saldo > 0 ? "text-alerta" : saldo < 0 ? "text-perigo" : "")}>{moeda(saldo)}</p>
+                      <p className="text-xs text-texto-3">
+                        {saldo > 0 ? "A repassar" : saldo < 0 ? "A diretoria já passou mais do que esta sede tinha a receber" : "Em dia"}
+                      </p>
+                      <p className="text-xs text-texto-3 mt-4 mb-1.5">Pela conta da torcida</p>
                       <dl className="grid grid-cols-3 gap-2 text-xs">
                         <ValorMini rotulo="Ingressos" valor={r.ingressos} />
                         <ValorMini rotulo="Sócios" valor={r.socios} />
                         <ValorMini rotulo="Repassado" valor={r.repassado} />
                       </dl>
                       <p className="mt-3 text-xs flex items-center justify-between gap-2 rounded-xl border border-sucesso/25 bg-sucesso/8 px-2.5 py-2">
-                        <span className="text-texto-2">Recebido direto pela subsede (split)</span>
+                        <span className="text-texto-2">Recebido direto na conta da subsede</span>
                         <span className="font-semibold numeros">{moeda(r.split)}</span>
                       </p>
                       <Botao tamanho="sm" variante="suave" icone="enviar" className="mt-4 self-start" onClick={() => setNovoRepasse(r.sedeId)}>
@@ -239,7 +283,7 @@ export default function Financeiro() {
               <div>
                 <h2 className="text-lg font-bold">Extrato</h2>
                 <p className="text-sm text-texto-3 numeros">
-                  {aba === "lancamentos" ? lancFiltrados.length : repFiltrados.length} itens · {moeda(somaFiltro)}
+                  {numero(aba === "lancamentos" ? linhasExtrato.length : repFiltrados.length)} itens · {moeda(somaFiltro)}
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
@@ -270,7 +314,7 @@ export default function Financeiro() {
                   </Selecao>
                 )}
                 <Botao variante="contorno" icone="download" onClick={exportar} disabled={aba === "lancamentos" ? !lancFiltrados.length : !repFiltrados.length}>
-                  CSV
+                  Baixar planilha
                 </Botao>
               </div>
             </div>
@@ -281,34 +325,36 @@ export default function Financeiro() {
               ) : (
                 <Cartao className="overflow-hidden">
                   <ul className="divide-y divide-linha">
-                    {lancFiltrados.slice(0, limite).map((l) => (
-                      <li key={l.id} className="flex items-center gap-3 px-4 py-3">
-                        <span
-                          className={cx(
-                            "size-9 shrink-0 rounded-xl grid place-items-center",
-                            l.natureza === "taxa" ? "bg-sucesso/12 text-sucesso" : l.origem === "ingresso" ? "bg-primaria/12 text-primaria-texto" : "bg-secundaria/15 text-secundaria",
-                          )}
-                        >
-                          <Icone nome={l.natureza === "taxa" ? "dinheiro" : l.origem === "ingresso" ? "ingresso" : "estrela"} className="size-4" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{l.descricao}</p>
-                          <p className="text-xs text-texto-3 truncate">
-                            {dataCurta(l.criadoEm)} · {nomeSede(l.sedeId)} · {l.natureza === "taxa" ? "Taxa de serviço" : "Valor base"}
-                            {l.liquidacao === "split" && <span className="sm:hidden"> · direto na subsede</span>}
-                          </p>
-                        </div>
-                        <span className="hidden sm:block shrink-0">
-                          {l.liquidacao === "split" ? <Selo tom="sucesso">Direto na subsede</Selo> : <Selo>Conta da torcida</Selo>}
-                        </span>
-                        <span className={cx("font-semibold numeros shrink-0", l.valor < 0 && "text-perigo")}>{moeda(l.valor)}</span>
-                      </li>
-                    ))}
+                    {linhasExtrato.slice(0, limite).map((linha) => {
+                      const l = (linha.base ?? linha.taxa)!;
+                      const soTaxa = !linha.base;
+                      return (
+                        <li key={linha.chave} className="flex items-start gap-3 px-4 py-3">
+                          <span
+                            className={cx(
+                              "size-9 shrink-0 rounded-xl grid place-items-center",
+                              soTaxa ? "bg-superficie-2 text-texto-2" : l.origem === "ingresso" ? "bg-primaria/12 text-primaria-texto" : "bg-secundaria/15 text-secundaria",
+                            )}
+                          >
+                            <Icone nome={soTaxa ? "dinheiro" : l.origem === "ingresso" ? "ingresso" : "estrela"} className="size-4" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium line-clamp-2 break-words">{l.descricao}</p>
+                            <p className="text-xs text-texto-3">
+                              {dataCurta(l.criadoEm)} · {nomeSede(l.sedeId)}
+                              {soTaxa ? " · só a taxa de serviço" : linha.taxa ? ` · + ${moeda(linha.taxa.valor)} de taxa` : ""}
+                              {l.liquidacao === "split" && " · direto na conta da subsede"}
+                            </p>
+                          </div>
+                          <span className={cx("font-semibold numeros shrink-0", l.valor < 0 && "text-perigo")}>{moeda(l.valor)}</span>
+                        </li>
+                      );
+                    })}
                   </ul>
-                  {lancFiltrados.length > limite && (
+                  {linhasExtrato.length > limite && (
                     <div className="px-4 py-3 border-t border-linha flex items-center justify-between gap-3">
-                      <p className="text-xs text-texto-3">
-                        Mostrando {limite} de {lancFiltrados.length}
+                      <p className="text-xs text-texto-3 numeros">
+                        Mostrando {numero(limite)} de {numero(linhasExtrato.length)}
                       </p>
                       <Botao tamanho="sm" variante="suave" onClick={() => setLimite((n) => n + 100)}>
                         Mostrar mais
@@ -336,9 +382,9 @@ export default function Financeiro() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{nomeSede(r.sedeId)}</p>
-                        <p className="text-xs text-texto-3 truncate">
+                        <p className="text-xs text-texto-3 line-clamp-2 break-words">
                           {dataCurta(r.criadoEm)}
-                          {r.competencia && ` · ref. ${rotuloMes(r.competencia)}`}
+                          {r.competencia && ` · referente a ${rotuloMes(r.competencia)}`}
                           {r.observacao && ` · ${r.observacao}`}
                         </p>
                       </div>
@@ -387,6 +433,8 @@ function ModalRepasse({ sedeInicial, saldos, fechar }: { sedeInicial: string; sa
   const [erro, setErro] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState(false);
   const centavos = centavosDeTexto(valor || "0");
+  // id do repasse fixo enquanto o modal está aberto: tentar de novo com internet ruim não registra duas vezes.
+  const [refRepasse] = useState(() => doc(collection(db, `torcidas/${tid}/repasses`)));
 
   function revisar() {
     setErro(null);
@@ -442,7 +490,7 @@ function ModalRepasse({ sedeInicial, saldos, fechar }: { sedeInicial: string; sa
         titulo="Confirmar repasse?"
         rotulo="Registrar repasse"
         acao={async () => {
-          await addDoc(collection(db, `torcidas/${tid}/repasses`), {
+          await setDoc(refRepasse, {
             sedeId,
             valor: centavos,
             observacao: observacao.trim(),

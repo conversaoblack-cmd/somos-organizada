@@ -55,13 +55,13 @@ export const TOURS: Record<string, PassoTour[]> = {
   "admin-pedidos": [
     { alvo: "pedidos-filtros", titulo: "Encontre um pedido", texto: "Busque pelo nome, e-mail, CPF ou evento. Filtre por ingressos ou sócios e pela situação do pagamento." },
     { alvo: "pedidos-lista", titulo: "Detalhes do pedido", texto: "Toque num pedido para ver quem comprou, os ingressos, os valores e o motivo de uma recusa do cartão. Dá para reenviar o link dos ingressos." },
-    { alvo: "pedidos-exportar", titulo: "Planilha", texto: "Baixe a lista em CSV para abrir no Excel ou no Google Planilhas." },
+    { alvo: "pedidos-exportar", titulo: "Planilha", texto: "Baixe a lista em planilha para abrir no Excel ou no Google Planilhas." },
   ],
   "admin-socios": [
-    { alvo: "socios-status", titulo: "Situação dos sócios", texto: "Ativos, em análise (aguardando sua aprovação), inadimplentes... toque para filtrar." },
+    { alvo: "socios-status", titulo: "Situação dos sócios", texto: "Ativos, em análise (aguardando sua aprovação), inadimplentes… toque para filtrar." },
     { alvo: "socios-busca", titulo: "Buscar", texto: "Procure pelo nome, CPF, matrícula ou e-mail." },
     { alvo: "socios-lista", titulo: "Ficha do sócio", texto: "Toque num sócio para ver foto, dados, plano, validade e para aprovar, suspender ou reativar." },
-    { alvo: "socios-exportar", titulo: "Planilha", texto: "Baixe a lista de sócios em CSV." },
+    { alvo: "socios-exportar", titulo: "Planilha", texto: "Baixe a lista de sócios em planilha." },
   ],
   "admin-planos": [
     { alvo: "novo-plano", titulo: "Criar um plano", texto: "Comece por um modelo pronto (Mensal, Anual, Mirim) e ajuste o valor e os benefícios." },
@@ -72,7 +72,7 @@ export const TOURS: Record<string, PassoTour[]> = {
     { alvo: "fin-resumo", titulo: "Resumo do dinheiro", texto: "Quanto foi vendido, quanto é taxa de serviço (caixa da diretoria) e quanto ainda falta repassar às subsedes." },
     { alvo: "fin-sedes", opcional: true, titulo: "Saldo de cada sede", texto: "Com a divisão ativa, o valor dos eventos da subsede cai direto na conta dela. O que caiu na conta da torcida aparece aqui como “a repassar”." },
     { alvo: "registrar-repasse", opcional: true, titulo: "Registrar repasse", texto: "Depois de transferir para uma subsede (Pix ou dinheiro), registre aqui para o saldo ficar certo." },
-    { alvo: "fin-extrato", titulo: "Extrato", texto: "Todos os lançamentos, filtráveis por mês e sede. Baixe em CSV para a prestação de contas." },
+    { alvo: "fin-extrato", titulo: "Extrato", texto: "Todos os lançamentos, filtráveis por mês e sede. Baixe a planilha para a prestação de contas." },
   ],
   "admin-sedes": [
     { alvo: "nova-subsede", titulo: "Cadastrar subsedes", texto: "Crie uma subsede para cada distrito, bairro ou cidade onde a torcida tem núcleo." },
@@ -160,7 +160,7 @@ export const TOURS: Record<string, PassoTour[]> = {
   ],
   "subsede-financeiro": [
     { alvo: "fin-resumo", titulo: "Seu dinheiro", texto: "“Direto na sua conta” já é seu (caiu pela Pagar.me). “Pela conta da torcida” é o que a diretoria precisa repassar." },
-    { alvo: "fin-extrato", titulo: "Extrato", texto: "Cada venda e cada repasse recebido. Baixe em CSV quando precisar." },
+    { alvo: "fin-extrato", titulo: "Extrato", texto: "Cada venda e cada repasse recebido. Baixe a planilha quando precisar." },
   ],
   "subsede-recebimentos": [
     { alvo: "receb-status", titulo: "Sua conta de recebimento", texto: "É para esta conta que a Pagar.me manda o dinheiro dos ingressos dos seus eventos." },

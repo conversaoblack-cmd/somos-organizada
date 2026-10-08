@@ -352,7 +352,7 @@ function NovaTorcida({ aberto, fechar, aoCriar, slugsUsados }: { aberto: boolean
         <ResultadoCriacao c={criada} />
       ) : (
         <form id="form-nova-torcida" onSubmit={enviar} className="space-y-5" noValidate>
-          <Campo rotulo="Nome da torcida" value={nome} onChange={setNome} placeholder="Ex.: Torcida Jovem do Leão" erro={tentou && erros.nome} autoFocus />
+          <Campo rotulo="Nome da torcida" value={nome} onChange={setNome} placeholder="Ex.: Torcida Jovem do Leão" erro={tentou && erros.nome} autoFocus={window.matchMedia("(pointer: fine)").matches} />
           <Campo
             rotulo="Endereço (slug)"
             value={slugFinal}
@@ -389,7 +389,7 @@ function LinhaCopiar({ rotulo, valor, abrir }: { rotulo: string; valor: string; 
       <div className="flex items-center gap-1 rounded-2xl border border-linha bg-superficie-2 pl-3">
         <code className="flex-1 min-w-0 truncate text-sm py-2.5">{valor}</code>
         {abrir && (
-          <a href={valor} target="_blank" rel="noreferrer" className="inline-grid place-items-center size-10 rounded-xl text-texto-2 hover:text-texto" aria-label={`Abrir ${rotulo}`} title="Abrir">
+          <a href={valor} target="_blank" rel="noreferrer" className="inline-grid place-items-center size-11 sm:size-10 rounded-xl text-texto-2 hover:text-texto" aria-label={`Abrir ${rotulo}`} title="Abrir">
             <Icone nome="externo" className="size-5" />
           </a>
         )}
@@ -448,7 +448,7 @@ function ResultadoCriacao({ c }: { c: Criada }) {
           Copiar mensagem
         </Botao>
       </div>
-      <Link to={rp(`/torcidas/${c.torcidaId}`)} className="inline-flex items-center gap-1.5 text-sm text-primaria-texto font-semibold hover:underline">
+      <Link to={rp(`/torcidas/${c.torcidaId}`)} className="inline-flex items-center gap-1.5 min-h-11 sm:min-h-0 text-sm text-primaria-texto font-semibold hover:underline">
         Ver detalhes da torcida <Icone nome="setaDireita" className="size-4" />
       </Link>
     </div>

@@ -5,12 +5,12 @@ import { db } from "@/lib/firebase";
 import { dataExtensa, diaDoMes, hora, mesAbrev, moeda, relativo, ROTULO_STATUS_SOCIO } from "@/lib/formatos";
 import type { Evento, Lancamento, Pedido, Repasse, Socio, Stats, StatusSocio } from "@/lib/tipos";
 import { useColecao, useDocumento } from "@/hooks/dados";
-import { Aviso, BotaoLink, CabecalhoPagina, Cartao, Carregando, Icone, Indicador, Selo } from "@/ui";
+import { Aviso, BotaoLink, CabecalhoPagina, Cartao, Carregando, cx, Icone, Indicador, Selo } from "@/ui";
 import { usePainel } from "./contexto";
 import { GraficoReceita, type PontoReceita } from "./Grafico";
 import { CartaoPrimeirosPassos } from "./PrimeirosPassos";
 import { useTourPagina } from "./tours";
-import { BarraOcupacao, EstadoLista, mesAtualSP, rotuloMes, ultimosMeses } from "./util";
+import { BarraOcupacao, EstadoLista, mesAtualSP, numero, rotuloMes, ultimosMeses, ValorKpi } from "./util";
 
 const ORDEM_STATUS: StatusSocio[] = ["ativo", "em_analise", "inadimplente", "pendente_pagamento", "suspenso", "cancelado"];
 const COR_STATUS: Record<StatusSocio, string> = {
@@ -28,6 +28,7 @@ interface Resumo {
   historico: PontoReceita[];
   carregando: boolean;
   erro: Error | null;
+  semConexao?: boolean;
 }
 
 /** Números da torcida inteira (diretoria): stats/geral e stats/{mês}. */
@@ -49,6 +50,7 @@ function useResumoDiretoria(ativo: boolean): Resumo {
     }),
     carregando: geral.carregando || hist.carregando,
     erro: geral.erro || hist.erro,
+    semConexao: geral.semConexao && hist.semConexao,
   };
 }
 
@@ -89,6 +91,7 @@ function useResumoSubsede(sedeId: string | null): Resumo & { socios: (Socio & { 
       }),
       carregando: lanc.carregando || socios.carregando,
       erro: lanc.erro || socios.erro,
+      semConexao: lanc.semConexao && socios.semConexao,
       socios: socios.dados,
       // O que caiu direto na conta da subsede (split) não entra no repasse.
       saldo: soma((l) => base(l) && l.liquidacao !== "split") - repasses.dados.reduce((s, r) => s + r.valor, 0),
@@ -140,13 +143,19 @@ export default function VisaoGeral() {
   if (ehDiretoria && !pag?.configurado)
     pendencias.push({ tom: "perigo", titulo: "Pagamentos não configurados", texto: "Conecte a Pagar.me da torcida ou teste tudo no modo demonstração. Sem isso, ninguém consegue comprar.", para: `${base}/pagamentos?tour=admin-pagamentos`, acao: "Configurar pagamentos" });
   if (ehDiretoria && pag?.configurado && !pag.webhookRecebidoEm)
-    pendencias.push({ tom: "alerta", titulo: "Webhook nunca recebido", texto: "Sem o webhook, pagamentos por Pix podem demorar a confirmar. Confira o passo 5 em Pagamentos.", para: `${base}/pagamentos`, acao: "Ver instruções" });
+    pendencias.push({
+      tom: "alerta",
+      titulo: "Confirmação automática dos pagamentos ainda não chegou",
+      texto: "Enquanto a Pagar.me não avisar o sistema sozinha, pagamentos por Pix podem demorar a confirmar. Confira o passo 5 em Pagamentos.",
+      para: `${base}/pagamentos`,
+      acao: "Ver instruções",
+    });
   if (ehDiretoria && pag?.configurado && pag.ambiente === "teste")
     pendencias.push({ tom: "info", titulo: "Pagar.me em modo de teste", texto: "As vendas não são reais. Quando estiver tudo certo, cole as chaves de produção.", para: `${base}/pagamentos`, acao: "Ir para Pagamentos" });
   if (ehDiretoria && emAprovacao > 0)
     pendencias.push({
       tom: "alerta",
-      titulo: `${emAprovacao} ${emAprovacao === 1 ? "evento aguardando" : "eventos aguardando"} aprovação`,
+      titulo: `${numero(emAprovacao)} ${emAprovacao === 1 ? "evento aguardando" : "eventos aguardando"} aprovação`,
       texto: "Subsedes enviaram eventos para você conferir e publicar.",
       para: `${base}/eventos?status=em_aprovacao`,
       acao: "Revisar eventos",
@@ -163,7 +172,7 @@ export default function VisaoGeral() {
       acao: "Ir para Recebimentos",
     });
   if (emAnalise > 0)
-    pendencias.push({ tom: "info", titulo: `${emAnalise} ${emAnalise === 1 ? "sócio aguardando" : "sócios aguardando"} aprovação`, texto: "Pagamento confirmado, falta só a sua aprovação.", para: `${base}/socios?status=em_analise`, acao: "Revisar sócios" });
+    pendencias.push({ tom: "info", titulo: `${numero(emAnalise)} ${emAnalise === 1 ? "sócio aguardando" : "sócios aguardando"} aprovação`, texto: "Pagamento confirmado, falta só a sua aprovação.", para: `${base}/socios?status=em_analise`, acao: "Revisar sócios" });
 
   const titulo = ehDiretoria ? "Visão geral" : `Visão geral · ${nomeSede(sedeEscopo)}`;
   const mesNome = rotuloMes(mesAtualSP(), true);
@@ -184,32 +193,50 @@ export default function VisaoGeral() {
 
       <CartaoPrimeirosPassos />
 
+      {/* Pendências num cartão só: empilhadas, três avisos empurravam os números para fora da tela no celular */}
       {pendencias.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 mb-6 lg:grid-cols-2" data-tour="pendencias">
-          {pendencias.map((p) => (
-            <Aviso key={p.titulo} tom={p.tom} titulo={p.titulo} acao={<BotaoLink to={p.para} tamanho="sm" variante="contorno" iconeDireita="setaDireita">{p.acao}</BotaoLink>}>
-              {p.texto}
-            </Aviso>
-          ))}
-        </div>
+        <Cartao className="mb-6 px-5 sm:px-6 py-2" data-tour="pendencias">
+          <h2 className="pt-3 pb-1 font-bold">
+            {pendencias.length === 1 ? "1 coisa precisa da sua atenção" : `${numero(pendencias.length)} coisas precisam da sua atenção`}
+          </h2>
+          <ul className="divide-y divide-linha">
+            {pendencias.map((p) => (
+              <li key={p.titulo} className="py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <Icone
+                    nome={p.tom === "info" ? "info" : "alerta"}
+                    className={cx("size-5 shrink-0 mt-0.5", p.tom === "perigo" ? "text-perigo" : p.tom === "alerta" ? "text-alerta" : "text-info")}
+                  />
+                  <div className="min-w-0">
+                    <p className="font-semibold leading-snug">{p.titulo}</p>
+                    <p className="text-sm text-texto-2 mt-0.5">{p.texto}</p>
+                  </div>
+                </div>
+                <BotaoLink to={p.para} tamanho="sm" variante="contorno" iconeDireita="setaDireita" className="self-start sm:self-center ml-8 sm:ml-0 shrink-0">
+                  {p.acao}
+                </BotaoLink>
+              </li>
+            ))}
+          </ul>
+        </Cartao>
       )}
 
-      {r.erro ? (
-        <EstadoLista carregando={false} erro={r.erro} vazio={false} tituloVazio="" />
+      {r.erro || r.semConexao ? (
+        <EstadoLista carregando={false} erro={r.erro} semConexao={r.semConexao} vazio={false} tituloVazio="" />
       ) : (
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4" data-tour="kpis">
           <Indicador
             rotulo="Ingressos (mês)"
             icone="ingresso"
             tom="primaria"
-            valor={r.carregando ? "…" : moeda(r.mes.receitaIngressos)}
+            valor={<ValorKpi>{r.carregando ? "…" : moeda(r.mes.receitaIngressos)}</ValorKpi>}
             detalhe={`Total: ${moeda(r.geral.receitaIngressos)}`}
           />
           <Indicador
             rotulo="Sócios (mês)"
             icone="usuarios"
             tom="primaria"
-            valor={r.carregando ? "…" : moeda(r.mes.receitaSocios)}
+            valor={<ValorKpi>{r.carregando ? "…" : moeda(r.mes.receitaSocios)}</ValorKpi>}
             detalhe={`Total: ${moeda(r.geral.receitaSocios)}`}
           />
           {ehDiretoria ? (
@@ -217,7 +244,7 @@ export default function VisaoGeral() {
               rotulo="Taxa de serviço (caixa)"
               icone="dinheiro"
               tom="sucesso"
-              valor={r.carregando ? "…" : moeda(r.mes.taxaServico)}
+              valor={<ValorKpi>{r.carregando ? "…" : moeda(r.mes.taxaServico)}</ValorKpi>}
               detalhe={`Total arrecadado: ${moeda(r.geral.taxaServico)}`}
             />
           ) : (
@@ -225,15 +252,19 @@ export default function VisaoGeral() {
               rotulo="A receber da diretoria"
               icone="dinheiro"
               tom={sub.saldo > 0 ? "alerta" : "sucesso"}
-              valor={r.carregando ? "…" : moeda(sub.saldo)}
-              detalhe={<Link to={`${base}/financeiro`} className="hover:underline">Ver extrato e repasses →</Link>}
+              valor={<ValorKpi>{r.carregando ? "…" : moeda(sub.saldo)}</ValorKpi>}
+              detalhe={
+                <Link to={`${base}/financeiro`} className="inline-flex items-center min-h-11 sm:min-h-0 hover:underline">
+                  Ver extrato e repasses →
+                </Link>
+              }
             />
           )}
           <Indicador
             rotulo="Ingressos vendidos"
             icone="qr"
-            valor={r.carregando ? "…" : ehDiretoria ? (r.mes.ingressosQtd ?? 0) : ingressosSubsede}
-            detalhe={ehDiretoria ? `No mês · ${r.geral.ingressosQtd ?? 0} no total` : "Nos eventos da sua sede"}
+            valor={<ValorKpi>{r.carregando ? "…" : numero(ehDiretoria ? r.mes.ingressosQtd : ingressosSubsede)}</ValorKpi>}
+            detalhe={ehDiretoria ? `No mês · ${numero(r.geral.ingressosQtd)} no total` : "Nos eventos da sua sede"}
           />
         </div>
       )}
@@ -243,7 +274,7 @@ export default function VisaoGeral() {
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
               <h2 className="font-bold">Receita dos últimos 6 meses</h2>
-              <p className="text-sm text-texto-3">Valor base, sem a taxa de serviço</p>
+              <p className="text-sm text-texto-3">Valor dos ingressos e mensalidades, sem a taxa de serviço</p>
             </div>
           </div>
           {r.carregando ? <Carregando /> : <GraficoReceita dados={r.historico} />}
@@ -252,17 +283,17 @@ export default function VisaoGeral() {
         <Cartao className="p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold">Sócios</h2>
-            <Link to={`${base}/socios`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1">
+            <Link to={`${base}/socios`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 min-h-11 sm:min-h-0">
               Ver todos <Icone nome="chevronDireita" className="size-4" />
             </Link>
           </div>
           <div className="flex items-end gap-6 mb-4">
             <div>
-              <p className="text-[34px] font-bold leading-none numeros">{socios.ativo ?? 0}</p>
+              <p className="text-[34px] font-bold leading-none numeros">{numero(socios.ativo)}</p>
               <p className="text-sm text-texto-3 mt-1">ativos</p>
             </div>
             <div>
-              <p className="text-xl font-bold leading-none numeros text-primaria-texto">+{r.mes.novosSocios ?? 0}</p>
+              <p className="text-xl font-bold leading-none numeros text-primaria-texto">+{numero(r.mes.novosSocios)}</p>
               <p className="text-sm text-texto-3 mt-1">novos no mês</p>
             </div>
           </div>
@@ -276,11 +307,11 @@ export default function VisaoGeral() {
           <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             {ORDEM_STATUS.map((k) => (
               <li key={k} className="flex items-center justify-between gap-2">
-                <Link to={`${base}/socios?status=${k}`} className="flex items-center gap-2 text-texto-2 hover:text-texto min-w-0">
+                <Link to={`${base}/socios?status=${k}`} className="flex items-center gap-2 text-texto-2 hover:text-texto min-w-0 min-h-11 sm:min-h-0">
                   <span className={`size-2 rounded-full shrink-0 ${COR_STATUS[k]}`} />
                   <span className="truncate">{ROTULO_STATUS_SOCIO[k]}</span>
                 </Link>
-                <span className="font-semibold numeros">{Math.max(0, socios[k] ?? 0)}</span>
+                <span className="font-semibold numeros">{numero(Math.max(0, socios[k] ?? 0))}</span>
               </li>
             ))}
           </ul>
@@ -291,7 +322,7 @@ export default function VisaoGeral() {
         <Cartao className="p-5 sm:p-6" data-tour="proximos-eventos">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold">Próximos eventos</h2>
-            <Link to={`${base}/eventos`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1">
+            <Link to={`${base}/eventos`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 min-h-11 sm:min-h-0">
               Todos <Icone nome="chevronDireita" className="size-4" />
             </Link>
           </div>
@@ -299,6 +330,7 @@ export default function VisaoGeral() {
             <EstadoLista
               carregando={eventosQ.carregando}
               erro={eventosQ.erro}
+              semConexao={eventosQ.semConexao}
               vazio
               icone="calendario"
               tituloVazio="Nenhum evento futuro"
@@ -318,7 +350,7 @@ export default function VisaoGeral() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold truncate group-hover:text-primaria-texto">{e.nome}</p>
+                        <p className="font-semibold line-clamp-2 break-words group-hover:text-primaria-texto">{e.nome}</p>
                         {e.status === "rascunho" && <Selo>Rascunho</Selo>}
                       </div>
                       <p className="text-xs text-texto-3 truncate mb-2">
@@ -336,12 +368,12 @@ export default function VisaoGeral() {
         <Cartao className="p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold">Últimos pedidos pagos</h2>
-            <Link to={`${base}/pedidos`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1">
+            <Link to={`${base}/pedidos`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 min-h-11 sm:min-h-0">
               Todos <Icone nome="chevronDireita" className="size-4" />
             </Link>
           </div>
           {pedidosQ.carregando || pedidosQ.erro || pagos.length === 0 ? (
-            <EstadoLista carregando={pedidosQ.carregando} erro={pedidosQ.erro} vazio icone="ingresso" tituloVazio="Nenhum pedido pago ainda" />
+            <EstadoLista carregando={pedidosQ.carregando} erro={pedidosQ.erro} semConexao={pedidosQ.semConexao} vazio icone="ingresso" tituloVazio="Nenhum pedido pago ainda" />
           ) : (
             <ul className="divide-y divide-linha -my-3">
               {pagos.map((p) => (
@@ -357,7 +389,7 @@ export default function VisaoGeral() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-semibold numeros">{moeda(p.total)}</p>
-                    <p className="text-[11px] text-texto-3 uppercase">{p.metodo === "pix" ? "Pix" : "Cartão"}</p>
+                    <p className="text-xs text-texto-3">{p.metodo === "pix" ? "Pix" : "Cartão"}</p>
                   </div>
                 </li>
               ))}

@@ -9,7 +9,7 @@ import { useColecao } from "@/hooks/dados";
 import { Aviso, Avatar, Botao, BotaoIcone, CabecalhoPagina, Campo, Cartao, cx, Interruptor, Modal, OpcoesCartao, Selecao, Selo, useToast } from "@/ui";
 import { ROTULO_PAPEL, usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
-import { BotaoCopiar, Confirmar, EstadoLista } from "./util";
+import { BotaoCopiar, comPrazo, Confirmar, EstadoLista, mensagemGravacao } from "./util";
 
 interface Convite {
   nome: string;
@@ -91,7 +91,7 @@ export default function Usuarios() {
       </div>
 
       {membros.carregando || membros.erro || ordenados.length === 0 ? (
-        <EstadoLista carregando={membros.carregando} erro={membros.erro} vazio icone="usuarios" tituloVazio="Nenhum usuário" />
+        <EstadoLista carregando={membros.carregando} erro={membros.erro} semConexao={membros.semConexao} vazio icone="usuarios" tituloVazio="Nenhum usuário" />
       ) : (
         <Cartao className="overflow-hidden" data-tour="lista-usuarios">
           <ul className="divide-y divide-linha">
@@ -107,6 +107,11 @@ export default function Usuarios() {
                     {m.email}
                     {m.sedeId && ` · ${nomeSede(m.sedeId)}`}
                   </p>
+                  {/* no celular o papel e o "Sem acesso" ficam embaixo do e-mail (sem espremer o nome) */}
+                  <div className="sm:hidden mt-1.5 flex flex-wrap gap-1.5">
+                    <Selo tom={m.papel === "diretoria" ? "primaria" : m.papel === "subsede" ? "info" : "neutro"}>{ROTULO_PAPEL[m.papel]}</Selo>
+                    {!m.ativo && <Selo tom="perigo">Sem acesso</Selo>}
+                  </div>
                 </div>
                 <div className="hidden sm:flex gap-1.5">
                   <Selo tom={m.papel === "diretoria" ? "primaria" : m.papel === "subsede" ? "info" : "neutro"}>{ROTULO_PAPEL[m.papel]}</Selo>
@@ -250,7 +255,7 @@ function ModalConvite({ aberto, fechar, sucesso }: { aberto: boolean; fechar: ()
             onChange={(e) => setSedeId(e.target.value)}
             dica={papel === "portaria" ? "A portaria valida ingressos de todos os eventos." : undefined}
           >
-            <option value="">{papel === "subsede" ? "Escolha..." : "Todas"}</option>
+            <option value="">{papel === "subsede" ? "Escolha…" : "Todas"}</option>
             {(papel === "subsede" ? subsedes : sedes).map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nome}
@@ -274,6 +279,7 @@ function ModalEditar({ m, fechar }: { m: ComId<Membro>; fechar: () => void }) {
   const [ativo, setAtivo] = useState(m.ativo);
   const [erro, setErro] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState(false);
+  const [salvando, setSalvando] = useState(false);
   const ehVoce = m.id === uid;
   const subsedes = sedes.filter((s) => s.tipo !== "principal");
 
@@ -282,18 +288,24 @@ function ModalEditar({ m, fechar }: { m: ComId<Membro>; fechar: () => void }) {
     if (papel === "subsede" && !sedeId) return setErro("Escolha a subsede.");
     const sensivel = (!ativo && m.ativo) || (m.papel === "diretoria" && papel !== "diretoria") || (papel === "diretoria" && m.papel !== "diretoria");
     if (sensivel) return setConfirmar(true);
-    void salvar().catch((e) => setErro(mensagemDeErro(e)));
+    if (salvando) return;
+    setSalvando(true);
+    salvar()
+      .catch((e) => setErro(mensagemGravacao(e)))
+      .finally(() => setSalvando(false));
   }
 
   async function salvar() {
     const novaSede = papel === "diretoria" ? null : sedeId || null;
-    await api.atualizarMembro({
-      tid,
-      uid: m.id,
-      ...(papel !== m.papel ? { papel } : {}),
-      ...(novaSede !== (m.sedeId ?? null) ? { sedeId: novaSede } : {}),
-      ...(ativo !== m.ativo ? { ativo } : {}),
-    });
+    await comPrazo(
+      api.atualizarMembro({
+        tid,
+        uid: m.id,
+        ...(papel !== m.papel ? { papel } : {}),
+        ...(novaSede !== (m.sedeId ?? null) ? { sedeId: novaSede } : {}),
+        ...(ativo !== m.ativo ? { ativo } : {}),
+      }),
+    );
     avisar("Usuário atualizado.", "sucesso");
     fechar();
   }
@@ -301,15 +313,15 @@ function ModalEditar({ m, fechar }: { m: ComId<Membro>; fechar: () => void }) {
   return (
     <Modal
       aberto
-      fechar={fechar}
+      fechar={() => !salvando && fechar()}
       titulo={m.nome || m.email}
       descricao={m.email}
       rodape={
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-          <Botao variante="fantasma" onClick={fechar}>
+          <Botao variante="fantasma" onClick={fechar} disabled={salvando}>
             Cancelar
           </Botao>
-          <Botao icone="check" onClick={revisar}>
+          <Botao icone="check" onClick={revisar} carregando={salvando}>
             Salvar
           </Botao>
         </div>
@@ -326,7 +338,7 @@ function ModalEditar({ m, fechar }: { m: ComId<Membro>; fechar: () => void }) {
         <p className="text-xs text-texto-3 -mt-2">{DESCRICAO_PAPEL[papel]}</p>
         {papel !== "diretoria" && (
           <Selecao rotulo={papel === "subsede" ? "Subsede" : "Sede (opcional)"} value={sedeId} onChange={(e) => setSedeId(e.target.value)}>
-            <option value="">{papel === "subsede" ? "Escolha..." : "Todas"}</option>
+            <option value="">{papel === "subsede" ? "Escolha…" : "Todas"}</option>
             {(papel === "subsede" ? subsedes : sedes).map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nome}

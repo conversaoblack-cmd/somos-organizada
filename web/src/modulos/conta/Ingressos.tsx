@@ -4,7 +4,7 @@ import { copiarTexto } from "@/lib/servicos";
 import { cpfMascarado, dataExtensa, dataHora, hora, paraData } from "@/lib/formatos";
 import type { ComId, Evento, Ingresso, Torcida } from "@/lib/tipos";
 import { useDocumento, type Estado } from "@/hooks/dados";
-import { Aviso, BotaoIcone, BotaoLink, cx, Esqueleto, Icone, Modal, Selo, useToast, Vazio } from "@/ui";
+import { Aviso, Botao, BotaoIcone, BotaoLink, cx, Esqueleto, Icone, Modal, Selo, useToast, Vazio } from "@/ui";
 import { QrCode } from "@/ui/qr";
 import { useTelaAcesa } from "./comum";
 
@@ -34,19 +34,20 @@ function SeloStatus({ i }: { i: Ingresso }) {
   );
 }
 
-/** Ingresso em forma de bilhete: canhoto colorido com a data, picote e corpo com os dados. */
+/**
+ * Ingresso em forma de bilhete: canhoto colorido com a data, picote e corpo com os dados.
+ * O botão do corpo cobre o bilhete inteiro (after:inset-0): tocar em qualquer parte abre o ingresso.
+ */
 function Bilhete({ i, abrir, apagado }: { i: ComId<Ingresso>; abrir: () => void; apagado?: boolean }) {
   const hoje = ehHoje(i);
+  const valido = i.status === "valido";
   return (
-    <button
-      type="button"
-      onClick={abrir}
+    <div
       className={cx(
-        "group relative w-full flex text-left rounded-[22px] transition-all duration-200 active:scale-[0.985]",
+        "group relative w-full flex text-left rounded-[22px] transition-all duration-200 has-[button:active]:scale-[0.985]",
         "drop-shadow-[0_14px_24px_rgb(0_0_0/.28)] hover:-translate-y-0.5",
         apagado && "opacity-60 saturate-50",
       )}
-      aria-label={`Abrir ingresso de ${i.eventoNome}`}
     >
       {/* canhoto */}
       <div
@@ -69,10 +70,9 @@ function Bilhete({ i, abrir, apagado }: { i: ComId<Ingresso>; abrir: () => void;
         <span className="absolute inset-y-3 left-1/2 -translate-x-1/2 w-[1.5px] so-tracejado" />
       </div>
       {/* corpo */}
-      <div className="relative min-w-0 flex-1 rounded-r-[22px] bg-superficie border-y border-r border-linha py-4 pr-4 pl-1">
+      <div className="min-w-0 flex-1 rounded-r-[22px] bg-superficie border-y border-r border-linha py-4 pr-4 pl-1">
         <div className="flex items-start justify-between gap-2">
           <p className="font-bold leading-snug line-clamp-2 text-[15px]">{i.eventoNome}</p>
-          <Icone nome="qr" className="size-6 shrink-0 text-texto-3 group-hover:text-primaria-texto transition-colors" />
         </div>
         <p className="mt-2 text-sm font-medium truncate">{i.titularNome}</p>
         <p className="text-xs text-texto-3 font-mono numeros">CPF {cpfMascarado(i.titularCpf)}</p>
@@ -81,13 +81,27 @@ function Bilhete({ i, abrir, apagado }: { i: ComId<Ingresso>; abrir: () => void;
           <SeloStatus i={i} />
           <span className="ml-auto font-mono text-xs font-bold tracking-wider text-texto-2">{i.codigo}</span>
         </div>
+        <button
+          type="button"
+          onClick={abrir}
+          aria-label={valido ? `Mostrar ingresso de ${i.eventoNome} com o QR Code` : `Ver ingresso de ${i.eventoNome}`}
+          className={cx(
+            "mt-3 w-full inline-flex items-center justify-center gap-2 min-h-11 rounded-xl px-3 text-sm font-semibold transition-colors",
+            "after:absolute after:inset-0 after:rounded-[22px] after:content-['']",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria-texto",
+            valido ? "bg-primaria text-sobre-primaria" : "bg-superficie-2 text-texto-2",
+          )}
+        >
+          <Icone nome={valido ? "qr" : "ingresso"} className="size-5" />
+          {valido ? "Mostrar ingresso (QR)" : "Ver detalhes"}
+        </button>
         {i.status !== "valido" && (
           <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-2 border-current px-2 py-0.5 font-display text-sm uppercase opacity-25">
             {i.status === "usado" ? "Utilizado" : "Cancelado"}
           </span>
         )}
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -156,7 +170,17 @@ function ModalIngresso({ i, tid, fechar }: { i: ComId<Ingresso>; tid: string; fe
   );
 }
 
-export default function AbaIngressos({ tid, torcida, ingressos }: { tid: string; torcida: Torcida; ingressos: Estado<ComId<Ingresso>[]> }) {
+export default function AbaIngressos({
+  tid,
+  torcida,
+  ingressos,
+  tentarDeNovo,
+}: {
+  tid: string;
+  torcida: Torcida;
+  ingressos: Estado<ComId<Ingresso>[]>;
+  tentarDeNovo?: () => void;
+}) {
   const [params, setParams] = useSearchParams();
   const abertoId = params.get("abrir");
   const aberto = ingressos.dados.find((i) => i.id === abertoId) ?? null;
@@ -193,8 +217,19 @@ export default function AbaIngressos({ tid, torcida, ingressos }: { tid: string;
       </div>
     );
   }
-  if (ingressos.erro) {
-    return <Aviso tom="perigo" titulo="Não foi possível carregar seus ingressos">Verifique sua conexão e tente de novo.</Aviso>;
+  const botaoTentar = tentarDeNovo && (
+    <Botao tamanho="sm" variante="contorno" icone="atualizar" onClick={tentarDeNovo}>
+      Tentar de novo
+    </Botao>
+  );
+  const falhou = !!ingressos.erro || !!ingressos.semConexao;
+  const semInternet = !!ingressos.semConexao || (typeof navigator !== "undefined" && !navigator.onLine);
+  if (falhou && !ingressos.dados.length) {
+    return (
+      <Aviso tom="perigo" titulo={semInternet ? "Sem internet" : "Não foi possível carregar seus ingressos"} acao={botaoTentar} className="max-w-2xl">
+        {semInternet ? "Não conseguimos buscar seus ingressos agora. Confira a conexão e tente de novo." : "Algo falhou ao buscar seus ingressos. Tente de novo."}
+      </Aviso>
+    );
   }
   if (!ingressos.dados.length) {
     return (
@@ -206,6 +241,11 @@ export default function AbaIngressos({ tid, torcida, ingressos }: { tid: string;
 
   return (
     <div className="max-w-2xl">
+      {falhou && (
+        <Aviso tom="alerta" titulo="Pode faltar algum ingresso" acao={botaoTentar} className="mb-5">
+          {semInternet ? "Sem internet: mostramos os ingressos que já estavam no aparelho." : "Uma parte dos seus ingressos não carregou."}
+        </Aviso>
+      )}
       <section>
         <div className="flex items-center justify-between gap-3 mb-3">
           <h2 className="text-lg font-bold">

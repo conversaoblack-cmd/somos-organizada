@@ -25,7 +25,7 @@ export function CartaoEvento({ evento, sede, slug, destaque }: { evento: ComId<E
       {destaque && (
         <div className={cx("relative overflow-hidden bg-superficie-2", evento.imagemUrl ? "h-44 sm:h-56" : "h-24 sm:h-28")}>
           {evento.imagemUrl ? (
-            <img src={evento.imagemUrl} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img src={evento.imagemUrl} alt="" loading="lazy" decoding="async" width={640} height={224} className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105" />
           ) : (
             <div className="absolute inset-0 brilho-primaria">
               <div className="absolute inset-0 grade-fundo opacity-60" />
@@ -66,7 +66,7 @@ export function CartaoEvento({ evento, sede, slug, destaque }: { evento: ComId<E
           <span className="truncate">{evento.local || dataExtensa(evento.data)}</span>
         </p>
         <div className="mt-3 flex items-end justify-between gap-3">
-          <div className="flex gap-4 text-sm">
+          <div className="flex flex-wrap items-end gap-x-4 gap-y-1 text-sm">
             <span>
               <span className="block text-[11px] uppercase tracking-wide text-texto-3">Sócio</span>
               <span className="font-bold text-primaria-texto numeros">{evento.valorSocio ? moedaCurta(evento.valorSocio) : "Grátis"}</span>
@@ -75,6 +75,8 @@ export function CartaoEvento({ evento, sede, slug, destaque }: { evento: ComId<E
               <span className="block text-[11px] uppercase tracking-wide text-texto-3">Público</span>
               <span className="font-bold numeros">{moedaCurta(evento.valorPublico)}</span>
             </span>
+            {/* O preço do cartão não inclui a taxa de serviço: avisa para não haver susto no checkout */}
+            {(evento.valorPublico > 0 || evento.valorSocio > 0) && <span className="text-xs text-texto-3 pb-0.5">+ taxa</span>}
           </div>
           <span className="size-9 shrink-0 rounded-full bg-superficie-2 grid place-items-center group-hover:bg-primaria group-hover:text-sobre-primaria transition-colors">
             <Icone nome="setaDireita" className="size-4" />

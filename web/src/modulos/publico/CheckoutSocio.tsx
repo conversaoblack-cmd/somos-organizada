@@ -1,4 +1,5 @@
 import { moduloAtivo } from "./Portao";
+import { esquecer, useLembrado } from "@/hooks/lembrado";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
@@ -29,7 +30,7 @@ import { useUsuario } from "@/hooks/dados";
 import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import { Login } from "@/componentes/Login";
 import { Aviso, Botao, BotaoLink, Campo, Carregando, Cartao, cx, Etapas, Icone, OpcoesCartao, Selecao, Selo, Vazio } from "@/ui";
-import { CabecalhoTorcida, LinhaValor, usePlanosAtivos, useSedes } from "./comum";
+import { CabecalhoTorcida, LinhaValor, rolarParaErro, usePlanosAtivos, useSedes, useTrocaDeEtapa } from "./comum";
 import { cartaoVazio, FormCartao, prepararCartao, validarCartao, type EstadoCartao } from "./FormCartao";
 
 const ETAPAS = ["Plano", "Sua conta", "Seus dados", "Pagamento"];
@@ -74,15 +75,34 @@ export default function CheckoutSocio() {
   const planos = usePlanosAtivos(tid);
   const sedes = useSedes(tid);
 
-  const [etapa, setEtapa] = useState(0);
-  const [planoId, setPlanoId] = useState<string | null>(planoUrl ?? null);
+  // Passo, plano e dados da adesão sobrevivem a recarregar a página (sem senha, foto nem cartão)
+  const chaveAdesao = `adesao:${tid}`;
+  const [lembrado, setLembrado] = useLembrado(chaveAdesao, { etapa: 0, planoId: null as string | null, dados: null as Dados | null, metodo: "pix" as "pix" | "cartao" });
+  const [etapa, setEtapaBrutaEstado] = useState(lembrado.etapa);
+  const setEtapaBruta = (n: number) => {
+    setEtapaBrutaEstado(n);
+    setLembrado((l) => ({ ...l, etapa: n }));
+  };
+  const [planoId, setPlanoIdEstado] = useState<string | null>(planoUrl ?? lembrado.planoId ?? null);
+  const setPlanoId = (id: string | null) => {
+    setPlanoIdEstado(id);
+    setLembrado((l) => ({ ...l, planoId: id }));
+  };
   const [conta, setConta] = useState({ nome: "", email: "", senha: "" });
   const [modoConta, setModoConta] = useState<"criar" | "entrar">("criar");
-  const [dados, setDados] = useState<Dados>({
-    nome: "", cpf: "", nascimento: "", telefone: "", cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "", sedeId: "",
-  });
+  const [dados, setDados] = useState<Dados>(
+    () =>
+      lembrado.dados ?? {
+        nome: "", cpf: "", nascimento: "", telefone: "", cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "", sedeId: "",
+      },
+  );
+  useEffect(() => setLembrado((l) => ({ ...l, dados })), [dados, setLembrado]);
   const [foto, setFoto] = useState<{ blob: Blob; url: string } | null>(null);
-  const [metodo, setMetodo] = useState<"pix" | "cartao">("pix");
+  const [metodo, setMetodoEstado] = useState<"pix" | "cartao">(lembrado.metodo);
+  const setMetodo = (m: "pix" | "cartao") => {
+    setMetodoEstado(m);
+    setLembrado((l) => ({ ...l, metodo: m }));
+  };
   const [cartao, setCartao] = useState<EstadoCartao>(cartaoVazio);
   const [aceite, setAceite] = useState(false);
   const [erros, setErros] = useState<Record<string, string>>({});
@@ -90,16 +110,33 @@ export default function CheckoutSocio() {
   const [erro, setErro] = useState<string | null>(null);
   const [concluido, setConcluido] = useState<string | null>(null);
   const inputFoto = useRef<HTMLInputElement>(null);
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const cepAtual = useRef("");
+  const topo = useRef<HTMLDivElement>(null);
+  const tituloPasso = useRef<HTMLHeadingElement>(null);
+  useTrocaDeEtapa(etapa, topo, tituloPasso);
+  // Cada passo começa sem erros do passo anterior
+  const setEtapa = (n: number) => {
+    setErro(null);
+    setErros({});
+    setEtapaBruta(n);
+  };
 
   const plano = planos.dados.find((p) => p.id === planoId) ?? null;
   const logado = !!usuario && !usuario.isAnonymous;
+  // recarregou depois de sair da conta: os passos de dados e pagamento exigem login
+  useEffect(() => {
+    if (usuario !== undefined && !logado && etapa >= 2) setEtapa(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuario, logado]);
   const pct = torcida.taxaServicoPct;
 
   useEffect(() => {
     if (!planoId && planos.dados.length) setPlanoId((planos.dados.find((p) => p.destaque) ?? planos.dados[0]).id);
   }, [planos.dados, planoId]);
   useEffect(() => {
-    if (plano) setMetodo((m) => (m === "pix" && !(plano.pix && torcida.pagamentos.pix) ? "cartao" : m));
+    if (plano && metodo === "pix" && !(plano.pix && torcida.pagamentos.pix)) setMetodo("cartao");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plano, torcida.pagamentos.pix]);
   useEffect(() => {
     if (!dados.sedeId && sedes.dados.length) setDados((d) => ({ ...d, sedeId: torcida.sedePrincipalId }));
@@ -121,15 +158,13 @@ export default function CheckoutSocio() {
     if (logado && usuario?.displayName) setDados((d) => (d.nome ? d : { ...d, nome: usuario.displayName ?? "" }));
   }, [logado, usuario]);
 
-  const rolarErro = () => requestAnimationFrame(() => document.querySelector("[data-erro]")?.scrollIntoView({ behavior: "smooth", block: "center" }));
-
   async function criarConta() {
     const e: Record<string, string> = {};
     if (conta.nome.trim().split(/\s+/).length < 2) e.nome = "Nome e sobrenome.";
     if (!emailValido(conta.email)) e.email = "E-mail inválido.";
     if (conta.senha.length < 8) e.senha = "Mínimo de 8 caracteres.";
     setErros(e);
-    if (Object.keys(e).length) return;
+    if (Object.keys(e).length) return rolarParaErro();
     setOcupado(true);
     setErro(null);
     try {
@@ -156,11 +191,15 @@ export default function CheckoutSocio() {
   }
 
   async function cep(v: string) {
+    cepAtual.current = v;
     setDados((d) => ({ ...d, cep: v }));
-    if (soDigitos(v).length === 8) {
-      const e = await buscarCep(v);
-      if (e) setDados((d) => ({ ...d, logradouro: e.logradouro || d.logradouro, bairro: e.bairro || d.bairro, cidade: e.cidade || d.cidade, uf: e.uf || d.uf }));
-    }
+    if (soDigitos(v).length !== 8) return setBuscandoCep(false);
+    setBuscandoCep(true);
+    const e = await buscarCep(v);
+    // Mudou o CEP enquanto buscava: esta resposta já não vale (a busca nova cuida do resto)
+    if (soDigitos(cepAtual.current) !== soDigitos(v)) return;
+    setBuscandoCep(false);
+    if (e) setDados((d) => ({ ...d, logradouro: e.logradouro || d.logradouro, bairro: e.bairro || d.bairro, cidade: e.cidade || d.cidade, uf: e.uf || d.uf }));
   }
 
   function validarDados() {
@@ -172,13 +211,13 @@ export default function CheckoutSocio() {
     if (!telefoneValido(dados.telefone)) e.telefone = "Celular com DDD.";
     if (soDigitos(dados.cep).length !== 8) e.cep = "CEP inválido.";
     if (!dados.logradouro.trim()) e.logradouro = "Obrigatório.";
-    if (!dados.numero.trim()) e.numero = "Obrigatório.";
+    if (!dados.numero.trim()) e.numero = "Informe o número da casa";
     if (!dados.bairro.trim()) e.bairro = "Obrigatório.";
     if (!dados.cidade.trim()) e.cidade = "Obrigatório.";
-    if (!UFS.includes(dados.uf)) e.uf = "UF";
+    if (!UFS.includes(dados.uf)) e.uf = "Escolha o estado";
     if (!dados.sedeId) e.sedeId = "Escolha sua sede.";
     setErros(e);
-    if (Object.keys(e).length) rolarErro();
+    if (Object.keys(e).length) rolarParaErro();
     return !Object.keys(e).length;
   }
 
@@ -202,7 +241,7 @@ export default function CheckoutSocio() {
     if (metodo === "cartao") {
       const e = validarCartao(cartao);
       setErros(e);
-      if (Object.keys(e).length) return;
+      if (Object.keys(e).length) return rolarParaErro();
     }
     setOcupado(true);
     try {
@@ -230,6 +269,7 @@ export default function CheckoutSocio() {
         },
         cartao: dadosCartao,
       });
+      esquecer(chaveAdesao);
       if (r.modo === "pedido") navegar(`/${torcida.slug}/pedido/${r.pedidoId}`);
       else setConcluido(r.status);
     } catch (e) {
@@ -285,14 +325,20 @@ export default function CheckoutSocio() {
   return (
     <Moldura>
       <div className="mb-8">
-        <Link to={`/${torcida.slug}?aba=socios`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1">
+        <Link to={`/${torcida.slug}?aba=socios`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 min-h-11 -my-2">
           <Icone nome="setaEsquerda" className="size-4" /> Planos
         </Link>
-        <h1 className="font-display uppercase text-3xl sm:text-4xl mt-3">Associe-se à {torcida.nome}</h1>
+        <h1 className="font-display uppercase text-3xl sm:text-4xl leading-[1.08] mt-3 break-words">Seja sócio: {torcida.nome}</h1>
       </div>
-      <Etapas etapas={ETAPAS} atual={etapa} />
+      <div ref={topo} className="scroll-mt-24">
+        <Etapas etapas={ETAPAS} atual={etapa} />
+        {/* Recebe o foco a cada troca de passo (o leitor de tela anuncia onde a pessoa está) */}
+        <h2 ref={tituloPasso} tabIndex={-1} className="sr-only">
+          Passo {etapa + 1} de {ETAPAS.length}: {ETAPAS[etapa]}
+        </h2>
+      </div>
 
-      <div className="grid lg:grid-cols-[1fr_340px] gap-8 mt-8 items-start">
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_340px] gap-8 mt-8 items-start">
         <div className="min-w-0">
           {/* 1. PLANO */}
           {etapa === 0 && (
@@ -306,7 +352,7 @@ export default function CheckoutSocio() {
                   valor: p.id,
                   titulo: (
                     <span className="flex flex-wrap items-center gap-2">
-                      {p.nome} {p.destaque && <Selo tom="primaria">Mais escolhido</Selo>}
+                      {p.nome} {p.destaque && <Selo tom="primaria">Recomendado</Selo>}
                     </span>
                   ),
                   descricao: `${moeda(p.valor)} ${periodicidade(p.intervalo, p.intervaloQtd)} + ${moeda(taxa(p.valor, pct))} de taxa`,
@@ -339,7 +385,7 @@ export default function CheckoutSocio() {
                     titulo="Entrar"
                     subtitulo="Use sua conta para continuar a associação."
                     rodape={
-                      <button type="button" className="font-semibold text-primaria-texto" onClick={() => setModoConta("criar")}>
+                      <button type="button" className="inline-flex items-center min-h-11 font-semibold text-primaria-texto" onClick={() => setModoConta("criar")}>
                         Criar uma conta nova
                       </button>
                     }
@@ -358,7 +404,7 @@ export default function CheckoutSocio() {
                   <Botao largo tamanho="lg" carregando={ocupado} onClick={criarConta} iconeDireita="setaDireita">
                     Criar conta e continuar
                   </Botao>
-                  <button type="button" className="w-full text-sm text-texto-2 hover:text-texto" onClick={() => setModoConta("entrar")}>
+                  <button type="button" className="w-full min-h-11 text-sm text-texto-2 hover:text-texto" onClick={() => setModoConta("entrar")}>
                     Já tenho conta
                   </button>
                 </Cartao>
@@ -381,7 +427,7 @@ export default function CheckoutSocio() {
             <div className="space-y-6 animate-surgir">
               <section className="space-y-4">
                 <h2 className="text-lg font-bold">Dados pessoais</h2>
-                <div className="flex gap-4 items-center">
+                <div className="flex gap-4 items-center min-w-0">
                   <button
                     type="button"
                     onClick={() => inputFoto.current?.click()}
@@ -390,19 +436,19 @@ export default function CheckoutSocio() {
                   >
                     {foto ? <img src={foto.url} alt="Sua foto" className="absolute inset-0 size-full object-cover" /> : <Icone nome="camera" className="size-7 text-texto-3" />}
                   </button>
-                  <div className="text-sm">
+                  <div className="text-sm min-w-0">
                     <p className="font-semibold">Foto 3x4 para a carteirinha</p>
-                    <p className="text-texto-3">Rosto de frente, fundo claro. Você pode tirar agora com o celular.</p>
-                    <button type="button" className="text-primaria-texto font-semibold mt-1" onClick={() => inputFoto.current?.click()}>
+                    <p className="text-texto-3">Rosto de frente, fundo claro. Tire agora com o celular ou escolha uma da galeria.</p>
+                    <button type="button" className="inline-flex items-center min-h-11 text-primaria-texto font-semibold" onClick={() => inputFoto.current?.click()}>
                       {foto ? "Trocar foto" : "Adicionar foto"}
                     </button>
                   </div>
-                  <input ref={inputFoto} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => escolherFoto(e.target.files?.[0])} />
+                  <input ref={inputFoto} type="file" accept="image/*" className="hidden" onChange={(e) => escolherFoto(e.target.files?.[0])} />
                 </div>
                 <Campo rotulo="Nome completo" value={dados.nome} onChange={(v) => setDados({ ...dados, nome: v })} erro={erros.nome} autoComplete="name" />
-                <div className="grid sm:grid-cols-2 gap-3">
+                <div className="grid sm:grid-cols-2 gap-3 [&>*]:min-w-0">
                   <Campo rotulo="CPF" mascara="cpf" value={dados.cpf} onChange={(v) => setDados({ ...dados, cpf: v })} erro={erros.cpf} />
-                  <Campo rotulo="Data de nascimento" type="date" value={dados.nascimento} onChange={(v) => setDados({ ...dados, nascimento: v })} erro={erros.nascimento} />
+                  <Campo rotulo="Data de nascimento" type="date" autoComplete="bday" value={dados.nascimento} onChange={(v) => setDados({ ...dados, nascimento: v })} erro={erros.nascimento} />
                 </div>
                 <Campo rotulo="Celular (WhatsApp)" mascara="telefone" value={dados.telefone} onChange={(v) => setDados({ ...dados, telefone: v })} erro={erros.telefone} autoComplete="tel" />
               </section>
@@ -420,18 +466,29 @@ export default function CheckoutSocio() {
 
               <section className="space-y-4">
                 <h2 className="text-lg font-bold">Endereço</h2>
-                <div className="grid grid-cols-[1fr_120px] gap-3">
-                  <Campo rotulo="CEP" mascara="cep" value={dados.cep} onChange={cep} erro={erros.cep} autoComplete="postal-code" />
+                <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3 [&>*]:min-w-0">
+                  <Campo
+                    rotulo="CEP"
+                    mascara="cep"
+                    value={dados.cep}
+                    onChange={cep}
+                    erro={erros.cep}
+                    autoComplete="postal-code"
+                    dica={buscandoCep ? "Buscando o endereço…" : undefined}
+                  />
                   <Campo rotulo="Número" value={dados.numero} onChange={(v) => setDados({ ...dados, numero: v })} erro={erros.numero} />
                 </div>
-                <Campo rotulo="Rua" value={dados.logradouro} onChange={(v) => setDados({ ...dados, logradouro: v })} erro={erros.logradouro} />
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Campo rotulo="Complemento" value={dados.complemento} onChange={(v) => setDados({ ...dados, complemento: v })} />
-                  <Campo rotulo="Bairro" value={dados.bairro} onChange={(v) => setDados({ ...dados, bairro: v })} erro={erros.bairro} />
+                <p className="sr-only" aria-live="polite">
+                  {buscandoCep ? "Buscando o endereço…" : ""}
+                </p>
+                <Campo rotulo="Rua" autoComplete="address-line1" value={dados.logradouro} onChange={(v) => setDados({ ...dados, logradouro: v })} erro={erros.logradouro} />
+                <div className="grid sm:grid-cols-2 gap-3 [&>*]:min-w-0">
+                  <Campo rotulo="Complemento" autoComplete="address-line2" value={dados.complemento} onChange={(v) => setDados({ ...dados, complemento: v })} />
+                  <Campo rotulo="Bairro" autoComplete="address-level3" value={dados.bairro} onChange={(v) => setDados({ ...dados, bairro: v })} erro={erros.bairro} />
                 </div>
-                <div className="grid grid-cols-[1fr_96px] gap-3">
-                  <Campo rotulo="Cidade" value={dados.cidade} onChange={(v) => setDados({ ...dados, cidade: v })} erro={erros.cidade} />
-                  <Selecao rotulo="UF" value={dados.uf} onChange={(e) => setDados({ ...dados, uf: e.target.value })} erro={erros.uf}>
+                <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-3 [&>*]:min-w-0">
+                  <Campo rotulo="Cidade" autoComplete="address-level2" value={dados.cidade} onChange={(v) => setDados({ ...dados, cidade: v })} erro={erros.cidade} />
+                  <Selecao rotulo="Estado" autoComplete="address-level1" value={dados.uf} onChange={(e) => setDados({ ...dados, uf: e.target.value })} erro={erros.uf}>
                     <option value="">—</option>
                     {UFS.map((u) => (
                       <option key={u}>{u}</option>
@@ -444,7 +501,7 @@ export default function CheckoutSocio() {
                 <Botao aria-label="Voltar" className="shrink-0 px-4 sm:px-7" variante="contorno" tamanho="lg" icone="setaEsquerda" onClick={() => setEtapa(logado ? 0 : 1)}>
                   <span className="hidden sm:inline">Voltar</span>
                 </Botao>
-                <Botao largo tamanho="lg" iconeDireita="setaDireita" onClick={() => validarDados() && setEtapa(3)}>
+                <Botao largo tamanho="lg" className="min-w-0 px-4 sm:px-7" iconeDireita="setaDireita" onClick={() => validarDados() && setEtapa(3)}>
                   Ir para pagamento
                 </Botao>
               </div>
@@ -463,7 +520,7 @@ export default function CheckoutSocio() {
                     ? [{ valor: "pix" as const, titulo: "Pix", descricao: "Você recebe a cobrança de cada período e paga pelo app do banco.", icone: "pix" as const }]
                     : []),
                   ...(plano.cartao && torcida.pagamentos.cartao
-                    ? [{ valor: "cartao" as const, titulo: "Cartão de crédito", descricao: "Cobrança automática a cada período. Sem preocupação.", icone: "cartao" as const, extra: <Selo tom="sucesso" className="mt-2">Mais prático</Selo> }]
+                    ? [{ valor: "cartao" as const, titulo: "Cartão de crédito", descricao: "Cobrança automática a cada período. Sem preocupação.", icone: "cartao" as const, extra: <Selo tom="primaria" className="mt-2">Mais prático</Selo> }]
                     : []),
                 ]}
               />
@@ -471,7 +528,7 @@ export default function CheckoutSocio() {
               <label className="flex gap-3 items-start text-sm cursor-pointer">
                 <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-1 size-4 accent-[var(--color-primaria)]" />
                 <span className="text-texto-2">
-                  Li e aceito o estatuto e as regras de associação da {torcida.nome}
+                  Li e aceito o estatuto e as regras de associação da torcida
                   {metodo === "cartao" ? `, e autorizo a cobrança automática de ${moeda(valores.base + valores.taxa)} ${periodicidade(plano.intervalo, plano.intervaloQtd)} até eu cancelar` : ""}.
                 </span>
               </label>
@@ -480,7 +537,15 @@ export default function CheckoutSocio() {
                 <Botao aria-label="Voltar" className="shrink-0 px-4 sm:px-7" variante="contorno" tamanho="lg" icone="setaEsquerda" disabled={ocupado} onClick={() => setEtapa(2)}>
                   <span className="hidden sm:inline">Voltar</span>
                 </Botao>
-                <Botao largo tamanho="lg" carregando={ocupado} icone={metodo === "pix" ? "pix" : "cadeado"} onClick={concluir}>
+                <Botao
+                  largo
+                  tamanho="lg"
+                  className="min-w-0 px-4 sm:px-7 whitespace-normal leading-tight text-center"
+                  carregando={ocupado}
+                  disabled={metodo === "cartao" && !!cartao.buscandoCep}
+                  icone={metodo === "pix" ? "pix" : "cadeado"}
+                  onClick={concluir}
+                >
                   {metodo === "pix" ? "Gerar Pix" : "Assinar"} · {moeda(valores.base + valores.taxa)}
                 </Botao>
               </div>
@@ -490,7 +555,8 @@ export default function CheckoutSocio() {
 
         {/* Resumo */}
         {plano && (
-          <aside className="lg:sticky lg:top-24 order-first lg:order-none">
+          // No celular o resumo vem depois da escolha; no passo do plano os próprios cartões já mostram o valor
+          <aside className={cx("lg:sticky lg:top-24", etapa === 0 && "hidden lg:block")}>
             <Cartao className="p-5 space-y-4">
               <div className="flex items-center gap-3">
                 <span className="size-11 rounded-2xl bg-primaria/15 text-primaria-texto grid place-items-center">

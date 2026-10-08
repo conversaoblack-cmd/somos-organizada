@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { socioEmDia, useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import type { ComId, Plano, Sede } from "@/lib/tipos";
 import { dataExtensa, moeda, periodicidadeCurta, taxa } from "@/lib/formatos";
-import { Abas, Aviso, BotaoLink, cx, Esqueleto, Icone, Vazio } from "@/ui";
-import { CabecalhoTorcida, RodapeTorcida, useEventosPublicos, usePlanosAtivos, useSedes } from "./comum";
+import { Abas, Aviso, Botao, BotaoLink, cx, Esqueleto, Icone, Vazio } from "@/ui";
+import { CabecalhoTorcida, RodapeTorcida, SemConexao, useEventosPublicos, usePlanosAtivos, useSedes } from "./comum";
 import { Calendario, chaveDia } from "./Calendario";
 import { CartaoEvento, disponibilidade } from "./CartaoEvento";
 import { moduloAtivo, torcidaBloqueada } from "./Portao";
@@ -36,7 +36,7 @@ export default function PaginaTorcida() {
       <section className="relative overflow-hidden border-b border-linha">
         {banner ? (
           <>
-            <img src={banner} alt="" className="absolute inset-0 size-full object-cover" />
+            <img src={banner} alt="" fetchPriority="high" decoding="async" width={1280} height={480} className="absolute inset-0 size-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-fundo via-fundo/75 to-fundo/30" />
           </>
         ) : (
@@ -45,17 +45,26 @@ export default function PaginaTorcida() {
             <div className="absolute inset-0 grade-fundo" />
           </>
         )}
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-14 pb-10 sm:pt-20 sm:pb-14">
-          <div className="flex items-center gap-2 mb-5">
+        {/* No celular o cabeçalho é curto: a agenda e os planos aparecem já na primeira tela */}
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-6 pb-6 sm:pt-20 sm:pb-14">
+          <div className="hidden sm:flex items-center gap-2 mb-5">
             <span className="h-1 w-8 rounded-full bg-primaria" />
             <span className="h-1 w-4 rounded-full bg-secundaria" />
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-texto-2">Página oficial</span>
           </div>
-          <h1 className="font-display uppercase text-[40px] leading-[0.95] sm:text-6xl lg:text-7xl tracking-tight max-w-4xl">{titulo}</h1>
-          {torcida.textos?.subtitulo && <p className="mt-4 text-texto-2 text-base sm:text-lg max-w-2xl">{torcida.textos.subtitulo}</p>}
+          {/* Sem título próprio, o nome já está no topo da página: no celular fica só para leitor de tela */}
+          <h1
+            className={cx(
+              "font-display uppercase text-[30px] leading-[1.08] sm:text-6xl lg:text-7xl tracking-tight max-w-4xl break-words",
+              titulo === torcida.nome && "max-sm:sr-only",
+            )}
+          >
+            {titulo}
+          </h1>
+          {torcida.textos?.subtitulo && <p className="mt-2 sm:mt-4 text-texto-2 text-[15px] sm:text-lg max-w-2xl">{torcida.textos.subtitulo}</p>}
 
           {temEventos && temSocios && (
-          <div className="mt-8 sm:mt-10">
+          <div className="mt-5 sm:mt-10">
             <Abas
               grande
               className="w-full sm:w-auto"
@@ -79,7 +88,14 @@ export default function PaginaTorcida() {
 
       <main className="flex-1 mx-auto max-w-6xl w-full px-4 sm:px-6 py-8 sm:py-12">
         {aba === "eventos" ? (
-          <AbaEventos carregando={eventos.carregando} eventos={eventos.dados} sedes={sedes.dados} sedePorId={sedePorId} />
+          <AbaEventos
+            carregando={eventos.carregando}
+            // sem importar lib/api (SDK de functions) só para isto: a página da torcida é a porta de entrada e precisa ser leve
+            semConexao={!!eventos.semConexao || (!!eventos.erro && ((eventos.erro as { code?: string }).code === "unavailable" || !navigator.onLine))}
+            eventos={eventos.dados}
+            sedes={sedes.dados}
+            sedePorId={sedePorId}
+          />
         ) : (
           <AbaSocios />
         )}
@@ -91,18 +107,36 @@ export default function PaginaTorcida() {
   );
 }
 
+/** true no computador (calendário sempre aberto ao lado da agenda). */
+function useTelaGrande() {
+  const consulta = "(min-width: 1024px)";
+  const [grande, setGrande] = useState(() => typeof window !== "undefined" && window.matchMedia(consulta).matches);
+  useEffect(() => {
+    const m = window.matchMedia(consulta);
+    const mudou = () => setGrande(m.matches);
+    m.addEventListener("change", mudou);
+    return () => m.removeEventListener("change", mudou);
+  }, []);
+  return grande;
+}
+
 function AbaEventos({
   carregando,
+  semConexao,
   eventos,
   sedes,
   sedePorId,
 }: {
   carregando: boolean;
+  semConexao: boolean;
   eventos: ReturnType<typeof useEventosPublicos>["dados"];
   sedes: ComId<Sede>[];
   sedePorId: Map<string, Sede>;
 }) {
   const { torcida } = useTorcida();
+  const temSocios = moduloAtivo(torcida, "socios");
+  const telaGrande = useTelaGrande();
+  const [calendarioAberto, setCalendarioAberto] = useState(false);
   const [sedeFiltro, setSedeFiltro] = useState<string>("todas");
   const [mes, setMes] = useState(() => {
     const d = new Date();
@@ -110,13 +144,16 @@ function AbaEventos({
   });
   const [dia, setDia] = useState<string | null>(null);
 
+  // No celular o calendário fica recolhido: sem ele, a lista mostra todos os próximos eventos (não só os do mês)
+  const porMes = telaGrande || calendarioAberto;
   const filtrados = eventos.filter((e) => sedeFiltro === "todas" || e.sedeId === sedeFiltro);
   const doMes = filtrados.filter((e) => {
     const d = e.data.toDate();
     return d.getFullYear() === mes.getFullYear() && d.getMonth() === mes.getMonth();
   });
-  const lista = dia ? filtrados.filter((e) => chaveDia(e.data.toDate()) === dia) : doMes;
   const proximo = filtrados.find((e) => !disponibilidade(e).esgotado);
+  // O próximo evento já aparece em destaque: não repete na lista logo abaixo
+  const lista = dia ? filtrados.filter((e) => chaveDia(e.data.toDate()) === dia) : (porMes ? doMes : filtrados).filter((e) => e.id !== proximo?.id);
   const sedesComEvento = sedes.filter((s) => eventos.some((e) => e.sedeId === s.id));
 
   if (carregando) {
@@ -130,10 +167,27 @@ function AbaEventos({
       </div>
     );
   }
+  if (!eventos.length && semConexao) {
+    return (
+      <SemConexao tentarDeNovo={() => location.reload()}>
+        Não conseguimos carregar a agenda. Confira a internet e toque em “Tentar de novo”.
+      </SemConexao>
+    );
+  }
   if (!eventos.length) {
     return (
-      <Vazio icone="calendario" titulo="Nenhum evento à venda agora">
-        A diretoria ainda vai divulgar os próximos eventos. Que tal virar sócio enquanto isso?
+      <Vazio
+        icone="calendario"
+        titulo="Nenhum evento à venda agora"
+        acao={
+          temSocios ? (
+            <BotaoLink to={`/${torcida.slug}?aba=socios`} variante="contorno" icone="escudo">
+              Ver planos de sócio
+            </BotaoLink>
+          ) : undefined
+        }
+      >
+        {temSocios ? "A diretoria ainda vai divulgar os próximos eventos. Que tal virar sócio enquanto isso?" : "A diretoria ainda vai divulgar os próximos eventos. Volte em breve."}
       </Vazio>
     );
   }
@@ -153,12 +207,13 @@ function AbaEventos({
             <button
               key={s.id}
               type="button"
+              aria-pressed={sedeFiltro === s.id}
               onClick={() => {
                 setSedeFiltro(s.id);
                 setDia(null);
               }}
               className={cx(
-                "h-10 px-4 rounded-full text-sm font-semibold whitespace-nowrap border transition-colors",
+                "h-11 sm:h-10 px-4 rounded-full text-sm font-semibold whitespace-nowrap border transition-colors",
                 sedeFiltro === s.id ? "bg-texto text-fundo border-texto" : "border-linha-forte text-texto-2 hover:text-texto",
               )}
             >
@@ -168,18 +223,34 @@ function AbaEventos({
         </div>
       )}
 
-      <div className="grid lg:grid-cols-[360px_1fr] gap-6 items-start">
-        <div className="lg:sticky lg:top-24">
-          <Calendario mes={mes} setMes={setMes} eventos={filtrados} diaSelecionado={dia} setDia={setDia} />
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] gap-6 items-start">
+        <div className="lg:sticky lg:top-24 space-y-3">
+          <Botao
+            variante="contorno"
+            largo
+            icone="calendario"
+            className="lg:hidden"
+            aria-expanded={calendarioAberto}
+            aria-controls="calendario-eventos"
+            onClick={() => {
+              setCalendarioAberto((a) => !a);
+              setDia(null);
+            }}
+          >
+            {calendarioAberto ? "Esconder calendário" : "Ver calendário"}
+          </Botao>
+          <div id="calendario-eventos" className={cx(!calendarioAberto && "hidden lg:block")}>
+            <Calendario mes={mes} setMes={setMes} eventos={filtrados} diaSelecionado={dia} setDia={setDia} />
+          </div>
         </div>
-        <div>
-          <div className="flex items-center justify-between mb-3">
+        <div className="min-w-0">
+          <div className="flex items-center justify-between gap-3 mb-3">
             <p className="font-semibold">
-              {dia ? `Eventos em ${dataExtensa(new Date(`${dia}T12:00:00`))}` : "Agenda do mês"}
+              {dia ? `Eventos em ${dataExtensa(new Date(`${dia}T12:00:00`))}` : porMes ? "Agenda do mês" : proximo ? "Outros eventos" : "Próximos eventos"}
               <span className="text-texto-3 font-normal"> · {lista.length}</span>
             </p>
             {dia && (
-              <button type="button" className="text-sm text-primaria-texto font-semibold" onClick={() => setDia(null)}>
+              <button type="button" className="inline-flex items-center min-h-11 text-sm text-primaria-texto font-semibold" onClick={() => setDia(null)}>
                 Ver mês inteiro
               </button>
             )}
@@ -192,11 +263,11 @@ function AbaEventos({
             </div>
           ) : (
             <div className="rounded-cartao border border-dashed border-linha-forte p-8 text-center text-texto-2">
-              <p>Nenhum evento neste mês.</p>
-              {filtrados.length > 0 && (
+              <p>{!porMes ? "Nenhum outro evento por enquanto." : doMes.length ? "Nenhum outro evento neste mês." : "Nenhum evento neste mês."}</p>
+              {porMes && !doMes.length && filtrados.length > 0 && (
                 <button
                   type="button"
-                  className="mt-2 text-primaria-texto font-semibold text-sm"
+                  className="mt-2 inline-flex items-center min-h-11 text-primaria-texto font-semibold text-sm"
                   onClick={() => {
                     const d = filtrados[0].data.toDate();
                     setMes(new Date(d.getFullYear(), d.getMonth(), 1));
@@ -225,7 +296,7 @@ function AbaSocios() {
       <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 items-end">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-primaria-texto mb-3">Programa oficial de sócios</p>
-          <h2 className="font-display uppercase text-3xl sm:text-5xl leading-[0.95]">Faça parte de verdade</h2>
+          <h2 className="font-display uppercase text-3xl sm:text-5xl leading-[1.08]">Faça parte de verdade</h2>
         </div>
         <p className="text-texto-2 sm:text-lg">
           {torcida.textos?.sobre ||
@@ -282,9 +353,11 @@ function AbaSocios() {
   );
 }
 
+const NUMERO_BR = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 function CartaoPlano({ plano, pct, slug, desativado }: { plano: ComId<Plano>; pct: number; slug: string; desativado: boolean }) {
-  const reais = Math.floor(plano.valor / 100);
-  const cents = String(plano.valor % 100).padStart(2, "0");
+  // "1.200,00" (com separador de milhar): reais em destaque e centavos menores
+  const [reais, cents] = NUMERO_BR.format(plano.valor / 100).split(",");
   return (
     <div
       className={cx(
@@ -293,7 +366,7 @@ function CartaoPlano({ plano, pct, slug, desativado }: { plano: ComId<Plano>; pc
       )}
     >
       {plano.destaque && (
-        <span className="absolute -top-3 left-6 rounded-full bg-secundaria text-sobre-secundaria text-xs font-bold px-3 py-1">Mais escolhido</span>
+        <span className="absolute -top-3 left-6 rounded-full bg-secundaria text-sobre-secundaria text-xs font-bold px-3 py-1">Recomendado</span>
       )}
       <p className="font-bold text-lg">{plano.nome}</p>
       {plano.descricao && <p className="text-sm text-texto-2 mt-1">{plano.descricao}</p>}

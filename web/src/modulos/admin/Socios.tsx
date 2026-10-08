@@ -22,7 +22,7 @@ import { useColecao } from "@/hooks/dados";
 import { Avatar, Botao, CabecalhoPagina, Campo, Cartao, Gaveta, Icone, Selecao, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
-import { baixarCsv, Confirmar, decimalBR, EstadoLista, Linha, normalizar, numeroWhatsapp, Pilulas } from "./util";
+import { baixarCsv, Confirmar, decimalBR, EstadoLista, Linha, MostrarMais, normalizar, numero, numeroWhatsapp, Pilulas, POR_PAGINA } from "./util";
 
 const STATUS: StatusSocio[] = ["ativo", "em_analise", "inadimplente", "pendente_pagamento", "suspenso", "cancelado"];
 type Acao = "aprovar" | "suspender" | "reativar" | "cancelar";
@@ -35,6 +35,9 @@ export default function Socios() {
   const [sede, setSede] = useState("");
   const [busca, setBusca] = useState("");
   const [abertoId, setAbertoId] = useState<string | null>(null);
+  // Torcida grande tem milhares de sócios: desenha 60 por vez (busca e planilha continuam com todos).
+  const [mostrar, setMostrar] = useState(POR_PAGINA);
+  useEffect(() => setMostrar(POR_PAGINA), [status, sede, busca]);
   useTourPagina("socios");
 
   const socios = useColecao<Socio>(
@@ -63,6 +66,7 @@ export default function Socios() {
     });
   }, [porSede, status, busca]);
 
+  const visiveis = filtrados.slice(0, mostrar);
   const aberto = abertoId ? (socios.dados.find((s) => s.id === abertoId) ?? null) : null;
 
   function exportar() {
@@ -96,7 +100,7 @@ export default function Socios() {
         descricao={ehDiretoria ? "Todos os sócios da torcida." : `Sócios da ${nomeSede(sedeEscopo)}.`}
         acoes={
           <Botao variante="contorno" tamanho="sm" icone="download" onClick={exportar} disabled={!filtrados.length} data-tour="socios-exportar">
-            Exportar CSV
+            Baixar planilha
           </Botao>
         }
       />
@@ -131,6 +135,7 @@ export default function Socios() {
         <EstadoLista
           carregando={socios.carregando}
           erro={socios.erro}
+          semConexao={socios.semConexao}
           vazio
           icone="usuarios"
           tituloVazio={socios.dados.length ? "Nenhum sócio com esses filtros" : "Nenhum sócio ainda"}
@@ -151,13 +156,23 @@ export default function Socios() {
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((s) => (
+                {visiveis.map((s) => (
                   <tr key={s.id} onClick={() => setAbertoId(s.id)} className="border-b border-linha last:border-0 hover:bg-superficie-2 cursor-pointer">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <Avatar nome={s.nome} tamanho="size-9" />
                         <div className="min-w-0">
-                          <p className="font-medium truncate">{s.nome}</p>
+                          {/* botão de verdade na primeira célula: abre a ficha pelo teclado e leitor de tela */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAbertoId(s.id);
+                            }}
+                            className="block max-w-full font-medium truncate text-left hover:underline focus-visible:outline-2 focus-visible:outline-primaria-texto rounded"
+                          >
+                            {s.nome}
+                          </button>
                           <p className="text-xs text-texto-3 truncate">{s.email}</p>
                         </div>
                       </div>
@@ -180,7 +195,7 @@ export default function Socios() {
             </table>
           </Cartao>
           <div className="md:hidden grid grid-cols-1 gap-2">
-            {filtrados.map((s) => (
+            {visiveis.map((s) => (
               <button key={s.id} type="button" onClick={() => setAbertoId(s.id)} className="text-left min-w-0 w-full">
                 <Cartao className="p-4 flex items-center gap-3 active:bg-superficie-2">
                   <Avatar nome={s.nome} />
@@ -196,6 +211,7 @@ export default function Socios() {
               </button>
             ))}
           </div>
+          <MostrarMais total={filtrados.length} mostrando={mostrar} mais={() => setMostrar((n) => n + POR_PAGINA)} />
         </div>
       )}
 
@@ -209,14 +225,14 @@ const TEXTO_ACAO: Record<Acao, { titulo: string; rotulo: string; texto: string; 
   suspender: {
     titulo: "Suspender sócio?",
     rotulo: "Suspender",
-    texto: "A carteirinha deixa de valer e ele perde o preço de sócio até ser reativado. As cobranças não são canceladas.",
+    texto: "A carteirinha deixa de valer e ele perde o preço de sócio até ser reativado. Enquanto estiver suspenso, o sistema não gera novas cobranças.",
     perigo: true,
   },
   reativar: { titulo: "Reativar sócio?", rotulo: "Reativar", texto: "Se a mensalidade estiver em dia, ele volta a ficar ativo; senão, fica como inadimplente até pagar." },
   cancelar: {
     titulo: "Cancelar associação?",
     rotulo: "Cancelar associação",
-    texto: "A associação é encerrada. Se ele paga por cartão, cancele também a assinatura no painel da Pagar.me para não haver novas cobranças.",
+    texto: "A associação é encerrada e as cobranças automáticas param. A carteirinha deixa de valer.",
     perigo: true,
   },
 };
@@ -255,7 +271,7 @@ function DetalheSocio({ s, fechar }: { s: ComId<Socio> | null; fechar: () => voi
     setSincronizando(true);
     try {
       const r = await api.sincronizarAssinatura({ tid, socioUid: s!.uid });
-      avisar(r.pagas ? `${r.pagas} ${r.pagas === 1 ? "fatura paga encontrada" : "faturas pagas encontradas"} e lançada(s).` : "Tudo em dia com a Pagar.me.", "sucesso");
+      avisar(r.pagas ? `${numero(r.pagas)} ${r.pagas === 1 ? "fatura paga encontrada" : "faturas pagas encontradas"} e lançada(s).` : "Tudo em dia com a Pagar.me.", "sucesso");
     } catch (e) {
       avisar(mensagemDeErro(e), "erro");
     } finally {
@@ -296,7 +312,7 @@ function DetalheSocio({ s, fechar }: { s: ComId<Socio> | null; fechar: () => voi
     >
       <div className="flex items-center gap-4 mb-6">
         {foto ? (
-          <img src={foto} alt={`Foto de ${s.nome}`} className="w-20 h-24 rounded-2xl object-cover bg-superficie-2 border border-linha" />
+          <img src={foto} alt={`Foto de ${s.nome}`} width={80} height={96} decoding="async" className="w-20 h-24 rounded-2xl object-cover bg-superficie-2 border border-linha" />
         ) : (
           <Avatar nome={s.nome} tamanho="size-20" className="text-xl" />
         )}
@@ -350,7 +366,7 @@ function DetalheSocio({ s, fechar }: { s: ComId<Socio> | null; fechar: () => voi
         </Linha>
         <Linha rotulo="Telefone">
           {tel ? (
-            <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primaria-texto hover:underline">
+            <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 min-h-11 sm:min-h-0 text-primaria-texto hover:underline">
               <Icone nome="whatsapp" className="size-4" /> {mascaraTelefone(s.telefone)}
             </a>
           ) : (
@@ -400,6 +416,10 @@ function DetalheSocio({ s, fechar }: { s: ComId<Socio> | null; fechar: () => voi
         >
           <strong className="block text-texto mb-1">{s.nome}</strong>
           {TEXTO_ACAO[acao].texto}
+          {/* assinatura antiga no cartão é cobrada pela própria Pagar.me, fora da rotina do sistema */}
+          {(acao === "cancelar" || acao === "suspender") && s.pagarme?.subscriptionId && (
+            <span className="block mt-2">Este sócio tem uma assinatura antiga no cartão: confira também se ela foi encerrada na Pagar.me.</span>
+          )}
         </Confirmar>
       )}
     </Gaveta>

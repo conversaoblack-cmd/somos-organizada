@@ -1,10 +1,11 @@
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router";
 import { collection, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useColecao } from "@/hooks/dados";
 import { socioEmDia, useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import type { Evento, Plano, Sede } from "@/lib/tipos";
-import { cx, Icone } from "@/ui";
+import { Botao, cx, Icone, Vazio } from "@/ui";
 
 export function useEventosPublicos(tid: string) {
   const q = query(collection(db, `torcidas/${tid}/eventos`), where("status", "==", "publicado"), orderBy("data", "asc"));
@@ -24,20 +25,30 @@ export function usePlanosAtivos(tid: string) {
   return { ...r, dados: r.dados.filter((p) => p.ativo).sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99)) };
 }
 
+/** Duas letras do nome da torcida para quando ela ainda não enviou o escudo ("Gaviões da Fiel" → "GF"). */
+export function iniciaisTorcida(nome: string): string {
+  const palavras = nome.split(/\s+/).filter((p) => p && !/^(d[aeo]s?|e|of|the)$/i.test(p));
+  if (!palavras.length) return "";
+  const letras = palavras.length > 1 ? palavras[0]![0]! + palavras[1]![0]! : palavras[0]!.slice(0, 2);
+  return letras.toUpperCase();
+}
+
 export function Marca({ tamanho = "md" }: { tamanho?: "md" | "lg" }) {
   const { torcida } = useTorcida();
   const logo = torcida.tema.logoUrl;
   const sz = tamanho === "lg" ? "size-14" : "size-9";
+  const px = tamanho === "lg" ? 56 : 36;
   return (
-    <Link to={`/${torcida.slug}`} className="flex items-center gap-2.5 min-w-0">
+    <Link to={`/${torcida.slug}`} className="flex items-center gap-2.5 min-w-0 min-h-11">
       {logo ? (
-        <img src={logo} alt="" className={cx(sz, "rounded-xl object-contain bg-superficie-2")} />
+        <img src={logo} alt="" width={px} height={px} decoding="async" className={cx(sz, "shrink-0 rounded-xl object-contain bg-superficie-2")} />
       ) : (
-        <span className={cx(sz, "rounded-xl grid grid-cols-2 gap-0.5 p-1.5 bg-superficie-2 border border-linha shrink-0")} aria-hidden="true">
-          <span className="rounded-[3px] bg-primaria" />
-          <span className="rounded-[3px] bg-secundaria" />
-          <span className="rounded-[3px] bg-secundaria" />
-          <span className="rounded-[3px] bg-texto" />
+        // Sem escudo cadastrado: iniciais da torcida na cor dela (nunca a marca da plataforma)
+        <span
+          className={cx(sz, "shrink-0 rounded-xl grid place-items-center bg-primaria text-sobre-primaria font-display leading-none", tamanho === "lg" ? "text-2xl" : "text-sm")}
+          aria-hidden="true"
+        >
+          {iniciaisTorcida(torcida.nome)}
         </span>
       )}
       <span className={cx("font-display uppercase tracking-tight truncate", tamanho === "lg" ? "text-xl" : "text-[15px]")}>{torcida.nome}</span>
@@ -57,7 +68,7 @@ export function CabecalhoTorcida() {
         <Link
           to={`/${torcida.slug}/${ficha ? "socio" : "conta"}`}
           className={cx(
-            "inline-flex items-center gap-2 h-10 px-3.5 rounded-xl text-sm font-semibold whitespace-nowrap shrink-0 transition-colors",
+            "inline-flex items-center gap-2 h-11 sm:h-10 px-3.5 rounded-xl text-sm font-semibold whitespace-nowrap shrink-0 transition-colors",
             ehSocio ? "bg-primaria/15 text-texto border border-primaria/40" : "border border-linha-forte hover:bg-superficie-2",
           )}
         >
@@ -90,12 +101,12 @@ export function RodapeTorcida() {
         </div>
         <div className="flex flex-wrap gap-2">
           {c.whatsapp && (
-            <a href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-linha hover:bg-superficie-2 text-sm">
+            <a href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 h-11 sm:h-10 px-4 rounded-xl border border-linha hover:bg-superficie-2 text-sm">
               <Icone nome="whatsapp" className="size-4" /> WhatsApp
             </a>
           )}
           {c.instagram && (
-            <a href={`https://instagram.com/${c.instagram.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-linha hover:bg-superficie-2 text-sm">
+            <a href={`https://instagram.com/${c.instagram.replace(/^@/, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 h-11 sm:h-10 px-4 rounded-xl border border-linha hover:bg-superficie-2 text-sm">
               <Icone nome="instagram" className="size-4" /> @{c.instagram.replace(/^@/, "")}
             </a>
           )}
@@ -117,5 +128,55 @@ export function LinhaValor({ rotulo, valor, forte, sutil }: { rotulo: React.Reac
       <span className={cx(!forte && !sutil && "text-texto-2")}>{rotulo}</span>
       <span className="numeros whitespace-nowrap">{valor}</span>
     </div>
+  );
+}
+
+const semMovimento = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Leva o torcedor ao primeiro campo com erro ([data-erro], posto por Campo/Selecao) e põe o foco nele. */
+export function rolarParaErro() {
+  requestAnimationFrame(() => {
+    const el = document.querySelector<HTMLElement>("[data-erro]");
+    if (!el) return;
+    el.scrollIntoView({ behavior: semMovimento() ? "auto" : "smooth", block: "center" });
+    el.querySelector<HTMLElement>("input:not([disabled]), select:not([disabled]), textarea:not([disabled])")?.focus({ preventScroll: true });
+  });
+}
+
+/**
+ * Ao trocar de passo no checkout: volta ao topo do checkout (se ele saiu da tela) e põe o foco no título
+ * do passo, para o leitor de tela anunciar e o teclado continuar do lugar certo. Não age na primeira exibição.
+ */
+export function useTrocaDeEtapa(etapa: number, topo: RefObject<HTMLElement | null>, titulo: RefObject<HTMLElement | null>) {
+  const anterior = useRef(etapa);
+  useEffect(() => {
+    if (anterior.current === etapa) return;
+    anterior.current = etapa;
+    const el = topo.current;
+    if (el) {
+      const y = el.getBoundingClientRect().top;
+      if (y < 72 || y > window.innerHeight * 0.4) el.scrollIntoView({ behavior: semMovimento() ? "auto" : "smooth", block: "start" });
+    }
+    titulo.current?.focus({ preventScroll: true });
+  }, [etapa, topo, titulo]);
+}
+
+/** Internet caiu ou servidor não respondeu: nunca dizer "não encontrado" nesse caso. */
+export function SemConexao({ tentarDeNovo, children, acaoExtra }: { tentarDeNovo: () => void; children?: ReactNode; acaoExtra?: ReactNode }) {
+  return (
+    <Vazio
+      icone="alerta"
+      titulo="Sem conexão"
+      acao={
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Botao icone="atualizar" onClick={tentarDeNovo}>
+            Tentar de novo
+          </Botao>
+          {acaoExtra}
+        </div>
+      }
+    >
+      {children ?? "Não conseguimos falar com o servidor. Confira a internet e toque em “Tentar de novo”."}
+    </Vazio>
   );
 }

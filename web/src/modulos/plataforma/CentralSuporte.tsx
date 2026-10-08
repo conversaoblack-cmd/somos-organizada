@@ -76,7 +76,7 @@ export default function CentralSuporte() {
                   aria-selected={filtro === v}
                   onClick={() => setFiltro(v)}
                   className={cx(
-                    "h-9 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1 transition-colors",
+                    "h-11 sm:h-9 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1 transition-colors",
                     filtro === v ? "bg-primaria text-sobre-primaria" : "text-texto-2 hover:text-texto",
                   )}
                 >
@@ -203,12 +203,17 @@ function Conversa({ chamado, voltar }: { chamado: ComId<Chamado>; voltar: () => 
     }
   }
 
+  const [mudando, setMudando] = useState(false);
   async function mudarStatus(status: Chamado["status"]) {
+    if (mudando) return;
+    setMudando(true);
     try {
       await updateDoc(doc(db, "suporte", chamado.id), { status, atualizadoEm: serverTimestamp(), naoLidasPlataforma: 0 });
       avisar(status === "resolvido" ? "Chamado marcado como resolvido." : "Chamado reaberto.", "sucesso");
     } catch (err) {
       avisar(mensagemDeErro(err), "erro");
+    } finally {
+      setMudando(false);
     }
   }
 
@@ -241,11 +246,11 @@ function Conversa({ chamado, voltar }: { chamado: ComId<Chamado>; voltar: () => 
               <span className="hidden sm:inline">Diagnóstico</span>
             </Botao>
             {chamado.status === "resolvido" ? (
-              <Botao tamanho="sm" variante="contorno" onClick={() => mudarStatus("aberto")}>
+              <Botao tamanho="sm" variante="contorno" onClick={() => mudarStatus("aberto")} carregando={mudando}>
                 Reabrir
               </Botao>
             ) : (
-              <Botao tamanho="sm" variante="contorno" icone="check" onClick={() => mudarStatus("resolvido")}>
+              <Botao tamanho="sm" variante="contorno" icone="check" onClick={() => mudarStatus("resolvido")} carregando={mudando} aria-label="Marcar como resolvido">
                 <span className="hidden sm:inline">Resolver</span>
               </Botao>
             )}

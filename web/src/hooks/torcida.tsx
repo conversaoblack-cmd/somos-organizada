@@ -13,6 +13,11 @@ interface ContextoTorcida {
 
 const Ctx = createContext<ContextoTorcida | null>(null);
 
+/** Torcida da página, quando houver (componentes usados dentro e fora do site da torcida, como o login). */
+export function useTorcidaOpcional(): ContextoTorcida | null {
+  return useContext(Ctx);
+}
+
 /** Dentro das rotas /:slug/* — torcida já carregada e tema aplicado. */
 export function useTorcida(): ContextoTorcida {
   const c = useContext(Ctx);
@@ -98,7 +103,9 @@ export function useMinhaFicha(tid: string | null) {
   const u = useUsuario();
   const caminho = tid && u && !u.isAnonymous ? `torcidas/${tid}/socios/${u.uid}` : null;
   const r = useDocumento<Socio>(caminho);
-  return { ficha: r.dados, carregando: u === undefined || r.carregando, usuario: u };
+  // Com internet ruim, "sem ficha" não quer dizer "não é sócio": quem usa precisa olhar erro e semConexao
+  // antes de concluir algo (ex.: mandar o sócio para /conta e oferecer "Seja sócio").
+  return { ficha: r.dados, carregando: u === undefined || r.carregando, usuario: u, erro: r.erro, semConexao: !!r.semConexao };
 }
 
 export const socioEmDia = (s: Socio | null | undefined) =>

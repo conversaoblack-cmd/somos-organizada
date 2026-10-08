@@ -115,7 +115,7 @@ export default function PlanoSomos() {
                       href={`https://wa.me/?text=${encodeURIComponent(`Olá! Quero pagar a fatura de ${moeda(destaque.valor)} (vencimento ${dataCurta(destaque.vencimento)}) da Somos Organizada.`)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
+                      className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
                     >
                       <Icone nome="whatsapp" className="size-4" /> WhatsApp
                     </a>
@@ -148,7 +148,7 @@ export default function PlanoSomos() {
       <section data-tour="faturas">
         <h2 className="text-lg font-bold mb-3">Faturas</h2>
         {faturas.carregando || faturas.erro || !faturas.dados.length ? (
-          <EstadoLista carregando={faturas.carregando} erro={faturas.erro} vazio icone="dinheiro" tituloVazio="Nenhuma fatura ainda" />
+          <EstadoLista carregando={faturas.carregando} erro={faturas.erro} semConexao={faturas.semConexao} vazio icone="dinheiro" tituloVazio="Nenhuma fatura ainda" />
         ) : (
           <Cartao className="overflow-hidden">
             <ul className="divide-y divide-linha">

@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /entrar
+Disallow: /verificar
 Disallow: /plataforma
 Disallow: /*/admin
 Disallow: /*/portaria

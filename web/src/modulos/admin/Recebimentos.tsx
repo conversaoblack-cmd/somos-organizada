@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { api, mensagemDeErro, type DadosRecebedor } from "@/lib/api";
 import { buscarCep } from "@/lib/servicos";
 import { centavosDeTexto, cpfValido, dataHora, emailValido, mascaraCpf, moeda, soDigitos, taxa, telefoneValido } from "@/lib/formatos";
-import { Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, OpcoesCartao, Selecao, useToast } from "@/ui";
+import { Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, Modal, OpcoesCartao, Selecao, useToast } from "@/ui";
+import { useAlteracoesPendentes } from "@/componentes/LayoutPainel";
 import { QrCode } from "@/ui/qr";
 import { useDocumento } from "@/hooks/dados";
 import type { RecebedorSede } from "@/lib/tipos";
@@ -146,7 +147,7 @@ export default function Recebimentos() {
       {demo && r && r.status !== "active" && (
         <Cartao className="p-5 sm:p-6 mb-6 border-info/40 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
-            <p className="font-semibold">Modo demonstração</p>
+            <p className="font-semibold">Modo de demonstração</p>
             <p className="text-sm text-texto-2">Na demonstração não existe prova de vida de verdade. Simule a aprovação para a conta ficar ativa.</p>
           </div>
           <Botao icone="raio" carregando={atualizando} onClick={simular}>
@@ -175,7 +176,7 @@ export default function Recebimentos() {
                   href={r.kycUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold bg-primaria text-sobre-primaria hover:brightness-110"
+                  className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-primaria text-sobre-primaria hover:brightness-110"
                 >
                   <Icone nome="externo" className="size-4" /> Abrir no celular
                 </a>
@@ -197,7 +198,7 @@ export default function Recebimentos() {
       <Cartao className="p-5 sm:p-6 mb-6" data-tour="receb-como-funciona">
         <h2 className="font-bold text-lg">Como o dinheiro é dividido</h2>
         <p className="text-sm text-texto-2 mt-1">
-          A Pagar.me divide cada venda na hora (o chamado “split”). Ninguém precisa repassar nada à mão.
+          A Pagar.me divide cada venda na hora, direto entre a torcida e a subsede. Ninguém precisa repassar nada à mão.
         </p>
         <div className="mt-4 rounded-2xl border border-linha bg-superficie-2 p-4">
           <p className="text-sm font-semibold mb-3">Exemplo: ingresso de {moeda(exemplo)} num evento da sua subsede</p>
@@ -219,7 +220,7 @@ export default function Recebimentos() {
         </div>
         <ul className="mt-4 space-y-2 text-sm text-texto-2">
           <li className="flex gap-2">
-            <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" />A subsede paga as tarifas da Pagar.me sobre a parte dela e responde por contestações (chargeback) dos eventos dela.
+            <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" />A subsede paga as tarifas da Pagar.me sobre a parte dela e responde quando um comprador de evento dela pede o dinheiro de volta ao banco do cartão.
           </li>
           <li className="flex gap-2">
             <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" />
@@ -236,7 +237,7 @@ export default function Recebimentos() {
 
       {sede && !splitAtivo && (
         <Aviso tom="alerta" titulo="A diretoria ainda não ativou a divisão de pagamentos">
-          Quando a diretoria ativar o split em Pagamentos, você poderá cadastrar a conta de recebimento aqui.
+          Quando a diretoria ativar, em Pagamentos, a divisão direta com as subsedes, você poderá cadastrar a conta de recebimento aqui.
         </Aviso>
       )}
 
@@ -279,7 +280,7 @@ function Secao({ titulo, porque, children }: { titulo: string; porque: ReactNode
 function FormRecebedor({ cancelar, concluido }: { cancelar: () => void; concluido: () => void }) {
   const { tid, membro } = usePainel();
   const avisar = useToast();
-  const [f, setF] = useState<Form>({
+  const [inicial] = useState<Form>(() => ({
     nome: membro.nome ?? "",
     email: membro.email ?? "",
     cpf: "",
@@ -303,7 +304,12 @@ function FormRecebedor({ cancelar, concluido }: { cancelar: () => void; concluid
     conta: "",
     contaDv: "",
     tipo: "checking",
-  });
+  }));
+  const [f, setF] = useState<Form>(inicial);
+  const alterado = useMemo(() => JSON.stringify(f) !== JSON.stringify(inicial), [f, inicial]);
+  const [confirmarDescarte, setConfirmarDescarte] = useState(false);
+  // Cadastro longo (titular, endereço e banco): não deixa perder tudo num toque em Cancelar, no menu ou ao fechar a aba.
+  useAlteracoesPendentes(alterado);
   const [erros, setErros] = useState<Erros>({});
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
@@ -439,7 +445,7 @@ function FormRecebedor({ cancelar, concluido }: { cancelar: () => void; concluid
 
       <Secao titulo="Endereço do titular" porque="Endereço residencial de quem é dono da conta. Também faz parte do cadastro obrigatório.">
         <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-4">
-          <Campo rotulo="CEP" mascara="cep" value={f.cep} onChange={aoMudarCep} erro={erros.cep} dica={buscandoCep ? "Buscando endereço..." : undefined} />
+          <Campo rotulo="CEP" mascara="cep" value={f.cep} onChange={aoMudarCep} erro={erros.cep} dica={buscandoCep ? "Buscando endereço…" : undefined} />
           <Campo rotulo="Rua" value={f.logradouro} onChange={(v) => set("logradouro", v)} erro={erros.logradouro} maxLength={120} />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-[140px_1fr] gap-4">
@@ -461,7 +467,7 @@ function FormRecebedor({ cancelar, concluido }: { cancelar: () => void; concluid
         <Aviso tom="alerta">A conta precisa estar no CPF do titular. Não use conta de parente, da torcida (CNPJ) ou de terceiros.</Aviso>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Selecao rotulo="Banco" value={f.banco} onChange={(e) => set("banco", e.target.value)} erro={erros.banco}>
-            <option value="">Escolha...</option>
+            <option value="">Escolha…</option>
             {BANCOS.map((b) => (
               <option key={b.codigo} value={b.codigo}>
                 {b.codigo} · {b.nome}
@@ -502,7 +508,7 @@ function FormRecebedor({ cancelar, concluido }: { cancelar: () => void; concluid
       {erroEnvio && <Aviso tom="perigo" titulo="A Pagar.me não aceitou o cadastro">{erroEnvio}</Aviso>}
 
       <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-        <Botao variante="fantasma" onClick={cancelar}>
+        <Botao variante="fantasma" onClick={() => (alterado ? setConfirmarDescarte(true) : cancelar())}>
           Cancelar
         </Botao>
         <Botao type="submit" icone="cadeado" tamanho="lg">
@@ -510,7 +516,39 @@ function FormRecebedor({ cancelar, concluido }: { cancelar: () => void; concluid
         </Botao>
       </div>
 
-      <Confirmar aberto={confirmar} fechar={() => setConfirmar(false)} titulo="Enviar cadastro para a Pagar.me?" rotulo="Enviar cadastro" acao={enviar}>
+      <Modal
+        aberto={confirmarDescarte}
+        fechar={() => setConfirmarDescarte(false)}
+        titulo="Descartar alterações?"
+        largura="max-w-md"
+        rodape={
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Botao variante="fantasma" onClick={() => setConfirmarDescarte(false)}>
+              Continuar preenchendo
+            </Botao>
+            <Botao
+              variante="perigo"
+              onClick={() => {
+                setConfirmarDescarte(false);
+                cancelar();
+              }}
+            >
+              Descartar
+            </Botao>
+          </div>
+        }
+      >
+        <p className="text-texto-2 text-[15px] leading-relaxed">Os dados que você preencheu no cadastro ainda não foram enviados e vão se perder.</p>
+      </Modal>
+
+      <Confirmar
+        aberto={confirmar}
+        fechar={() => setConfirmar(false)}
+        titulo="Enviar cadastro para a Pagar.me?"
+        rotulo="Enviar cadastro"
+        acao={enviar}
+        prazo={60_000}
+      >
         <p className="mb-3">Confira antes de enviar. Depois do envio, para trocar a conta é preciso falar com a Pagar.me.</p>
         <div className="rounded-2xl border border-linha bg-superficie-2 px-4 py-1 text-sm">
           <Linha rotulo="Titular">{f.nome}</Linha>

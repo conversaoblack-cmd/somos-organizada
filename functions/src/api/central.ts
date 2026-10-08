@@ -8,6 +8,7 @@
  * Cada ação continua sendo o mesmo onCall de antes (mesmas checagens de login, papel e escopo);
  * aqui só repassamos o pedido autenticado para ela com .run().
  */
+import * as verificacao from "./verificacao";
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { EMAIL_API_KEY, MASTER_KEY, MAX_INSTANCIAS_API, QR_HMAC } from "../config";
 import * as ingressos from "./ingressos";
@@ -58,6 +59,8 @@ export const ACOES: Record<string, Acao> = {
   solicitarTorcida: cadastro.solicitarTorcida,
   avaliarSolicitacao: cadastro.avaliarSolicitacao,
   entrarComCpf: conta.entrarComCpf,
+  redefinirSenhaPorCpf: conta.redefinirSenhaPorCpf,
+  enviarConfirmacaoEmail: verificacao.enviarConfirmacaoEmail,
 } as unknown as Record<string, Acao>;
 
 export const api = onCall(

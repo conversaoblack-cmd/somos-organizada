@@ -18,7 +18,16 @@ const TOM_PEDIDO: Record<StatusPedido, Tom> = {
   estornado: "info",
 };
 
-function Linha({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+/** Linha rótulo/valor. Com `bloco`, o valor (frase longa) vai embaixo do rótulo, alinhado à esquerda. */
+function Linha({ rotulo, children, bloco }: { rotulo: string; children: ReactNode; bloco?: boolean }) {
+  if (bloco) {
+    return (
+      <div className="py-3.5 border-b border-linha last:border-0">
+        <span className="block text-texto-2 text-sm">{rotulo}</span>
+        <span className="block font-semibold mt-0.5 min-w-0">{children}</span>
+      </div>
+    );
+  }
   return (
     <div className="flex items-center justify-between gap-4 py-3.5 border-b border-linha last:border-0">
       <span className="text-texto-2 text-sm">{rotulo}</span>
@@ -150,7 +159,7 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
                 <p className="text-xs font-bold uppercase tracking-[.18em] opacity-75">Seu plano</p>
                 <p className="font-display text-2xl leading-tight mt-1">{ficha.planoNome}</p>
               </div>
-              <span className="rounded-full bg-black/25 px-3 py-1 text-xs font-bold text-white">{ROTULO_SITUACAO[situacao]}</span>
+              <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-bold text-white text-center">{ROTULO_SITUACAO[situacao]}</span>
             </div>
             <p className="mt-5">
               <span className="font-display text-4xl numeros">{moeda(base + valorTaxa)}</span>
@@ -166,13 +175,13 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
                 {ROTULO_SITUACAO[situacao]}
               </Selo>
             </Linha>
-            <Linha rotulo="Pagamento">
+            <Linha rotulo="Pagamento" bloco={!pix}>
               {pix ? (
                 <span className="inline-flex items-center gap-1.5">
                   <Icone nome="pix" className="size-4 text-primaria-texto" /> Pix a cada ciclo
                 </span>
               ) : (
-                <span className="block text-right">
+                <span className="block">
                   <span className="inline-flex items-center gap-1.5">
                     <Icone nome="cartao" className="size-4 text-primaria-texto shrink-0" />
                     Cartão <span className="font-mono">•••• {final}</span>
@@ -191,7 +200,7 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
                 )}
               </span>
             </Linha>
-            <Linha rotulo="Renovação">{ficha.assinaturaCancelada ? "Cancelada" : pix ? "Você paga cada ciclo pelo Pix" : "Automática no cartão salvo"}</Linha>
+            <Linha rotulo="Renovação" bloco>{ficha.assinaturaCancelada ? "Cancelada" : pix ? "Você paga cada ciclo pelo Pix" : "Automática no cartão salvo"}</Linha>
             {ficha.matricula && (
               <Linha rotulo="Matrícula">
                 <span className="font-mono tracking-wider">{ficha.matricula}</span>
@@ -227,20 +236,9 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
                   </div>
                 </div>
                 <div className="mt-5 grid gap-2.5">
-                  {ficha.cobrancaAbertaId && (
-                    <Botao largo tamanho="lg" icone="qr" onClick={() => pagar(true)}>
-                      Ver cobrança em aberto
-                    </Botao>
-                  )}
-                  <Botao
-                    largo
-                    tamanho={ficha.cobrancaAbertaId ? "md" : "lg"}
-                    variante={urgente && !ficha.cobrancaAbertaId ? "primaria" : "suave"}
-                    icone="pix"
-                    carregando={pagando}
-                    onClick={() => pagar(false)}
-                  >
-                    Pagar próxima mensalidade
+                  {/* Um botão só para o Pix: com cobrança aberta, ele abre o mesmo Pix (não gera outro) */}
+                  <Botao largo tamanho="lg" icone="pix" carregando={pagando} onClick={() => pagar(!!ficha.cobrancaAbertaId)}>
+                    {ficha.cobrancaAbertaId ? "Ver meu Pix em aberto" : `Pagar no Pix · ${moeda(base + valorTaxa)}`}
                   </Botao>
                   {cartaoDisponivel && (
                     <Botao largo variante="contorno" icone="cartao" onClick={() => setModalCartao("pagar")}>
@@ -288,7 +286,7 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
 
         {!ficha.assinaturaCancelada && !encerrada && ficha.status !== "pendente_pagamento" && (
           <div className="text-center">
-            <button type="button" onClick={() => setConfirmarCancelar(true)} className="text-sm text-texto-3 hover:text-perigo underline underline-offset-4 py-2">
+            <button type="button" onClick={() => setConfirmarCancelar(true)} className="min-h-11 px-3 text-sm text-texto-3 hover:text-perigo underline underline-offset-4">
               Cancelar renovação
             </button>
           </div>

@@ -44,6 +44,9 @@ async function postar(url: string, headers: Record<string, string>, corpo: unkno
   }
 }
 
+/** Envio direto (sem o controle de "uma vez só" por torcida): e-mails de conta, como a confirmação de e-mail. */
+export const enviarAgora = (m: Mensagem, chaveIdem: string) => despachar(m, chaveIdem);
+
 async function despachar(m: Mensagem, chaveIdem: string): Promise<{ provedor: Provedor; id?: string }> {
   let chave = "";
   try {

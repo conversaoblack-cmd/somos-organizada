@@ -101,7 +101,7 @@ export default function AbaDados({ tid, torcida, ficha }: { tid: string; torcida
               <p className="font-semibold">Precisa corrigir algum dado?</p>
               <p className="text-sm text-texto-2 mt-1">Para alterar dados, fale com a diretoria. Assim mantemos sua carteirinha segura e conferida.</p>
               {contato && (
-                <a href={contato} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primaria-texto hover:underline">
+                <a href={contato} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 min-h-11 text-sm font-semibold text-primaria-texto hover:underline">
                   <Icone nome={torcida.contato?.whatsapp ? "whatsapp" : "enviar"} className="size-4" /> Falar com a diretoria
                 </a>
               )}
@@ -112,7 +112,9 @@ export default function AbaDados({ tid, torcida, ficha }: { tid: string; torcida
           <p className="font-semibold flex items-center gap-2">
             <Icone nome="cadeado" className="size-5 text-texto-2" /> Senha
           </p>
-          <p className="text-sm text-texto-2 mt-1">Enviamos um link para {email} para você criar uma nova senha.</p>
+          <p className="text-sm text-texto-2 mt-1" aria-live="polite">
+            {enviado ? `Enviamos o link para ${email}. Confira também o spam.` : `Vamos enviar um link para ${email} para você criar uma nova senha.`}
+          </p>
           <Botao className="mt-4" largo variante="suave" icone="chave" carregando={enviando} disabled={enviado} onClick={alterarSenha}>
             {enviado ? "Link enviado — confira seu e-mail" : "Alterar senha"}
           </Botao>

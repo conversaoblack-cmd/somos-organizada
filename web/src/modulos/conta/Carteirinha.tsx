@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as P
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { mensagemDeErro } from "@/lib/api";
-import { dataCurta, dataExtensa, hora, iniciais, moeda, paraData, periodicidadeCurta, taxa } from "@/lib/formatos";
+import { dataCurta, dataExtensa, hora, iniciais, moeda, paraData, periodicidade, taxa } from "@/lib/formatos";
 import type { ComId, Ingresso, Plano, Socio, Torcida } from "@/lib/tipos";
 import { useDocumento } from "@/hooks/dados";
-import { Aviso, Botao, BotaoLink, Cartao, cx, Girando, Icone } from "@/ui";
+import { corSobre, corValida, TEMA_PADRAO } from "@/lib/tema";
+import { Aviso, Botao, BotaoLink, Cartao, classesBotao, cx, Girando, Icone } from "@/ui";
 import { QrCode } from "@/ui/qr";
 import { buscarQrCarteirinha, usePagarMensalidade } from "./acoes";
 import { AvisoFalhaCartao, useFalhaCobranca } from "./CartaoCobranca";
@@ -32,7 +33,7 @@ const COR_PONTO: Record<Situacao, string> = {
 
 const CARIMBO: Partial<Record<Situacao, string>> = {
   vencida: "Vencida",
-  inadimplente: "Inadimplente",
+  inadimplente: "Mensalidade atrasada",
   analise: "Em análise",
   suspenso: "Suspensa",
   cancelado: "Cancelada",
@@ -43,25 +44,42 @@ const CARIMBO: Partial<Record<Situacao, string>> = {
 const RUIDO =
   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")";
 
-const FUNDO_CARTAO: CSSProperties = {
-  backgroundColor: "var(--color-primaria)",
-  backgroundImage: [
-    // brilho que acompanha o dedo/mouse
-    "radial-gradient(circle at var(--mx, 30%) var(--my, 0%), rgb(255 255 255 / .28), transparent 42%)",
-    // faixa diagonal com a cor secundária (a "faixa da torcida")
-    "linear-gradient(122deg, transparent 71%, color-mix(in oklab, var(--color-secundaria) 88%, transparent) 71% 73.5%, transparent 73.5% 75.5%, color-mix(in oklab, var(--color-secundaria) 50%, transparent) 75.5% 76.4%, transparent 76.4%)",
-    // guilhochê
-    "repeating-linear-gradient(135deg, rgb(255 255 255 / .05) 0 1.5px, transparent 1.5px 8px)",
-    "radial-gradient(120% 70% at 100% 0%, color-mix(in oklab, var(--color-secundaria) 45%, transparent), transparent 55%)",
-    "linear-gradient(165deg, color-mix(in oklab, var(--color-primaria), black 8%) 0%, color-mix(in oklab, var(--color-primaria), black 52%) 62%, color-mix(in oklab, var(--color-primaria), black 74%) 100%)",
-  ].join(","),
-};
+/**
+ * Fundo do cartão na cor da torcida. O texto usa text-sobre-primaria (branco ou quase preto, o que tiver mais
+ * contraste com a primária). Com primária escura o fundo escurece para baixo (texto branco); com primária clara
+ * (amarelo, branco, celeste) o fundo escurece pouco, para o texto escuro continuar legível do topo ao rodapé.
+ */
+function fundoCartao(primariaClara: boolean): CSSProperties {
+  const [a, b, c] = primariaClara ? [0, 10, 18] : [8, 52, 74];
+  return {
+    backgroundColor: "var(--color-primaria)",
+    backgroundImage: [
+      // brilho que acompanha o dedo/mouse
+      "radial-gradient(circle at var(--mx, 30%) var(--my, 0%), rgb(255 255 255 / .28), transparent 42%)",
+      // faixa da torcida (cor secundária) na margem direita, fora de qualquer texto
+      "linear-gradient(90deg, transparent 94.5%, color-mix(in oklab, var(--color-secundaria) 88%, transparent) 94.5% 96.5%, transparent 96.5% 97.6%, color-mix(in oklab, var(--color-secundaria) 50%, transparent) 97.6% 98.3%, transparent 98.3%)",
+      // guilhochê
+      "repeating-linear-gradient(135deg, rgb(255 255 255 / .05) 0 1.5px, transparent 1.5px 8px)",
+      "radial-gradient(120% 70% at 100% 0%, color-mix(in oklab, var(--color-secundaria) 30%, transparent), transparent 50%)",
+      `linear-gradient(165deg, color-mix(in oklab, var(--color-primaria), black ${a}%) 0%, color-mix(in oklab, var(--color-primaria), black ${b}%) 62%, color-mix(in oklab, var(--color-primaria), black ${c}%) 100%)`,
+    ].join(","),
+  };
+}
+
+/** A cor primária pede texto escuro por cima? (mesma conta do tema: preto ou branco, o de maior contraste) */
+const primariaClara = (t: Torcida) => corSobre(corValida(t.tema.corPrimaria) ? t.tema.corPrimaria : TEMA_PADRAO.corPrimaria) !== "#FFFFFF";
+
+/** Link de contato da diretoria (WhatsApp ou e-mail cadastrado pela torcida). */
+export const contatoDiretoria = (t: Torcida) =>
+  t.contato?.whatsapp ? `https://wa.me/${t.contato.whatsapp.replace(/\D/g, "")}` : t.contato?.email ? `mailto:${t.contato.email}` : null;
 
 function Logo({ torcida, className }: { torcida: Torcida; className?: string }) {
   return torcida.tema.logoUrl ? (
     <img src={torcida.tema.logoUrl} alt="" className={cx("object-contain", className)} />
   ) : (
-    <span className={cx("grid place-items-center rounded-xl bg-white/15 font-display text-white", className)}>{iniciais(torcida.nome)}</span>
+    <span className={cx("grid place-items-center rounded-xl bg-sobre-primaria/15 font-display text-sobre-primaria", className)} aria-hidden="true">
+      {iniciais(torcida.nome)}
+    </span>
   );
 }
 
@@ -69,7 +87,7 @@ function Foto({ nome, url, className }: { nome: string; url: string | null; clas
   return url ? (
     <img src={url} alt={`Foto de ${nome}`} className={cx("object-cover", className)} />
   ) : (
-    <span className={cx("grid place-items-center bg-white/12 font-display text-4xl text-white/90", className)} aria-label="Sem foto">
+    <span className={cx("grid place-items-center bg-sobre-primaria/12 font-display text-4xl text-sobre-primaria", className)} aria-label="Sem foto">
       {iniciais(nome)}
     </span>
   );
@@ -77,7 +95,7 @@ function Foto({ nome, url, className }: { nome: string; url: string | null; clas
 
 function SeloCartao({ situacao }: { situacao: Situacao }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/35 backdrop-blur px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white ring-1 ring-white/15">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white ring-1 ring-white/15">
       <span className={cx("size-2 rounded-full", COR_PONTO[situacao], situacao === "em_dia" && "so-pulso")} />
       {ROTULO_SITUACAO[situacao]}
     </span>
@@ -138,6 +156,9 @@ export function CartaoSocio({
     el.style.setProperty("--ry", "0deg");
   }
 
+  const clara = primariaClara(torcida);
+  const fundo = fundoCartao(clara);
+  const sombraTexto = clara ? "" : "[text-shadow:0_1px_8px_rgb(0_0_0/.35)]";
   const face = "absolute inset-0 rounded-[26px] overflow-hidden [backface-visibility:hidden] [-webkit-backface-visibility:hidden]";
 
   return (
@@ -156,8 +177,8 @@ export function CartaoSocio({
         >
           {/* ── Frente ── */}
           <div
-            className={cx(face, "text-white shadow-[0_30px_80px_-24px_var(--color-primaria),0_10px_30px_-10px_rgb(0_0_0/.6)] ring-1 ring-white/15")}
-            style={FUNDO_CARTAO}
+            className={cx(face, "text-sobre-primaria shadow-[0_30px_80px_-24px_var(--color-primaria),0_10px_30px_-10px_rgb(0_0_0/.6)] ring-1 ring-white/15")}
+            style={fundo}
           >
             <div className="absolute inset-0 opacity-[.22] mix-blend-overlay pointer-events-none" style={{ backgroundImage: RUIDO }} />
             <div className={cx("absolute inset-0 so-reflexo overflow-hidden", !emDia && "hidden")} />
@@ -171,8 +192,8 @@ export function CartaoSocio({
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Logo torcida={torcida} className="size-10 shrink-0 text-sm" />
                   <div className="min-w-0">
-                    <p className="font-display text-[15px] leading-tight uppercase tracking-wide truncate [text-shadow:0_1px_8px_rgb(0_0_0/.35)]">{torcida.nome}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-[.22em] text-white/70">Sócio oficial</p>
+                    <p className={cx("font-display text-[15px] leading-tight uppercase tracking-wide truncate", sombraTexto)}>{torcida.nome}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-[.18em] text-sobre-primaria/80">Sócio oficial</p>
                   </div>
                 </div>
                 <Chip />
@@ -183,35 +204,35 @@ export function CartaoSocio({
                   <div className="absolute -inset-1 rounded-[22px] bg-gradient-to-b from-white/50 to-white/5" />
                   <Foto nome={ficha.nome} url={fotoUrl} className="relative w-[118px] aspect-[3/4] rounded-[18px] shadow-xl" />
                 </div>
-                <p className="mt-4 font-display text-[22px] sm:text-2xl leading-[1.1] uppercase tracking-tight line-clamp-2 [text-shadow:0_2px_14px_rgb(0_0_0/.35)]">
+                <p className={cx("mt-4 font-display text-[22px] sm:text-2xl leading-[1.1] uppercase tracking-tight line-clamp-2", !clara && "[text-shadow:0_2px_14px_rgb(0_0_0/.35)]")}>
                   {ficha.nome}
                 </p>
-                <p className="mt-1.5 font-mono text-sm tracking-[.3em] text-white/85 numeros">Nº {ficha.matricula ?? "— — —"}</p>
+                <p className="mt-1.5 font-mono text-sm tracking-[.3em] text-sobre-primaria/90 numeros">Nº {ficha.matricula ?? "— — —"}</p>
                 <div className="mt-3">
                   <SeloCartao situacao={situacao} />
                 </div>
               </div>
 
-              <div className="mt-auto grid grid-cols-3 gap-2 rounded-2xl bg-black/25 backdrop-blur-sm ring-1 ring-white/10 px-3 py-2.5">
+              <div className={cx("mt-auto grid grid-cols-3 gap-2 rounded-2xl backdrop-blur-sm ring-1 px-3 py-2.5", clara ? "bg-white/30 ring-black/10" : "bg-black/25 ring-white/10")}>
                 {[
                   ["Plano", ficha.planoNome.replace(/^Sócio\s+/i, "")],
                   ["Sócio desde", mesAno(ficha.criadoEm)],
                   ["Válida até", ficha.validoAte ? dataCurta(ficha.validoAte) : "—"],
                 ].map(([r, v]) => (
                   <div key={r} className="min-w-0">
-                    <p className="text-[9px] font-bold uppercase tracking-[.16em] text-white/60">{r}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wide leading-tight text-sobre-primaria/80">{r}</p>
                     <p className="text-[13px] font-semibold truncate numeros">{v}</p>
                   </div>
                 ))}
               </div>
-              <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-white/75">
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-sobre-primaria/85">
                 <Icone nome="atualizar" className="size-3.5" /> Toque para ver o QR de conferência
               </p>
             </div>
 
             {CARIMBO[situacao] && (
               <div className="absolute inset-0 grid place-items-center pointer-events-none">
-                <span className="-rotate-12 rounded-xl border-[3px] border-white/85 px-4 py-1.5 font-display text-2xl uppercase tracking-wider text-white/90 bg-black/30 backdrop-blur-[2px]">
+                <span className="-rotate-12 max-w-[85%] text-center rounded-xl border-[3px] border-white/85 px-4 py-1.5 font-display text-2xl leading-tight uppercase tracking-wider text-white bg-black/60 backdrop-blur-[2px]">
                   {CARIMBO[situacao]}
                 </span>
               </div>
@@ -220,14 +241,14 @@ export function CartaoSocio({
 
           {/* ── Verso ── */}
           <div className={cx(face, "bg-superficie ring-1 ring-linha-forte [transform:rotateY(180deg)] text-texto")}>
-            <div className="absolute inset-x-0 top-0 h-24 opacity-90" style={FUNDO_CARTAO} />
+            <div className="absolute inset-x-0 top-0 h-24 opacity-90" style={fundo} />
             <div className="relative h-full flex flex-col items-center p-5 sm:p-6">
-              <div className="w-full flex items-center justify-between text-white">
+              <div className="w-full flex items-center justify-between text-sobre-primaria">
                 <div className="flex items-center gap-2 min-w-0">
                   <Logo torcida={torcida} className="size-8 text-xs" />
                   <p className="font-display text-sm uppercase truncate">{torcida.nome}</p>
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-[.2em] text-white/80">Conferência</span>
+                <span className="text-[11px] font-bold uppercase tracking-[.18em] text-sobre-primaria/85">Conferência</span>
               </div>
 
               <div className="mt-6 w-[78%] max-w-[260px]">
@@ -243,7 +264,7 @@ export function CartaoSocio({
                       <div>
                         <Icone nome="cadeado" className="size-9 mx-auto text-texto-3" />
                         <p className="mt-3 text-sm text-texto-2">
-                          {!emDia ? "O QR fica disponível com a mensalidade em dia." : (qr.erro ?? "QR indisponível no momento.")}
+                          {!emDia ? "O QR fica disponível com a mensalidade em dia." : qr.erro ? "Não foi possível carregar o QR. Use o botão “Carregar QR de novo” abaixo do cartão." : "QR indisponível no momento."}
                         </p>
                       </div>
                     )}
@@ -394,6 +415,8 @@ export default function AbaCarteirinha({
   const plano = useDocumento<Plano>(`torcidas/${tid}/planos/${ficha.planoId}`).dados;
   const falhaCartao = useFalhaCobranca(tid, ficha);
   const dias = diasParaVencer(ficha);
+  const [tentativaQr, setTentativaQr] = useState(0);
+  const contato = contatoDiretoria(torcida);
 
   useEffect(() => {
     if (!ficha.matricula || !emDia) return;
@@ -405,9 +428,20 @@ export default function AbaCarteirinha({
     return () => {
       ativo = false;
     };
-  }, [tid, ficha.uid, ficha.matricula, emDia]);
+  }, [tid, ficha.uid, ficha.matricula, emDia, tentativaQr]);
 
-  const valorTotal = ficha.cobranca ? ficha.cobranca.valorBase + ficha.cobranca.taxa : ficha.valorPlano + taxa(ficha.valorPlano, torcida.taxaServicoPct ?? 10);
+  // Por que "Tela cheia" está desligado (botão cinza sem explicação confunde)
+  const motivoSemTelaCheia = !emDia
+    ? "Tela cheia libera com a mensalidade em dia."
+    : !ficha.matricula
+      ? "Tela cheia libera quando a matrícula for gerada."
+      : !qr.valor && !qr.erro
+        ? "Carregando o QR…"
+        : null;
+
+  const valorBase = ficha.cobranca?.valorBase ?? ficha.valorPlano;
+  const valorTaxa = ficha.cobranca?.taxa ?? taxa(ficha.valorPlano, torcida.taxaServicoPct ?? 10);
+  const valorTotal = valorBase + valorTaxa;
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-10 items-start">
@@ -417,10 +451,30 @@ export default function AbaCarteirinha({
           <Botao variante="suave" icone="atualizar" onClick={() => setVirado((v) => !v)}>
             {virado ? "Ver frente" : "Ver QR"}
           </Botao>
-          <Botao icone="olho" disabled={!emDia || !qr.valor} onClick={() => setTelaCheia(true)}>
+          <Botao icone="olho" disabled={!emDia || !qr.valor} onClick={() => setTelaCheia(true)} aria-describedby={motivoSemTelaCheia ? "carteirinha-tela-cheia" : undefined}>
             Tela cheia
           </Botao>
         </div>
+        {emDia && qr.erro ? (
+          <Aviso
+            tom="perigo"
+            className="mt-3"
+            titulo="O QR não carregou"
+            acao={
+              <Botao tamanho="sm" variante="contorno" icone="atualizar" onClick={() => setTentativaQr((n) => n + 1)}>
+                Carregar QR de novo
+              </Botao>
+            }
+          >
+            {qr.erro}
+          </Aviso>
+        ) : (
+          motivoSemTelaCheia && (
+            <p id="carteirinha-tela-cheia" className="mt-2 text-xs text-texto-3 text-center" aria-live="polite">
+              {motivoSemTelaCheia}
+            </p>
+          )
+        )}
       </div>
 
       <div className="space-y-4 min-w-0">
@@ -467,8 +521,18 @@ export default function AbaCarteirinha({
           </Aviso>
         )}
         {situacao === "suspenso" && (
-          <Aviso tom="perigo" titulo="Associação suspensa">
-            Sua carteirinha está suspensa pela diretoria. Fale com a sua sede para regularizar.
+          <Aviso
+            tom="perigo"
+            titulo="Associação suspensa"
+            acao={
+              contato && (
+                <a href={contato} target="_blank" rel="noreferrer" className={classesBotao("contorno", "sm")}>
+                  <Icone nome={torcida.contato?.whatsapp ? "whatsapp" : "enviar"} className="size-4" /> Falar com a diretoria
+                </a>
+              )
+            }
+          >
+            Sua carteirinha está suspensa pela diretoria. Fale com a diretoria da torcida para regularizar.
           </Aviso>
         )}
         {situacao === "cancelado" && (
@@ -504,10 +568,13 @@ export default function AbaCarteirinha({
               <p className="font-bold text-lg">{ficha.planoNome}</p>
             </div>
             <p className="text-right">
-              <span className="font-display text-xl numeros">{moeda(ficha.valorPlano)}</span>
-              <span className="text-sm text-texto-3">{periodicidadeCurta(ficha.intervalo, ficha.intervaloQtd)}</span>
+              <span className="font-display text-xl numeros">{moeda(valorTotal)}</span>
+              <span className="block text-sm text-texto-3">{periodicidade(ficha.intervalo, ficha.intervaloQtd)}</span>
             </p>
           </div>
+          <p className="mt-1 text-xs text-texto-3 numeros">
+            {moeda(valorBase)} do plano + {moeda(valorTaxa)} de taxa de serviço
+          </p>
           {!!plano?.beneficios?.length && (
             <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">
               {plano.beneficios.map((b) => (

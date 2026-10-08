@@ -35,14 +35,18 @@ export default function FaqRobo() {
 
   const lista = faqs.dados.filter((f) => filtro === "todos" || (f.publico ?? "todos") === filtro);
 
+  const [excluindo, setExcluindo] = useState(false);
   async function confirmarExclusao() {
-    if (!excluir) return;
+    if (!excluir || excluindo) return;
+    setExcluindo(true);
     try {
       await deleteDoc(doc(db, "faq", excluir.id));
       avisar("Pergunta excluída.", "sucesso");
       setExcluir(null);
     } catch (e) {
       avisar(mensagemDeErro(e), "erro");
+    } finally {
+      setExcluindo(false);
     }
   }
 
@@ -129,14 +133,14 @@ export default function FaqRobo() {
       />
       <Modal
         aberto={!!excluir}
-        fechar={() => setExcluir(null)}
+        fechar={() => !excluindo && setExcluir(null)}
         titulo="Excluir pergunta?"
         rodape={
           <div className="flex justify-end gap-2">
-            <Botao variante="fantasma" onClick={() => setExcluir(null)}>
+            <Botao variante="fantasma" onClick={() => setExcluir(null)} disabled={excluindo}>
               Cancelar
             </Botao>
-            <Botao variante="perigo" icone="lixeira" onClick={confirmarExclusao}>
+            <Botao variante="perigo" icone="lixeira" onClick={confirmarExclusao} carregando={excluindo}>
               Excluir
             </Botao>
           </div>
@@ -259,7 +263,7 @@ function EditorFaq({ faq, proximaOrdem, fechar }: { faq: ComId<Faq> | "nova" | n
       }
     >
       <form id="form-faq" onSubmit={salvar} className="space-y-5" noValidate>
-        <Campo rotulo="Pergunta" value={pergunta} onChange={setPergunta} erro={tentou && erros.pergunta} maxLength={200} autoFocus />
+        <Campo rotulo="Pergunta" value={pergunta} onChange={setPergunta} erro={tentou && erros.pergunta} maxLength={200} autoFocus={window.matchMedia("(pointer: fine)").matches} />
         <AreaTexto rotulo="Resposta" value={resposta} onChange={(e) => setResposta(e.target.value)} erro={tentou && erros.resposta} maxLength={2000} rows={6} />
         <Campo
           rotulo="Palavras-chave"

@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
-import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { useEffect, useRef, useState } from "react";
+import { collection, doc, serverTimestamp, setDoc, updateDoc, type DocumentReference } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
 import type { ComId, Sede } from "@/lib/tipos";
 import { Botao, BotaoIcone, CabecalhoPagina, Campo, Cartao, cx, Gaveta, Icone, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
-import { Confirmar, EstadoLista } from "./util";
+import { comPrazo, Confirmar, EstadoLista, mensagemGravacao, numero } from "./util";
 import { infoRecebedor, SeloRecebedor } from "./recebedor";
 
 interface Form {
@@ -98,7 +98,16 @@ export default function Sedes() {
               </Botao>
             )}
             {s.recebedor && (
-              <Botao tamanho="sm" variante="fantasma" icone="atualizar" className="shrink-0" carregando={atualizando === s.id} onClick={() => atualizarRecebedor(s.id)}>
+              <Botao
+                tamanho="sm"
+                variante="fantasma"
+                icone="atualizar"
+                className="shrink-0"
+                carregando={atualizando === s.id}
+                onClick={() => atualizarRecebedor(s.id)}
+                aria-label={`Atualizar a situação da conta de recebimento de ${s.nome}`}
+                title="Atualizar situação"
+              >
                 <span className="hidden sm:inline">Atualizar</span>
               </Botao>
             )}
@@ -122,7 +131,7 @@ export default function Sedes() {
     <div className="max-w-4xl">
       <CabecalhoPagina
         titulo="Sedes"
-        descricao="A sede principal fica com a taxa de serviço. Cada subsede recebe o valor dos próprios eventos direto na conta de recebimento dela (split) e, se configurado, as mensalidades dos seus sócios."
+        descricao="A sede principal fica com a taxa de serviço. Cada subsede recebe o valor dos próprios eventos direto na conta de recebimento dela, dividido na hora pela Pagar.me, e, se configurado, as mensalidades dos seus sócios."
         acoes={
           <Botao icone="mais" onClick={() => setEditando("nova")} data-tour="nova-subsede">
             Nova subsede
@@ -135,7 +144,7 @@ export default function Sedes() {
         <div className="space-y-6" data-tour="lista-sedes">
           {principal && <div className="grid grid-cols-1 gap-3">{item(principal)}</div>}
           <section>
-            <h2 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-3">Subsedes ({subsedes.length})</h2>
+            <h2 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-3">Subsedes ({numero(subsedes.length)})</h2>
             {subsedes.length ? (
               <div className="grid grid-cols-1 gap-3">{subsedes.map(item)}</div>
             ) : (
@@ -185,17 +194,21 @@ function FormSede({
   const [f, setF] = useState<Form>(() => formDe(existente, proximaOrdem));
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  // Subsede nova ganha o id ao abrir: se a internet cair e a pessoa tentar de novo, não duplica.
+  const novaRef = useRef<DocumentReference | null>(null);
 
   useEffect(() => {
     if (sede) {
       setF(formDe(existente, proximaOrdem));
       setErro(null);
+      novaRef.current = sede === "nova" ? doc(collection(db, `torcidas/${tid}/sedes`)) : null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sede]);
   const set = (k: keyof Form, v: string) => setF((x) => ({ ...x, [k]: v }));
 
   async function salvar() {
+    if (salvando) return;
     if (f.nome.trim().length < 2) return setErro("Dê um nome à sede.");
     setSalvando(true);
     const dados = {
@@ -208,15 +221,16 @@ function FormSede({
     };
     try {
       if (existente) {
-        await updateDoc(doc(db, `torcidas/${tid}/sedes/${existente.id}`), { ...dados, atualizadoEm: serverTimestamp() });
+        await comPrazo(updateDoc(doc(db, `torcidas/${tid}/sedes/${existente.id}`), { ...dados, atualizadoEm: serverTimestamp() }));
         avisar("Sede atualizada.", "sucesso");
       } else {
-        await addDoc(collection(db, `torcidas/${tid}/sedes`), { ...dados, tipo: "subsede", ativa: true, criadoEm: serverTimestamp() });
+        novaRef.current ??= doc(collection(db, `torcidas/${tid}/sedes`));
+        await comPrazo(setDoc(novaRef.current, { ...dados, tipo: "subsede", ativa: true, criadoEm: serverTimestamp() }));
         avisar("Subsede criada.", "sucesso");
       }
       fechar();
     } catch (e) {
-      avisar(mensagemDeErro(e), "erro");
+      avisar(mensagemGravacao(e), "erro");
     } finally {
       setSalvando(false);
     }

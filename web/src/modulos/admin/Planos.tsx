@@ -102,6 +102,7 @@ export default function Planos() {
         <EstadoLista
           carregando={planos.carregando}
           erro={planos.erro}
+          semConexao={planos.semConexao}
           vazio
           icone="estrela"
           tituloVazio="Nenhum plano ainda"
@@ -250,7 +251,7 @@ function FormPlano({ plano, proximaOrdem, fechar }: { plano: ComId<Plano> | "nov
                   key={m.nome}
                   type="button"
                   onClick={() => setF((x) => ({ ...x, ...m, beneficios: [...(m.beneficios ?? [])] }))}
-                  className="h-9 px-3.5 rounded-xl border border-linha bg-superficie-2 hover:border-linha-forte text-sm font-semibold"
+                  className="h-11 sm:h-9 px-3.5 rounded-xl border border-linha bg-superficie-2 hover:border-linha-forte text-sm font-semibold"
                 >
                   {m.nome}
                 </button>

@@ -70,7 +70,7 @@ export const ROTULO_SITUACAO: Record<Situacao, string> = {
   analise: "Em análise",
   suspenso: "Suspenso",
   cancelado: "Cancelado",
-  inadimplente: "Inadimplente",
+  inadimplente: "Mensalidade atrasada",
 };
 
 export const TOM_SITUACAO: Record<Situacao, Tom> = {

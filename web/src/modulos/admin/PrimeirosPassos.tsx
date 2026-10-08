@@ -86,7 +86,7 @@ export function usePrimeirosPassos(args: { tid: string; torcida: ComId<Torcida>;
         itens.push({
           chave: "planos",
           titulo: "Criar os planos de sócio",
-          descricao: "Mensal, anual, mirim... com valor e benefícios.",
+          descricao: "Mensal, anual, mirim… com valor e benefícios.",
           feito: planos.dados.length > 0,
           para: "planos?tour=admin-planos",
           acao: "Criar plano",
@@ -164,7 +164,7 @@ function ListaPassos({ itens, compacta }: { itens: ItemPrimeiroPasso[]; compacta
       {itens.map((it, n) => (
         <li
           key={it.chave}
-          className={cx("flex items-center gap-3 py-3.5", compacta && it.feito && "hidden sm:flex")}
+          className={cx("flex items-center gap-3 py-3.5", compacta && it.feito && "hidden")}
           data-tour={it.chave === primeiroPendente ? "primeiro-pendente" : undefined}
         >
           <span
@@ -215,11 +215,12 @@ export function CartaoPrimeirosPassos() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold">Primeiros passos</h2>
-          <p className="text-sm text-texto-2">
-            {feitos} de {obrigatorios.length} concluídos
+          {/* no cartão da Visão geral só aparecem os que faltam; os feitos viram o contador */}
+          <p className="text-sm text-texto-2 numeros">
+            {feitos} de {obrigatorios.length} feitos
           </p>
         </div>
-        <Link to={`${base}/primeiros-passos`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 shrink-0">
+        <Link to={`${base}/primeiros-passos`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 shrink-0 min-h-11 sm:min-h-0">
           Ver tudo <Icone nome="chevronDireita" className="size-4" />
         </Link>
       </div>

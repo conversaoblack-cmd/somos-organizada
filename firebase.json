@@ -47,6 +47,10 @@
         "destination": "/app.html"
       },
       {
+        "source": "/verificar",
+        "destination": "/app.html"
+      },
+      {
         "source": "/plataforma",
         "destination": "/app.html"
       },

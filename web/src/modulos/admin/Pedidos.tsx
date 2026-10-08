@@ -9,20 +9,27 @@ import { Abas, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Gaveta, Icone, 
 import { api, mensagemDeErro } from "@/lib/api";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
-import { baixarCsv, BotaoCopiar, decimalBR, EstadoLista, Linha, normalizar, numeroWhatsapp, TOM_PEDIDO } from "./util";
+import { baixarCsv, BotaoCopiar, decimalBR, EstadoLista, Linha, normalizar, numero, numeroWhatsapp, TOM_PEDIDO } from "./util";
+
+/** Quantos pedidos buscar por vez (o painel lê do mais recente para o mais antigo). */
+const LOTE = 100;
 
 type PedidoPg = Pedido & { pagarme?: { orderId?: string; chargeId?: string } };
 
 export default function Pedidos() {
   const { tid, ehDiretoria, sedeEscopo, nomeSede } = usePainel();
+  const [qtd, setQtd] = useState(LOTE);
   const pedidos = useColecao<PedidoPg>(
     ehDiretoria
-      ? query(collection(db, `torcidas/${tid}/pedidos`), orderBy("criadoEm", "desc"), limit(100))
+      ? query(collection(db, `torcidas/${tid}/pedidos`), orderBy("criadoEm", "desc"), limit(qtd))
       : sedeEscopo
-        ? query(collection(db, `torcidas/${tid}/pedidos`), where("sedeId", "==", sedeEscopo), orderBy("criadoEm", "desc"), limit(100))
+        ? query(collection(db, `torcidas/${tid}/pedidos`), where("sedeId", "==", sedeEscopo), orderBy("criadoEm", "desc"), limit(qtd))
         : null,
-    `pedidos-${tid}-${sedeEscopo ?? "todas"}`,
+    `pedidos-${tid}-${sedeEscopo ?? "todas"}-${qtd}`,
   );
+  // Veio a página cheia: pode haver pedidos mais antigos que ainda não foram carregados.
+  const temMais = pedidos.dados.length >= qtd;
+  const carregandoMais = pedidos.carregando && pedidos.dados.length > 0;
   const [tipo, setTipo] = useState<"todos" | "ingresso" | "socio">("todos");
   const [status, setStatus] = useState<"" | StatusPedido>("");
   const [busca, setBusca] = useState("");
@@ -47,7 +54,7 @@ export default function Pedidos() {
   function exportar() {
     baixarCsv(
       `pedidos-${new Date().toISOString().slice(0, 10)}`,
-      ["Data", "Pedido", "Tipo", "Evento", "Comprador", "E-mail", "Telefone", "Método", "Status", "Valor base", "Taxa", "Total", "Sede", "Motivo"],
+      ["Data", "Pedido", "Tipo", "Evento", "Comprador", "E-mail", "Telefone", "Forma de pagamento", "Situação", "Valor sem taxa", "Taxa de serviço", "Total", "Sede", "Motivo"],
       filtrados.map((p) => [
         dataHora(p.criadoEm),
         p.id,
@@ -71,16 +78,16 @@ export default function Pedidos() {
     <div>
       <CabecalhoPagina
         titulo="Pedidos e ingressos"
-        descricao="Os 100 pedidos mais recentes, de ingressos e de mensalidades."
+        descricao="Pedidos de ingressos e de mensalidades, do mais recente para o mais antigo."
         acoes={
           <button
             type="button"
             onClick={exportar}
             disabled={!filtrados.length}
             data-tour="pedidos-exportar"
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2 disabled:opacity-50"
           >
-            <Icone nome="download" className="size-4" /> Exportar CSV
+            <Icone nome="download" className="size-4" /> Baixar planilha
           </button>
         }
       />
@@ -109,19 +116,31 @@ export default function Pedidos() {
         </div>
       </div>
 
-      {pedidos.carregando || pedidos.erro || filtrados.length === 0 ? (
-        <EstadoLista
-          carregando={pedidos.carregando}
-          erro={pedidos.erro}
-          vazio
-          icone="ingresso"
-          tituloVazio={pedidos.dados.length ? "Nenhum pedido com esses filtros" : "Nenhum pedido ainda"}
-          textoVazio={pedidos.dados.length ? "Mude os filtros ou a busca." : "Quando alguém comprar um ingresso ou virar sócio, o pedido aparece aqui."}
-        />
+      {temMais && !pedidos.erro && (
+        <Aviso tom="info" className="mb-4">
+          A busca e a planilha consideram só os {numero(pedidos.dados.length)} pedidos mais recentes. Para incluir os mais antigos, toque em “Carregar mais”
+          no fim da lista.
+        </Aviso>
+      )}
+
+      {(pedidos.carregando && !pedidos.dados.length) || pedidos.erro || filtrados.length === 0 ? (
+        <>
+          <EstadoLista
+            carregando={pedidos.carregando && !pedidos.dados.length}
+            erro={pedidos.erro}
+            semConexao={pedidos.semConexao}
+            vazio
+            icone="ingresso"
+            tituloVazio={pedidos.dados.length ? "Nenhum pedido com esses filtros" : "Nenhum pedido ainda"}
+            textoVazio={pedidos.dados.length ? "Mude os filtros ou a busca." : "Quando alguém comprar um ingresso ou virar sócio, o pedido aparece aqui."}
+          />
+          {temMais && !pedidos.erro && <CarregarMais carregando={carregandoMais} mais={() => setQtd((n) => n + LOTE)} />}
+        </>
       ) : (
         <div data-tour="pedidos-lista">
           <p className="text-sm text-texto-3 mb-3 numeros">
-            {filtrados.length} {filtrados.length === 1 ? "pedido" : "pedidos"} · {moeda(somaPagos)} pagos
+            {numero(filtrados.length)} {filtrados.length === 1 ? "pedido" : "pedidos"} · {moeda(somaPagos)} pagos
+            {temMais && " · há pedidos mais antigos"}
           </p>
           {/* Tabela (desktop) */}
           <Cartao className="hidden md:block overflow-hidden">
@@ -139,7 +158,17 @@ export default function Pedidos() {
                 {filtrados.map((p) => (
                   <tr key={p.id} onClick={() => setAberto(p)} className="border-b border-linha last:border-0 hover:bg-superficie-2 cursor-pointer">
                     <td className="px-4 py-3">
-                      <p className="font-medium">{p.comprador?.nome}</p>
+                      {/* botão de verdade na primeira célula: abre o pedido pelo teclado e leitor de tela */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAberto(p);
+                        }}
+                        className="font-medium text-left hover:underline focus-visible:outline-2 focus-visible:outline-primaria-texto rounded"
+                      >
+                        {p.comprador?.nome || "Sem nome"}
+                      </button>
                       <p className="text-xs text-texto-3">{p.comprador?.email}</p>
                     </td>
                     <td className="px-4 py-3 max-w-64">
@@ -162,26 +191,26 @@ export default function Pedidos() {
           <div className="md:hidden grid grid-cols-1 gap-2">
             {filtrados.map((p) => (
               <button key={p.id} type="button" onClick={() => setAberto(p)} className="text-left min-w-0 w-full">
-                <Cartao className="p-4 flex items-center gap-3 active:bg-superficie-2">
+                <Cartao className="p-4 flex items-start gap-3 active:bg-superficie-2">
                   <span className={cx("size-10 shrink-0 rounded-xl grid place-items-center", p.tipo === "ingresso" ? "bg-primaria/12 text-primaria-texto" : "bg-secundaria/15 text-secundaria")}>
                     <Icone nome={p.tipo === "ingresso" ? "ingresso" : "estrela"} className="size-5" />
                   </span>
+                  {/* nome com a linha inteira; situação e valor embaixo (a etiqueta não espreme mais o nome) */}
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{p.comprador?.nome}</p>
-                    <p className="text-xs text-texto-3 truncate">
-                      {p.tipo === "ingresso" ? p.eventoNome : "Sócio"} · {relativo(p.criadoEm)}
+                    <p className="font-medium truncate">{p.comprador?.nome || "Sem nome"}</p>
+                    <p className="text-xs text-texto-3 line-clamp-2 break-words">
+                      {p.tipo === "ingresso" ? `${p.itens?.length ?? 1}× ${p.eventoNome ?? "Ingresso"}` : p.renovacao ? "Renovação de sócio" : "Adesão de sócio"} · {relativo(p.criadoEm)}
                     </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-semibold numeros">{moeda(p.total)}</p>
-                    <Selo tom={TOM_PEDIDO[p.status]} className="mt-1">
-                      {ROTULO_STATUS_PEDIDO[p.status]}
-                    </Selo>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <Selo tom={TOM_PEDIDO[p.status]}>{ROTULO_STATUS_PEDIDO[p.status]}</Selo>
+                      <p className="font-semibold numeros">{moeda(p.total)}</p>
+                    </div>
                   </div>
                 </Cartao>
               </button>
             ))}
           </div>
+          {temMais && <CarregarMais carregando={carregandoMais} mais={() => setQtd((n) => n + LOTE)} />}
         </div>
       )}
 
@@ -211,7 +240,7 @@ function DetalhePedido({ p, fechar }: { p: ComId<PedidoPg> | null; fechar: () =>
 
       {demo && p.status === "aguardando" && (
         <div className="mb-5 rounded-2xl border border-info/30 bg-info/10 p-4">
-          <p className="text-sm font-semibold">Modo demonstração</p>
+          <p className="text-sm font-semibold">Modo de demonstração</p>
           <p className="text-sm text-texto-2 mt-0.5 mb-3">Simule o Pix pago para ver o pedido confirmado e os ingressos gerados.</p>
           <Botao
             tamanho="sm"
@@ -247,7 +276,7 @@ function DetalhePedido({ p, fechar }: { p: ComId<PedidoPg> | null; fechar: () =>
         <Linha rotulo="CPF">{cpfMascarado(p.comprador?.cpf ?? "")}</Linha>
         <Linha rotulo="Telefone">
           {tel ? (
-            <a href={`https://wa.me/${numeroWhatsapp(tel)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primaria-texto hover:underline">
+            <a href={`https://wa.me/${numeroWhatsapp(tel)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 min-h-11 sm:min-h-0 text-primaria-texto hover:underline">
               <Icone nome="whatsapp" className="size-4" /> {mascaraTelefone(tel)}
             </a>
           ) : (
@@ -286,7 +315,7 @@ function DetalhePedido({ p, fechar }: { p: ComId<PedidoPg> | null; fechar: () =>
 
       <h3 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-1">Valores</h3>
       <div className="mb-6">
-        <Linha rotulo="Valor base">{moeda(p.valorBase)}</Linha>
+        <Linha rotulo={p.tipo === "ingresso" ? "Valor dos ingressos" : "Valor da mensalidade"}>{moeda(p.valorBase)}</Linha>
         <Linha rotulo="Taxa de serviço">{moeda(p.taxa)}</Linha>
         <Linha rotulo="Total cobrado">
           <span className="text-base">{moeda(p.total)}</span>
@@ -322,7 +351,7 @@ function DetalhePedido({ p, fechar }: { p: ComId<PedidoPg> | null; fechar: () =>
                 href={`https://wa.me/${numeroWhatsapp(tel)}?text=${encodeURIComponent(`Olá! Seus ingressos para ${p.eventoNome ?? "o evento"}: ${linkIngressos}`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
+                className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
               >
                 <Icone nome="whatsapp" className="size-4" /> Enviar no WhatsApp
               </a>
@@ -331,5 +360,16 @@ function DetalhePedido({ p, fechar }: { p: ComId<PedidoPg> | null; fechar: () =>
         </Cartao>
       )}
     </Gaveta>
+  );
+}
+
+function CarregarMais({ carregando, mais }: { carregando: boolean; mais: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-2 pt-4">
+      <Botao variante="contorno" icone="chevronBaixo" carregando={carregando} onClick={mais}>
+        Carregar mais pedidos
+      </Botao>
+      <p className="text-xs text-texto-3">Busca mais {LOTE} pedidos, dos mais antigos.</p>
+    </div>
   );
 }

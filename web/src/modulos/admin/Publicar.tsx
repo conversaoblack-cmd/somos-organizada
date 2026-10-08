@@ -154,6 +154,7 @@ export default function Publicar() {
           titulo="Tirar o site do ar?"
           rotulo="Tirar do ar"
           perigo
+          prazo={60_000}
           acao={async () => {
             await api.despublicarSite({ tid });
             avisar("Site fora do ar. Só a sua equipe consegue ver.", "sucesso");
@@ -224,6 +225,7 @@ export default function Publicar() {
         fechar={() => setConfirmar(false)}
         titulo="Publicar o site da torcida?"
         rotulo="Publicar agora"
+        prazo={60_000}
         acao={async () => {
           await api.publicarSite({ tid, ...(assinatura ? {} : { plano: plano! }) });
           avisar("Site publicado! Agora é só divulgar.", "sucesso");
@@ -259,7 +261,7 @@ function ItemChecklist({ ok, titulo, detalhe, para, base, recomendado }: { ok: b
         <p className="text-xs text-texto-3">{detalhe}</p>
       </div>
       {!ok && (
-        <Link to={`${base}/${para}`} className="text-sm font-semibold text-primaria-texto hover:underline shrink-0">
+        <Link to={`${base}/${para}`} className="inline-flex items-center min-h-11 sm:min-h-0 text-sm font-semibold text-primaria-texto hover:underline shrink-0">
           Resolver
         </Link>
       )}
@@ -272,10 +274,10 @@ function LinkSite({ rotulo, url }: { rotulo: string; url: string }) {
     <div>
       <p className="text-sm text-texto-3 mb-1">{rotulo}</p>
       <div className="flex flex-col sm:flex-row gap-2">
-        <code className="flex-1 min-w-0 truncate rounded-xl bg-superficie-2 border border-linha px-3 h-10 leading-10 text-sm text-texto">{url}</code>
+        <code className="flex-1 min-w-0 truncate rounded-xl bg-superficie-2 border border-linha px-3 h-11 leading-[2.75rem] sm:h-10 sm:leading-10 text-sm text-texto">{url}</code>
         <div className="flex gap-2">
-          <BotaoCopiar texto={url} rotulo="Copiar" className="h-10" />
-          <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3">
+          <BotaoCopiar texto={url} rotulo="Copiar" className="h-11 sm:h-10" />
+          <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-11 sm:h-10 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3">
             <Icone nome="externo" className="size-4" /> Abrir
           </a>
         </div>

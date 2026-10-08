@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { addDoc, collection, deleteDoc, deleteField, doc, orderBy, query, serverTimestamp, Timestamp, updateDoc, where } from "firebase/firestore";
+import { collection, deleteDoc, deleteField, doc, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, type DocumentReference } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { mensagemDeErro } from "@/lib/api";
 import { centavosDeTexto, cpfMascarado, dataExtensa, dataHora, diaDoMes, hora, mesAbrev, moeda, taxa } from "@/lib/formatos";
@@ -9,6 +9,7 @@ import { linkEvento, novoCodigoEvento } from "@/lib/eventos";
 import { QrCode } from "@/ui/qr";
 import QRCodeLib from "qrcode";
 import { useColecao, useDocumento } from "@/hooks/dados";
+import { useAlteracoesPendentes } from "@/componentes/LayoutPainel";
 import {
   AreaTexto,
   Aviso,
@@ -35,10 +36,16 @@ import { useTourPagina } from "./tours";
 import {
   BarraOcupacao,
   BotaoCopiar,
+  comPrazo,
   Confirmar,
   deInputDataHora,
+  DICA_FUSO,
   EstadoLista,
+  mensagemGravacao,
+  MostrarMais,
   normalizar,
+  numero,
+  POR_PAGINA,
   paraInputDataHora,
   Pilulas,
   SeletorImagem,
@@ -192,10 +199,11 @@ export default function Eventos() {
         <EstadoLista
           carregando={eventos.carregando}
           erro={eventos.erro}
+          semConexao={eventos.semConexao}
           vazio
           icone="calendario"
           tituloVazio={eventos.dados.length ? "Nenhum evento com esses filtros" : "Nenhum evento ainda"}
-          textoVazio={eventos.dados.length ? "Mude os filtros ou a busca." : "Crie o primeiro evento: caravana, festa, churrasco, jogo..."}
+          textoVazio={eventos.dados.length ? "Mude os filtros ou a busca." : "Crie o primeiro evento: caravana, festa, churrasco, jogo…"}
           acaoVazio={
             !eventos.dados.length && (
               <Botao icone="mais" onClick={() => setEditando("novo")}>
@@ -240,7 +248,7 @@ function CartaoEvento({ e, sede, para, editar, passado }: { e: ComId<EventoAdm>;
       <Link to={para} className="flex gap-4 p-4 pb-3 min-w-0">
         <div className="relative size-20 sm:size-24 shrink-0 rounded-2xl overflow-hidden bg-superficie-2">
           {e.imagemUrl ? (
-            <img src={e.imagemUrl} alt="" className="size-full object-cover" loading="lazy" />
+            <img src={e.imagemUrl} alt="" width={96} height={96} className="size-full object-cover" loading="lazy" decoding="async" />
           ) : (
             <div className="size-full grid place-items-center text-center leading-none">
               <span>
@@ -326,15 +334,33 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
   const [erros, setErros] = useState<Partial<Record<keyof Form, string>>>({});
   const [salvando, setSalvando] = useState(false);
   const [confirmarStatus, setConfirmarStatus] = useState(false);
+  const [confirmarDescarte, setConfirmarDescarte] = useState(false);
+  // Como o formulário estava ao abrir: serve para saber se há alteração não salva.
+  const [inicial, setInicial] = useState<Form>(() => formDe(existente, sedePadrao));
+  // Evento novo ganha o id ao abrir: se a internet cair e a pessoa tentar de novo, grava o mesmo documento (sem duplicar).
+  const novoRef = useRef<DocumentReference | null>(null);
+  const novoCodigo = useRef(novoCodigoEvento());
   useTourPagina("eventos-criar", { ativo: evento === "novo" });
 
   useEffect(() => {
     if (evento) {
-      setF(formDe(existente, sedePadrao));
+      const base = formDe(existente, sedePadrao);
+      setF(base);
+      setInicial(base);
       setErros({});
+      novoRef.current = evento === "novo" ? doc(collection(db, `torcidas/${tid}/eventos`)) : null;
+      novoCodigo.current = novoCodigoEvento();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evento]);
+
+  const alterado = !!evento && JSON.stringify(f) !== JSON.stringify(inicial);
+  useAlteracoesPendentes(alterado);
+  function tentarFechar() {
+    if (salvando) return;
+    if (alterado) setConfirmarDescarte(true);
+    else fechar();
+  }
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }));
   const vSocio = centavosDeTexto(f.valorSocio || "0");
@@ -361,7 +387,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
       const c = Number(f.capacidade);
       if (!Number.isInteger(c) || c <= 0) e.capacidade = "Use um número inteiro maior que zero.";
       else if (existente && c < existente.vendidos + existente.reservados)
-        e.capacidade = `Já existem ${existente.vendidos + existente.reservados} ingressos vendidos ou reservados.`;
+        e.capacidade = `Já existem ${numero(existente.vendidos + existente.reservados)} ingressos vendidos ou reservados.`;
     }
     const lim = Number(f.limitePorPedido);
     if (!Number.isInteger(lim) || lim < 1 || lim > 20) e.limitePorPedido = "Entre 1 e 20.";
@@ -406,14 +432,15 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
     const limparDevolucao = !!existente?.motivoDevolucao && f.status !== "rascunho";
     try {
       if (!existente) {
-        await addDoc(collection(db, `torcidas/${tid}/eventos`), {
+        novoRef.current ??= doc(collection(db, `torcidas/${tid}/eventos`));
+        await comPrazo(setDoc(novoRef.current, {
           ...dados,
-          codigo: novoCodigoEvento(),
+          codigo: novoCodigo.current,
           ...(f.imagemUrl ? { imagemUrl: f.imagemUrl } : {}),
           vendidos: 0,
           reservados: 0,
           criadoEm: serverTimestamp(),
-        });
+        }));
         avisar(
           f.status === "publicado"
             ? "Evento publicado! Já está na página da torcida."
@@ -438,12 +465,12 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
           fechar();
           return;
         }
-        await updateDoc(doc(db, `torcidas/${tid}/eventos/${existente.id}`), { ...mudancas, atualizadoEm: serverTimestamp() });
+        await comPrazo(updateDoc(doc(db, `torcidas/${tid}/eventos/${existente.id}`), { ...mudancas, atualizadoEm: serverTimestamp() }));
         avisar("Evento atualizado.", "sucesso");
       }
       fechar();
     } catch (e) {
-      avisar(mensagemDeErro(e), "erro");
+      avisar(mensagemGravacao(e), "erro");
     } finally {
       setSalvando(false);
     }
@@ -454,11 +481,11 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
   return (
     <Gaveta
       aberto={!!evento}
-      fechar={() => !salvando && fechar()}
+      fechar={tentarFechar}
       titulo={existente ? "Editar evento" : "Novo evento"}
       rodape={
         <div className="flex gap-2 justify-end">
-          <Botao variante="fantasma" onClick={fechar} disabled={salvando}>
+          <Botao variante="fantasma" onClick={tentarFechar} disabled={salvando}>
             Cancelar
           </Botao>
           <Botao onClick={pedirSalvar} carregando={salvando} icone="check" data-tour="evento-salvar">
@@ -488,7 +515,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
           value={f.descricao}
           onChange={(e) => set("descricao", e.target.value)}
           maxLength={2000}
-          placeholder="Horário de saída, o que está incluso, regras de entrada..."
+          placeholder="Horário de saída, o que está incluso, regras de entrada…"
         />
         </div>
         <div data-tour="evento-sede">
@@ -509,7 +536,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
         </Selecao>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-tour="evento-data">
-          <Campo rotulo="Data e hora" type="datetime-local" value={f.data} onChange={(v) => set("data", v)} erro={erros.data} />
+          <Campo rotulo="Data e hora" type="datetime-local" value={f.data} onChange={(v) => set("data", v)} erro={erros.data} dica={DICA_FUSO} />
           <Campo rotulo="Local" value={f.local} onChange={(v) => set("local", v)} placeholder="Ex.: Sede Central" maxLength={120} />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-tour="evento-valores">
@@ -559,7 +586,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
           value={f.vendaAte}
           onChange={(v) => set("vendaAte", v)}
           erro={erros.vendaAte}
-          dica="Depois desse horário o botão de compra some."
+          dica={`${DICA_FUSO} Depois desse horário o botão de compra some.`}
         />
         <div data-tour="evento-imagem">
         <SeletorImagem
@@ -627,7 +654,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
             O evento sai da página pública e ninguém mais consegue comprar.
             {existente && existente.vendidos > 0 && (
               <strong className="block mt-2 text-texto">
-                Já existem {existente.vendidos} ingressos vendidos. Os estornos precisam ser feitos no painel da Pagar.me.
+                Já existem {numero(existente.vendidos)} ingressos vendidos. Os estornos precisam ser feitos no painel da Pagar.me.
               </strong>
             )}
           </>
@@ -635,6 +662,30 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
           "O evento continua visível, mas a venda de ingressos é encerrada."
         )}
       </Confirmar>
+      <Modal
+        aberto={confirmarDescarte}
+        fechar={() => setConfirmarDescarte(false)}
+        titulo="Descartar alterações?"
+        largura="max-w-md"
+        rodape={
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Botao variante="fantasma" onClick={() => setConfirmarDescarte(false)}>
+              Continuar editando
+            </Botao>
+            <Botao
+              variante="perigo"
+              onClick={() => {
+                setConfirmarDescarte(false);
+                fechar();
+              }}
+            >
+              Descartar
+            </Botao>
+          </div>
+        }
+      >
+        <p className="text-texto-2 text-[15px] leading-relaxed">O que você preencheu neste evento ainda não foi salvo e vai se perder.</p>
+      </Modal>
     </Gaveta>
   );
 }
@@ -656,7 +707,10 @@ export function DetalheEvento() {
   const [devolver, setDevolver] = useState(false);
   const [enviar, setEnviar] = useState(false);
   const [motivo, setMotivo] = useState("");
+  const [devolvendo, setDevolvendo] = useState(false);
   const [busca, setBusca] = useState("");
+  // Evento grande tem centenas de ingressos: desenha aos poucos (a busca continua valendo para todos).
+  const [mostrar, setMostrar] = useState(POR_PAGINA);
   const e = ev.dados;
   const podeEditarFn = usePodeEditar();
   useTourPagina("evento-detalhe");
@@ -691,6 +745,7 @@ export function DetalheEvento() {
   }, [ingressos.dados, busca]);
 
   if (ev.carregando) return <Carregando />;
+  if (!e && ev.semConexao) return <EstadoLista carregando={false} erro={null} semConexao vazio={false} tituloVazio="" />;
   if (!e)
     return (
       <Vazio icone="calendario" titulo="Evento não encontrado" acao={<BotaoLink to={`${base}/eventos`} variante="contorno" icone="setaEsquerda">Voltar aos eventos</BotaoLink>}>
@@ -709,7 +764,7 @@ export function DetalheEvento() {
 
   return (
     <div>
-      <Link to={`${base}/eventos`} className="inline-flex items-center gap-1.5 text-sm text-texto-2 hover:text-texto mb-4">
+      <Link to={`${base}/eventos`} className="inline-flex items-center gap-1.5 min-h-11 sm:min-h-0 text-sm text-texto-2 hover:text-texto mb-4">
         <Icone nome="setaEsquerda" className="size-4" /> Eventos
       </Link>
 
@@ -717,7 +772,7 @@ export function DetalheEvento() {
         <div className="grid md:grid-cols-[280px_1fr]">
           <div className="relative aspect-[16/9] md:aspect-auto md:min-h-full bg-superficie-2">
             {e.imagemUrl ? (
-              <img src={e.imagemUrl} alt="" className="absolute inset-0 size-full object-cover" />
+              <img src={e.imagemUrl} alt="" width={560} height={315} decoding="async" className="absolute inset-0 size-full object-cover" />
             ) : (
               <div className="absolute inset-0 grid place-items-center brilho-primaria">
                 <div className="text-center leading-none">
@@ -755,7 +810,7 @@ export function DetalheEvento() {
                   Editar
                 </Botao>
               )}
-              <a href={linkPublico} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3">
+              <a href={linkPublico} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3">
                 <Icone nome="externo" className="size-4" /> Ver página
               </a>
               <BotaoLink to={`/${torcida.slug}/portaria`} tamanho="sm" variante="suave" icone="qr">
@@ -840,21 +895,21 @@ export function DetalheEvento() {
           )}
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <code className="flex-1 min-w-0 truncate rounded-xl bg-superficie-2 border border-linha px-3 h-9 leading-9 text-sm text-texto-2">{linkPublico}</code>
+          <code className="flex-1 min-w-0 truncate rounded-xl bg-superficie-2 border border-linha px-3 h-11 leading-[2.75rem] sm:h-9 sm:leading-9 text-sm text-texto-2">{linkPublico}</code>
           <div className="flex flex-wrap gap-2">
             <BotaoCopiar texto={linkPublico} rotulo="Copiar link" />
             <a
               href={`https://wa.me/?text=${encodeURIComponent(`*${e.nome}*\n${dataExtensa(e.data)}, ${hora(e.data)}${e.local ? ` · ${e.local}` : ""}\nGaranta seu ingresso: ${linkPublico}`)}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
+              className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
             >
               <Icone nome="whatsapp" className="size-4" /> WhatsApp
             </a>
             <button
               type="button"
               onClick={() => setQrAberto(true)}
-              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
+              className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
             >
               <Icone nome="qr" className="size-4" /> QR Code
             </button>
@@ -888,19 +943,35 @@ export function DetalheEvento() {
       </Modal>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4" data-tour="evento-numeros">
-        <Indicador rotulo="Vendidos" icone="ingresso" tom="primaria" valor={e.vendidos} detalhe={e.capacidade ? `de ${e.capacidade} lugares` : "Sem limite de lugares"} />
-        <Indicador rotulo="Reservados" icone="relogio" tom="alerta" valor={e.reservados} detalhe="Aguardando pagamento" />
-        <Indicador rotulo="Entradas" icone="qr" tom="info" valor={e.entradas ?? 0} detalhe={e.vendidos ? `${Math.round(((e.entradas ?? 0) / e.vendidos) * 100)}% dos vendidos` : "Na portaria"} />
-        <Indicador rotulo="Receita (valor base)" icone="dinheiro" tom="sucesso" valor={moeda(receitaBase)} detalhe={`${qtdSocio} de sócio · ${validos.length - qtdSocio} de público`} />
+        <Indicador rotulo="Vendidos" icone="ingresso" tom="primaria" valor={numero(e.vendidos)} detalhe={e.capacidade ? `de ${numero(e.capacidade)} lugares` : "Sem limite de lugares"} />
+        <Indicador rotulo="Reservados" icone="relogio" tom="alerta" valor={numero(e.reservados)} detalhe="Aguardando pagamento" />
+        <Indicador rotulo="Entradas" icone="qr" tom="info" valor={numero(e.entradas)} detalhe={e.vendidos ? `${Math.round(((e.entradas ?? 0) / e.vendidos) * 100)}% dos vendidos` : "Na portaria"} />
+        <Indicador
+          rotulo="Receita dos ingressos"
+          icone="dinheiro"
+          tom="sucesso"
+          valor={moeda(receitaBase)}
+          detalhe={`Sem a taxa de serviço · ${numero(qtdSocio)} de sócio, ${numero(validos.length - qtdSocio)} de público`}
+        />
       </div>
       {e.capacidade ? <BarraOcupacao vendidos={e.vendidos} reservados={e.reservados} capacidade={e.capacidade} className="mb-6" /> : null}
 
       <Cartao className="p-4 sm:p-5" data-tour="evento-ingressos">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between mb-4">
           <h2 className="font-bold">
-            Ingressos <span className="text-texto-3 font-normal">({ingressos.dados.length})</span>
+            Ingressos <span className="text-texto-3 font-normal numeros">({numero(ingressos.dados.length)})</span>
           </h2>
-          <Campo value={busca} onChange={setBusca} placeholder="Nome, código ou CPF" icone="busca" className="sm:w-72" aria-label="Buscar ingresso" />
+          <Campo
+            value={busca}
+            onChange={(v) => {
+              setBusca(v);
+              setMostrar(POR_PAGINA);
+            }}
+            placeholder="Nome, código ou CPF"
+            icone="busca"
+            className="sm:w-72"
+            aria-label="Buscar ingresso"
+          />
         </div>
         {!ehDiretoria && e.sedeId !== sedeEscopo ? (
           <Aviso tom="info">Este evento é de outra sede. Você só vê os ingressos dos eventos da sua sede.</Aviso>
@@ -908,29 +979,33 @@ export function DetalheEvento() {
           <EstadoLista
             carregando={ingressos.carregando}
             erro={ingressos.erro}
+            semConexao={ingressos.semConexao}
             vazio
             icone="ingresso"
             tituloVazio={busca ? "Nenhum ingresso encontrado" : "Nenhum ingresso vendido ainda"}
             textoVazio={busca ? undefined : "Divulgue o link do evento para começar a vender."}
           />
         ) : (
-          <ul className="divide-y divide-linha">
-            {lista.map((i) => (
-              <li key={i.id} className="flex items-center gap-3 py-3">
-                <span className={cx("size-9 shrink-0 rounded-xl grid place-items-center", i.tipo === "socio" ? "bg-secundaria/15 text-secundaria" : "bg-superficie-2 text-texto-2")}>
-                  <Icone nome={i.tipo === "socio" ? "estrela" : "ingresso"} className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate">{i.titularNome}</p>
-                  <p className="text-xs text-texto-3 truncate numeros">
-                    {i.codigo} · {cpfMascarado(i.titularCpf)} · {i.tipo === "socio" ? "Sócio" : "Público"}
-                    {i.usadoEm && ` · entrou ${hora(i.usadoEm)}`}
-                  </p>
-                </div>
-                <Selo tom={TOM_INGRESSO[i.status]}>{ROTULO_INGRESSO[i.status]}</Selo>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="divide-y divide-linha">
+              {lista.slice(0, mostrar).map((i) => (
+                <li key={i.id} className="flex items-center gap-3 py-3">
+                  <span className={cx("size-9 shrink-0 rounded-xl grid place-items-center", i.tipo === "socio" ? "bg-secundaria/15 text-secundaria" : "bg-superficie-2 text-texto-2")}>
+                    <Icone nome={i.tipo === "socio" ? "estrela" : "ingresso"} className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{i.titularNome}</p>
+                    <p className="text-xs text-texto-3 truncate numeros">
+                      {i.codigo} · {cpfMascarado(i.titularCpf)} · {i.tipo === "socio" ? "Sócio" : "Público"}
+                      {i.usadoEm && ` · entrou ${hora(i.usadoEm)}`}
+                    </p>
+                  </div>
+                  <Selo tom={TOM_INGRESSO[i.status]}>{ROTULO_INGRESSO[i.status]}</Selo>
+                </li>
+              ))}
+            </ul>
+            <MostrarMais total={lista.length} mostrando={mostrar} mais={() => setMostrar((n) => n + POR_PAGINA)} />
+          </>
         )}
       </Cartao>
 
@@ -961,25 +1036,30 @@ export function DetalheEvento() {
       </Confirmar>
       <Modal
         aberto={devolver}
-        fechar={() => setDevolver(false)}
+        fechar={() => !devolvendo && setDevolver(false)}
         titulo="Devolver para ajustes"
         descricao="O evento volta a ser rascunho e a subsede vê o motivo."
         rodape={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-            <Botao variante="fantasma" onClick={() => setDevolver(false)}>
+            <Botao variante="fantasma" onClick={() => setDevolver(false)} disabled={devolvendo}>
               Cancelar
             </Botao>
             <Botao
               icone="setaEsquerda"
               disabled={motivo.trim().length < 5}
+              carregando={devolvendo}
               onClick={async () => {
+                if (devolvendo) return;
+                setDevolvendo(true);
                 try {
-                  await updateDoc(refEvento, { status: "rascunho", motivoDevolucao: motivo.trim(), devolvidoEm: serverTimestamp() });
+                  await comPrazo(updateDoc(refEvento, { status: "rascunho", motivoDevolucao: motivo.trim(), devolvidoEm: serverTimestamp() }));
                   avisar("Evento devolvido para a subsede.", "sucesso");
                   setDevolver(false);
                   setMotivo("");
                 } catch (err) {
-                  avisar(mensagemDeErro(err), "erro");
+                  avisar(mensagemGravacao(err), "erro");
+                } finally {
+                  setDevolvendo(false);
                 }
               }}
             >

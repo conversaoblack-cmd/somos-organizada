@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -9,7 +9,7 @@ import type { ComId, Evento, Membro, Papel } from "@/lib/tipos";
 import { useColecao, useDocumento } from "@/hooks/dados";
 import { useMembro, useTorcida } from "@/hooks/torcida";
 import { Login } from "@/componentes/Login";
-import { Aviso, Botao, BotaoIcone, Carregando, cx, Esqueleto, Girando, Icone, Vazio } from "@/ui";
+import { Aviso, Botao, BotaoIcone, Carregando, cx, Esqueleto, Girando, Icone, Modal, Vazio } from "@/ui";
 import { useTelaAcesa } from "../conta/comum";
 import { feedback, prepararAudio } from "./feedback";
 import { Leitor } from "./Leitor";
@@ -48,6 +48,33 @@ const CSS_PORTARIA = `
 .so-tremer { animation: so-tremer .4s ease both; }
 `;
 
+const NUM = new Intl.NumberFormat("pt-BR");
+/** 1234 → "1.234" */
+const num = (n: number | null | undefined) => NUM.format(n ?? 0);
+
+/** Só abre o teclado sozinho no computador (no celular o teclado cobre a tela sem o porteiro pedir). */
+const focarSozinho = () => typeof window !== "undefined" && window.matchMedia?.("(pointer: fine)").matches;
+
+/** Tela de "sem internet" com botão para assinar de novo. */
+function SemInternet({ tentarDeNovo, extra }: { tentarDeNovo: () => void; extra?: ReactNode }) {
+  return (
+    <Vazio
+      icone="alerta"
+      titulo="Sem internet"
+      acao={
+        <div className="flex flex-col sm:flex-row gap-2 justify-center">
+          <Botao icone="atualizar" onClick={tentarDeNovo}>
+            Tentar de novo
+          </Botao>
+          {extra}
+        </div>
+      }
+    >
+      Não conseguimos falar com o servidor. Confira o sinal ou o Wi-Fi e toque em Tentar de novo.
+    </Vazio>
+  );
+}
+
 const ehHoje = (v: Evento["data"]) => {
   const d = paraData(v);
   if (!d) return false;
@@ -57,6 +84,9 @@ const ehHoje = (v: Evento["data"]) => {
 
 // ── Cabeçalho ─────────────────────────────────────────────────────────────
 function Cabecalho({ titulo, subtitulo, voltar, membro }: { titulo: string; subtitulo?: string; voltar?: () => void; membro?: Membro | null }) {
+  // Sair no meio da fila obriga a entrar de novo (e-mail e senha): sempre pede confirmação.
+  const [confirmarSaida, setConfirmarSaida] = useState(false);
+  const [saindo, setSaindo] = useState(false);
   return (
     <header className="sticky top-0 z-30 bg-fundo/90 backdrop-blur-xl border-b border-linha">
       <div className="mx-auto max-w-5xl h-16 px-3 sm:px-6 flex items-center gap-2">
@@ -74,15 +104,51 @@ function Cabecalho({ titulo, subtitulo, voltar, membro }: { titulo: string; subt
         {membro && (
           <button
             type="button"
-            onClick={() => signOut(auth)}
+            onClick={() => setConfirmarSaida(true)}
             className="h-11 px-3 rounded-xl flex items-center gap-2 text-sm font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2"
             title={`Sair (${membro.email})`}
+            aria-label="Sair da conta"
           >
             <Icone nome="sair" className="size-5" />
             <span className="hidden sm:inline">Sair</span>
           </button>
         )}
       </div>
+      {membro && (
+        <Modal
+          aberto={confirmarSaida}
+          fechar={() => !saindo && setConfirmarSaida(false)}
+          titulo="Sair da portaria?"
+          largura="max-w-md"
+          rodape={
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <Botao variante="fantasma" onClick={() => setConfirmarSaida(false)} disabled={saindo}>
+                Continuar na portaria
+              </Botao>
+              <Botao
+                variante="perigo"
+                icone="sair"
+                carregando={saindo}
+                onClick={async () => {
+                  setSaindo(true);
+                  try {
+                    await signOut(auth);
+                  } finally {
+                    setSaindo(false);
+                    setConfirmarSaida(false);
+                  }
+                }}
+              >
+                Sair
+              </Botao>
+            </div>
+          }
+        >
+          <p className="text-texto-2 text-[15px] leading-relaxed">
+            Para voltar a ler ingressos, será preciso entrar de novo com o e-mail e a senha de {membro.email}.
+          </p>
+        </Modal>
+      )}
     </header>
   );
 }
@@ -95,7 +161,8 @@ function EscolherEvento({ tid, membro, escolher }: { tid: string; membro: Membro
     const status = where("status", "in", ["publicado", "encerrado"]);
     return subsede ? query(base, where("sedeId", "==", membro.sedeId), status) : query(base, status);
   }, [tid, subsede, membro.sedeId]);
-  const r = useColecao<Evento>(consulta, `portaria-eventos-${tid}-${subsede ? membro.sedeId : "todos"}`);
+  const [tentativa, setTentativa] = useState(0);
+  const r = useColecao<Evento>(consulta, `portaria-eventos-${tid}-${subsede ? membro.sedeId : "todos"}-${tentativa}`);
 
   const grupos = useMemo(() => {
     const agora = Date.now();
@@ -135,7 +202,7 @@ function EscolherEvento({ tid, membro, escolher }: { tid: string; membro: Membro
           <span className="block text-lg font-bold leading-snug mt-0.5 line-clamp-2">{e.nome}</span>
           {e.local && <span className="block text-sm text-texto-2 truncate">{e.local}</span>}
           <span className="block text-sm font-semibold text-texto-3 numeros">
-            {e.entradas ?? 0} de {e.vendidos} entraram
+            {num(e.entradas)} de {num(e.vendidos)} entraram
           </span>
         </span>
         <Icone nome="chevronDireita" className="size-6 text-texto-3 shrink-0" />
@@ -157,7 +224,12 @@ function EscolherEvento({ tid, membro, escolher }: { tid: string; membro: Membro
       ) : r.erro ? (
         <Aviso tom="perigo" className="mt-6" titulo="Não foi possível carregar os eventos">
           {mensagemDeErro(r.erro)}
+          <Botao className="mt-3" tamanho="sm" variante="contorno" icone="atualizar" onClick={() => setTentativa((t) => t + 1)}>
+            Tentar de novo
+          </Botao>
         </Aviso>
+      ) : r.semConexao ? (
+        <SemInternet tentarDeNovo={() => setTentativa((t) => t + 1)} />
       ) : !r.dados.length ? (
         <Vazio icone="calendario" titulo="Nenhum evento publicado">
           Quando a diretoria publicar um evento{subsede ? " da sua sede" : ""}, ele aparece aqui.
@@ -317,9 +389,26 @@ const COR_HIST: Record<Resultado["resultado"], string> = {
   erro_conexao: "bg-info",
 };
 
-function Leitura({ tid, eventoId, membro, trocar }: { tid: string; eventoId: string; membro: Membro; trocar: () => void }) {
+function Leitura({
+  tid,
+  eventoId,
+  membro,
+  trocar,
+  pronto,
+  comecar,
+  recarregar,
+}: {
+  tid: string;
+  eventoId: string;
+  membro: Membro;
+  trocar: () => void;
+  /** false ao voltar para a página (recarregou): o som, a vibração e a câmera esperam um toque. */
+  pronto: boolean;
+  comecar: () => void;
+  recarregar: () => void;
+}) {
   useTelaAcesa(true);
-  const { dados: evento, carregando, erro } = useDocumento<Evento>(`torcidas/${tid}/eventos/${eventoId}`);
+  const { dados: evento, carregando, erro, semConexao } = useDocumento<Evento>(`torcidas/${tid}/eventos/${eventoId}`);
   const chaveSessao = `portaria:sessao:${tid}:${eventoId}`;
   const [liberadas, setLiberadas] = useState(() => Number(ler(chaveSessao)) || 0);
   const [modo, setModo] = useState<"camera" | "digitar">(() => (ler("portaria:modo") === "digitar" ? "digitar" : "camera"));
@@ -328,6 +417,9 @@ function Leitura({ tid, eventoId, membro, trocar }: { tid: string; eventoId: str
   const [validando, setValidando] = useState(false);
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [historico, setHistorico] = useState<Resultado[]>([]);
+  // A câmera falhou e passamos sozinhos para a digitação: avisa o porquê (só uma vez, para não prender o porteiro).
+  const [falhaCamera, setFalhaCamera] = useState<string | null>(null);
+  const trocouSozinho = useRef(false);
   const ultimo = useRef<{ texto: string; em: number }>({ texto: "", em: 0 });
   const ocupado = useRef(false);
   const campo = useRef<HTMLInputElement>(null);
@@ -433,7 +525,28 @@ function Leitura({ tid, eventoId, membro, trocar }: { tid: string; eventoId: str
   const vendidos = evento?.vendidos ?? 0;
   const pct = vendidos ? Math.min(100, Math.round((entradas / vendidos) * 100)) : 0;
 
-  if (carregando) return <Carregando texto="Carregando evento..." className="py-32" />;
+  const aoFalharCamera = useCallback((motivo: string) => {
+    if (trocouSozinho.current) return;
+    trocouSozinho.current = true;
+    setFalhaCamera(motivo);
+    setModo("digitar");
+  }, []);
+
+  if (carregando) return <Carregando texto="Carregando evento…" className="py-32" />;
+  if (!evento && semConexao) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-10">
+        <SemInternet
+          tentarDeNovo={recarregar}
+          extra={
+            <Botao variante="contorno" onClick={trocar}>
+              Escolher outro evento
+            </Botao>
+          }
+        />
+      </div>
+    );
+  }
   if (erro || !evento) {
     return (
       <div className="mx-auto max-w-md px-4 py-10">
@@ -452,15 +565,15 @@ function Leitura({ tid, eventoId, membro, trocar }: { tid: string; eventoId: str
           {/* contadores */}
           <div className="grid grid-cols-3 gap-2.5">
             <div className="rounded-2xl bg-sucesso/12 border border-sucesso/30 px-3 py-3 text-center">
-              <p className="text-[32px] font-black leading-none numeros text-sucesso">{liberadas}</p>
+              <p className="text-[32px] font-black leading-none numeros text-sucesso">{num(liberadas)}</p>
               <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-texto-2">Liberei agora</p>
             </div>
             <div className="rounded-2xl bg-superficie border border-linha px-3 py-3 text-center">
-              <p className="text-[32px] font-black leading-none numeros">{entradas}</p>
+              <p className="text-[32px] font-black leading-none numeros">{num(entradas)}</p>
               <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-texto-2">Entraram</p>
             </div>
             <div className="rounded-2xl bg-superficie border border-linha px-3 py-3 text-center">
-              <p className="text-[32px] font-black leading-none numeros">{vendidos}</p>
+              <p className="text-[32px] font-black leading-none numeros">{num(vendidos)}</p>
               <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-texto-2">Vendidos</p>
             </div>
           </div>
@@ -468,90 +581,116 @@ function Leitura({ tid, eventoId, membro, trocar }: { tid: string; eventoId: str
             <div className="h-full bg-sucesso rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
           </div>
 
-          {/* modo */}
-          <div role="tablist" className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-superficie-2 border border-linha">
-            {(
-              [
-                ["camera", "Câmera", "camera"],
-                ["digitar", "Digitar CPF / QR", "lapis"],
-              ] as const
-            ).map(([v, rot, ic]) => (
+          {!pronto ? (
+            <div className="rounded-[28px] border border-linha bg-superficie p-5 sm:p-6 text-center">
               <button
-                key={v}
-                role="tab"
                 type="button"
-                aria-selected={modo === v}
                 onClick={() => {
                   prepararAudio();
-                  setModo(v);
-                  if (v === "digitar") setTimeout(() => campo.current?.focus(), 50);
+                  comecar();
+                  if (modo === "digitar" && focarSozinho()) setTimeout(() => campo.current?.focus(), 50);
                 }}
-                className={cx(
-                  "h-14 rounded-xl flex items-center justify-center gap-2 text-base font-bold transition-all",
-                  modo === v ? "bg-primaria text-sobre-primaria shadow" : "text-texto-2",
-                )}
+                className="w-full min-h-28 rounded-3xl bg-primaria text-sobre-primaria text-2xl font-black flex flex-col items-center justify-center gap-2 px-4 py-5 active:scale-[0.98] transition-transform shadow-2xl"
               >
-                <Icone nome={ic} className="size-5" /> {rot}
+                <Icone nome={modo === "camera" ? "camera" : "lapis"} className="size-9" />
+                Toque para começar
               </button>
-            ))}
-          </div>
-
-          {modo === "camera" ? (
-            <div className="relative">
-              <Leitor pausado={!!resultado || validando} aoLer={aoLer} />
-              {validando && (
-                <div className="absolute inset-0 rounded-[28px] bg-black/60 grid place-items-center text-white">
-                  <div className="flex flex-col items-center gap-3">
-                    <Girando className="size-10" />
-                    <p className="font-bold text-lg">Conferindo…</p>
-                  </div>
-                </div>
-              )}
+              <p className="mt-3 text-sm text-texto-2">O celular só libera a câmera, o som e a vibração depois de um toque na tela.</p>
             </div>
           ) : (
-            <form onSubmit={enviar} className="rounded-[28px] border border-linha bg-superficie p-4 sm:p-5 space-y-3">
-              <label htmlFor="entrada-manual" className="block font-bold text-lg">
-                CPF do titular ou conteúdo do QR
-              </label>
-              <div className="relative">
-                <input
-                  ref={campo}
-                  id="entrada-manual"
-                  value={texto}
-                  onChange={(e) => {
-                    setTexto(e.target.value);
-                    setErroTexto(null);
-                  }}
-                  autoComplete="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  enterKeyHint="go"
-                  inputMode={/^[\d.\-\s]*$/.test(texto) ? "numeric" : "text"}
-                  placeholder="CPF ou código (K7QM-2XRA)"
-                  className={cx(
-                    "w-full h-16 rounded-2xl bg-superficie-2 border px-4 pr-24 text-xl font-mono outline-none focus:border-primaria",
-                    erroTexto ? "border-perigo" : "border-linha",
-                  )}
-                />
-                <button
-                  type="button"
-                  onClick={colar}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-12 px-3 rounded-xl bg-superficie-3 text-sm font-bold flex items-center gap-1.5"
-                >
-                  <Icone nome="copiar" className="size-4" /> Colar
-                </button>
+            <>
+              {/* modo */}
+              <div role="tablist" className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-superficie-2 border border-linha">
+                {(
+                  [
+                    ["camera", "Câmera", "camera"],
+                    ["digitar", "Digitar CPF / QR", "lapis"],
+                  ] as const
+                ).map(([v, rot, ic]) => (
+                  <button
+                    key={v}
+                    role="tab"
+                    type="button"
+                    aria-selected={modo === v}
+                    onClick={() => {
+                      prepararAudio();
+                      setModo(v);
+                      if (v === "camera") setFalhaCamera(null);
+                      if (v === "digitar") setTimeout(() => campo.current?.focus(), 50);
+                    }}
+                    className={cx(
+                      "h-14 rounded-xl flex items-center justify-center gap-2 text-base font-bold transition-all",
+                      modo === v ? "bg-primaria text-sobre-primaria shadow" : "text-texto-2",
+                    )}
+                  >
+                    <Icone nome={ic} className="size-5" /> {rot}
+                  </button>
+                ))}
               </div>
-              {erroTexto && <p className="text-perigo text-sm font-semibold">{erroTexto}</p>}
-              <button
-                type="submit"
-                disabled={validando || !texto.trim()}
-                className="w-full h-16 rounded-2xl bg-primaria text-sobre-primaria text-xl font-black flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-transform"
-              >
-                {validando ? <Girando className="size-6" /> : <Icone nome="checkCirculo" className="size-6" />}
-                Validar entrada
-              </button>
-              <p className="text-xs text-texto-3">Pelo CPF, liberamos o ingresso válido do titular para este evento. Sempre confira o documento com foto.</p>
-            </form>
+
+              {modo === "camera" ? (
+                <div className="relative">
+                  <Leitor pausado={!!resultado || validando} aoLer={aoLer} aoFalhar={aoFalharCamera} />
+                  {validando && (
+                    <div className="absolute inset-0 rounded-[28px] bg-black/60 grid place-items-center text-white">
+                      <div className="flex flex-col items-center gap-3">
+                        <Girando className="size-10" />
+                        <p className="font-bold text-lg">Conferindo…</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <form onSubmit={enviar} className="rounded-[28px] border border-linha bg-superficie p-4 sm:p-5 space-y-3">
+                  {falhaCamera && (
+                    <Aviso tom="alerta" titulo={falhaCamera}>
+                      Siga pela digitação do CPF ou do código. Para tentar a câmera de novo, toque em “Câmera”, acima.
+                    </Aviso>
+                  )}
+                  <label htmlFor="entrada-manual" className="block font-bold text-lg">
+                    CPF do titular ou conteúdo do QR
+                  </label>
+                  <div className="relative">
+                    <input
+                      ref={campo}
+                      id="entrada-manual"
+                      value={texto}
+                      onChange={(e) => {
+                        setTexto(e.target.value);
+                        setErroTexto(null);
+                      }}
+                      autoComplete="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      enterKeyHint="go"
+                      inputMode={/^[\d.\-\s]*$/.test(texto) ? "numeric" : "text"}
+                      placeholder="CPF ou código (K7QM-2XRA)"
+                      className={cx(
+                        "w-full h-16 rounded-2xl bg-superficie-2 border px-4 pr-24 text-xl font-mono outline-none focus:border-primaria",
+                        erroTexto ? "border-perigo" : "border-linha",
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={colar}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-12 px-3 rounded-xl bg-superficie-3 text-sm font-bold flex items-center gap-1.5"
+                    >
+                      <Icone nome="copiar" className="size-4" /> Colar
+                    </button>
+                  </div>
+                  {erroTexto && <p className="text-perigo text-sm font-semibold">{erroTexto}</p>}
+                  <button
+                    type="submit"
+                    disabled={validando || !texto.trim()}
+                    className="w-full h-16 rounded-2xl bg-primaria text-sobre-primaria text-xl font-black flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-transform"
+                  >
+                    {validando ? <Girando className="size-6" /> : <Icone nome="checkCirculo" className="size-6" />}
+                    Validar entrada
+                  </button>
+                  <p className="text-xs text-texto-3">Pelo CPF, liberamos o ingresso válido do titular para este evento. Sempre confira o documento com foto.</p>
+                </form>
+              )}
+            </>
           )}
         </div>
 
@@ -559,7 +698,7 @@ function Leitura({ tid, eventoId, membro, trocar }: { tid: string; eventoId: str
         <aside className="mt-6 lg:mt-0">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-bold uppercase tracking-[.16em] text-texto-3">Últimas leituras</h2>
-            {!!historico.length && <span className="text-xs text-texto-3">{historico.length} nesta sessão</span>}
+            {!!historico.length && <span className="text-xs text-texto-3 numeros">{num(historico.length)} nesta sessão</span>}
           </div>
           {!historico.length ? (
             <p className="rounded-2xl border border-dashed border-linha-forte p-5 text-sm text-texto-3 text-center">As leituras aparecem aqui.</p>
@@ -594,6 +733,10 @@ export default function Portaria() {
   const { membro, carregando, usuario } = useMembro(tid);
   const chaveEvento = `portaria:evento:${tid}`;
   const [eventoId, setEventoId] = useState<string | null>(() => ler(chaveEvento));
+  // Evento lembrado da sessão (a página foi recarregada): sem um toque o navegador bloqueia som e vibração,
+  // então a leitura espera "Toque para começar". Escolhendo o evento na lista, o toque já aconteceu.
+  const [pronto, setPronto] = useState(() => !eventoId);
+  const [tentativa, setTentativa] = useState(0);
 
   // Cores da torcida em alto contraste (reaplica se o documento da torcida mudar).
   useEffect(() => {
@@ -606,6 +749,7 @@ export default function Portaria() {
   const escolher = (id: string | null) => {
     gravar(chaveEvento, id);
     setEventoId(id);
+    if (id) setPronto(true);
   };
 
   const logado = !!usuario && !usuario.isAnonymous;
@@ -613,7 +757,7 @@ export default function Portaria() {
 
   let conteudo;
   if (carregando) {
-    conteudo = <Carregando texto="Verificando acesso..." className="py-40" />;
+    conteudo = <Carregando texto="Verificando acesso…" className="py-40" />;
   } else if (!logado) {
     conteudo = (
       <>
@@ -650,7 +794,18 @@ export default function Portaria() {
       </>
     );
   } else {
-    conteudo = <Leitura key={eventoId} tid={tid} eventoId={eventoId} membro={membro!} trocar={() => escolher(null)} />;
+    conteudo = (
+      <Leitura
+        key={`${eventoId}-${tentativa}`}
+        tid={tid}
+        eventoId={eventoId}
+        membro={membro!}
+        trocar={() => escolher(null)}
+        pronto={pronto}
+        comecar={() => setPronto(true)}
+        recarregar={() => setTentativa((t) => t + 1)}
+      />
+    );
   }
 
   return (

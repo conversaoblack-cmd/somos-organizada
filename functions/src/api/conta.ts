@@ -7,7 +7,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { URL_APP, WEB_API_KEY, ESCALA_PUBLICA } from "../config";
-import { auth, db, Timestamp } from "../util/firebase";
+import { auth, db, refs, Timestamp } from "../util/firebase";
 import { cpfValido, soDigitos } from "../util/validacao";
 
 const MAX_TENTATIVAS = 5;
@@ -86,4 +86,99 @@ export const entrarComCpf = onCall(ESCALA_PUBLICA, async (req) => {
     if (await senhaConfere(email, senha)) return { email };
   }
   throw new HttpsError("permission-denied", INCORRETO);
+});
+
+/**
+ * "ra***@g***.com": mostra só o começo do e-mail, para a pessoa reconhecer para onde foi o link
+ * sem entregar o e-mail inteiro de quem tem aquele CPF.
+ */
+export function mascararEmail(email: string): string {
+  const [local = "", dominio = ""] = email.trim().toLowerCase().split("@");
+  if (!local || !dominio) return "***";
+  const [nome = "", ...resto] = dominio.split(".");
+  const inicio = local.length > 2 ? local.slice(0, 2) : local.slice(0, 1);
+  return `${inicio}***@${nome.slice(0, 1)}***${resto.length ? `.${resto.join(".")}` : ""}`;
+}
+
+type ResultadoEnvio = "enviado" | "sem_conta" | "limite";
+
+/** Pede ao Firebase Auth o e-mail padrão de "redefinir senha" (o mesmo que o site manda quando a pessoa digita o e-mail). */
+async function enviarLinkRedefinicao(email: string, continueUrl: string | null): Promise<ResultadoEnvio> {
+  const emulador = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  const chave = emulador ? "chave-emulador" : WEB_API_KEY.value();
+  if (!chave) throw new HttpsError("failed-precondition", "Para receber o link, digite o seu e-mail no lugar do CPF.");
+  const base = emulador ? `http://${emulador}/identitytoolkit.googleapis.com` : "https://identitytoolkit.googleapis.com";
+  const pedir = (comVolta: boolean) =>
+    fetch(`${base}/v1/accounts:sendOobCode?key=${encodeURIComponent(chave)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Referer: URL_APP.value(), "X-Firebase-Locale": "pt-BR" },
+      body: JSON.stringify({ requestType: "PASSWORD_RESET", email, ...(comVolta && continueUrl ? { continueUrl } : {}) }),
+    });
+  let r = await pedir(true);
+  let msg = r.ok ? "" : (((await r.json().catch(() => ({}))) as { error?: { message?: string } }).error?.message ?? "");
+  // Domínio do link de volta não autorizado no Auth: o e-mail sai mesmo assim, só sem o botão de voltar ao site
+  if (!r.ok && continueUrl && /UNAUTHORIZED_DOMAIN|INVALID_CONTINUE_URI|UNAUTHORIZED_CONTINUE_URI/.test(msg)) {
+    logger.warn("Link de volta não autorizado no e-mail de redefinição por CPF", { msg });
+    r = await pedir(false);
+    msg = r.ok ? "" : (((await r.json().catch(() => ({}))) as { error?: { message?: string } }).error?.message ?? "");
+  }
+  if (r.ok) return "enviado";
+  if (/EMAIL_NOT_FOUND|USER_DISABLED/.test(msg)) return "sem_conta";
+  if (/TOO_MANY_ATTEMPTS|RESET_PASSWORD_EXCEED_LIMIT|QUOTA_EXCEEDED/.test(msg)) return "limite";
+  logger.error("Falha ao pedir e-mail de redefinição por CPF", { status: r.status, msg });
+  throw new HttpsError("unavailable", "Não foi possível enviar o link agora. Tente de novo em instantes.");
+}
+
+/** Contas desta torcida ligadas ao CPF: o sócio (ficha) e quem comprou com esse CPF e tem pedido aqui. */
+async function contasDoCpf(tid: string, cpf: string, uidsLogin: string[]): Promise<string[]> {
+  const doSocio = tid ? ((await refs.cpf(tid, cpf).get().catch(() => null))?.get("uid") as string | undefined) : undefined;
+  const naTorcida = tid
+    ? (
+        await Promise.all(
+          uidsLogin.map(async (u) => ((await refs.pedidos(tid).where("uid", "==", u).limit(1).get().catch(() => null))?.empty === false ? u : null)),
+        )
+      ).filter((u): u is string => !!u)
+    : [];
+  const daTorcida = [...new Set([...(doSocio ? [doSocio] : []), ...naTorcida])];
+  // O login por CPF vale em qualquer torcida: se nenhuma conta tem ligação com esta, vale a conta ligada ao CPF.
+  return daTorcida.length ? daTorcida : uidsLogin;
+}
+
+/**
+ * "Esqueci minha senha" para quem entra com CPF: manda o link de redefinir para o e-mail da conta.
+ * Resposta sempre igual ({ enviado: true }), com ou sem conta, para ninguém descobrir quem tem cadastro;
+ * só acrescenta o e-mail mascarado quando há uma conta só. Conta no mesmo limite do login por CPF.
+ */
+export const redefinirSenhaPorCpf = onCall(ESCALA_PUBLICA, async (req) => {
+  const d = (req.data ?? {}) as Record<string, unknown>;
+  const cpf = soDigitos(d.cpf);
+  const tid = typeof d.tid === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(d.tid) ? d.tid : "";
+  if (!cpfValido(cpf)) throw new HttpsError("invalid-argument", "CPF inválido. Confira os 11 números.");
+
+  // Mesmo contador do login por CPF (5 a cada 15 minutos), reservado antes de qualquer envio.
+  const ref = refLoginCpf(cpf);
+  const uidsLogin = await db.runTransaction(async (tx) => {
+    const dados = (await tx.get(ref)).data() as { uids?: string[]; uid?: string; tentativas?: number; janelaAte?: Timestamp } | undefined;
+    const agora = Date.now();
+    const janelaAberta = !!dados?.janelaAte && dados.janelaAte.toMillis() > agora;
+    const tentativas = janelaAberta ? dados?.tentativas ?? 0 : 0;
+    if (tentativas >= MAX_TENTATIVAS) return "bloqueado" as const;
+    tx.set(ref, { tentativas: tentativas + 1, janelaAte: janelaAberta ? dados!.janelaAte : Timestamp.fromMillis(agora + BLOQUEIO_MS) }, { merge: true });
+    return [...new Set([...(dados?.uids ?? []), ...(dados?.uid ? [dados.uid] : [])])];
+  });
+  if (uidsLogin === "bloqueado") throw new HttpsError("resource-exhausted", "Muitas tentativas. Aguarde 15 minutos ou use o seu e-mail.");
+
+  const uids = await contasDoCpf(tid, cpf, uidsLogin);
+  const usuarios = await Promise.all(uids.map((u) => auth.getUser(u).catch(() => null)));
+  const emails = [...new Set(usuarios.filter((u) => u && !u.disabled && u.providerData.length > 0).map((u) => u!.email).filter((e): e is string => !!e))];
+  if (!emails.length) return { enviado: true };
+
+  const slug = tid ? ((await refs.torcida(tid).get().catch(() => null))?.get("slug") as string | undefined) : undefined;
+  const continueUrl = slug ? `${URL_APP.value().replace(/\/+$/, "")}/${slug}/conta` : null;
+  const resultados = await Promise.all(emails.map((e) => enviarLinkRedefinicao(e, continueUrl)));
+  if (resultados.every((r) => r === "limite")) {
+    throw new HttpsError("resource-exhausted", "Muitos pedidos de link seguidos. Aguarde alguns minutos e confira o seu e-mail.");
+  }
+  // Mesma resposta com ou sem conta: não confirmamos a ninguém que um CPF é sócio ou comprou ingresso desta torcida.
+  return { enviado: true };
 });

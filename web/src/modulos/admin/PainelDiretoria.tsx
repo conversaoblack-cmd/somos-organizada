@@ -29,6 +29,7 @@ import Publicar from "./Publicar";
 import PlanoSomos from "./PlanoSomos";
 import Dominio from "./Dominio";
 import { recebedorAtivo } from "./recebedor";
+import { iniciaisTorcida } from "../publico/comum";
 
 function Centro({ children }: { children: ReactNode }) {
   return <div className="min-h-dvh grid place-items-center px-4 py-10">{children}</div>;
@@ -147,22 +148,28 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
 
   const menu: ItemMenu[] = useMemo(() => {
     if (papel === "portaria") return [{ para: base, rotulo: "Portaria", icone: "qr", fim: true }];
+    // Agrupado em três blocos (14 itens soltos confundem no celular); os destinos são os mesmos.
+    const DIA = "Dia a dia";
+    const DINHEIRO = "Dinheiro";
+    const CONFIG = "Configurações";
     const itens: (ItemMenu & { so?: boolean })[] = [
-      { para: base, rotulo: "Visão geral", icone: "painel", fim: true },
-      { para: `${base}/primeiros-passos`, rotulo: "Primeiros passos", icone: "lista", contador: passosPendentes || undefined },
-      { para: `${base}/eventos`, rotulo: "Eventos", icone: "calendario", contador: ehDiretoria ? aprovacao.dados.length : undefined },
-      { para: `${base}/pedidos`, rotulo: "Pedidos e ingressos", icone: "ingresso" },
-      { para: `${base}/socios`, rotulo: "Sócios", icone: "usuarios", contador: analise.dados.length },
-      { para: `${base}/planos`, rotulo: "Planos de sócio", icone: "estrela", so: true },
-      { para: `${base}/financeiro`, rotulo: "Financeiro", icone: "dinheiro" },
-      ...(papel === "subsede" ? [{ para: `${base}/recebimentos`, rotulo: "Recebimentos", icone: "cartao" as const, contador: contaPendente ? 1 : undefined }] : []),
-      { para: `${base}/sedes`, rotulo: "Sedes", icone: "casa", so: true },
-      { para: `${base}/usuarios`, rotulo: "Usuários do painel", icone: "chave", so: true },
-      { para: `${base}/personalizacao`, rotulo: "Personalizar página", icone: "pincel", so: true },
-      { para: `${base}/pagamentos`, rotulo: "Pagamentos", icone: "cartao", so: true, contador: torcida.pagamentos?.configurado ? undefined : 1 },
-      { para: `${base}/publicar`, rotulo: "Publicar site", icone: "raio", so: true, contador: torcida.publicada ? undefined : 1 },
-      { para: `${base}/plano`, rotulo: "Plano Somos Organizada", icone: "bandeira", so: true },
-      { para: `${base}/dominio`, rotulo: "Domínio", icone: "cadeado", so: true },
+      { para: base, rotulo: "Visão geral", icone: "painel", fim: true, grupo: DIA },
+      { para: `${base}/primeiros-passos`, rotulo: "Primeiros passos", icone: "lista", contador: passosPendentes || undefined, grupo: DIA },
+      { para: `${base}/eventos`, rotulo: "Eventos", icone: "calendario", contador: ehDiretoria ? aprovacao.dados.length : undefined, grupo: DIA },
+      { para: `${base}/pedidos`, rotulo: "Pedidos e ingressos", icone: "ingresso", grupo: DIA },
+      { para: `${base}/socios`, rotulo: "Sócios", icone: "usuarios", contador: analise.dados.length, grupo: DIA },
+      { para: `${base}/financeiro`, rotulo: "Financeiro", icone: "dinheiro", grupo: DINHEIRO },
+      ...(papel === "subsede"
+        ? [{ para: `${base}/recebimentos`, rotulo: "Recebimentos", icone: "cartao" as const, contador: contaPendente ? 1 : undefined, grupo: DINHEIRO }]
+        : []),
+      { para: `${base}/pagamentos`, rotulo: "Pagamentos", icone: "cartao", so: true, contador: torcida.pagamentos?.configurado ? undefined : 1, grupo: DINHEIRO },
+      { para: `${base}/plano`, rotulo: "Plano Somos Organizada", icone: "bandeira", so: true, grupo: DINHEIRO },
+      { para: `${base}/planos`, rotulo: "Planos de sócio", icone: "estrela", so: true, grupo: CONFIG },
+      { para: `${base}/personalizacao`, rotulo: "Personalizar página", icone: "pincel", so: true, grupo: CONFIG },
+      { para: `${base}/publicar`, rotulo: "Publicar site", icone: "raio", so: true, contador: torcida.publicada ? undefined : 1, grupo: CONFIG },
+      { para: `${base}/sedes`, rotulo: "Sedes", icone: "casa", so: true, grupo: CONFIG },
+      { para: `${base}/usuarios`, rotulo: "Usuários do painel", icone: "chave", so: true, grupo: CONFIG },
+      { para: `${base}/dominio`, rotulo: "Domínio", icone: "cadeado", so: true, grupo: CONFIG },
     ];
     return itens.filter((i) => !i.so || ehDiretoria);
   }, [papel, base, ehDiretoria, analise.dados.length, aprovacao.dados.length, contaPendente, passosPendentes, torcida.pagamentos?.configurado, torcida.publicada]);
@@ -170,10 +177,11 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
   const marca = (
     <div className="flex items-center gap-3">
       {torcida.tema?.logoUrl ? (
-        <img src={torcida.tema.logoUrl} alt="" className="size-10 rounded-xl object-cover bg-superficie-2" />
+        <img src={torcida.tema.logoUrl} alt="" width={40} height={40} decoding="async" className="size-10 shrink-0 rounded-xl object-contain bg-superficie-2" />
       ) : (
-        <span className="size-10 rounded-xl bg-primaria/15 text-primaria-texto grid place-items-center">
-          <Icone nome="escudo" className="size-5" />
+        // sem escudo: iniciais da torcida na cor dela (mesmo padrão do site da torcida)
+        <span className="size-10 shrink-0 rounded-xl bg-primaria text-sobre-primaria grid place-items-center font-display text-sm leading-none" aria-hidden="true">
+          {iniciaisTorcida(torcida.nome)}
         </span>
       )}
       <div className="min-w-0">
@@ -200,7 +208,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
               href={`/${torcida.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2"
+              className="inline-flex items-center justify-center gap-1.5 min-w-11 h-11 sm:h-9 px-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2"
               aria-label="Ver página da torcida"
             >
               <Icone nome="externo" className="size-4" />
@@ -265,7 +273,7 @@ function FaixasGlobais() {
   if (demo)
     faixas.push(
       <Faixa key="demo" tom="info" icone="raio">
-        <strong>MODO DEMONSTRAÇÃO</strong> — nenhum pagamento é real.
+        <strong>Modo de demonstração:</strong> nenhum pagamento é real.
       </Faixa>,
     );
   if (!torcida.publicada && !torcida.bloqueioSaas)

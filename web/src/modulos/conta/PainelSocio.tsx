@@ -8,7 +8,7 @@ import type { ComId, Ingresso, Socio, Torcida } from "@/lib/tipos";
 import { useColecao, type Estado } from "@/hooks/dados";
 import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import { Login } from "@/componentes/Login";
-import { Avatar, Botao, BotaoLink, Carregando, cx, Icone, type NomeIcone } from "@/ui";
+import { Avatar, Botao, BotaoLink, Carregando, cx, Icone, Vazio, type NomeIcone } from "@/ui";
 import { usePagarMensalidade } from "./acoes";
 import { aceitaCartao, ModalCartao } from "./CartaoCobranca";
 import { CSS_CONTA, ROTULO_SITUACAO, situacaoDoSocio, useFotoSocio } from "./comum";
@@ -18,16 +18,19 @@ import AbaAssinatura from "./Assinatura";
 import AbaDados from "./Dados";
 
 function MarcaTorcida({ torcida }: { torcida: Torcida }) {
+  // No celular: escudo + nome em até 2 linhas (o rótulo "Área do sócio" só aparece no computador)
   return (
     <Link to={`/${torcida.slug}`} className="flex items-center gap-2.5 min-w-0">
       {torcida.tema.logoUrl ? (
         <img src={torcida.tema.logoUrl} alt="" className="size-9 object-contain shrink-0" />
       ) : (
-        <span className="size-9 shrink-0 rounded-xl bg-primaria text-sobre-primaria grid place-items-center font-display text-sm">{iniciais(torcida.nome)}</span>
+        <span className="size-9 shrink-0 rounded-xl bg-primaria text-sobre-primaria grid place-items-center font-display text-sm" aria-hidden="true">
+          {iniciais(torcida.nome)}
+        </span>
       )}
       <span className="min-w-0">
-        <span className="block font-display uppercase text-[15px] leading-tight truncate">{torcida.nome}</span>
-        <span className="block text-[11px] font-semibold uppercase tracking-[.18em] text-texto-3">Área do sócio</span>
+        <span className="block font-display uppercase text-[13px] sm:text-[15px] leading-tight line-clamp-2 sm:line-clamp-1 break-words">{torcida.nome}</span>
+        <span className="hidden sm:block text-[11px] font-semibold uppercase tracking-[.18em] text-texto-3">Área do sócio</span>
       </span>
     </Link>
   );
@@ -90,11 +93,10 @@ function Topo({ torcida, usuario }: { torcida: Torcida; usuario?: { nome: string
         </div>
         <Link
           to={`/${torcida.slug}`}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2 shrink-0"
+          className="inline-flex items-center gap-1.5 min-h-11 sm:min-h-9 max-w-[104px] sm:max-w-none px-2.5 sm:px-3 rounded-xl text-[13px] sm:text-sm leading-tight font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2 shrink-0"
         >
-          <Icone nome="setaEsquerda" className="size-4" />
-          <span className="hidden sm:inline">Voltar à página</span>
-          <span className="sm:hidden">Página</span>
+          <Icone nome="setaEsquerda" className="size-4 shrink-0" />
+          Ver site da torcida
         </Link>
         {usuario && <MenuUsuario {...usuario} />}
       </div>
@@ -105,7 +107,7 @@ function Topo({ torcida, usuario }: { torcida: Torcida; usuario?: { nome: string
 const ABAS: { para: string; rotulo: string; icone: NomeIcone }[] = [
   { para: "", rotulo: "Carteirinha", icone: "escudo" },
   { para: "ingressos", rotulo: "Ingressos", icone: "ingresso" },
-  { para: "assinatura", rotulo: "Assinatura", icone: "cartao" },
+  { para: "assinatura", rotulo: "Mensalidade", icone: "cartao" },
   { para: "dados", rotulo: "Dados", icone: "usuario" },
 ];
 
@@ -203,7 +205,13 @@ function useMeusIngressos(tid: string, uid: string | null): Estado<ComId<Ingress
   return useMemo(() => {
     const porId = new Map([...comprados.dados, ...emMeuNome.dados].map((i) => [i.id, i]));
     const dados = [...porId.values()].sort((a, b) => b.eventoData.toMillis() - a.eventoData.toMillis());
-    return { dados, carregando: comprados.carregando || emMeuNome.carregando, erro: comprados.erro ?? emMeuNome.erro };
+    // Se uma das consultas falhar, a outra continua aparecendo: AbaIngressos mostra o que carregou e avisa que pode faltar algum
+    return {
+      dados,
+      carregando: comprados.carregando || emMeuNome.carregando,
+      erro: comprados.erro ?? emMeuNome.erro,
+      semConexao: !!(comprados.semConexao || emMeuNome.semConexao),
+    };
   }, [comprados, emMeuNome]);
 }
 
@@ -212,15 +220,23 @@ function useMeusIngressos(tid: string, uid: string | null): Estado<ComId<Ingress
  * /{torcida}/conta (quem comprou ingresso e não é sócio). Cada um é levado para o endereço certo.
  */
 export default function PainelSocio() {
+  // "Tentar de novo" remonta a tela: as consultas em tempo real são refeitas do zero
+  const [tentativa, setTentativa] = useState(0);
+  return <Painel key={tentativa} tentarDeNovo={() => setTentativa((n) => n + 1)} />;
+}
+
+function Painel({ tentarDeNovo }: { tentarDeNovo: () => void }) {
   const { tid, torcida } = useTorcida();
-  const { ficha, carregando, usuario } = useMinhaFicha(tid);
+  const { ficha, carregando, usuario, erro: erroFicha, semConexao } = useMinhaFicha(tid);
   const logado = !!usuario && !usuario.isAnonymous;
+  // Sem conseguir ler a ficha, não dá para saber se é sócio: não troca de endereço nem oferece "Seja sócio"
+  const fichaIncerta = logado && !ficha && (!!erroFicha || semConexao);
   const { pathname, search } = useLocation();
   const [, , secao = "conta", ...resto] = pathname.split("/");
   const secaoCerta = ficha ? "socio" : "conta";
   // Não sócio só tem "Meus ingressos" (sem subpáginas); sócio mantém a subpágina pedida (ex.: /ingressos)
   const destinoCerto =
-    logado && !carregando && secao !== secaoCerta ? `/${torcida.slug}/${secaoCerta}${ficha && resto.length ? `/${resto.join("/")}` : ""}${search}` : null;
+    logado && !carregando && !fichaIncerta && secao !== secaoCerta ? `/${torcida.slug}/${secaoCerta}${ficha && resto.length ? `/${resto.join("/")}` : ""}${search}` : null;
   const foto = useFotoSocio(ficha?.fotoPath);
 
   const ingressos = useMeusIngressos(tid, logado ? usuario!.uid : null);
@@ -239,7 +255,7 @@ export default function PainelSocio() {
 
   let conteudo;
   if (carregando) {
-    conteudo = <Carregando texto="Abrindo sua área de sócio..." className="py-32" />;
+    conteudo = <Carregando texto="Abrindo sua área de sócio…" className="py-32" />;
   } else if (!logado) {
     conteudo = (
       <div className="min-h-[calc(100dvh-4rem)] grid place-items-center py-10">
@@ -263,6 +279,24 @@ export default function PainelSocio() {
         </div>
       </div>
     );
+  } else if (fichaIncerta) {
+    conteudo = (
+      <div className="py-10">
+        <Vazio
+          icone="alerta"
+          titulo={semConexao || !navigator.onLine ? "Sem internet" : "Não foi possível abrir sua conta"}
+          acao={
+            <Botao icone="atualizar" onClick={tentarDeNovo}>
+              Tentar de novo
+            </Botao>
+          }
+        >
+          {semConexao || !navigator.onLine
+            ? "Não conseguimos falar com o servidor. Confira a conexão e toque em Tentar de novo."
+            : "Algo falhou ao buscar seus dados. Toque em Tentar de novo."}
+        </Vazio>
+      </div>
+    );
   } else if (!ficha) {
     // Conta de quem comprou ingresso sem ser sócio: vê os ingressos e o convite para se associar
     conteudo = (
@@ -282,7 +316,7 @@ export default function PainelSocio() {
         </div>
         <section>
           <h2 className="text-lg font-bold mb-3">Meus ingressos</h2>
-          <AbaIngressos tid={tid} torcida={torcida} ingressos={ingressos} />
+          <AbaIngressos tid={tid} torcida={torcida} ingressos={ingressos} tentarDeNovo={tentarDeNovo} />
         </section>
         <Botao variante="fantasma" onClick={() => signOut(auth)} icone="sair">
           Sair da conta
@@ -302,7 +336,7 @@ export default function PainelSocio() {
         <div className="pt-4 pb-16 animate-surgir" key={ficha.status}>
           <Routes>
             <Route index element={<AbaCarteirinha tid={tid} torcida={torcida} ficha={ficha} proximo={proximos[0] ?? null} />} />
-            <Route path="ingressos" element={<AbaIngressos tid={tid} torcida={torcida} ingressos={ingressos} />} />
+            <Route path="ingressos" element={<AbaIngressos tid={tid} torcida={torcida} ingressos={ingressos} tentarDeNovo={tentarDeNovo} />} />
             <Route path="assinatura" element={<AbaAssinatura tid={tid} torcida={torcida} ficha={ficha} />} />
             <Route path="dados" element={<AbaDados tid={tid} torcida={torcida} ficha={ficha} />} />
             <Route path="*" element={<Navigate to={`/${torcida.slug}/socio`} replace />} />

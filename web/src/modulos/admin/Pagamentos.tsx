@@ -160,7 +160,7 @@ export default function Pagamentos() {
             {pag.configurado ? [pag.pix && "Pix", pag.cartao && "Cartão"].filter(Boolean).join(" + ") || "—" : "—"}
           </Info>
           <Info rotulo="Chave pública">{pag.chavePublica ? <span className="font-mono text-xs">{pag.chavePublica.slice(0, 12)}…</span> : "—"}</Info>
-          <Info rotulo="Último webhook">
+          <Info rotulo="Último aviso da Pagar.me">
             {pag.webhookRecebidoEm ? (
               <span title={dataHora(pag.webhookRecebidoEm)}>{relativo(pag.webhookRecebidoEm)}</span>
             ) : (
@@ -217,7 +217,7 @@ export default function Pagamentos() {
                 <code className="font-mono">sk_test_…</code> e <code className="font-mono">pk_test_…</code>. Compras de mentira, para experimentar.
               </p>
               <p className="text-xs mt-1.5">
-                Exige conta na Pagar.me. No simulador oficial, Pix de até R$ 500 é aprovado e acima disso falha; Pix com divisão (split) não funciona no
+                Exige conta na Pagar.me. No simulador oficial, Pix de até R$ 500 é aprovado e acima disso falha; Pix dividido direto com as subsedes não funciona no
                 simulador.
               </p>
             </div>
@@ -247,21 +247,21 @@ export default function Pagamentos() {
           <p className="text-xs text-texto-3">Se só for aceitar Pix, este passo é opcional.</p>
         </Passo>
 
-        <Passo n={5} titulo="Configure o webhook (aviso de pagamento)" feito={webhookOk}>
+        <Passo n={5} titulo="Ligue o aviso automático de pagamento (webhook)" feito={webhookOk}>
           <p>É por ele que a Pagar.me avisa na hora que um Pix foi pago ou que uma cobrança foi recusada.</p>
           {demo ? (
             <Aviso tom="info">No modo demonstração não precisa configurar: os pagamentos simulados confirmam na hora.</Aviso>
           ) : !pag.configurado ? (
-            <Aviso tom="info">A URL do webhook aparece aqui depois do passo 3.</Aviso>
+            <Aviso tom="info">O endereço para colar na Pagar.me aparece aqui depois do passo 3.</Aviso>
           ) : carregandoUrl ? (
-            <p className="text-sm text-texto-3">Buscando a URL...</p>
+            <p className="text-sm text-texto-3">Buscando o endereço…</p>
           ) : webhookUrl ? (
             <>
               <ol className="list-decimal pl-5 space-y-1.5">
                 <li>
                   Na Pagar.me, vá em <Caminho>Configurações</Caminho> → <Caminho>Webhooks</Caminho> → <Caminho>Criar webhook</Caminho>.
                 </li>
-                <li>Cole esta URL:</li>
+                <li>Cole este endereço (URL):</li>
               </ol>
               <CaixaCopiar texto={webhookUrl} mono />
               <ol className="list-decimal pl-5 space-y-1.5" start={3}>
@@ -276,7 +276,7 @@ export default function Pagamentos() {
               </div>
               <BotaoCopiar texto={EVENTOS_WEBHOOK.join("\n")} rotulo="Copiar lista de eventos" />
               <ol className="list-decimal pl-5 space-y-1.5" start={4}>
-                <li>Salve. Na primeira venda, o “Último webhook” lá em cima passa a mostrar a hora.</li>
+                <li>Salve. Na primeira venda, o “Último aviso da Pagar.me” lá em cima passa a mostrar a hora.</li>
               </ol>
             </>
           ) : (
@@ -284,7 +284,7 @@ export default function Pagamentos() {
           )}
         </Passo>
 
-        <Passo n={6} titulo="Divisão com as subsedes (split)" feito={!!pag.splitAtivo}>
+        <Passo n={6} titulo="Dividir as vendas direto com as subsedes" feito={!!pag.splitAtivo}>
           <PassoSplit configurado={pag.configurado} />
         </Passo>
 
@@ -294,7 +294,7 @@ export default function Pagamentos() {
           </p>
           <ul className="list-disc pl-5 space-y-1">
             <li>Em modo teste, use qualquer cartão de teste da Pagar.me — nada é cobrado.</li>
-            <li>Confira se o pedido aparece como “Pago” em Pedidos e se o webhook aparece na lista abaixo.</li>
+            <li>Confira se o pedido aparece como “Pago” em Pedidos e se o aviso da Pagar.me aparece na lista abaixo.</li>
             <li>Tudo certo? Volte ao passo 3 e cole as chaves de produção. Depois, exclua ou cancele o evento de teste.</li>
           </ul>
           <div className="flex flex-wrap gap-2">
@@ -311,7 +311,7 @@ export default function Pagamentos() {
       <section className="mt-10">
         <div className="flex items-end justify-between mb-3">
           <div>
-            <h2 className="text-lg font-bold">Últimos webhooks recebidos</h2>
+            <h2 className="text-lg font-bold">Últimos avisos da Pagar.me</h2>
             <p className="text-sm text-texto-3">Os 20 avisos mais recentes da Pagar.me.</p>
           </div>
         </div>
@@ -319,9 +319,10 @@ export default function Pagamentos() {
           <EstadoLista
             carregando={logs.carregando}
             erro={logs.erro}
+            semConexao={logs.semConexao}
             vazio
             icone="raio"
-            tituloVazio="Nenhum webhook recebido ainda"
+            tituloVazio="Nenhum aviso da Pagar.me recebido ainda"
             textoVazio="Depois de configurar o passo 5, faça uma compra de teste para ver os avisos chegando."
           />
         ) : (
@@ -340,7 +341,7 @@ export default function Pagamentos() {
                   <div className="min-w-0 flex-1">
                     <p className="font-mono text-sm truncate">{w.tipo || "(sem tipo)"}</p>
                     <p className={cx("text-xs truncate", w.erro ? "text-perigo" : "text-texto-3")}>
-                      {w.erro ? w.erro : w.processado ? (ROTULO_RESULTADO[w.resultado ?? ""] ?? w.resultado ?? "Processado") : "Processando..."}
+                      {w.erro ? w.erro : w.processado ? (ROTULO_RESULTADO[w.resultado ?? ""] ?? w.resultado ?? "Processado") : "Processando…"}
                       {(w.tentativas ?? 1) > 1 && ` · ${w.tentativas} tentativas`}
                     </p>
                   </div>
@@ -443,23 +444,23 @@ function FormChaves({ configurado, aoSalvar, sinalAbrir }: { configurado: boolea
         é só colar uma nova.
       </Aviso>
       <Campo
-        rotulo="Chave secreta (sk_...)"
+        rotulo="Chave secreta (sk_…)"
         type={verSk ? "text" : "password"}
         value={sk}
         onChange={setSk}
         autoComplete="off"
         spellCheck={false}
-        placeholder="sk_test_..."
+        placeholder="sk_test_…"
         className="[&_input]:font-mono"
         sufixo={<BotaoIcone icone="olho" rotulo={verSk ? "Esconder" : "Mostrar"} onClick={() => setVerSk((v) => !v)} className="size-9" />}
       />
       <Campo
-        rotulo="Chave pública (pk_...)"
+        rotulo="Chave pública (pk_…)"
         value={pk}
         onChange={setPk}
         autoComplete="off"
         spellCheck={false}
-        placeholder="pk_test_..."
+        placeholder="pk_test_…"
         className="[&_input]:font-mono"
       />
       {skLimpa.startsWith("sk_") && (
@@ -495,6 +496,7 @@ function FormChaves({ configurado, aoSalvar, sinalAbrir }: { configurado: boolea
         fechar={() => setConfirmar(false)}
         titulo={producao ? "Ativar vendas reais?" : "Trocar as chaves?"}
         rotulo={producao ? "Sim, conectar em produção" : "Trocar chaves"}
+        prazo={60_000}
         acao={async () => {
           try {
             await salvar();
@@ -506,7 +508,7 @@ function FormChaves({ configurado, aoSalvar, sinalAbrir }: { configurado: boolea
         {producao
           ? "Com as chaves de produção, as compras na página da torcida passam a ser cobradas de verdade."
           : "As chaves atuais serão substituídas. Pedidos em andamento continuam funcionando."}
-        {configurado && " A URL do webhook não muda."}
+        {configurado && " O endereço de aviso (passo 5) não muda."}
       </Confirmar>
     </form>
   );
@@ -571,6 +573,7 @@ function CartaoDemo({ demo, sair }: { demo: boolean; sair: () => void }) {
         fechar={() => setConfirmar(false)}
         titulo="Ativar o modo demonstração?"
         rotulo="Ativar demonstração"
+        prazo={60_000}
         acao={async () => {
           setAtivando(true);
           try {
@@ -602,7 +605,7 @@ function PassoSplit({ configurado }: { configurado: boolean }) {
   async function ativar() {
     setErro(null);
     const v = rp.trim();
-    if (!/^rp_[A-Za-z0-9]+$/.test(v)) return setErro("O código do recebedor começa com rp_ (ex.: rp_AbC123...).");
+    if (!/^rp_[A-Za-z0-9]+$/.test(v)) return setErro("O código do recebedor começa com rp_ (ex.: rp_AbC123…).");
     setSalvando(true);
     try {
       const r = await api.configurarSplit({ tid, recebedorPrincipalId: v });
@@ -622,7 +625,7 @@ function PassoSplit({ configurado }: { configurado: boolean }) {
       </p>
       <ul className="list-disc pl-5 space-y-1">
         <li>
-          Disponível para contas <strong>PSP</strong> da Pagar.me. Confirme com o atendimento da Pagar.me que o split está liberado na sua conta.
+          Disponível para contas <strong>PSP</strong> da Pagar.me. Confirme com o atendimento da Pagar.me que a divisão de pagamentos (eles chamam de “split”) está liberada na sua conta.
         </li>
         <li>Cada subsede vira um “recebedor” da sua conta. Quem cadastra é o responsável da subsede, no painel dele (Recebimentos), com prova de vida.</li>
         <li>Eventos da sede principal continuam caindo inteiros na conta da torcida.</li>
@@ -675,7 +678,7 @@ function PassoSplit({ configurado }: { configurado: boolean }) {
             rotulo="ID do recebedor principal"
             value={rp}
             onChange={(v) => setRp(v.trim())}
-            placeholder="rp_..."
+            placeholder="rp_…"
             className="[&_input]:font-mono"
             spellCheck={false}
             autoComplete="off"
@@ -692,6 +695,7 @@ function PassoSplit({ configurado }: { configurado: boolean }) {
         titulo="Desativar a divisão com as subsedes?"
         rotulo="Desativar"
         perigo
+        prazo={60_000}
         acao={async () => {
           await api.configurarSplit({ tid, desativar: true });
           avisar("Divisão de pagamentos desativada.", "sucesso");

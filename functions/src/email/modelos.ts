@@ -57,6 +57,8 @@ interface Bloco {
   nota?: string;
   /** texto pequeno de rodapé específico do e-mail */
   rodape?: string;
+  /** e-mail de conta da plataforma (não de ingresso/sócio): rodapé sem o aviso de ingresso */
+  conta?: boolean;
 }
 
 export function montar(torcida: Torcida, assunto: string, para: Mensagem["para"], b: Bloco): Mensagem {
@@ -110,8 +112,8 @@ export function montar(torcida: Torcida, assunto: string, para: Mensagem["para"]
     </td></tr>
     <tr><td style="padding:22px 28px 28px;">
       <p style="margin:0;border-top:1px solid #efeff2;padding-top:18px;font:400 12px/1.6 Arial,Helvetica,sans-serif;color:#8a8a94;">
-        ${b.rodape ? `${b.rodape}<br>` : ""}Por segurança, nunca enviamos ingresso, QR Code ou carteirinha por e-mail. Eles ficam só na sua conta.<br>
-        ${nome} · tecnologia Somos Organizada. Este é um e-mail automático; não precisa responder.
+        ${b.rodape ? `${b.rodape}<br>` : ""}${b.conta ? "" : "Por segurança, nunca enviamos ingresso, QR Code ou carteirinha por e-mail. Eles ficam só na sua conta.<br>"}
+        ${b.conta ? "Somos Organizada · gestão de sócios e ingressos para torcidas organizadas." : `${nome} · tecnologia Somos Organizada.`} Este é um e-mail automático; não precisa responder.
       </p>
     </td></tr>
   </table>
@@ -131,7 +133,7 @@ export function montar(torcida: Torcida, assunto: string, para: Mensagem["para"]
     `${limpo(b.botao.texto)}: ${b.botao.url}`,
     ...(b.nota ? ["", limpo(b.nota)] : []),
     "",
-    "Por segurança, nunca enviamos ingresso, QR Code ou carteirinha por e-mail. Eles ficam só na sua conta.",
+    ...(b.conta ? [] : ["Por segurança, nunca enviamos ingresso, QR Code ou carteirinha por e-mail. Eles ficam só na sua conta."]),
   ].join("\n");
 
   return { para, assunto, html, texto, nomeRemetente: torcida.nome, responderPara: torcida.contato?.email };

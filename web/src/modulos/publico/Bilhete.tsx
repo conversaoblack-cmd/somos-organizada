@@ -29,7 +29,7 @@ export function Bilhete({ b, torcidaNome }: { b: DadosBilhete; torcidaNome: stri
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-texto-3">{torcidaNome}</p>
-            <h3 className="font-bold text-lg leading-snug mt-1">{b.eventoNome}</h3>
+            <h3 className="font-bold text-lg leading-snug mt-1 break-words">{b.eventoNome}</h3>
             <p className="text-sm text-texto-2">
               {maiuscula(dataExtensa(b.eventoData))} · {hora(b.eventoData)}
             </p>
@@ -47,7 +47,7 @@ export function Bilhete({ b, torcidaNome }: { b: DadosBilhete; torcidaNome: stri
         <div className="min-w-0 space-y-3">
           <div>
             <p className="text-[11px] uppercase tracking-wider text-texto-3">Titular (intransferível)</p>
-            <p className="font-semibold truncate">{b.titularNome}</p>
+            <p className="font-semibold break-words">{b.titularNome}</p>
             <p className="text-sm text-texto-2 numeros">{cpfMascarado(b.titularCpf)}</p>
           </div>
           <div>

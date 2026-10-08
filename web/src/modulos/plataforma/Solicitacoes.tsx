@@ -47,7 +47,7 @@ export default function Solicitacoes() {
             aria-pressed={filtro === f}
             onClick={() => setFiltro(f)}
             className={cx(
-              "h-9 px-3.5 rounded-xl text-sm font-semibold border transition-colors",
+              "h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold border transition-colors",
               filtro === f ? "bg-primaria text-sobre-primaria border-primaria" : "border-linha text-texto-2 hover:text-texto hover:bg-superficie-2",
             )}
           >
@@ -193,7 +193,7 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
               pagamentos e publica quando estiver pronto.
             </p>
             {resultadoAprovacao.torcidaId && (
-              <Link to={rp(`/torcidas/${resultadoAprovacao.torcidaId}`)} className="inline-flex items-center gap-1.5 font-semibold text-primaria-texto hover:underline">
+              <Link to={rp(`/torcidas/${resultadoAprovacao.torcidaId}`)} className="inline-flex items-center gap-1.5 min-h-11 sm:min-h-0 font-semibold text-primaria-texto hover:underline">
                 Ver torcida no painel <Icone nome="setaDireita" className="size-4" />
               </Link>
             )}

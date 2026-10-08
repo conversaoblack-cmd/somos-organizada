@@ -9,6 +9,7 @@ import { useColecao, useUsuario } from "@/hooks/dados";
 import { dataHora } from "@/lib/formatos";
 import type { SolicitacaoTorcida } from "@/lib/tipos";
 import { Login } from "@/componentes/Login";
+import { ehErroDeConexao, mensagemDeErro } from "@/lib/api";
 import { Botao, Carregando, Cartao, Icone, Selo, Vazio } from "@/ui";
 import { slugDoNome } from "./planos";
 
@@ -125,10 +126,10 @@ function EntrarPorTorcida({ aoUsarEmail }: { aoUsarEmail: () => void }) {
         </Botao>
       </form>
       <div className="mt-6 pt-5 border-t border-linha flex flex-col gap-2 text-sm text-center">
-        <button type="button" onClick={aoUsarEmail} className="text-texto-2 hover:text-texto">
+        <button type="button" onClick={aoUsarEmail} className="min-h-11 text-texto-2 hover:text-texto">
           Não lembro o endereço: entrar com e-mail
         </button>
-        <Link to="/cadastro" className="font-semibold text-primaria-texto hover:underline">
+        <Link to="/cadastro" className="min-h-11 inline-flex items-center justify-center font-semibold text-primaria-texto hover:underline">
           Cadastrar minha torcida
         </Link>
       </div>
@@ -143,6 +144,8 @@ function EntrarEquipe({ aoInformarTorcida }: { aoInformarTorcida: () => void }) 
   const usuario = useUsuario();
   const [acessos, setAcessos] = useState<Acesso[] | null>(null);
   const [plataforma, setPlataforma] = useState(false);
+  const [erroAcessos, setErroAcessos] = useState<string | null>(null);
+  const [tentativa, setTentativa] = useState(0);
   const logado = !!usuario && !usuario.isAnonymous;
   const sols = useColecao<SolicitacaoTorcida>(
     logado ? query(collection(db, "solicitacoes"), where("uid", "==", usuario!.uid)) : null,
@@ -156,19 +159,33 @@ function EntrarEquipe({ aoInformarTorcida }: { aoInformarTorcida: () => void }) 
 
   useEffect(() => {
     if (!usuario || usuario.isAnonymous) return setAcessos(null);
-    usuario.getIdTokenResult().then((t) => setPlataforma(t.claims.plataforma === true));
-    getDocs(collection(db, `usuarios/${usuario.uid}/acessos`)).then(async (s) => {
-      const lista = await Promise.all(
-        s.docs
-          .filter((d) => d.get("ativo") !== false)
-          .map(async (d) => {
-            const t = await getDoc(doc(db, "torcidas", d.id));
-            return { tid: d.id, nome: t.get("nome") ?? "Torcida", slug: t.get("slug") ?? "", papel: d.get("papel") as string };
-          }),
-      );
-      setAcessos(lista);
-    });
-  }, [usuario]);
+    let ativo = true;
+    setAcessos(null);
+    setErroAcessos(null);
+    // Sem internet, estas leituras falham: sem o .catch a tela ficava girando para sempre
+    usuario
+      .getIdTokenResult()
+      .then((t) => ativo && setPlataforma(t.claims.plataforma === true))
+      .catch(() => undefined);
+    getDocs(collection(db, `usuarios/${usuario.uid}/acessos`))
+      .then(async (s) => {
+        const lista = await Promise.all(
+          s.docs
+            .filter((d) => d.get("ativo") !== false)
+            .map(async (d) => {
+              const t = await getDoc(doc(db, "torcidas", d.id));
+              return { tid: d.id, nome: t.get("nome") ?? "Torcida", slug: t.get("slug") ?? "", papel: d.get("papel") as string };
+            }),
+        );
+        if (ativo) setAcessos(lista);
+      })
+      .catch((e) => {
+        if (ativo) setErroAcessos(ehErroDeConexao(e) ? "Sem internet. Confira a conexão e tente de novo." : mensagemDeErro(e));
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [usuario, tentativa]);
 
   return (
     <>
@@ -183,14 +200,31 @@ function EntrarEquipe({ aoInformarTorcida }: { aoInformarTorcida: () => void }) 
               <Link to="/cadastro" className="font-semibold text-primaria-texto hover:underline">
                 Cadastrar minha torcida
               </Link>
-              <button type="button" onClick={aoInformarTorcida} className="hover:text-texto">
+              <button type="button" onClick={aoInformarTorcida} className="min-h-11 hover:text-texto">
                 Informar o endereço da torcida
               </button>
             </span>
           }
         />
+      ) : erroAcessos ? (
+        <Cartao className="w-full max-w-md p-7 animate-surgir">
+          <Vazio
+            icone="alerta"
+            titulo="Não foi possível abrir seus painéis"
+            acao={
+              <Botao icone="atualizar" onClick={() => setTentativa((n) => n + 1)}>
+                Tentar de novo
+              </Botao>
+            }
+          >
+            {erroAcessos}
+          </Vazio>
+          <Botao variante="fantasma" largo icone="sair" onClick={() => signOut(auth)}>
+            Sair
+          </Botao>
+        </Cartao>
       ) : !acessos ? (
-        <Carregando />
+        <Carregando texto="Buscando seus painéis…" />
       ) : (
         <Cartao className="w-full max-w-md p-7 animate-surgir">
           <p className="text-sm text-texto-3">Conectado como</p>

@@ -39,13 +39,18 @@ export function GraficoReceita({ dados, altura = 220 }: { dados: PontoReceita[];
 
   const maxTotal = Math.max(0, ...dados.map((d) => d.ingressos + d.socios));
   const topo = escalaBonita(maxTotal);
-  const margem = { esq: 64, dir: 8, cima: 12, baixo: 28 };
+  // No celular: menos marcas no eixo e rótulos de mês alternados, para não colarem uns nos outros.
+  const estreito = largura < 480;
+  const margem = { esq: estreito ? 58 : 64, dir: 8, cima: 12, baixo: 28 };
   const w = largura - margem.esq - margem.dir;
   const h = altura - margem.cima - margem.baixo;
   const coluna = w / Math.max(1, dados.length);
   const barra = Math.min(40, coluna * 0.5);
   const y = (v: number) => margem.cima + h - (v / topo) * h;
-  const linhas = [0, 0.25, 0.5, 0.75, 1].map((f) => f * topo);
+  const linhas = (estreito ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1]).map((f) => f * topo);
+  // pula rótulos de mês quando a coluna é estreita (o último, mês atual, sempre aparece)
+  const passoRotulo = coluna < 44 ? 2 : 1;
+  const mostraRotulo = (i: number) => (dados.length - 1 - i) % passoRotulo === 0;
   const GAP = 2;
 
   // Retângulo com topo arredondado (4px) ancorado na base.
@@ -59,7 +64,7 @@ export function GraficoReceita({ dados, altura = 220 }: { dados: PontoReceita[];
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-4 text-xs text-texto-2 mb-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-texto-2 mb-3">
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2.5 rounded-sm bg-primaria" /> Ingressos
         </span>
@@ -72,7 +77,7 @@ export function GraficoReceita({ dados, altura = 220 }: { dados: PontoReceita[];
           {linhas.map((v) => (
             <g key={v}>
               <line x1={margem.esq} x2={largura - margem.dir} y1={y(v)} y2={y(v)} stroke="var(--color-linha)" strokeDasharray={v === 0 ? undefined : "3 4"} />
-              <text x={margem.esq - 10} y={y(v)} dy="0.32em" textAnchor="end" fontSize="11" fill="var(--color-texto-3)" className="numeros">
+              <text x={margem.esq - 8} y={y(v)} dy="0.32em" textAnchor="end" fontSize="11" fill="var(--color-texto-3)" className="numeros">
                 {eixo(v)}
               </text>
             </g>
@@ -96,9 +101,11 @@ export function GraficoReceita({ dados, altura = 220 }: { dados: PontoReceita[];
                 {hSoc > 0 && (
                   <path d={barraArredondada(x, base - hIng - hSoc - (temAmbos ? GAP : 0), hSoc, 4)} fill="var(--color-secundaria)" />
                 )}
-                <text x={x + barra / 2} y={altura - 8} textAnchor="middle" fontSize="11" fill={ativo === i ? "var(--color-texto)" : "var(--color-texto-3)"}>
-                  {p.rotulo}
-                </text>
+                {(mostraRotulo(i) || ativo === i) && (
+                  <text x={x + barra / 2} y={altura - 8} textAnchor="middle" fontSize="12" fill={ativo === i ? "var(--color-texto)" : "var(--color-texto-3)"}>
+                    {p.rotulo}
+                  </text>
+                )}
                 <rect
                   x={margem.esq + i * coluna}
                   y={margem.cima}

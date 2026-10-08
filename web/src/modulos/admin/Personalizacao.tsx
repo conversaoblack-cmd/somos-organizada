@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { collection, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { mensagemDeErro } from "@/lib/api";
 import { emailValido, mascaraTelefone, moeda, periodicidadeCurta, soDigitos, taxa } from "@/lib/formatos";
 import { aplicarTema, avisosDeContraste, corValida, PALETAS, TEMA_PADRAO, temaDoPainel } from "@/lib/tema";
 import type { Plano, Tema, Torcida } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { AreaTexto, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, Interruptor, OpcoesCartao, useToast } from "@/ui";
+import { useAlteracoesPendentes } from "@/componentes/LayoutPainel";
+import { iniciaisTorcida } from "../publico/comum";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
-import { numeroWhatsapp, SeletorImagem, semIndefinidos } from "./util";
+import { comPrazo, mensagemGravacao, numeroWhatsapp, SeletorImagem, semIndefinidos } from "./util";
 
 interface Form {
   modulos: { eventos: boolean; socios: boolean };
@@ -53,6 +54,34 @@ export default function Personalizacao() {
   const [salvando, setSalvando] = useState(false);
   const original = useMemo(() => JSON.stringify(formDe(torcida)), [torcida]);
   const alterado = JSON.stringify(f) !== original;
+  // Trocar de página pelo menu ou fechar a aba com alteração não salva pede confirmação.
+  useAlteracoesPendentes(alterado);
+
+  // A barra fixa de salvar cobre o fim da tela: o botão de ajuda e os avisos sobem a altura dela.
+  const barra = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const raiz = document.documentElement;
+    const el = barra.current;
+    if (!alterado || !el) return;
+    const medir = () => raiz.style.setProperty("--folga-inferior", `${Math.ceil(el.getBoundingClientRect().height)}px`);
+    medir();
+    const obs = typeof ResizeObserver !== "undefined" ? new ResizeObserver(medir) : null;
+    obs?.observe(el);
+    return () => {
+      obs?.disconnect();
+      raiz.style.removeProperty("--folga-inferior");
+    };
+  }, [alterado]);
+
+  // Botão "Ver prévia" fixo no celular: some quando a prévia já está na tela.
+  const [previaVisivel, setPreviaVisivel] = useState(false);
+  useEffect(() => {
+    const el = document.getElementById("previa");
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver(([e]) => setPreviaVisivel(!!e?.isIntersecting), { threshold: 0.15 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Se outra pessoa salvar enquanto a tela está aberta e não há alterações locais, acompanha.
   const ultimoOriginal = useRef(original);
@@ -85,7 +114,7 @@ export default function Personalizacao() {
         logoUrl: t.logoUrl || undefined,
         bannerUrl: t.bannerUrl || undefined,
       });
-      await updateDoc(doc(db, `torcidas/${tid}`), {
+      await comPrazo(updateDoc(doc(db, `torcidas/${tid}`), {
         tema,
         textos: { titulo: f.textos.titulo.trim(), subtitulo: f.textos.subtitulo.trim(), sobre: f.textos.sobre.trim() },
         contato: {
@@ -96,30 +125,30 @@ export default function Personalizacao() {
         aprovacaoManualSocio: f.aprovacaoManualSocio,
         modulos: f.modulos,
         destinoMensalidade: f.destinoMensalidade,
-      });
+      }));
       avisar("Página atualizada! As mudanças já estão no ar.", "sucesso");
     } catch (e) {
-      avisar(mensagemDeErro(e), "erro");
+      avisar(mensagemGravacao(e), "erro");
     } finally {
       setSalvando(false);
     }
   }
 
   return (
-    <div className="pb-24">
+    <div className="pb-[calc(6rem+var(--folga-inferior,0px))]">
       <CabecalhoPagina
         titulo="Personalizar página"
         descricao="Cores, imagens, textos e regras da página pública da torcida."
         acoes={
           <>
-          <a href="#previa" className="xl:hidden inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3">
+          <a href="#previa" className="xl:hidden inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3">
             <Icone nome="olho" className="size-4" /> Ver prévia
           </a>
           <a
             href={`/${torcida.slug}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2"
+            className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2"
           >
             <Icone nome="externo" className="size-4" /> Ver página
           </a>
@@ -154,12 +183,13 @@ export default function Personalizacao() {
                   icone="check"
                   carregando={confirmandoModulos}
                   onClick={async () => {
+                    if (confirmandoModulos) return;
                     setConfirmandoModulos(true);
                     try {
-                      await updateDoc(doc(db, `torcidas/${tid}`), { modulos: f.modulos });
+                      await comPrazo(updateDoc(doc(db, `torcidas/${tid}`), { modulos: f.modulos }));
                       avisar("Módulos confirmados.", "sucesso");
                     } catch (e) {
-                      avisar(mensagemDeErro(e), "erro");
+                      avisar(mensagemGravacao(e), "erro");
                     } finally {
                       setConfirmandoModulos(false);
                     }
@@ -178,7 +208,7 @@ export default function Personalizacao() {
                   key={p.nome}
                   type="button"
                   onClick={() => setF((x) => ({ ...x, tema: { ...x.tema, ...p.tema } }))}
-                  className="inline-flex items-center gap-2 h-9 pl-2 pr-3 rounded-xl border border-linha bg-superficie-2 hover:border-linha-forte text-sm font-medium"
+                  className="inline-flex items-center gap-2 h-11 sm:h-9 pl-2 pr-3 rounded-xl border border-linha bg-superficie-2 hover:border-linha-forte text-sm font-medium"
                 >
                   <span className="flex -space-x-1">
                     {[p.tema.corFundo, p.tema.corPrimaria, p.tema.corSecundaria].map((c) => (
@@ -242,6 +272,7 @@ export default function Personalizacao() {
                 onChange={(u) => setTema("logoUrl", u ?? undefined)}
                 pasta={`torcidas/${tid}/publico/marca`}
                 prefixo="logo"
+                ladoMaximo={512}
                 proporcao="aspect-square"
                 dica="Quadrada, fundo transparente (PNG)."
               />
@@ -343,16 +374,32 @@ export default function Personalizacao() {
         </div>
       </div>
 
+      {!previaVisivel && (
+        <a
+          href="#previa"
+          className="xl:hidden fixed z-30 left-4 lg:left-[288px] bottom-[calc(max(1rem,env(safe-area-inset-bottom))+var(--folga-inferior,0px))] inline-flex items-center gap-2 h-12 px-4 rounded-full bg-superficie-3 text-texto text-sm font-semibold border border-linha-forte shadow-[0_10px_30px_-8px_rgba(0,0,0,.6)] animate-deslizar"
+        >
+          <Icone nome="olho" className="size-5" /> Ver prévia
+        </a>
+      )}
+
       {alterado && (
-        <div className="fixed bottom-0 inset-x-0 lg:left-[272px] z-30 border-t border-linha bg-fundo/90 backdrop-blur pl-4 sm:pl-6 pr-20 py-3 animate-deslizar">
-          <div className="max-w-[1400px] flex items-center gap-3 justify-end">
-            <p className="text-sm text-texto-2 mr-auto hidden sm:block">Você tem alterações não salvas.</p>
-            <Botao variante="fantasma" onClick={() => setF(formDe(torcida))} disabled={salvando}>
-              Descartar
-            </Botao>
-            <Botao icone="check" onClick={salvar} carregando={salvando} disabled={coresInvalidas.length > 0}>
-              Salvar alterações
-            </Botao>
+        <div
+          ref={barra}
+          className="fixed bottom-0 inset-x-0 lg:left-[272px] z-30 border-t border-linha bg-fundo/95 backdrop-blur px-4 sm:px-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] animate-deslizar"
+        >
+          <div className="max-w-[1400px] flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:justify-end">
+            <p className="text-sm text-texto-2 sm:mr-auto text-center sm:text-left" role="status">
+              Você tem alterações não salvas.
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row gap-2">
+              <Botao variante="fantasma" onClick={() => setF(formDe(torcida))} disabled={salvando} className="w-full sm:w-auto">
+                Descartar
+              </Botao>
+              <Botao icone="check" onClick={salvar} carregando={salvando} disabled={coresInvalidas.length > 0} className="w-full sm:w-auto">
+                Salvar alterações
+              </Botao>
+            </div>
           </div>
         </div>
       )}
@@ -408,7 +455,7 @@ function Previa({ f }: { f: Form }) {
         <div className="relative">
           <div className="h-40 relative overflow-hidden">
             {f.tema.bannerUrl ? (
-              <img src={f.tema.bannerUrl} alt="" className="absolute inset-0 size-full object-cover" />
+              <img src={f.tema.bannerUrl} alt="" width={380} height={160} loading="lazy" decoding="async" className="absolute inset-0 size-full object-cover" />
             ) : (
               <div className="absolute inset-0" style={{ background: BRILHO }}>
                 <div className="absolute inset-0" style={GRADE} />
@@ -418,10 +465,11 @@ function Previa({ f }: { f: Form }) {
           </div>
           <div className="px-5 -mt-10 relative">
             {f.tema.logoUrl ? (
-              <img src={f.tema.logoUrl} alt="" className="size-16 rounded-2xl object-cover border-2 border-fundo bg-superficie-2" />
+              <img src={f.tema.logoUrl} alt="" width={64} height={64} loading="lazy" decoding="async" className="size-16 rounded-2xl object-contain border-2 border-fundo bg-superficie-2" />
             ) : (
-              <span className="size-16 rounded-2xl grid place-items-center bg-primaria text-sobre-primaria border-2 border-fundo">
-                <Icone nome="escudo" className="size-8" />
+              // sem escudo: iniciais da torcida na cor dela (igual ao site da torcida)
+              <span className="size-16 rounded-2xl grid place-items-center bg-primaria text-sobre-primaria border-2 border-fundo font-display text-2xl leading-none" aria-hidden="true">
+                {iniciaisTorcida(torcida.nome)}
               </span>
             )}
             <p className="mt-3 text-[22px] font-display leading-tight uppercase tracking-tight">{t.titulo || torcida.nome}</p>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { api, mensagemDeErro } from "@/lib/api";
+import { api, ehErroDeConexao, mensagemDeErro } from "@/lib/api";
 import { useDocumento, useUsuario } from "@/hooks/dados";
 import { useTorcida } from "@/hooks/torcida";
 import type { Ingresso, Pedido } from "@/lib/tipos";
@@ -10,51 +10,103 @@ import { moeda } from "@/lib/formatos";
 import { copiarTexto } from "@/lib/servicos";
 import { Aviso, Botao, BotaoLink, Carregando, Cartao, Icone, useToast, Vazio } from "@/ui";
 import { QrCode } from "@/ui/qr";
-import { CabecalhoTorcida, LinhaValor } from "./comum";
+import { CabecalhoTorcida, LinhaValor, SemConexao } from "./comum";
 import { Bilhete, type DadosBilhete } from "./Bilhete";
 
 export default function PaginaPedido() {
+  // Trocar a chave remonta o conteúdo e assina o pedido de novo ("Tentar de novo" sem recarregar a página)
+  const [tentativa, setTentativa] = useState(0);
+  return (
+    <div className="min-h-dvh">
+      <CabecalhoTorcida />
+      <main className="mx-auto max-w-xl px-4 sm:px-6 py-8 sm:py-12">
+        <ConteudoPedido key={tentativa} tentarDeNovo={() => setTentativa((n) => n + 1)} />
+      </main>
+    </div>
+  );
+}
+
+function ConteudoPedido({ tentarDeNovo }: { tentarDeNovo: () => void }) {
   const { pedidoId } = useParams();
   const { tid, torcida } = useTorcida();
   const usuario = useUsuario();
   const p = useDocumento<Pedido>(usuario && pedidoId ? `torcidas/${tid}/pedidos/${pedidoId}` : null);
+  const logado = !!usuario && !usuario.isAnonymous;
 
-  let conteudo;
-  if (usuario === undefined || p.carregando) conteudo = <Carregando texto="Carregando seu pedido..." />;
-  else if (!usuario || p.erro || !p.dados) {
-    conteudo = (
-      <Vazio icone="ingresso" titulo="Pedido não encontrado neste aparelho" acao={<BotaoLink to={`/${torcida.slug}`}>Ver eventos</BotaoLink>}>
-        Abra o pedido no mesmo aparelho em que comprou, ou use o link dos ingressos que você salvou.
+  if (usuario === undefined || p.carregando) return <Carregando texto="Carregando seu pedido…" />;
+  // Internet ruim não é "pedido não encontrado": oferece tentar de novo
+  if (usuario && (p.semConexao || (p.erro && ehErroDeConexao(p.erro)))) {
+    return (
+      <SemConexao tentarDeNovo={tentarDeNovo}>
+        Não conseguimos abrir seu pedido agora. Confira a internet e toque em “Tentar de novo”. Se você já pagou, o pagamento não se perde.
+      </SemConexao>
+    );
+  }
+  if (!usuario || p.erro || !p.dados) {
+    return (
+      <Vazio
+        icone="ingresso"
+        titulo="Pedido não encontrado neste aparelho"
+        acao={
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <BotaoLink to={`/${torcida.slug}/conta`} icone="usuario">
+              {logado ? "Ver minha conta" : "Entrar na minha conta"}
+            </BotaoLink>
+            <Botao variante="contorno" icone="atualizar" onClick={tentarDeNovo}>
+              Tentar de novo
+            </Botao>
+          </div>
+        }
+      >
+        Entre na sua conta com CPF (ou e-mail) e senha para ver seus pedidos e ingressos. Ou abra o link dos ingressos que você salvou.
       </Vazio>
     );
-  } else {
-    const ped = p.dados;
-    if (ped.status === "aguardando" && ped.pix) conteudo = <TelaPix pedido={ped} />;
-    else if (ped.status === "aguardando" || ped.status === "criando") conteudo = <Carregando texto="Confirmando pagamento..." />;
-    else if (ped.status === "pago") conteudo = ped.tipo === "ingresso" ? <IngressosEmitidos pedido={ped} /> : <SocioConfirmado />;
-    else
-      conteudo = (
-        <div className="space-y-6 text-center py-6">
-          <div className="mx-auto size-16 rounded-full bg-perigo/15 text-perigo grid place-items-center">
-            <Icone nome="xCirculo" className="size-9" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">
-              {ped.status === "expirado" ? "O prazo do Pix acabou" : ped.status === "estornado" ? "Pagamento estornado" : "Pagamento não aprovado"}
-            </h1>
-            <p className="text-texto-2 mt-2">{ped.motivo || "Nenhum valor foi cobrado."}</p>
-          </div>
-          <BotaoLink to={ped.tipo === "ingresso" && ped.eventoId ? `/${torcida.slug}/evento/${ped.eventoId}` : `/${torcida.slug}/associar`} tamanho="lg">
-            Tentar novamente
-          </BotaoLink>
-        </div>
-      );
   }
 
+  const ped = p.dados;
+  if (ped.status === "aguardando" && ped.pix) return <TelaPix pedido={ped} />;
+  if (ped.status === "aguardando" || ped.status === "criando") return <Carregando texto="Confirmando pagamento…" />;
+  if (ped.status === "pago") return ped.tipo === "ingresso" ? <IngressosEmitidos pedido={ped} /> : <SocioConfirmado />;
+  if (ped.status === "estornado") return <PedidoEstornado pedido={ped} />;
   return (
-    <div className="min-h-dvh">
-      <CabecalhoTorcida />
-      <main className="mx-auto max-w-xl px-4 sm:px-6 py-8 sm:py-12">{conteudo}</main>
+    <div className="space-y-6 text-center py-6">
+      <div className="mx-auto size-16 rounded-full bg-perigo/15 text-perigo grid place-items-center">
+        <Icone nome="xCirculo" className="size-9" />
+      </div>
+      <div>
+        <h1 className="text-2xl font-bold">{ped.status === "expirado" ? "O prazo do Pix acabou" : "Pagamento não aprovado"}</h1>
+        <p className="text-texto-2 mt-2">{ped.motivo || "Nenhum valor foi cobrado."}</p>
+      </div>
+      <BotaoLink to={ped.tipo === "ingresso" && ped.eventoId ? `/${torcida.slug}/evento/${ped.eventoId}` : `/${torcida.slug}/associar`} tamanho="lg">
+        Tentar novamente
+      </BotaoLink>
+    </div>
+  );
+}
+
+/** Pagamento devolvido (estorno pedido à Pagar.me ou contestação no cartão): não há o que "tentar de novo". */
+function PedidoEstornado({ pedido }: { pedido: Pedido & { id: string } }) {
+  const { torcida } = useTorcida();
+  // O servidor grava o motivo em `motivoEstorno` ("estorno" | "chargeback")
+  const contestado = (pedido as Pedido & { motivoEstorno?: string }).motivoEstorno === "chargeback";
+  return (
+    <div className="space-y-6 text-center py-6">
+      <div className="mx-auto size-16 rounded-full bg-superficie-2 text-texto-2 grid place-items-center">
+        <Icone nome="info" className="size-9" />
+      </div>
+      <div>
+        <h1 className="text-2xl font-bold">Pagamento devolvido</h1>
+        <p className="text-texto-2 mt-2">
+          {contestado
+            ? "A compra foi contestada junto ao banco ou ao cartão, e o valor foi devolvido."
+            : "O valor foi devolvido ao seu banco ou cartão."}
+          {pedido.tipo === "ingresso" ? " Os ingressos deste pedido foram cancelados." : ""}
+        </p>
+        <p className="text-sm text-texto-3 mt-2">Dúvidas? Fale com a diretoria pelos canais oficiais.</p>
+      </div>
+      <BotaoLink to={`/${torcida.slug}`} variante="contorno">
+        Voltar para a página
+      </BotaoLink>
     </div>
   );
 }
@@ -127,12 +179,13 @@ function TelaPix({ pedido }: { pedido: Pedido & { id: string } }) {
         <p className="text-texto-2 mt-1">{pedido.tipo === "ingresso" ? pedido.eventoNome : "Mensalidade de sócio"}</p>
       </div>
 
+      {/* No celular (toque) quem compra paga no mesmo aparelho: "Copiar código" vem antes do QR. No computador, QR primeiro. */}
       <Cartao className="p-6 flex flex-col items-center gap-5">
-        <QrCode valor={pedido.pix!.qrCode} className="w-60 max-w-full" />
-        <div className="flex items-center gap-2 text-sm">
-          <span className="relative flex size-2.5">
-            <span className="absolute inline-flex size-full rounded-full bg-sucesso opacity-75 animate-ping" />
-            <span className="relative inline-flex size-2.5 rounded-full bg-sucesso" />
+        <QrCode valor={pedido.pix!.qrCode} className="w-60 max-w-full pointer-coarse:w-44 pointer-coarse:order-3" />
+        <div className="flex items-center gap-2 text-sm pointer-coarse:order-1">
+          <span className="relative flex size-2.5" aria-hidden="true">
+            <span className="absolute inline-flex size-full rounded-full bg-alerta opacity-75 motion-safe:animate-ping" />
+            <span className="relative inline-flex size-2.5 rounded-full bg-alerta" />
           </span>
           {restante > 0 ? (
             <span className="text-texto-2">
@@ -142,13 +195,14 @@ function TelaPix({ pedido }: { pedido: Pedido & { id: string } }) {
             <span className="text-alerta">Prazo encerrado</span>
           )}
         </div>
-        <Botao largo tamanho="lg" icone="copiar" onClick={copiar}>
+        <Botao largo tamanho="lg" icone="copiar" onClick={copiar} className="pointer-coarse:order-2">
           Copiar código Pix
         </Botao>
+        <p className="hidden pointer-coarse:block pointer-coarse:order-4 text-xs text-texto-3 -mt-2">Ou escaneie o QR Code de outro aparelho.</p>
       </Cartao>
 
       <ol className="space-y-3">
-        {["Abra o app do seu banco e escolha Pix", "Use “Pix copia e cola” ou escaneie o QR Code", "Confirme o pagamento. Esta tela atualiza sozinha"].map((t, i) => (
+        {["Toque em “Copiar código Pix”", "Abra o app do seu banco, escolha Pix e “Pix copia e cola” (ou escaneie o QR Code)", "Confirme o pagamento. Esta tela atualiza sozinha"].map((t, i) => (
           <li key={t} className="flex gap-3 items-center">
             <span className="size-7 shrink-0 rounded-full bg-superficie-2 grid place-items-center text-sm font-bold">{i + 1}</span>
             <span className="text-texto-2">{t}</span>
@@ -173,18 +227,28 @@ function IngressosEmitidos({ pedido }: { pedido: Pedido & { id: string } }) {
   const { tid, torcida } = useTorcida();
   const avisar = useToast();
   const [bilhetes, setBilhetes] = useState<DadosBilhete[] | null>(null);
+  const [erroLeitura, setErroLeitura] = useState<"conexao" | "outro" | null>(null);
+  const [tentativa, setTentativa] = useState(0);
   useEffect(() => {
-    Promise.all((pedido.ingressoIds ?? []).map((id) => getDoc(doc(db, `torcidas/${tid}/ingressos/${id}`)))).then((snaps) =>
-      setBilhetes(
-        snaps
-          .filter((s) => s.exists())
-          .map((s) => {
-            const i = s.data() as Ingresso;
-            return { id: s.id, ...i, eventoData: i.eventoData.toDate() };
-          }),
-      ),
-    );
-  }, [tid, pedido.ingressoIds]);
+    let ativo = true;
+    setErroLeitura(null);
+    Promise.all((pedido.ingressoIds ?? []).map((id) => getDoc(doc(db, `torcidas/${tid}/ingressos/${id}`))))
+      .then((snaps) => {
+        if (!ativo) return;
+        setBilhetes(
+          snaps
+            .filter((s) => s.exists())
+            .map((s) => {
+              const i = s.data() as Ingresso;
+              return { id: s.id, ...i, eventoData: i.eventoData.toDate() };
+            }),
+        );
+      })
+      .catch((e) => ativo && setErroLeitura(ehErroDeConexao(e) ? "conexao" : "outro"));
+    return () => {
+      ativo = false;
+    };
+  }, [tid, pedido.ingressoIds, tentativa]);
 
   const link = `${location.origin}/${torcida.slug}/ingressos/${pedido.id}?k=${pedido.chaveAcesso}`;
   const texto = `Meus ingressos para ${pedido.eventoNome} (${torcida.nome}): ${link}`;
@@ -222,8 +286,22 @@ function IngressosEmitidos({ pedido }: { pedido: Pedido & { id: string } }) {
         </Botao>
       </div>
 
-      {!bilhetes ? (
-        <Carregando />
+      {erroLeitura ? (
+        <Aviso
+          tom={erroLeitura === "conexao" ? "alerta" : "perigo"}
+          titulo={erroLeitura === "conexao" ? "Sem conexão" : "Não conseguimos mostrar os ingressos aqui"}
+          acao={
+            <Botao tamanho="sm" icone="atualizar" onClick={() => setTentativa((n) => n + 1)}>
+              Tentar de novo
+            </Botao>
+          }
+        >
+          {erroLeitura === "conexao"
+            ? "Seus ingressos estão garantidos. Confira a internet e toque em “Tentar de novo”."
+            : "Seus ingressos estão garantidos. Abra o link dos ingressos (botões acima) ou entre na sua conta."}
+        </Aviso>
+      ) : !bilhetes ? (
+        <Carregando texto="Carregando ingressos…" />
       ) : (
         <div className="space-y-4">
           {bilhetes.map((b) => (
@@ -251,14 +329,14 @@ function SocioConfirmado() {
         <p className="text-texto-2 mt-2">
           {torcida.aprovacaoManualSocio
             ? "Sua ficha foi para a diretoria aprovar. Você recebe acesso completo assim que for aprovada."
-            : `Bem-vindo à ${torcida.nome}. Sua carteirinha digital já está disponível.`}
+            : "Bem-vindo! Sua carteirinha digital já está disponível."}
         </p>
       </div>
       <BotaoLink to={`/${torcida.slug}/socio`} tamanho="lg" iconeDireita="setaDireita">
         Ver minha carteirinha
       </BotaoLink>
       <div>
-        <Link to={`/${torcida.slug}`} className="text-sm text-texto-2 hover:text-texto">
+        <Link to={`/${torcida.slug}`} className="inline-flex items-center min-h-11 text-sm text-texto-2 hover:text-texto">
           Ver eventos
         </Link>
       </div>

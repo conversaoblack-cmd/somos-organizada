@@ -3,7 +3,7 @@
  * Fases: conta → verificar e-mail → torcida → responsável → entidade → revisão → em análise.
  * O pedido fica em `solicitacoes` e só vira torcida depois da aprovação da equipe Somos Organizada.
  */
-import { enviarConfirmacaoEmail } from "@/lib/emailsConta";
+import { enviarConfirmacaoEmail, CANAL_CONTA } from "@/lib/emailsConta";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router";
 import { createUserWithEmailAndPassword, signOut, updateProfile, type User } from "firebase/auth";
@@ -15,7 +15,7 @@ import { buscarCep } from "@/lib/servicos";
 import { cpfValido, dataHora, emailValido, mascaraCep, mascaraCpf, mascaraTelefone, soDigitos, telefoneValido } from "@/lib/formatos";
 import type { ComId, SolicitacaoTorcida } from "@/lib/tipos";
 import { useColecao, useUsuario } from "@/hooks/dados";
-import { Login } from "@/componentes/Login";
+import { BotaoVerSenha, Login } from "@/componentes/Login";
 import { Abas, Aviso, Botao, BotaoLink, Campo, Cartao, Carregando, cx, Etapas, Girando, Icone, OpcoesCartao } from "@/ui";
 import { SLUG_VALIDO, slugDoNome } from "./planos";
 import { CoresCadastro, type Cores } from "./CoresCadastro";
@@ -60,22 +60,61 @@ const VAZIO: Dados = {
 };
 
 // ── Rascunho (só neste navegador; conveniência) ─────────────────
-const CHAVE_RASCUNHO = "somos-cadastro-rascunho";
-function lerRascunho(): Dados {
+// Um rascunho por conta (celular emprestado não mostra os dados de outra pessoa), sem o CPF,
+// e apagado ao sair ou ao trocar de e-mail.
+const CHAVE_ANTIGA = "somos-cadastro-rascunho";
+const chaveRascunho = (uid: string) => `somos-cadastro-rascunho:${uid}`;
+function lerRascunho(uid: string): Dados {
   try {
-    return { ...VAZIO, ...(JSON.parse(localStorage.getItem(CHAVE_RASCUNHO) || "{}") as Partial<Dados>) };
+    localStorage.removeItem(CHAVE_ANTIGA); // versão antiga guardava CPF numa chave só para todos
+    const r = JSON.parse(localStorage.getItem(chaveRascunho(uid)) || "{}") as Partial<Dados>;
+    return { ...VAZIO, ...r, respCpf: "" };
   } catch {
     return VAZIO;
   }
 }
-function gravarRascunho(d: Dados | null) {
+function gravarRascunho(uid: string, d: Dados | null) {
   try {
-    if (d) localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify(d));
-    else localStorage.removeItem(CHAVE_RASCUNHO);
+    if (d) localStorage.setItem(chaveRascunho(uid), JSON.stringify({ ...d, respCpf: undefined }));
+    else localStorage.removeItem(chaveRascunho(uid));
   } catch {
     /* sem armazenamento: segue sem rascunho */
   }
 }
+/**
+ * Passo em que a pessoa parou: recarregar a página (queda de internet, erro, celular que fechou a aba)
+ * volta exatamente para ele, não para o começo.
+ */
+const chavePasso = (uid: string) => `somos-cadastro-passo:${uid}`;
+function lerPasso(uid: string): 2 | 3 | 4 | 5 {
+  try {
+    const n = Number(localStorage.getItem(chavePasso(uid)));
+    return n === 3 || n === 4 || n === 5 ? n : 2;
+  } catch {
+    return 2;
+  }
+}
+function gravarPasso(uid: string, passo: number | null) {
+  try {
+    if (passo && passo > 2) localStorage.setItem(chavePasso(uid), String(passo));
+    else localStorage.removeItem(chavePasso(uid));
+  } catch {
+    /* sem armazenamento: começa do passo 2 */
+  }
+}
+
+/** Sair da conta apagando o rascunho deste aparelho. */
+function sairApagandoRascunho() {
+  const uid = auth.currentUser?.uid;
+  if (uid) {
+    gravarRascunho(uid, null);
+    gravarPasso(uid, null);
+  }
+  return signOut(auth);
+}
+
+/** Foco automático só com mouse: no celular ele abre o teclado a cada passo e cobre a tela. */
+const focoAutomatico = () => typeof window !== "undefined" && !!window.matchMedia?.("(pointer: fine)").matches;
 
 const mascaraCnpj = (s: string) =>
   soDigitos(s)
@@ -151,7 +190,7 @@ export default function Cadastro() {
           Somos Organizada
         </Link>
         {logado && (
-          <button type="button" onClick={() => signOut(auth)} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1.5">
+          <button type="button" onClick={() => void sairApagandoRascunho()} className="min-h-11 px-2 text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1.5">
             <Icone nome="sair" className="size-4" /> Sair
           </button>
         )}
@@ -192,6 +231,7 @@ function PassoConta() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [verSenha, setVerSenha] = useState(false);
   const [tentou, setTentou] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -248,6 +288,9 @@ function PassoConta() {
               rotulo="E-mail"
               type="email"
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={email}
               onChange={setEmail}
               erro={tentou && erros.email}
@@ -255,8 +298,12 @@ function PassoConta() {
             />
             <Campo
               rotulo="Crie uma senha"
-              type="password"
+              type={verSenha ? "text" : "password"}
               autoComplete="new-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              sufixo={<BotaoVerSenha visivel={verSenha} alternar={() => setVerSenha((v) => !v)} />}
               value={senha}
               onChange={setSenha}
               erro={tentou && erros.senha}
@@ -337,7 +384,22 @@ function PassoVerificar({ usuario, aoVerificar }: { usuario: User; aoVerificar: 
   };
   useEffect(() => {
     const t = setInterval(() => void conferir.current(false), 5000);
-    return () => clearInterval(t);
+    // confirmou em outra aba (página /verificar): segue na hora, sem esperar os 5 s
+    let canal: BroadcastChannel | null = null;
+    try {
+      canal = new BroadcastChannel(CANAL_CONTA);
+      canal.onmessage = (ev) => ev.data === "email-confirmado" && void conferir.current(false);
+    } catch {
+      /* navegador sem BroadcastChannel: fica a conferência a cada 5 s */
+    }
+    // voltou para esta aba (ex.: depois de abrir o e-mail no celular): confere na hora
+    const aoVoltar = () => document.visibilityState === "visible" && void conferir.current(false);
+    document.addEventListener("visibilitychange", aoVoltar);
+    return () => {
+      clearInterval(t);
+      canal?.close();
+      document.removeEventListener("visibilitychange", aoVoltar);
+    };
   }, []);
 
   async function jaVerifiquei() {
@@ -363,9 +425,9 @@ function PassoVerificar({ usuario, aoVerificar }: { usuario: User; aoVerificar: 
           </div>
         </div>
         <ol className="space-y-2 text-sm text-texto-2 list-decimal pl-5">
-          <li>Abra o seu e-mail (confira o spam).</li>
-          <li>Toque no link “Verificar e-mail”.</li>
-          <li>Volte aqui. A página continua sozinha, ou toque em “Já verifiquei”.</li>
+          <li>Abra o seu e-mail (confira também o spam e as promoções).</li>
+          <li>Toque em “Confirmar meu e-mail”.</li>
+          <li>Pronto: o cadastro continua de onde parou, lá ou aqui. Esta tela segue sozinha.</li>
         </ol>
         {aviso && <Aviso tom={aviso.tom}>{aviso.texto}</Aviso>}
         <Botao largo tamanho="lg" icone="checkCirculo" carregando={verificando} onClick={jaVerifiquei}>
@@ -375,7 +437,7 @@ function PassoVerificar({ usuario, aoVerificar }: { usuario: User; aoVerificar: 
           <Botao variante="contorno" className="flex-1" icone="enviar" disabled={espera > 0} onClick={enviar}>
             {espera > 0 ? `Reenviar em ${espera}s` : "Reenviar e-mail"}
           </Botao>
-          <Botao variante="fantasma" className="flex-1" icone="sair" onClick={() => signOut(auth)}>
+          <Botao variante="fantasma" className="flex-1" icone="sair" onClick={() => void sairApagandoRascunho()}>
             Usar outro e-mail
           </Botao>
         </div>
@@ -393,20 +455,23 @@ type EstadoSlug = { fase: "vazio" } | { fase: "verificando" } | { fase: "ok" } |
 
 function Formulario({ usuario }: { usuario: User }) {
   const [d, setD] = useState<Dados>(() => {
-    const r = lerRascunho();
+    const r = lerRascunho(usuario.uid);
     return { ...r, respNome: r.respNome || usuario.displayName || "" };
   });
-  const [passo, setPasso] = useState<Passo>(2);
+  const [passo, setPasso] = useState<Passo>(() => lerPasso(usuario.uid));
   const [tentou, setTentou] = useState<Record<number, boolean>>({});
   const [slug, setSlug] = useState<EstadoSlug>({ fase: "vazio" });
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [declaro, setDeclaro] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  /** Tocou em Continuar enquanto o endereço ainda era conferido: avança sozinho quando a checagem terminar. */
+  const [esperandoSlug, setEsperandoSlug] = useState(false);
   const topo = useRef<HTMLDivElement>(null);
 
   const mudar = <K extends keyof Dados>(k: K, v: Dados[K]) => setD((x) => ({ ...x, [k]: v }));
-  useEffect(() => gravarRascunho(d), [d]);
+  useEffect(() => gravarRascunho(usuario.uid, d), [usuario.uid, d]);
+  useEffect(() => gravarPasso(usuario.uid, passo), [usuario.uid, passo]);
   useEffect(() => topo.current?.scrollIntoView({ behavior: "smooth", block: "start" }), [passo]);
 
   const slugFinal = d.slugEditado ? d.slug : slugDoNome(d.nomeTorcida);
@@ -461,6 +526,10 @@ function Formulario({ usuario }: { usuario: User }) {
   function avancar(e?: FormEvent) {
     e?.preventDefault();
     setTentou((x) => ({ ...x, [passo]: true }));
+    if (passo === 2 && slug.fase === "verificando" && !temErro({ ...errosTorcida, slug: null })) {
+      setEsperandoSlug(true);
+      return;
+    }
     if (temErro(errosDoPasso)) {
       requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-erro] input, [aria-invalid=true]")?.focus());
       return;
@@ -468,6 +537,13 @@ function Formulario({ usuario }: { usuario: User }) {
     if (passo === 2 && !d.slugEditado) mudar("slug", slugFinal);
     setPasso((p) => (p < 5 ? ((p + 1) as Passo) : p));
   }
+
+  useEffect(() => {
+    if (!esperandoSlug || slug.fase === "verificando") return;
+    setEsperandoSlug(false);
+    avancar(); // endereço livre: segue; com erro, avancar mostra o motivo e põe o foco no campo
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esperandoSlug, slug.fase]);
 
   async function aoMudarCep(v: string) {
     mudar("cep", v);
@@ -511,7 +587,8 @@ function Formulario({ usuario }: { usuario: User }) {
           uf: d.uf.trim().toUpperCase(),
         },
       });
-      gravarRascunho(null);
+      gravarRascunho(usuario.uid, null);
+      gravarPasso(usuario.uid, null);
       // a tela "Em análise" aparece sozinha quando a solicitação chega pelo tempo real
     } catch (e) {
       const msg = mensagemDeErro(e);
@@ -541,7 +618,7 @@ function Formulario({ usuario }: { usuario: User }) {
               onChange={(v) => mudar("nomeTorcida", v)}
               placeholder="Ex.: Fúria Jovem"
               erro={t && errosTorcida.nome}
-              autoFocus
+              autoFocus={focoAutomatico()}
               maxLength={80}
             />
             <Campo rotulo="Clube que a torcida apoia" value={d.clube} onChange={(v) => mudar("clube", v)} placeholder="Ex.: Esporte Clube Bahia" maxLength={80} dica="Opcional." />
@@ -608,7 +685,7 @@ function Formulario({ usuario }: { usuario: User }) {
             </div>
             <CoresCadastro cores={d.cores} onChange={(c) => mudar("cores", c)} erro={t && errosTorcida.cores} />
           </Cartao>
-          <Navegacao />
+          <Navegacao conferindo={esperandoSlug} />
         </form>
       )}
 
@@ -616,7 +693,7 @@ function Formulario({ usuario }: { usuario: User }) {
         <form onSubmit={avancar} noValidate>
           <Titulo titulo="Responsável">Quem responde pela torcida perante a Somos Organizada.</Titulo>
           <Cartao className="p-6 sm:p-7 space-y-5">
-            <Campo rotulo="Nome completo" autoComplete="name" value={d.respNome} onChange={(v) => mudar("respNome", v)} erro={t && errosResp.nome} autoFocus maxLength={64} />
+            <Campo rotulo="Nome completo" autoComplete="name" value={d.respNome} onChange={(v) => mudar("respNome", v)} erro={t && errosResp.nome} autoFocus={focoAutomatico()} maxLength={64} />
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo rotulo="CPF" mascara="cpf" value={d.respCpf} onChange={(v) => mudar("respCpf", v)} erro={t && errosResp.cpf} placeholder="000.000.000-00" />
               <Campo
@@ -696,6 +773,7 @@ function Formulario({ usuario }: { usuario: User }) {
                 <Campo
                   rotulo="CEP"
                   mascara="cep"
+                  autoComplete="postal-code"
                   value={d.cep}
                   onChange={(v) => void aoMudarCep(v)}
                   erro={t && errosEnt.cep}
@@ -706,20 +784,20 @@ function Formulario({ usuario }: { usuario: User }) {
                   href="https://buscacepinter.correios.com.br/"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-texto-3 underline mt-9 sm:justify-self-start"
+                  className="min-h-11 inline-flex items-center text-xs text-texto-3 underline mt-6 sm:justify-self-start"
                 >
                   Não sei o CEP
                 </a>
               </div>
-              <Campo rotulo="Rua / avenida" value={d.logradouro} onChange={(v) => mudar("logradouro", v)} erro={t && errosEnt.logradouro} maxLength={120} />
+              <Campo rotulo="Rua / avenida" autoComplete="address-line1" value={d.logradouro} onChange={(v) => mudar("logradouro", v)} erro={t && errosEnt.logradouro} maxLength={120} />
               <div className="grid grid-cols-[110px_1fr] gap-4">
                 <Campo rotulo="Número" value={d.numero} onChange={(v) => mudar("numero", v)} erro={t && errosEnt.numero} maxLength={12} />
-                <Campo rotulo="Complemento" value={d.complemento} onChange={(v) => mudar("complemento", v)} maxLength={60} dica="Opcional." />
+                <Campo rotulo="Complemento" autoComplete="address-line2" value={d.complemento} onChange={(v) => mudar("complemento", v)} maxLength={60} dica="Opcional." />
               </div>
-              <Campo rotulo="Bairro" value={d.bairro} onChange={(v) => mudar("bairro", v)} erro={t && errosEnt.bairro} maxLength={80} />
+              <Campo rotulo="Bairro" autoComplete="address-level3" value={d.bairro} onChange={(v) => mudar("bairro", v)} erro={t && errosEnt.bairro} maxLength={80} />
               <div className="grid grid-cols-[1fr_90px] gap-4">
-                <Campo rotulo="Cidade" value={d.cidade} onChange={(v) => mudar("cidade", v)} erro={t && errosEnt.cidade} maxLength={64} />
-                <Campo rotulo="UF" value={d.uf} onChange={(v) => mudar("uf", v.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase())} erro={t && errosEnt.uf} placeholder="BA" />
+                <Campo rotulo="Cidade" autoComplete="address-level2" value={d.cidade} onChange={(v) => mudar("cidade", v)} erro={t && errosEnt.cidade} maxLength={64} />
+                <Campo rotulo="UF" autoComplete="address-level1" value={d.uf} onChange={(v) => mudar("uf", v.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase())} erro={t && errosEnt.uf} placeholder="BA" />
               </div>
             </div>
           </Cartao>
@@ -778,8 +856,8 @@ function Formulario({ usuario }: { usuario: User }) {
                   <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" /> O dinheiro de ingressos e sócios cai direto na conta da torcida.
                 </li>
               </ul>
-              <label className="flex gap-3 items-start pt-2 cursor-pointer">
-                <input type="checkbox" checked={declaro} onChange={(e) => setDeclaro(e.target.checked)} className="mt-1 size-4 accent-[var(--color-primaria)]" />
+              <label className="flex gap-3 items-start pt-2 min-h-11 cursor-pointer">
+                <input type="checkbox" checked={declaro} onChange={(e) => setDeclaro(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--color-primaria)]" />
                 <span>Declaro que represento esta torcida e que os dados acima são verdadeiros.</span>
               </label>
             </Cartao>
@@ -788,10 +866,23 @@ function Formulario({ usuario }: { usuario: User }) {
               <Botao variante="contorno" icone="setaEsquerda" onClick={() => setPasso(4)}>
                 Voltar
               </Botao>
-              <Botao className="sm:flex-1" tamanho="lg" icone="enviar" disabled={!declaro} carregando={enviando} onClick={enviar}>
+              <Botao
+                className="sm:flex-1"
+                tamanho="lg"
+                icone="enviar"
+                disabled={!declaro}
+                carregando={enviando}
+                onClick={enviar}
+                aria-describedby={!declaro ? "cad-dica-declaracao" : undefined}
+              >
                 Enviar para análise
               </Botao>
             </div>
+            {!declaro && (
+              <p id="cad-dica-declaracao" className="text-sm text-texto-2 text-center">
+                Marque a declaração acima para enviar.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -800,7 +891,7 @@ function Formulario({ usuario }: { usuario: User }) {
 
 }
 
-function Navegacao({ voltar }: { voltar?: () => void }) {
+function Navegacao({ voltar, conferindo }: { voltar?: () => void; conferindo?: boolean }) {
   return (
     <div className="flex flex-col-reverse sm:flex-row gap-2 mt-5">
       {voltar && (
@@ -808,8 +899,8 @@ function Navegacao({ voltar }: { voltar?: () => void }) {
           Voltar
         </Botao>
       )}
-      <Botao type="submit" tamanho="lg" className="sm:flex-1" iconeDireita="setaDireita">
-        Continuar
+      <Botao type="submit" tamanho="lg" className="sm:flex-1" iconeDireita={conferindo ? undefined : "setaDireita"} carregando={conferindo}>
+        {conferindo ? "Conferindo o endereço…" : "Continuar"}
       </Botao>
     </div>
   );
@@ -820,7 +911,7 @@ function Resumo({ titulo, editar, children }: { titulo: string; editar: () => vo
     <Cartao className="p-5">
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold">{titulo}</h2>
-        <button type="button" onClick={editar} className="text-sm text-primaria-texto font-semibold inline-flex items-center gap-1 hover:underline">
+        <button type="button" onClick={editar} aria-label={`Editar ${titulo.toLowerCase()}`} className="min-h-11 -mr-2 px-2 text-sm text-primaria-texto font-semibold inline-flex items-center gap-1 hover:underline">
           <Icone nome="lapis" className="size-4" /> Editar
         </button>
       </div>

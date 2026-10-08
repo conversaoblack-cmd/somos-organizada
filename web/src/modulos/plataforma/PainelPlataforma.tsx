@@ -114,19 +114,33 @@ function SemPermissao({ usuario, aoAtivar }: { usuario: User; aoAtivar: () => Pr
       setCarregando(false);
     }
   }
+  const [verificando, setVerificando] = useState<"enviar" | "conferir" | null>(null);
   async function enviarVerificacao() {
+    if (verificando) return;
     setErro(null);
+    setVerificando("enviar");
     try {
       await enviarConfirmacaoEmail(usuario, `${location.origin}${rp("/")}`);
       setAviso("Enviamos o link de verificação para o seu e-mail. Depois de confirmar, toque em “Já verifiquei”.");
     } catch (e) {
       setErro(mensagemDeErro(e));
+    } finally {
+      setVerificando(null);
     }
   }
   async function jaVerifiquei() {
-    await usuario.reload();
-    await usuario.getIdToken(true);
-    setAviso(auth.currentUser?.emailVerified ? "E-mail verificado. Agora ative o acesso." : "Ainda não aparece como verificado. Confira o link no e-mail.");
+    if (verificando) return;
+    setErro(null);
+    setVerificando("conferir");
+    try {
+      await usuario.reload();
+      await usuario.getIdToken(true);
+      setAviso(auth.currentUser?.emailVerified ? "E-mail verificado. Agora ative o acesso." : "Ainda não aparece como verificado. Confira o link no e-mail.");
+    } catch (e) {
+      setErro(mensagemDeErro(e));
+    } finally {
+      setVerificando(null);
+    }
   }
 
   const verificado = auth.currentUser?.emailVerified ?? usuario.emailVerified;
@@ -151,10 +165,10 @@ function SemPermissao({ usuario, aoAtivar }: { usuario: User; aoAtivar: () => Pr
                 titulo="E-mail não verificado"
                 acao={
                   <div className="flex flex-wrap gap-2">
-                    <Botao tamanho="sm" variante="contorno" icone="enviar" onClick={enviarVerificacao}>
+                    <Botao tamanho="sm" variante="contorno" icone="enviar" onClick={enviarVerificacao} carregando={verificando === "enviar"}>
                       Enviar verificação
                     </Botao>
-                    <Botao tamanho="sm" variante="fantasma" onClick={jaVerifiquei}>
+                    <Botao tamanho="sm" variante="fantasma" onClick={jaVerifiquei} carregando={verificando === "conferir"}>
                       Já verifiquei
                     </Botao>
                   </div>

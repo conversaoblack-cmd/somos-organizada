@@ -46,7 +46,7 @@ export function CoresCadastro({ cores, onChange, erro }: { cores: Cores | null; 
               aria-pressed={ativa}
               onClick={() => onChange({ ...p.tema })}
               className={cx(
-                "inline-flex items-center gap-2 h-9 pl-2 pr-3 rounded-xl border text-sm font-medium transition-colors",
+                "inline-flex items-center gap-2 h-11 sm:h-9 pl-2 pr-3 rounded-xl border text-sm font-medium transition-colors",
                 ativa ? "border-primaria bg-primaria/10" : "border-linha bg-superficie-2 hover:border-linha-forte",
               )}
             >
@@ -89,7 +89,7 @@ export function CoresCadastro({ cores, onChange, erro }: { cores: Cores | null; 
                   aria-pressed={f === "claro" ? claro : !claro}
                   onClick={() => onChange({ ...base, ...FUNDOS[f] })}
                   className={cx(
-                    "h-10 rounded-xl border text-sm font-medium",
+                    "h-11 sm:h-10 rounded-xl border text-sm font-medium",
                     (f === "claro" ? claro : !claro) ? "border-primaria bg-primaria/10" : "border-linha bg-superficie-2 hover:border-linha-forte",
                   )}
                 >
