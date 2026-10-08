@@ -3,7 +3,7 @@ import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
-import { aplicarTema, TEMA_PAINEL } from "@/lib/tema";
+import { aplicarTema, temaDoPainel } from "@/lib/tema";
 import { cpfValido, dataExtensa, hora, paraData, relativo } from "@/lib/formatos";
 import type { ComId, Evento, Membro, Papel } from "@/lib/tipos";
 import { useColecao, useDocumento } from "@/hooks/dados";
@@ -593,9 +593,9 @@ export default function Portaria() {
   const chaveEvento = `portaria:evento:${tid}`;
   const [eventoId, setEventoId] = useState<string | null>(() => ler(chaveEvento));
 
-  // Tema neutro de alto contraste (reaplica se o documento da torcida mudar).
+  // Cores da torcida em alto contraste (reaplica se o documento da torcida mudar).
   useEffect(() => {
-    aplicarTema(TEMA_PAINEL);
+    aplicarTema(temaDoPainel(torcida.tema));
   }, [torcida]);
   useEffect(() => {
     document.title = `Portaria · ${torcida.nome}`;

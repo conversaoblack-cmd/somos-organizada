@@ -518,6 +518,8 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
     responsavel: { nome: "Diretor Novo da Silva", cpf: "52998224725", telefone: "71988887777", cargo: "Presidente" },
     entidade: { tipo: "cnpj", cnpj: "11.222.333/0001-81", razaoSocial: "Associação Fúria Azul", emailFinanceiro: "fin@furia.test" },
     endereco: { cep: "40000000", logradouro: "Rua A", numero: "1", bairro: "Centro", cidade: "Salvador", uf: "BA" },
+    // cores escolhidas no cadastro (a de fundo inválida volta para o padrão azul e amarelo)
+    tema: { corPrimaria: "#ffffff", corSecundaria: "#9CA3AF", corFundo: "preto", corTexto: "#F5F5F5", logoUrl: "https://x.test/a.png" },
   };
   await assert.rejects(b.chamar("solicitarTorcida", { ...dados, entidade: { ...dados.entidade, cnpj: "11222333000100" } }), /CNPJ/);
   const sol = await b.chamar("solicitarTorcida", dados);
@@ -533,6 +535,7 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
   const t = await aDb.doc(`torcidas/${ap.torcidaId}`).get();
   assert.equal(t.get("status"), "implantacao");
   assert.equal(t.get("publicada"), false);
+  assert.deepEqual(t.get("tema"), { corPrimaria: "#FFFFFF", corSecundaria: "#9CA3AF", corFundo: "#070A12", corTexto: "#F5F5F5" });
   const membro = await aDb.doc(`torcidas/${ap.torcidaId}/membros/${u.uid}`).get();
   assert.equal(membro.get("papel"), "diretoria");
   ctx.demo = { tid: ap.torcidaId, dir: b };

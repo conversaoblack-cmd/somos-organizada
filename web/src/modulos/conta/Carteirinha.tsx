@@ -328,7 +328,7 @@ function TelaCheia({
           <div className="min-w-0">
             <p className="font-display text-2xl leading-tight uppercase line-clamp-2">{ficha.nome}</p>
             <p className="font-mono tracking-[.25em] text-neutral-600 mt-1">Nº {ficha.matricula}</p>
-            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-green-600 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider">
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-neutral-900 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider">
               <span className="size-2 rounded-full bg-white so-pulso" /> Sócio em dia
             </span>
           </div>

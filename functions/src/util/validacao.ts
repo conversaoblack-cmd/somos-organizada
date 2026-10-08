@@ -106,3 +106,18 @@ export function pessoa(v: unknown): Pessoa {
   if (!telefoneBR(tel)) throw new HttpsError("invalid-argument", "Telefone inválido. Use DDD + número.");
   return { nome, email, cpf, telefone: soDigitos(tel) };
 }
+
+/** Cores da Somos Organizada (azul e amarelo): padrão quando a torcida ainda não escolheu as dela. */
+export const TEMA_PADRAO = { corPrimaria: "#2E6BFF", corSecundaria: "#FFCC00", corFundo: "#070A12", corTexto: "#F1F4FA" } as const;
+
+/** Tema escolhido no cadastro: só as 4 cores em #RRGGBB; o que vier inválido ou faltando fica com o padrão. */
+export function temaInformado(v: unknown): { corPrimaria: string; corSecundaria: string; corFundo: string; corTexto: string } {
+  const t = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+  const cor = (c: unknown, padrao: string) => (typeof c === "string" && /^#[0-9A-Fa-f]{6}$/.test(c) ? c.toUpperCase() : padrao);
+  return {
+    corPrimaria: cor(t.corPrimaria, TEMA_PADRAO.corPrimaria),
+    corSecundaria: cor(t.corSecundaria, TEMA_PADRAO.corSecundaria),
+    corFundo: cor(t.corFundo, TEMA_PADRAO.corFundo),
+    corTexto: cor(t.corTexto, TEMA_PADRAO.corTexto),
+  };
+}

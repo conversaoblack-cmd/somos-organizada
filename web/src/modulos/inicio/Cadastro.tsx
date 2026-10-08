@@ -17,6 +17,7 @@ import { useColecao, useUsuario } from "@/hooks/dados";
 import { Login } from "@/componentes/Login";
 import { Abas, Aviso, Botao, BotaoLink, Campo, Cartao, Carregando, cx, Etapas, Girando, Icone, OpcoesCartao } from "@/ui";
 import { SLUG_VALIDO, slugDoNome } from "./planos";
+import { CoresCadastro, type Cores } from "./CoresCadastro";
 
 const DOMINIO = "somosorganizada.com.br/";
 const WHATSAPP = "5571994095784";
@@ -33,6 +34,7 @@ interface Dados {
   slugEditado: boolean;
   estimativaSocios: string;
   quantidadeSubsedes: string;
+  cores: Cores | null;
   respNome: string;
   respCpf: string;
   respTelefone: string;
@@ -50,7 +52,7 @@ interface Dados {
   uf: string;
 }
 const VAZIO: Dados = {
-  nomeTorcida: "", clube: "", slug: "", slugEditado: false, estimativaSocios: "", quantidadeSubsedes: "",
+  nomeTorcida: "", clube: "", slug: "", slugEditado: false, estimativaSocios: "", quantidadeSubsedes: "", cores: null,
   respNome: "", respCpf: "", respTelefone: "", respCargo: "",
   temCnpj: null, cnpj: "", razaoSocial: "", emailFinanceiro: "",
   cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "",
@@ -431,6 +433,7 @@ function Formulario({ usuario }: { usuario: User }) {
     nome: d.nomeTorcida.trim().length < 2 ? "Informe o nome da torcida." : null,
     slug: slug.fase === "erro" ? slug.motivo : slug.fase === "vazio" ? "Escolha o endereço." : slug.fase === "verificando" ? "Conferindo o endereço…" : null,
     socios: d.estimativaSocios && !/^\d+$/.test(d.estimativaSocios) ? "Só números." : null,
+    cores: !d.cores ? "Escolha as cores da torcida (pode ajustar depois)." : null,
   };
   const errosResp = {
     nome: d.respNome.trim().length < 5 || d.respNome.trim().split(/\s+/).length < 2 ? "Nome e sobrenome." : null,
@@ -491,6 +494,7 @@ function Formulario({ usuario }: { usuario: User }) {
         clube: d.clube.trim() || undefined,
         estimativaSocios: Number(d.estimativaSocios || 0),
         quantidadeSubsedes: Number(d.quantidadeSubsedes || 0),
+        tema: d.cores ?? undefined,
         responsavel: { nome: d.respNome.trim(), cpf: so(d.respCpf), telefone: so(d.respTelefone), cargo: d.respCargo.trim() },
         entidade:
           d.temCnpj === "cnpj"
@@ -601,6 +605,7 @@ function Formulario({ usuario }: { usuario: User }) {
                 dica="0 se for só a sede."
               />
             </div>
+            <CoresCadastro cores={d.cores} onChange={(c) => mudar("cores", c)} erro={t && errosTorcida.cores} />
           </Cartao>
           <Navegacao />
         </form>
@@ -731,6 +736,18 @@ function Formulario({ usuario }: { usuario: User }) {
               <Linha r="Endereço" v={`${DOMINIO}${slugFinal}`} />
               <Linha r="Sócios (estimativa)" v={d.estimativaSocios || "0"} />
               <Linha r="Subsedes" v={d.quantidadeSubsedes || "0"} />
+              {d.cores && (
+                <Linha
+                  r="Cores"
+                  v={
+                    <span className="inline-flex gap-1 align-middle">
+                      {[d.cores.corPrimaria, d.cores.corSecundaria, d.cores.corFundo].map((c, i) => (
+                        <span key={i} className="size-4 rounded-full border border-linha-forte" style={{ background: c }} />
+                      ))}
+                    </span>
+                  }
+                />
+              )}
             </Resumo>
             <Resumo titulo="Responsável" editar={() => setPasso(3)}>
               <Linha r="Nome" v={d.respNome} />
@@ -810,7 +827,7 @@ function Resumo({ titulo, editar, children }: { titulo: string; editar: () => vo
     </Cartao>
   );
 }
-function Linha({ r, v }: { r: string; v: string }) {
+function Linha({ r, v }: { r: string; v: ReactNode }) {
   return (
     <div className="flex justify-between gap-4 py-2">
       <dt className="text-texto-3 shrink-0">{r}</dt>

@@ -5,7 +5,7 @@
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
-import { cpfValido, emailValido, endereco, inteiro, slugValido, soDigitos, telefoneBR, texto, umDe } from "../util/validacao";
+import { cpfValido, emailValido, endereco, inteiro, slugValido, soDigitos, telefoneBR, temaInformado, texto, umDe } from "../util/validacao";
 import { exigirLogin, exigirPlataforma } from "../dominio/permissoes";
 import { criarTorcidaInterno } from "./plataforma";
 import { refsSaas } from "./saas";
@@ -66,6 +66,7 @@ export const solicitarTorcida = onCall(async (req) => {
   if (!emailValido(emailFinanceiro)) throw new HttpsError("invalid-argument", "E-mail financeiro inválido.");
   entidade.emailFinanceiro = emailFinanceiro;
   const end = endereco(d.endereco);
+  const tema = temaInformado(d.tema);
 
   const pendentes = await db.collection("solicitacoes").where("uid", "==", uid).where("status", "==", "pendente").limit(1).get();
   if (!pendentes.empty) throw new HttpsError("already-exists", "Você já tem um cadastro em análise.");
@@ -77,7 +78,7 @@ export const solicitarTorcida = onCall(async (req) => {
     tx.set(refs.slug(slug), { solicitacaoId: ref.id, reservado: true });
     tx.set(ref, {
       uid, email, status: "pendente", nomeTorcida, slug, clube, estimativaSocios, quantidadeSubsedes: subsedes,
-      responsavel, entidade, endereco: end, criadoEm: FieldValue.serverTimestamp(),
+      responsavel, entidade, endereco: end, tema, criadoEm: FieldValue.serverTimestamp(),
     });
   });
   return { solicitacaoId: ref.id, status: "pendente" };
@@ -109,6 +110,7 @@ export const avaliarSolicitacao = onCall(async (req) => {
     diretor: { nome: sol.responsavel.nome, email: sol.email },
     criadoPor: quem,
     solicitacaoId: id,
+    tema: sol.tema,
   });
   await refsSaas.cadastro(r.torcidaId).set({
     clube: sol.clube ?? "", estimativaSocios: sol.estimativaSocios ?? 0, quantidadeSubsedes: sol.quantidadeSubsedes ?? 0,

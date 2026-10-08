@@ -212,6 +212,18 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
         <Item r="Endereço do site" v={<a href={pagina} target="_blank" rel="noreferrer" className="underline">/{s.slug}</a>} />
         <Item r="Sócios estimados" v={numero(s.estimativaSocios)} />
         <Item r="Subsedes" v={numero(s.quantidadeSubsedes)} />
+        {s.tema && (
+          <Item
+            r="Cores"
+            v={
+              <span className="inline-flex gap-1 align-middle">
+                {[s.tema.corPrimaria, s.tema.corSecundaria, s.tema.corFundo].map((c, i) => (
+                  <span key={i} className="size-4 rounded-full border border-linha-forte" style={{ background: c }} />
+                ))}
+              </span>
+            }
+          />
+        )}
       </Bloco>
       <Bloco titulo="Responsável">
         <Item r="Nome" v={s.responsavel?.nome} />

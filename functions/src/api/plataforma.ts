@@ -2,7 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { PADROES, PLATAFORMA_EMAILS } from "../config";
 import { auth, db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { mascararCpf } from "../util/validacao";
-import { emailValido, slugValido, texto, umDe } from "../util/validacao";
+import { emailValido, slugValido, temaInformado, texto, umDe } from "../util/validacao";
 import { competencia } from "../util/datas";
 import { exigirLogin, exigirPlataforma } from "../dominio/permissoes";
 import { concederAcesso } from "./torcida";
@@ -32,6 +32,7 @@ export async function criarTorcidaInterno(args: {
   criadoPor: string;
   mensalidadeSaas?: number;
   solicitacaoId?: string;
+  tema?: unknown;
 }) {
   const { nome, slug, diretor, criadoPor } = args;
   const tRef = db.collection("torcidas").doc();
@@ -53,7 +54,7 @@ export async function criarTorcidaInterno(args: {
       destinoMensalidade: "sede_do_socio",
       sedePrincipalId: sedeRef.id,
       proximaMatricula: 1,
-      tema: { corPrimaria: "#009C3B", corSecundaria: "#FFDF00", corFundo: "#07090B", corTexto: "#F2F5F3" },
+      tema: temaInformado(args.tema),
       textos: { titulo: nome, subtitulo: "Eventos e associação oficial" },
       pagamentos: { configurado: false, pix: true, cartao: true },
       criadoEm: Timestamp.now(),
@@ -83,7 +84,7 @@ export const criarTorcida = onCall(async (req) => {
   const nomeSede = texto(d.nomeSedePrincipal, "sede principal", { max: 80, obrigatorio: false }) || "Sede principal";
   return criarTorcidaInterno({
     nome, slug, nomeSedePrincipal: nomeSede, diretor: { nome: nomeDiretor, email: emailDiretor }, criadoPor: quem,
-    mensalidadeSaas: Number(d.mensalidadeSaas ?? 0),
+    mensalidadeSaas: Number(d.mensalidadeSaas ?? 0), tema: d.tema,
   });
 });
 

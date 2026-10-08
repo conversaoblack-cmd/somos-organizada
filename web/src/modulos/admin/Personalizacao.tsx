@@ -3,7 +3,7 @@ import { collection, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { mensagemDeErro } from "@/lib/api";
 import { emailValido, mascaraTelefone, moeda, periodicidadeCurta, soDigitos, taxa } from "@/lib/formatos";
-import { aplicarTema, avisosDeContraste, corValida, TEMA_PADRAO, TEMA_PAINEL } from "@/lib/tema";
+import { aplicarTema, avisosDeContraste, corValida, PALETAS, TEMA_PADRAO, temaDoPainel } from "@/lib/tema";
 import type { Plano, Tema, Torcida } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { AreaTexto, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, Interruptor, OpcoesCartao, useToast } from "@/ui";
@@ -43,14 +43,6 @@ const CORES: { chave: keyof Pick<Tema, "corPrimaria" | "corSecundaria" | "corFun
   { chave: "corTexto", rotulo: "Texto", dica: "Cor das letras" },
 ];
 
-const PALETAS: { nome: string; tema: Pick<Tema, "corPrimaria" | "corSecundaria" | "corFundo" | "corTexto"> }[] = [
-  { nome: "Verde e amarelo", tema: { corPrimaria: "#009C3B", corSecundaria: "#FFDF00", corFundo: "#07090B", corTexto: "#F2F5F3" } },
-  { nome: "Rubro-negro", tema: { corPrimaria: "#D7141A", corSecundaria: "#F5F5F5", corFundo: "#0B0B0C", corTexto: "#F4F4F5" } },
-  { nome: "Alvinegro", tema: { corPrimaria: "#FFFFFF", corSecundaria: "#9CA3AF", corFundo: "#050505", corTexto: "#F5F5F5" } },
-  { nome: "Tricolor", tema: { corPrimaria: "#1D4ED8", corSecundaria: "#DC2626", corFundo: "#0A0E1A", corTexto: "#F1F5F9" } },
-  { nome: "Celeste", tema: { corPrimaria: "#38BDF8", corSecundaria: "#FFFFFF", corFundo: "#06121D", corTexto: "#EEF6FB" } },
-  { nome: "Claro", tema: { corPrimaria: "#0F7A3B", corSecundaria: "#E8B100", corFundo: "#F7F7F5", corTexto: "#141414" } },
-];
 
 export default function Personalizacao() {
   const { tid, torcida } = usePainel();
@@ -402,8 +394,8 @@ function Previa({ f }: { f: Form }) {
     if (!ref.current) return;
     aplicarTema(f.tema, ref.current);
     // aplicarTema também ajusta a cor da barra do navegador; mantém a do painel.
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", TEMA_PAINEL.corFundo);
-  }, [f.tema]);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", temaDoPainel(torcida.tema).corFundo);
+  }, [f.tema, torcida.tema]);
 
   const t = f.textos;
   const valorPlano = plano?.valor ?? 1000;

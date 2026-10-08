@@ -60,7 +60,7 @@ interface Bloco {
 }
 
 export function montar(torcida: Torcida, assunto: string, para: Mensagem["para"], b: Bloco): Mensagem {
-  const cor = corValida(torcida.tema?.corPrimaria, "#16a34a");
+  const cor = corValida(torcida.tema?.corPrimaria, "#2E6BFF");
   const corTexto = sobre(cor);
   const corDestaque = corParaTexto(cor);
   const nome = esc(torcida.nome);

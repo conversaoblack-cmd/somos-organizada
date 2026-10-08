@@ -1,7 +1,7 @@
 /** Chamadas às Cloud Functions (functions/src/index.ts). Todas tipadas aqui, em um só lugar. */
 import { httpsCallable, type FunctionsError } from "firebase/functions";
 import { fns } from "./firebase";
-import type { Endereco, Papel, RecebedorSede, StatusTorcida, Stats } from "./tipos";
+import type { Endereco, Papel, RecebedorSede, StatusTorcida, Stats, Tema } from "./tipos";
 
 // Todas as ações passam pela function única "api" (functions/src/api/central.ts).
 const portaApi = httpsCallable<{ acao: string; dados: unknown }, unknown>(fns, "api");
@@ -177,6 +177,7 @@ export const api = {
       clube?: string;
       estimativaSocios?: number;
       quantidadeSubsedes?: number;
+      tema?: Pick<Tema, "corPrimaria" | "corSecundaria" | "corFundo" | "corTexto">;
       responsavel: { nome: string; cpf: string; telefone: string; cargo: string };
       entidade: { tipo: "cnpj" | "sem_cnpj"; cnpj?: string; razaoSocial?: string; emailFinanceiro?: string };
       endereco: Endereco;

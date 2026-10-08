@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from "react-router";
 import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { aplicarTema, TEMA_PAINEL } from "@/lib/tema";
+import { aplicarTema, temaDoPainel } from "@/lib/tema";
 import type { AssinaturaSaas, Evento, FaturaSaas, Sede, Socio } from "@/lib/tipos";
 import { useColecao, useDocumento } from "@/hooks/dados";
 import { useMembro, useTorcida } from "@/hooks/torcida";
@@ -38,9 +38,10 @@ export default function PainelDiretoria() {
   const { tid, torcida } = useTorcida();
   const { membro, carregando, usuario } = useMembro(tid);
 
-  // Tema neutro de painel. Reaplica quando a torcida muda (o provedor restaura o padrão ao trocar).
+  // Painel com as cores da torcida sobre fundo escuro legível. Reaplica quando a torcida muda
+  // (o provedor restaura o padrão ao trocar).
   useEffect(() => {
-    aplicarTema(TEMA_PAINEL);
+    aplicarTema(temaDoPainel(torcida.tema));
     document.title = `Painel · ${torcida.nome}`;
   }, [torcida]);
 

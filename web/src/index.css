@@ -5,10 +5,10 @@
  * As variáveis --cor-* são trocadas em tempo real por lib/tema.ts.
  */
 :root {
-  --cor-fundo: #07090b;
-  --cor-texto: #f2f5f3;
-  --cor-primaria: #009c3b;
-  --cor-secundaria: #ffdf00;
+  --cor-fundo: #070a12;
+  --cor-texto: #f1f4fa;
+  --cor-primaria: #2e6bff;
+  --cor-secundaria: #ffcc00;
   --cor-sobre-primaria: #ffffff;
   --cor-sobre-secundaria: #111111;
   color-scheme: dark;

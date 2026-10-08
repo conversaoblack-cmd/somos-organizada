@@ -328,6 +328,7 @@ export interface SolicitacaoTorcida {
   clube?: string;
   estimativaSocios?: number;
   quantidadeSubsedes?: number;
+  tema?: Pick<Tema, "corPrimaria" | "corSecundaria" | "corFundo" | "corTexto">;
   responsavel: { nome: string; cpf: string; telefone: string; cargo: string };
   entidade: { tipo: "cnpj" | "sem_cnpj"; cnpj?: string; razaoSocial?: string; emailFinanceiro: string };
   endereco: Endereco;
