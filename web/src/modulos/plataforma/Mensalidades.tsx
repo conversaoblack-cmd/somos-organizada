@@ -1,3 +1,4 @@
+import { rp } from "@/lib/hosts";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { api, mensagemDeErro } from "@/lib/api";
@@ -146,7 +147,7 @@ export default function Mensalidades() {
       />
       {erro && <Aviso tom="perigo" className="mb-4">{erro}</Aviso>}
       {!cfg.carregando && !cfg.pix.chave && (
-        <Aviso tom="alerta" className="mb-6" titulo="Chave Pix da plataforma não configurada" acao={<Link to="/plataforma/configuracoes" className="text-sm font-semibold text-primaria hover:underline">Configurar agora</Link>}>
+        <Aviso tom="alerta" className="mb-6" titulo="Chave Pix da plataforma não configurada" acao={<Link to={rp("/configuracoes")} className="text-sm font-semibold text-primaria hover:underline">Configurar agora</Link>}>
           As faturas novas sairão sem Pix copia e cola.
         </Aviso>
       )}
@@ -203,7 +204,7 @@ export default function Mensalidades() {
               <ul className="flex flex-wrap gap-2">
                 {dados.semAssinatura.map((t) => (
                   <li key={t.id}>
-                    <Link to={`/plataforma/torcidas/${t.id}`} className="inline-flex items-center gap-2 rounded-xl border border-linha px-3 py-1.5 text-sm hover:bg-superficie-2">
+                    <Link to={rp(`/torcidas/${t.id}`)} className="inline-flex items-center gap-2 rounded-xl border border-linha px-3 py-1.5 text-sm hover:bg-superficie-2">
                       {t.nome}
                       <Selo tom={TOM_STATUS_TORCIDA[t.status]}>{ROTULO_STATUS_TORCIDA[t.status]}</Selo>
                     </Link>
@@ -225,7 +226,7 @@ function CartaoAssinatura({ t, valor, aoConfirmar }: { t: LinhaTorcida; valor: {
     <Cartao className={cx("p-5", (s.situacao === "bloqueada" || s.bloqueada) && "border-perigo/40")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link to={`/plataforma/torcidas/${t.id}`} className="font-bold hover:underline">
+          <Link to={rp(`/torcidas/${t.id}`)} className="font-bold hover:underline">
             {t.nome}
           </Link>
           <p className="text-sm text-texto-2 mt-0.5">

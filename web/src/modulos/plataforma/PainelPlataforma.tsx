@@ -1,3 +1,4 @@
+import { rp } from "@/lib/hosts";
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { sendEmailVerification, signOut, type User } from "firebase/auth";
@@ -115,7 +116,7 @@ function SemPermissao({ usuario, aoAtivar }: { usuario: User; aoAtivar: () => Pr
   async function enviarVerificacao() {
     setErro(null);
     try {
-      await sendEmailVerification(usuario, { url: `${location.origin}/plataforma` });
+      await sendEmailVerification(usuario, { url: `${location.origin}${rp("/")}` });
       setAviso("Enviamos o link de verificação para o seu e-mail. Depois de confirmar, toque em “Já verifiquei”.");
     } catch (e) {
       setErro(mensagemDeErro(e));
@@ -185,19 +186,19 @@ function PainelLogado({ usuario }: { usuario: User }) {
     (t) => t.saas && (t.saas.bloqueada || t.saas.situacao === "bloqueada" || t.saas.faturasAbertas.some((f) => f.informadoPagamentoEm)),
   ).length;
   const menu: ItemMenu[] = [
-    { para: "/plataforma", rotulo: "Visão geral", icone: "painel", fim: true },
+    { para: rp("/"), rotulo: "Visão geral", icone: "painel", fim: true },
     {
-      para: "/plataforma/solicitacoes",
+      para: rp("/solicitacoes"),
       rotulo: "Solicitações",
       icone: "sino",
       contador: pendentes.carregando || pendentes.erro ? resumo?.solicitacoesPendentes : pendentes.dados.length,
     },
-    { para: "/plataforma/torcidas", rotulo: "Torcidas", icone: "bandeira" },
-    { para: "/plataforma/mensalidades", rotulo: "Mensalidades", icone: "pix", contador: mensalidadesAtencao },
-    { para: "/plataforma/depuracao", rotulo: "Depuração", icone: "bug" },
-    { para: "/plataforma/suporte", rotulo: "Suporte", icone: "chat", contador: abertos.dados.length },
-    { para: "/plataforma/faq", rotulo: "FAQ do robô", icone: "lista" },
-    { para: "/plataforma/configuracoes", rotulo: "Configurações", icone: "engrenagem" },
+    { para: rp("/torcidas"), rotulo: "Torcidas", icone: "bandeira" },
+    { para: rp("/mensalidades"), rotulo: "Mensalidades", icone: "pix", contador: mensalidadesAtencao },
+    { para: rp("/depuracao"), rotulo: "Depuração", icone: "bug" },
+    { para: rp("/suporte"), rotulo: "Suporte", icone: "chat", contador: abertos.dados.length },
+    { para: rp("/faq"), rotulo: "FAQ do robô", icone: "lista" },
+    { para: rp("/configuracoes"), rotulo: "Configurações", icone: "engrenagem" },
   ];
   return (
     <LayoutPainel
@@ -219,7 +220,7 @@ function PainelLogado({ usuario }: { usuario: User }) {
         <Route path="solicitacoes/:id" element={<Solicitacoes />} />
         <Route path="mensalidades" element={<Mensalidades />} />
         <Route path="configuracoes" element={<Configuracoes />} />
-        <Route path="*" element={<Navigate to="/plataforma" replace />} />
+        <Route path="*" element={<Navigate to={rp("/")} replace />} />
       </Routes>
     </LayoutPainel>
   );

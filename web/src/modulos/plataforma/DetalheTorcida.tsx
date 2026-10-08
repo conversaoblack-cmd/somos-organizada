@@ -1,3 +1,4 @@
+import { rp } from "@/lib/hosts";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useColecao, useDocumento } from "@/hooks/dados";
@@ -38,7 +39,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
   if (!torcida) {
     return (
       <Cartao>
-        <Vazio icone="bandeira" titulo="Torcida não encontrada" acao={<Link to="/plataforma/torcidas" className="underline">Voltar para a lista</Link>} />
+        <Vazio icone="bandeira" titulo="Torcida não encontrada" acao={<Link to={rp("/torcidas")} className="underline">Voltar para a lista</Link>} />
       </Cartao>
     );
   }
@@ -46,7 +47,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
 
   return (
     <>
-      <Link to="/plataforma/torcidas" className="inline-flex items-center gap-1.5 text-sm text-texto-2 hover:text-texto mb-4">
+      <Link to={rp("/torcidas")} className="inline-flex items-center gap-1.5 text-sm text-texto-2 hover:text-texto mb-4">
         <Icone nome="setaEsquerda" className="size-4" /> Torcidas
       </Link>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
@@ -91,7 +92,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
       <Abas
         className="mb-6"
         valor={aba}
-        onChange={(v) => navegar(v === "geral" ? `/plataforma/torcidas/${id}` : `/plataforma/torcidas/${id}/depuracao`)}
+        onChange={(v) => navegar(v === "geral" ? rp(`/torcidas/${id}`) : rp(`/torcidas/${id}/depuracao`))}
         opcoes={[
           { valor: "geral", rotulo: "Visão geral", icone: "painel" },
           { valor: "depuracao", rotulo: "Depuração", icone: "bug" },
@@ -110,7 +111,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
               <Indicador
                 rotulo="Chamados abertos"
                 valor={numero(linha.chamadosAbertos)}
-                detalhe={<Link className="underline" to="/plataforma/suporte">Central de suporte</Link>}
+                detalhe={<Link className="underline" to={rp("/suporte")}>Central de suporte</Link>}
                 icone="chat"
               />
             </div>
@@ -126,7 +127,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
                 <li>Cartão: {torcida.pagamentos?.cartao ? "habilitado" : "desabilitado"}</li>
                 {torcida.pagamentos?.descritorFatura && <li>Descritor na fatura: {torcida.pagamentos.descritorFatura}</li>}
               </ul>
-              <Link to={`/plataforma/torcidas/${id}/depuracao`} className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-primaria hover:underline">
+              <Link to={rp(`/torcidas/${id}/depuracao`)} className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-primaria hover:underline">
                 Ver webhooks e pedidos na depuração <Icone nome="setaDireita" className="size-4" />
               </Link>
             </Cartao>

@@ -1,3 +1,4 @@
+import { rp } from "@/lib/hosts";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { collection, orderBy, query } from "firebase/firestore";
@@ -68,7 +69,7 @@ export default function Solicitacoes() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {lista.map((s) => (
-            <Link key={s.id} to={`/plataforma/solicitacoes/${s.id}`}>
+            <Link key={s.id} to={rp(`/solicitacoes/${s.id}`)}>
               <Cartao className="p-4 h-full hover:border-linha-forte transition-colors">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -101,7 +102,7 @@ export default function Solicitacoes() {
         </div>
       )}
 
-      <Gaveta aberto={!!id} fechar={() => navegar("/plataforma/solicitacoes")} titulo={aberta?.nomeTorcida ?? "Solicitação"} largura="sm:max-w-2xl">
+      <Gaveta aberto={!!id} fechar={() => navegar(rp("/solicitacoes"))} titulo={aberta?.nomeTorcida ?? "Solicitação"} largura="sm:max-w-2xl">
         {aberta ? <DetalheSolicitacao s={aberta} /> : sols.carregando ? <Carregando /> : <Vazio titulo="Solicitação não encontrada" />}
       </Gaveta>
     </>
@@ -192,7 +193,7 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
               pagamentos e publica quando estiver pronto.
             </p>
             {resultadoAprovacao.torcidaId && (
-              <Link to={`/plataforma/torcidas/${resultadoAprovacao.torcidaId}`} className="inline-flex items-center gap-1.5 font-semibold text-primaria hover:underline">
+              <Link to={rp(`/torcidas/${resultadoAprovacao.torcidaId}`)} className="inline-flex items-center gap-1.5 font-semibold text-primaria hover:underline">
                 Ver torcida no painel <Icone nome="setaDireita" className="size-4" />
               </Link>
             )}

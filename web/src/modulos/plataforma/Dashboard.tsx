@@ -1,3 +1,4 @@
+import { rp } from "@/lib/hosts";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { moeda, relativo } from "@/lib/formatos";
@@ -66,7 +67,7 @@ export default function Dashboard() {
               tom="info"
               titulo={`${plural(resumo.solicitacoesPendentes, "cadastro de torcida aguardando", "cadastros de torcida aguardando")} aprovação`}
               acao={
-                <Link to="/plataforma/solicitacoes" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primaria hover:underline">
+                <Link to={rp("/solicitacoes")} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primaria hover:underline">
                   Ver solicitações <Icone nome="setaDireita" className="size-4" />
                 </Link>
               }
@@ -92,7 +93,7 @@ export default function Dashboard() {
                 rotulo="MRR da plataforma"
                 valor={moedaCompacta(kpi.mrr)}
                 detalhe={
-                  <Link to="/plataforma/mensalidades" className="hover:text-texto">
+                  <Link to={rp("/mensalidades")} className="hover:text-texto">
                     {plural(kpi.assinantes, "assinatura", "assinaturas")}
                     {kpi.atrasadas ? ` · ${kpi.atrasadas} em atraso` : ""}
                   </Link>
@@ -124,7 +125,7 @@ export default function Dashboard() {
               <Indicador
                 rotulo="Chamados abertos"
                 valor={numero(kpi.chamados)}
-                detalhe={<Link to="/plataforma/suporte" className="underline hover:text-texto">Abrir central de suporte</Link>}
+                detalhe={<Link to={rp("/suporte")} className="underline hover:text-texto">Abrir central de suporte</Link>}
                 icone="chat"
                 tom={kpi.chamados ? "alerta" : undefined}
               />
@@ -154,7 +155,7 @@ export default function Dashboard() {
                     const v = gmv(t.mes);
                     return (
                       <li key={t.id}>
-                        <Link to={`/plataforma/torcidas/${t.id}`} className="group block">
+                        <Link to={rp(`/torcidas/${t.id}`)} className="group block">
                           <div className="flex items-center gap-3 text-sm">
                             <span className="w-5 text-texto-3 numeros">{i + 1}º</span>
                             <span className="flex-1 truncate font-medium group-hover:underline">{t.nome}</span>
@@ -188,7 +189,7 @@ export default function Dashboard() {
                 {kpi.alertas.map((a, i) => (
                   <Link
                     key={i}
-                    to={a.destino === "mensalidades" ? "/plataforma/mensalidades" : `/plataforma/torcidas/${a.torcida.id}/depuracao`}
+                    to={a.destino === "mensalidades" ? rp("/mensalidades") : rp(`/torcidas/${a.torcida.id}/depuracao`)}
                     className={cx(
                       "flex gap-3 rounded-2xl border p-4 transition-colors hover:bg-superficie-2",
                       a.tom === "perigo" ? "border-perigo/30 bg-perigo/8" : a.tom === "info" ? "border-info/30 bg-info/8" : "border-alerta/30 bg-alerta/8",

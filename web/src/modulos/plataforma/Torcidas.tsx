@@ -1,3 +1,4 @@
+import { rp } from "@/lib/hosts";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { api, mensagemDeErro } from "@/lib/api";
@@ -136,10 +137,10 @@ export default function Torcidas() {
                     <tr
                       key={t.id}
                       className="border-b border-linha last:border-0 hover:bg-superficie-2/60 cursor-pointer"
-                      onClick={() => navegar(`/plataforma/torcidas/${t.id}`)}
+                      onClick={() => navegar(rp(`/torcidas/${t.id}`))}
                     >
                       <td className="px-5 py-3.5">
-                        <Link to={`/plataforma/torcidas/${t.id}`} className="font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>
+                        <Link to={rp(`/torcidas/${t.id}`)} className="font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>
                           {t.nome}
                         </Link>
                         <p className="text-xs text-texto-3">/{t.slug}</p>
@@ -168,7 +169,7 @@ export default function Torcidas() {
                           </span>
                         )}
                         <Link
-                          to={`/plataforma/torcidas/${t.id}/depuracao`}
+                          to={rp(`/torcidas/${t.id}/depuracao`)}
                           onClick={(e) => e.stopPropagation()}
                           className="inline-grid place-items-center size-9 rounded-xl text-texto-2 hover:text-texto hover:bg-superficie-3 align-middle"
                           aria-label={`Depuração de ${t.nome}`}
@@ -189,7 +190,7 @@ export default function Torcidas() {
             {lista.map((t) => {
               const alertas = alertasDaTorcida(t);
               return (
-                <Link key={t.id} to={`/plataforma/torcidas/${t.id}`} className="block">
+                <Link key={t.id} to={rp(`/torcidas/${t.id}`)} className="block">
                   <Cartao className="p-4 hover:border-linha-forte transition-colors h-full">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -447,7 +448,7 @@ function ResultadoCriacao({ c }: { c: Criada }) {
           Copiar mensagem
         </Botao>
       </div>
-      <Link to={`/plataforma/torcidas/${c.torcidaId}`} className="inline-flex items-center gap-1.5 text-sm text-primaria font-semibold hover:underline">
+      <Link to={rp(`/torcidas/${c.torcidaId}`)} className="inline-flex items-center gap-1.5 text-sm text-primaria font-semibold hover:underline">
         Ver detalhes da torcida <Icone nome="setaDireita" className="size-4" />
       </Link>
     </div>

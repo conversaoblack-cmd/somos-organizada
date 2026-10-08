@@ -1,3 +1,4 @@
+import { rp } from "@/lib/hosts";
 import { Link } from "react-router";
 import { relativo } from "@/lib/formatos";
 import { Aviso, CabecalhoPagina, Cartao, Carregando, Icone, Selo, Vazio } from "@/ui";
@@ -25,7 +26,7 @@ export default function EscolherDepuracao() {
           {lista.map((t) => {
             const alertas = alertasDaTorcida(t);
             return (
-              <Link key={t.id} to={`/plataforma/torcidas/${t.id}/depuracao`}>
+              <Link key={t.id} to={rp(`/torcidas/${t.id}/depuracao`)}>
                 <Cartao className="p-4 h-full hover:border-linha-forte transition-colors flex items-start gap-3">
                   <span className={`size-10 shrink-0 rounded-xl grid place-items-center ${alertas.length ? "bg-alerta/12 text-alerta" : "bg-sucesso/12 text-sucesso"}`}>
                     <Icone nome={alertas.length ? "alerta" : "checkCirculo"} className="size-5" />

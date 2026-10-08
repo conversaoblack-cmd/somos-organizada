@@ -1,6 +1,6 @@
 import { lazy, Suspense, Component, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useParams, useLocation } from "react-router";
-import { noHostPlataforma, plataformaSeparada, urlPlataforma, urlPrincipal } from "./lib/hosts";
+import { noHostPlataforma, plataformaSeparada, urlPlataforma } from "./lib/hosts";
 import { ProvedorTorcida, useTorcidaPorSlug } from "./hooks/torcida";
 import { registrarErro } from "./lib/erros";
 import { BotaoLink, TelaCarregando, Vazio } from "./ui";
@@ -89,13 +89,12 @@ function IrPara({ url }: { url: string }) {
 
 function RotasPlataformaSeparada() {
   const { pathname, search } = useLocation();
-  // No subdomínio da plataforma só existe o painel da equipe; o resto volta para o domínio principal
+  // No subdomínio da plataforma só existe o painel da equipe, direto na raiz (sem /plataforma no endereço)
   if (noHostPlataforma()) {
     return (
       <Routes>
-        <Route path="/plataforma/*" element={<PainelPlataforma />} />
-        <Route path="/" element={<Navigate to="/plataforma" replace />} />
-        <Route path="*" element={<IrPara url={urlPrincipal(pathname + search)} />} />
+        <Route path="/plataforma/*" element={<Navigate to={(pathname.replace(/^\/plataforma/, "") || "/") + search} replace />} />
+        <Route path="/*" element={<PainelPlataforma />} />
       </Routes>
     );
   }
@@ -104,7 +103,7 @@ function RotasPlataformaSeparada() {
       <Route path="/" element={<Inicio />} />
       <Route path="/entrar" element={<Entrar />} />
       <Route path="/cadastro" element={<Cadastro />} />
-      <Route path="/plataforma/*" element={<IrPara url={urlPlataforma(pathname + search)} />} />
+      <Route path="/plataforma/*" element={<IrPara url={urlPlataforma(pathname.replace(/^\/plataforma/, "") + search)} />} />
       <Route path="/:slug/*" element={<RotasTorcida />} />
     </Routes>
   );

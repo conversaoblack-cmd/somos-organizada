@@ -1,3 +1,4 @@
+import { rp } from "@/lib/hosts";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { addDoc, collection, doc, limit, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
@@ -107,7 +108,7 @@ export default function CentralSuporte() {
                 {lista.map((c) => (
                   <li key={c.id}>
                     <Link
-                      to={`/plataforma/suporte/${c.id}`}
+                      to={rp(`/suporte/${c.id}`)}
                       className={cx(
                         "flex gap-3 px-4 py-3.5 border-b border-linha transition-colors",
                         c.id === chamadoId ? "bg-primaria/10" : "hover:bg-superficie-2",
@@ -141,7 +142,7 @@ export default function CentralSuporte() {
         {/* Conversa */}
         <div className={cx("min-h-0", !chamadoId && "hidden lg:block")}>
           {selecionado ? (
-            <Conversa key={selecionado.id} chamado={selecionado} voltar={() => navegar("/plataforma/suporte")} />
+            <Conversa key={selecionado.id} chamado={selecionado} voltar={() => navegar(rp("/suporte"))} />
           ) : (
             <Cartao className="h-full grid place-items-center">
               {chamadoId && todos.carregando ? (
@@ -339,7 +340,7 @@ function PainelDiagnostico({ chamado }: { chamado: ComId<Chamado> }) {
       <p className="text-xs text-texto-3 mb-3">Capturado automaticamente quando o chamado foi aberto.</p>
       {chamado.torcidaId && (
         <Link
-          to={`/plataforma/torcidas/${chamado.torcidaId}/depuracao`}
+          to={rp(`/torcidas/${chamado.torcidaId}/depuracao`)}
           className="flex items-center justify-between gap-2 rounded-xl border border-linha px-3 py-2.5 mb-3 text-sm font-semibold hover:bg-superficie-2"
         >
           <span className="flex items-center gap-2">

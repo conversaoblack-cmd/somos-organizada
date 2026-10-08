@@ -149,7 +149,7 @@ node -e '
     `VITE_FIREBASE_STORAGE_BUCKET=${c.storageBucket || c.projectId + ".firebasestorage.app"}`,
     `VITE_FIREBASE_APP_ID=${c.appId}`,
     `VITE_VERSAO=${new Date().toISOString().slice(0, 10)}`,
-    ...(process.argv[2] ? [`VITE_HOST_PLATAFORMA=${process.argv[2]}`, `VITE_HOST_PRINCIPAL=${process.argv[3]}`] : []),
+    ...(process.argv[2] ? [`VITE_HOST_PLATAFORMA=${process.argv[2]}`] : []),
   ];
   const fs = require("fs");
   fs.writeFileSync("web/.env.production.local", linhas.join("\n") + "\n");
