@@ -1,0 +1,3 @@
+# Scripts sempre com quebra de linha Unix (LF), mesmo clonando no Windows: com CRLF o bash não roda
+*.sh text eol=lf
+*.mjs text eol=lf
