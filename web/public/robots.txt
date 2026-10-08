@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /entrar
+Disallow: /plataforma
+Disallow: /*/admin
+Disallow: /*/portaria
+Disallow: /*/conta
+Disallow: /*/socio
+Disallow: /*/pedido/
+Disallow: /*/ingressos/
+
+Sitemap: https://somosorganizada.com.br/sitemap.xml

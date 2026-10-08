@@ -6,7 +6,6 @@ import { registrarErro } from "./lib/erros";
 import { BotaoLink, TelaCarregando, Vazio } from "./ui";
 import { PortaoTorcida } from "./modulos/publico/Portao";
 
-const Inicio = lazy(() => import("./modulos/inicio/Inicio"));
 const Entrar = lazy(() => import("./modulos/inicio/Entrar"));
 const Cadastro = lazy(() => import("./modulos/inicio/Cadastro"));
 const PainelPlataforma = lazy(() => import("./modulos/plataforma/PainelPlataforma"));
@@ -100,7 +99,8 @@ function Rotas() {
   }
   return (
     <Routes>
-      <Route path="/" element={<Inicio />} />
+      {/* A página inicial é HTML estático (index.html): sai do sistema e carrega ela */}
+      <Route path="/" element={<IrPara url="/" />} />
       <Route path="/entrar" element={<Entrar />} />
       <Route path="/cadastro" element={<Cadastro />} />
       <Route

@@ -2,17 +2,43 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <!--redirecionar-plataforma-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Somos Organizada · Sócios, ingressos e portaria para torcidas organizadas</title>
+    <meta
+      name="description"
+      content="Sócios com cobrança automática, ingressos com QR Code e portaria antifraude para torcidas organizadas. O dinheiro cai direto na conta da torcida."
+    />
+    <link rel="canonical" href="https://somosorganizada.com.br/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="theme-color" content="#070A12" />
-    <title>Somos Organizada</title>
-    <meta name="description" content="Eventos, ingressos e associação oficial da sua torcida organizada." />
+    <meta name="color-scheme" content="dark" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="Somos Organizada" />
+    <meta property="og:url" content="https://somosorganizada.com.br/" />
+    <meta property="og:title" content="Somos Organizada · Sócio em dia, ingresso sem fraude e o caixa na conta da torcida" />
+    <meta
+      property="og:description"
+      content="Programa de sócios, venda de ingressos e portaria com QR Code numa plataforma só. Cada pagamento cai direto na conta da torcida."
+    />
+    <meta property="og:image" content="https://somosorganizada.com.br/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Somos Organizada: sócios, ingressos e portaria para torcidas organizadas" />
+    <meta name="twitter:card" content="summary_large_image" />
+
     <link rel="icon" href="/icone.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Black&display=swap" rel="stylesheet" />
+    <link rel="icon" href="/icone-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preload" href="/fontes/archivo-black.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fontes/archivo.woff2" as="font" type="font/woff2" crossorigin />
+    <!--dados-estruturados-->
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!--pagina-inicial-->
+    <script type="module" src="/src/landing/cliente.ts"></script>
   </body>
 </html>

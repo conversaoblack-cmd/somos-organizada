@@ -93,7 +93,7 @@ fi
 
 titulo "4. Site"
 for U in "https://somosorganizada.com.br/" "https://plataforma.somosorganizada.com.br/"; do
-  if curl -fsS -m 20 "$U" 2>/dev/null | grep -q "<title>Somos Organizada</title>"; then ok "$U no ar"; else atencao "$U não respondeu com o site"; fi
+  if curl -fsS -m 20 "$U" 2>/dev/null | grep -Eq "<title>[^<]*Somos Organizada"; then ok "$U no ar"; else atencao "$U não respondeu com o site"; fi
 done
 
 echo

@@ -50,6 +50,10 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   - `/{torcida}/socio`: painel do sócio;
   - `/{torcida}/admin`: diretoria, subsedes e portaria;
   - `plataforma.somosorganizada.com.br`: painel da equipe.
+- Página inicial (`/`): HTML estático gerado no build a partir de `web/src/landing/` (React só no build, 1 KB de
+  script no navegador; Lighthouse 100 nas 4 notas). O sistema (cadastro, entrar, torcidas, painéis) é o
+  `web/app.html`; o Hosting manda para ele tudo que não é `/`. Não importe Firebase nem React no
+  `landing/cliente.ts`. Torcida de exemplo no botão do topo: `VITE_SLUG_DEMO=<endereço>` em `web/.env.production.local`.
 - Estrutura: `functions/` (back-end), `web/` (front-end), `firestore.rules`, `storage.rules`, `scripts/`
   (implantar e verificar), `testes-e2e/` (emuladores + Pagar.me simulada), `docs/IMPLANTACAO.md` (guia completo).
 - Arquivos locais que **não** vão para o Git e são recriados pelo `implantar.sh`: `functions/.env` e

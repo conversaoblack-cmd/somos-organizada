@@ -170,7 +170,7 @@ if [ -n "$DOMINIO" ]; then
   JA_LIGADO="$(grep -s '^VITE_HOST_PLATAFORMA=' web/.env.production.local | cut -d= -f2 || true)"
   NO_AR=0
   for _ in 1 2 3; do
-    if curl -fsS -m 20 "https://plataforma.$DOMINIO/" 2>/dev/null | grep -q "<title>Somos Organizada</title>"; then NO_AR=1; break; fi
+    if curl -fsS -m 20 "https://plataforma.$DOMINIO/" 2>/dev/null | grep -Eq "<title>[^<]*Somos Organizada"; then NO_AR=1; break; fi
     sleep 3
   done
   if [ "$NO_AR" = 1 ] || [ "$JA_LIGADO" = "plataforma.$DOMINIO" ]; then

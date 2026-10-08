@@ -1,0 +1,13 @@
+{
+  "name": "Somos Organizada",
+  "short_name": "Somos Organizada",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#070A12",
+  "theme_color": "#070A12",
+  "icons": [
+    { "src": "/icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icone-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
