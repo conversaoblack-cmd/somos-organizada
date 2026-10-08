@@ -128,6 +128,18 @@ else
   echo "App Web existente: $APP_ID"
 fi
 JSON_CFG="$(firebase apps:sdkconfig WEB "$APP_ID" --project "$PROJETO" --json)"
+# Painel da equipe em subdomínio próprio (sessão separada das páginas das torcidas). Só liga quando
+# plataforma.<domínio> já responde com o site; senão o painel continua em <domínio>/plataforma.
+HOST_PLATAFORMA=""
+if [ -n "$DOMINIO" ]; then
+  if curl -fsS -m 20 "https://plataforma.$DOMINIO/" 2>/dev/null | grep -q "<title>Somos Organizada</title>"; then
+    HOST_PLATAFORMA="plataforma.$DOMINIO"
+    echo "Painel da equipe: https://$HOST_PLATAFORMA (o endereço $URL_SITE/plataforma redireciona para lá)"
+  else
+    aviso "plataforma.$DOMINIO ainda não está no ar: o painel da equipe continua em $URL_SITE/plataforma."
+    echo "   Para separar: Firebase Hosting → Adicionar domínio personalizado → plataforma.$DOMINIO, cole os registros no Registro.br e rode este script de novo."
+  fi
+fi
 node -e '
   const c = JSON.parse(process.argv[1]).result.sdkConfig;
   const linhas = [
@@ -137,13 +149,14 @@ node -e '
     `VITE_FIREBASE_STORAGE_BUCKET=${c.storageBucket || c.projectId + ".firebasestorage.app"}`,
     `VITE_FIREBASE_APP_ID=${c.appId}`,
     `VITE_VERSAO=${new Date().toISOString().slice(0, 10)}`,
+    ...(process.argv[2] ? [`VITE_HOST_PLATAFORMA=${process.argv[2]}`, `VITE_HOST_PRINCIPAL=${process.argv[3]}`] : []),
   ];
   const fs = require("fs");
   fs.writeFileSync("web/.env.production.local", linhas.join("\n") + "\n");
   // Chave pública do app Web (a mesma que vai no site): as functions usam para conferir a senha no login por CPF
   const env = fs.readFileSync("functions/.env", "utf8").split("\n").filter((l) => l && !l.startsWith("WEB_API_KEY="));
   fs.writeFileSync("functions/.env", [...env, `WEB_API_KEY=${c.apiKey}`].join("\n") + "\n");
-' "$JSON_CFG"
+' "$JSON_CFG" "$HOST_PLATAFORMA" "$DOMINIO"
 echo "web/.env.production.local gerado (e WEB_API_KEY em functions/.env)."
 
 passo "Build do front-end"
@@ -200,11 +213,11 @@ if [ -n "$DOMINIO" ] && command -v gcloud >/dev/null 2>&1 && TOKEN="$(gcloud aut
   CFG="$(curl -fsS -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJETO" "$API" 2>/dev/null || true)"
   if [ -n "$CFG" ]; then
     CORPO="$(node -e '
-      const cfg = JSON.parse(process.argv[1]); const d = process.argv[2];
+      const cfg = JSON.parse(process.argv[1]); const d = process.argv[2]; const p = process.argv[3];
       const atuais = cfg.authorizedDomains || [];
-      const novos = [...new Set([...atuais, d, "www." + d])];
+      const novos = [...new Set([...atuais, d, "www." + d, ...(p ? [p] : [])])];
       if (novos.length !== atuais.length) process.stdout.write(JSON.stringify({ authorizedDomains: novos }));
-    ' "$CFG" "$DOMINIO" 2>/dev/null || echo ERRO)"
+    ' "$CFG" "$DOMINIO" "$HOST_PLATAFORMA" 2>/dev/null || echo ERRO)"
     if [ "$CORPO" = "ERRO" ]; then
       :
     elif [ -z "$CORPO" ]; then
@@ -217,14 +230,14 @@ if [ -n "$DOMINIO" ] && command -v gcloud >/dev/null 2>&1 && TOKEN="$(gcloud aut
 fi
 unset TOKEN
 if [ -n "$DOMINIO" ] && [ "$AUTH_OK" != "1" ]; then
-  aviso "Confira no console: Authentication → Configurações → Domínios autorizados → adicione $DOMINIO e www.$DOMINIO"
+  aviso "Confira no console: Authentication → Configurações → Domínios autorizados → adicione $DOMINIO, www.$DOMINIO${HOST_PLATAFORMA:+ e $HOST_PLATAFORMA}"
   echo "   https://console.firebase.google.com/project/$PROJETO/authentication/settings"
 fi
 
 passo "Pronto!"
 cat <<FIM
 Site:        $URL_SITE
-Plataforma:  $URL_SITE/plataforma   (equipe: $(grep '^PLATAFORMA_EMAILS=' functions/.env | cut -d= -f2))
+Plataforma:  ${HOST_PLATAFORMA:+https://$HOST_PLATAFORMA}${HOST_PLATAFORMA:-$URL_SITE/plataforma}   (equipe: $(grep '^PLATAFORMA_EMAILS=' functions/.env | cut -d= -f2))
 Chaves:      $COFRE   ← guarde também num cofre de senhas
 
 Próximos passos:

@@ -38,7 +38,7 @@ export default function AbaDados({ tid, torcida, ficha }: { tid: string; torcida
   async function alterarSenha() {
     setEnviando(true);
     try {
-      await sendPasswordResetEmail(auth, email, { url: `${location.origin}/${torcida.slug}/conta` });
+      await sendPasswordResetEmail(auth, email, { url: `${location.origin}/${torcida.slug}/socio` });
     } catch {
       // Não revelamos se o e-mail existe; a mensagem é a mesma.
     } finally {

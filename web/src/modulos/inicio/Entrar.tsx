@@ -1,3 +1,4 @@
+import { plataformaSeparada, urlPlataforma } from "@/lib/hosts";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
@@ -82,7 +83,7 @@ export default function Entrar() {
           <p className="font-semibold">{usuario.email}</p>
           <div className="mt-6 space-y-2">
             {plataforma && (
-              <PainelLink para="/plataforma" titulo="Plataforma Somos Organizada" detalhe="Equipe interna" />
+              <PainelLink para={urlPlataforma()} titulo="Plataforma Somos Organizada" detalhe={plataformaSeparada ? "Equipe interna · abre no endereço da plataforma" : "Equipe interna"} />
             )}
             {minhas.map((sol) => (
               <CartaoSolicitacao key={sol.id} s={sol} />
@@ -126,8 +127,9 @@ export default function Entrar() {
 }
 
 function PainelLink({ para, titulo, detalhe }: { para: string; titulo: string; detalhe: string }) {
-  return (
-    <Link to={para} className="flex items-center gap-3 rounded-2xl border border-linha p-4 hover:border-primaria hover:bg-superficie-2 transition-colors">
+  const classe = "flex items-center gap-3 rounded-2xl border border-linha p-4 hover:border-primaria hover:bg-superficie-2 transition-colors";
+  const conteudo = (
+    <>
       <span className="size-10 rounded-xl bg-primaria/15 text-primaria grid place-items-center">
         <Icone nome="painel" className="size-5" />
       </span>
@@ -136,6 +138,16 @@ function PainelLink({ para, titulo, detalhe }: { para: string; titulo: string; d
         <span className="block text-sm text-texto-3">{detalhe}</span>
       </span>
       <Icone nome="chevronDireita" className="size-5 text-texto-3" />
+    </>
+  );
+  // O painel da plataforma pode estar em outro domínio (subdomínio próprio): aí é link comum, não rota interna
+  return /^https?:/.test(para) ? (
+    <a href={para} className={classe}>
+      {conteudo}
+    </a>
+  ) : (
+    <Link to={para} className={classe}>
+      {conteudo}
     </Link>
   );
 }

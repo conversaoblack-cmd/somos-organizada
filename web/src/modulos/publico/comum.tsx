@@ -55,7 +55,7 @@ export function CabecalhoTorcida() {
         <Marca />
         <div className="flex-1" />
         <Link
-          to={`/${torcida.slug}/conta`}
+          to={`/${torcida.slug}/${ficha ? "socio" : "conta"}`}
           className={cx(
             "inline-flex items-center gap-2 h-10 px-3.5 rounded-xl text-sm font-semibold whitespace-nowrap shrink-0 transition-colors",
             ehSocio ? "bg-primaria/15 text-texto border border-primaria/40" : "border border-linha-forte hover:bg-superficie-2",

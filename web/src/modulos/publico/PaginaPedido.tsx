@@ -253,7 +253,7 @@ function SocioConfirmado() {
             : `Bem-vindo à ${torcida.nome}. Sua carteirinha digital já está disponível.`}
         </p>
       </div>
-      <BotaoLink to={`/${torcida.slug}/conta`} tamanho="lg" iconeDireita="setaDireita">
+      <BotaoLink to={`/${torcida.slug}/socio`} tamanho="lg" iconeDireita="setaDireita">
         Ver minha carteirinha
       </BotaoLink>
       <div>

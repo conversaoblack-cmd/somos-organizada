@@ -478,7 +478,7 @@ export default function AbaCarteirinha({
 
         {proximo && (
           <Link
-            to={`/${torcida.slug}/conta/ingressos?abrir=${proximo.id}`}
+            to={`/${torcida.slug}/socio/ingressos?abrir=${proximo.id}`}
             className="group flex items-center gap-4 rounded-cartao border border-linha bg-superficie p-4 hover:border-linha-forte transition-colors"
           >
             <span className="shrink-0 w-14 rounded-2xl bg-primaria text-sobre-primaria text-center py-2">

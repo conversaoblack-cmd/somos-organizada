@@ -262,7 +262,7 @@ export default function CheckoutSocio() {
               ? "Sua ficha está com a diretoria para aprovação. A cobrança automática já está ativa no seu cartão."
               : "Sua carteirinha digital já está disponível. A mensalidade será cobrada automaticamente no cartão."}
           </p>
-          <BotaoLink to={`/${torcida.slug}/conta`} tamanho="lg" iconeDireita="setaDireita">
+          <BotaoLink to={`/${torcida.slug}/socio`} tamanho="lg" iconeDireita="setaDireita">
             Ver minha carteirinha
           </BotaoLink>
         </div>
@@ -272,7 +272,7 @@ export default function CheckoutSocio() {
   if (ficha && ["ativo", "em_analise", "suspenso", "inadimplente"].includes(ficha.status)) {
     return (
       <Moldura>
-        <Vazio icone="escudo" titulo="Você já é sócio" acao={<BotaoLink to={`/${torcida.slug}/conta`}>Ir para minha conta</BotaoLink>}>
+        <Vazio icone="escudo" titulo="Você já é sócio" acao={<BotaoLink to={`/${torcida.slug}/socio`}>Ir para minha conta</BotaoLink>}>
           Matrícula {ficha.matricula ?? "em processamento"} · {ficha.planoNome}
         </Vazio>
       </Moldura>

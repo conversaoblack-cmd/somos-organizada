@@ -50,7 +50,7 @@ export function notificarPedidoPago(tid: string, pedidoId: string) {
         const ficha = (await refs.socio(tid, i.titularUid).get()).data() as Socio | undefined;
         if (!ficha?.email || ficha.email.toLowerCase() === p.comprador?.email?.toLowerCase()) continue;
         await enviarUmaVez(tid, `ingresso-titular-${s.id}`, "ingresso_no_seu_nome", emailIngressoNoSeuNome({
-          torcida, url: link(torcida, "/conta/ingressos"), nome: ficha.nome, email: ficha.email,
+          torcida, url: link(torcida, "/socio/ingressos"), nome: ficha.nome, email: ficha.email,
           compradorNome: p.comprador.nome, eventoNome: ev.nome, data: ev.data.toDate(), local: ev.local,
         }));
       }
@@ -60,7 +60,7 @@ export function notificarPedidoPago(tid: string, pedidoId: string) {
     const ficha = (await refs.socio(tid, p.socioUid ?? p.uid).get()).data() as Socio | undefined;
     if (!ficha?.email) return;
     await enviarUmaVez(tid, `socio-pago-${pedidoId}`, "socio_confirmado", emailSocioConfirmado({
-      torcida, url: link(torcida, "/conta"), nome: ficha.nome, email: ficha.email, renovacao: !!p.renovacao,
+      torcida, url: link(torcida, "/socio"), nome: ficha.nome, email: ficha.email, renovacao: !!p.renovacao,
       plano: ficha.planoNome, validoAte: ficha.validoAte?.toDate() ?? null, total: p.total, matricula: ficha.matricula,
       emAnalise: ficha.status === "em_analise",
     }));
@@ -74,7 +74,7 @@ export function avisarRenovacaoPix(tid: string, torcida: Torcida, socio: Socio, 
     const vence = socio.validoAte.toDate();
     const ciclo = vence.toISOString().slice(0, 10);
     await enviarUmaVez(tid, `renovacao-${socio.uid}-${ciclo}-${hoje ? "dia" : "aviso"}`, hoje ? "renovacao_vence_hoje" : "renovacao_pix", emailRenovacaoPix({
-      torcida, url: link(torcida, "/conta/assinatura"), nome: socio.nome, email: socio.email, vence, total, hoje,
+      torcida, url: link(torcida, "/socio/assinatura"), nome: socio.nome, email: socio.email, vence, total, hoje,
     }));
   });
 }
@@ -85,7 +85,7 @@ export function avisarCartaoRecusado(tid: string, torcida: Torcida, socio: Socio
     if (!socio.email) return;
     const ciclo = socio.validoAte ? socio.validoAte.toDate().toISOString().slice(0, 10) : "sem-ciclo";
     await enviarUmaVez(tid, `cartao-recusado-${socio.uid}-${ciclo}-${definitiva ? "definitiva" : "1"}`, "cartao_recusado", emailCartaoRecusado({
-      torcida, url: link(torcida, "/conta/assinatura"), nome: socio.nome, email: socio.email, motivo, definitiva,
+      torcida, url: link(torcida, "/socio/assinatura"), nome: socio.nome, email: socio.email, motivo, definitiva,
     }));
   });
 }

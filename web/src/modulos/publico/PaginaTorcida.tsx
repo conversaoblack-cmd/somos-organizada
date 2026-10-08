@@ -316,7 +316,7 @@ function AbaSocios() {
           tom={emDia ? "sucesso" : "alerta"}
           titulo={emDia ? `Você já é sócio · matrícula ${ficha.matricula}` : "Sua associação precisa de atenção"}
           acao={
-            <BotaoLink to={`/${torcida.slug}/conta`} tamanho="sm" variante={emDia ? "contorno" : "primaria"}>
+            <BotaoLink to={`/${torcida.slug}/socio`} tamanho="sm" variante={emDia ? "contorno" : "primaria"}>
               {emDia ? "Ver carteirinha" : "Resolver agora"}
             </BotaoLink>
           }

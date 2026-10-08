@@ -98,13 +98,26 @@ O primeiro deploy demora (cria funções, índices e agendamentos). Se o CLI per
 
 ## 7. Domínio
 
-1. Firebase Console → Hosting → **Adicionar domínio personalizado**: `somosorganizada.com.br` e
-   `www.somosorganizada.com.br` (redirecionando para o principal). Se o domínio estava em outro projeto,
-   remova de lá antes.
-2. No Registro.br, deixe só o que o Firebase pedir (A `199.36.158.100`, TXT `hosting-site=...` e o CNAME do www).
-3. Rode `bash scripts/implantar.sh`: ele grava `URL_APP=https://somosorganizada.com.br` em `functions/.env`
-   (links de e-mail, convites e webhook) e, se o `gcloud` estiver logado, autoriza o domínio no login do
-   Firebase. Sem `gcloud`: Authentication → Configurações → Domínios autorizados → adicione os dois.
+Endereços:
+- `somosorganizada.com.br/{torcida}`: página da torcida (ingressos e adesão de sócio);
+- `somosorganizada.com.br/{torcida}/conta`: quem comprou ingresso e não é sócio (meus ingressos);
+- `somosorganizada.com.br/{torcida}/socio`: painel do sócio (carteirinha, ingressos, mensalidade, dados);
+- `somosorganizada.com.br/{torcida}/admin`: diretoria, subsedes e portaria (cada um vê só o que pode);
+- `plataforma.somosorganizada.com.br`: painel da equipe Somos Organizada, em subdomínio próprio para a sessão
+  da equipe ficar separada das páginas das torcidas (`somosorganizada.com.br/plataforma` redireciona para lá).
+
+No futuro, a torcida que contratar domínio próprio terá tudo no domínio dela (página **Domínio** do painel).
+
+Passos:
+1. Firebase Console → Hosting → **Adicionar domínio personalizado**: `somosorganizada.com.br`,
+   `www.somosorganizada.com.br` (redirecionando para o principal) e `plataforma.somosorganizada.com.br`.
+   Se o domínio estava em outro projeto, remova de lá antes.
+2. No Registro.br, cole só o que o Firebase pedir para cada um.
+3. Rode `bash scripts/implantar.sh`. Ele:
+   - grava `URL_APP=https://somosorganizada.com.br` em `functions/.env` (links de e-mail, convites e webhook);
+   - liga o painel da equipe em `plataforma.` só quando esse endereço já responde (antes disso fica em `/plataforma`);
+   - autoriza os domínios no login do Firebase se o `gcloud` estiver logado (senão: Authentication →
+     Configurações → Domínios autorizados → adicione os três).
    Para outro domínio: `DOMINIO=meudominio.com.br bash scripts/implantar.sh`.
 
 ## 8. Primeiro acesso da equipe

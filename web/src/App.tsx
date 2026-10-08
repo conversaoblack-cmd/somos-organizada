@@ -1,5 +1,6 @@
-import { lazy, Suspense, Component, type ReactNode } from "react";
-import { Route, Routes, useParams, useLocation } from "react-router";
+import { lazy, Suspense, Component, useEffect, type ReactNode } from "react";
+import { Navigate, Route, Routes, useParams, useLocation } from "react-router";
+import { noHostPlataforma, plataformaSeparada, urlPlataforma, urlPrincipal } from "./lib/hosts";
 import { ProvedorTorcida, useTorcidaPorSlug } from "./hooks/torcida";
 import { registrarErro } from "./lib/erros";
 import { BotaoLink, TelaCarregando, Vazio } from "./ui";
@@ -64,6 +65,7 @@ function RotasTorcida() {
         <Route path="pedido/:pedidoId" element={<PaginaPedido />} />
         <Route path="ingressos/:pedidoId" element={<IngressosDoPedido />} />
         <Route path="conta/*" element={<PainelSocio />} />
+        <Route path="socio/*" element={<PainelSocio />} />
         <Route path="admin/*" element={<PainelDiretoria />} />
         <Route path="portaria" element={<Portaria />} />
         <Route path="*" element={<PaginaTorcida />} />
@@ -77,17 +79,52 @@ function RotasTorcida() {
   );
 }
 
+/** Troca de domínio (painel da plataforma ↔ páginas das torcidas), mantendo o caminho. */
+function IrPara({ url }: { url: string }) {
+  useEffect(() => {
+    location.replace(url);
+  }, [url]);
+  return <TelaCarregando />;
+}
+
+function RotasPlataformaSeparada() {
+  const { pathname, search } = useLocation();
+  // No subdomínio da plataforma só existe o painel da equipe; o resto volta para o domínio principal
+  if (noHostPlataforma()) {
+    return (
+      <Routes>
+        <Route path="/plataforma/*" element={<PainelPlataforma />} />
+        <Route path="/" element={<Navigate to="/plataforma" replace />} />
+        <Route path="*" element={<IrPara url={urlPrincipal(pathname + search)} />} />
+      </Routes>
+    );
+  }
+  return (
+    <Routes>
+      <Route path="/" element={<Inicio />} />
+      <Route path="/entrar" element={<Entrar />} />
+      <Route path="/cadastro" element={<Cadastro />} />
+      <Route path="/plataforma/*" element={<IrPara url={urlPlataforma(pathname + search)} />} />
+      <Route path="/:slug/*" element={<RotasTorcida />} />
+    </Routes>
+  );
+}
+
 export function App() {
   return (
     <LimiteDeErro>
       <Suspense fallback={<TelaCarregando />}>
-        <Routes>
-          <Route path="/" element={<Inicio />} />
-          <Route path="/entrar" element={<Entrar />} />
-          <Route path="/cadastro" element={<Cadastro />} />
-          <Route path="/plataforma/*" element={<PainelPlataforma />} />
-          <Route path="/:slug/*" element={<RotasTorcida />} />
-        </Routes>
+        {plataformaSeparada ? (
+          <RotasPlataformaSeparada />
+        ) : (
+          <Routes>
+            <Route path="/" element={<Inicio />} />
+            <Route path="/entrar" element={<Entrar />} />
+            <Route path="/cadastro" element={<Cadastro />} />
+            <Route path="/plataforma/*" element={<PainelPlataforma />} />
+            <Route path="/:slug/*" element={<RotasTorcida />} />
+          </Routes>
+        )}
       </Suspense>
     </LimiteDeErro>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate, NavLink, Route, Routes } from "react-router";
+import { Link, Navigate, NavLink, Route, Routes, useLocation } from "react-router";
 import { signOut } from "firebase/auth";
 import { collection, orderBy, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -116,7 +116,7 @@ function BarraAbas({ slug, contadorIngressos }: { slug: string; contadorIngresso
         {ABAS.map((a) => (
           <NavLink
             key={a.rotulo}
-            to={a.para ? `/${slug}/conta/${a.para}` : `/${slug}/conta`}
+            to={a.para ? `/${slug}/socio/${a.para}` : `/${slug}/socio`}
             end={!a.para}
             className={({ isActive }) =>
               cx(
@@ -207,10 +207,20 @@ function useMeusIngressos(tid: string, uid: string | null): Estado<ComId<Ingress
   }, [comprados, emMeuNome]);
 }
 
+/**
+ * Mesma tela para dois endereços: /{torcida}/socio (painel do sócio, com a aba de ingressos) e
+ * /{torcida}/conta (quem comprou ingresso e não é sócio). Cada um é levado para o endereço certo.
+ */
 export default function PainelSocio() {
   const { tid, torcida } = useTorcida();
   const { ficha, carregando, usuario } = useMinhaFicha(tid);
   const logado = !!usuario && !usuario.isAnonymous;
+  const { pathname, search } = useLocation();
+  const [, , secao = "conta", ...resto] = pathname.split("/");
+  const secaoCerta = ficha ? "socio" : "conta";
+  // Não sócio só tem "Meus ingressos" (sem subpáginas); sócio mantém a subpágina pedida (ex.: /ingressos)
+  const destinoCerto =
+    logado && !carregando && secao !== secaoCerta ? `/${torcida.slug}/${secaoCerta}${ficha && resto.length ? `/${resto.join("/")}` : ""}${search}` : null;
   const foto = useFotoSocio(ficha?.fotoPath);
 
   const ingressos = useMeusIngressos(tid, logado ? usuario!.uid : null);
@@ -224,6 +234,8 @@ export default function PainelSocio() {
   }, [torcida.nome]);
 
   const dadosUsuario = logado ? { nome: ficha?.nome ?? usuario!.displayName ?? "", email: usuario!.email ?? "", foto } : null;
+
+  if (destinoCerto) return <Navigate to={destinoCerto} replace />;
 
   let conteudo;
   if (carregando) {
@@ -293,7 +305,7 @@ export default function PainelSocio() {
             <Route path="ingressos" element={<AbaIngressos tid={tid} torcida={torcida} ingressos={ingressos} />} />
             <Route path="assinatura" element={<AbaAssinatura tid={tid} torcida={torcida} ficha={ficha} />} />
             <Route path="dados" element={<AbaDados tid={tid} torcida={torcida} ficha={ficha} />} />
-            <Route path="*" element={<Navigate to={`/${torcida.slug}/conta`} replace />} />
+            <Route path="*" element={<Navigate to={`/${torcida.slug}/socio`} replace />} />
           </Routes>
         </div>
       </>
