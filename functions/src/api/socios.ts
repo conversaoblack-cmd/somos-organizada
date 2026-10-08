@@ -11,7 +11,6 @@ import { pagarmeDaTorcida } from "../pagarme/credenciais";
 import { clientePg, enderecoPg } from "../pagarme/montagem";
 import { dividir } from "../dominio/split";
 import { PagarmeErro, type Pagarme } from "../pagarme/cliente";
-import { registrarCpfDaConta } from "./conta";
 import { aplicarRespostaPedido, mensagemErroPagarme, pagamentoPg, torcidaVendendo } from "./ingressos";
 import type { Pedido, Plano, Sede, Socio, StatusSocio, Torcida } from "../dominio/tipos";
 
@@ -215,7 +214,6 @@ export const aderirSocio = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, asyn
     contarMudancaStatus(tx, tid, atual?.status ?? null, "pendente_pagamento");
     return ficha;
   });
-  await registrarCpfDaConta(uid, cpf, false);
 
   try {
     if (metodo === "pix") {

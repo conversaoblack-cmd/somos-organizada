@@ -9,7 +9,6 @@ import { exigirEscopoSede, exigirLogin, exigirMembro } from "../dominio/permisso
 import { confirmarPedidoPago, encerrarPedidoNaoPago } from "../dominio/processamento";
 import { pagarmeDaTorcida } from "../pagarme/credenciais";
 import { clientePg, descritor, enderecoPg } from "../pagarme/montagem";
-import { registrarCpfDaConta } from "./conta";
 import { motivoRecusa, recusaDefinitiva, PagarmeErro, type PgPagamento, type PgPedido, type PgSplit } from "../pagarme/cliente";
 import { dividir, subsedePodeVender } from "../dominio/split";
 import type { Evento, Ingresso, Pedido, Sede, Socio, Torcida } from "../dominio/tipos";
@@ -200,7 +199,7 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
     return { ...c, eventoNome: ev.nome, split: divisao.split };
   });
 
-  let criadoNaPagarme = false;
+  let respostaPg: PgPedido | null = null;
   try {
     const pg = await pagarmeDaTorcida(tid);
     const items = calc.itens.map((it, i) => ({
@@ -217,17 +216,17 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
       payments: [pagamentoPg(metodo, torcida, d, PADROES.pixExpiraSegundos, { split: calc.split })],
       metadata: { torcidaId: tid, pedidoId: pedidoRef.id, tipo: "ingresso" },
     });
-    criadoNaPagarme = true;
-    await registrarCpfDaConta(uid, comprador.cpf, req.auth?.token.firebase?.sign_in_provider === "anonymous");
+    respostaPg = resposta;
     const resultado = await aplicarRespostaPedido(tid, pedidoRef.id, resposta, expiraEm);
     if (typeof resultado === "object") throw new HttpsError("aborted", resultado.falhou);
     return { pedidoId: pedidoRef.id, status: resultado };
   } catch (e) {
     if (e instanceof HttpsError && e.code === "aborted") throw e;
-    if (criadoNaPagarme) {
+    if (respostaPg) {
       // A cobrança já existe na Pagar.me (pode até já estar paga): não encerra nem libera os lugares.
-      // O webhook ou o "Já paguei" (verificarPedido) concilia; o comprador vai para a tela do pedido.
+      // Guarda ao menos o id da Pagar.me para o webhook, o "Já paguei" e a rotina de 15 min conciliarem.
       logger.error("Pedido criado na Pagar.me, mas a confirmação local falhou", { tid, pedidoId: pedidoRef.id, erro: String(e) });
+      await refs.pedido(tid, pedidoRef.id).update({ "pagarme.orderId": respostaPg.id }).catch(() => undefined);
       return { pedidoId: pedidoRef.id, status: "aguardando" as const };
     }
     await encerrarPedidoNaoPago(tid, pedidoRef.id, "falhou", e instanceof Error ? e.message : "erro").catch(() => undefined);

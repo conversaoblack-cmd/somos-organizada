@@ -33,7 +33,25 @@ const publico = (r: RecebedorSede): RecebedorPublico => ({ id: r.id, status: r.s
 
 /** Grava a situação na sede (pública) e os dados completos no documento privado da subsede. */
 async function gravarRecebedor(tid: string, sedeId: string, r: RecebedorSede) {
-  await Promise.all([refs.sede(tid, sedeId).update({ recebedor: publico(r) }), refPrivadoRecebedor(tid, sedeId).set(r)]);
+  // Os dois juntos ou nenhum: público e privado nunca ficam com ids de recebedor diferentes
+  const lote = db.batch();
+  lote.update(refs.sede(tid, sedeId), { recebedor: publico(r) });
+  lote.set(refPrivadoRecebedor(tid, sedeId), r);
+  await lote.commit();
+}
+
+/** Sedes cadastradas antes da separação público/privado: move os dados do titular para o privado. */
+export async function migrarRecebedoresAntigos() {
+  const torcidas = await db.collection("torcidas").select().get();
+  for (const t of torcidas.docs) {
+    const sedes = await refs.sedes(t.id).get();
+    for (const sede of sedes.docs) {
+      const r = sede.get("recebedor") as (RecebedorSede & Record<string, unknown>) | undefined;
+      if (!r?.id || !("nomeTitular" in r || "banco" in r || "kycUrl" in r)) continue;
+      const privado = (await refPrivadoRecebedor(t.id, sede.id).get()).data();
+      await gravarRecebedor(t.id, sede.id, { ...r, ...(privado ?? {}), id: r.id, status: r.status } as RecebedorSede);
+    }
+  }
 }
 
 /** Atualiza status do recebedor (e o link da prova de vida, quando ainda pendente). */
@@ -41,8 +59,9 @@ export async function sincronizarRecebedor(tid: string, sedeId: string, pg: Paga
   const sede = (await refs.sede(tid, sedeId).get()).data() as (Sede & { recebedor?: Partial<RecebedorSede> }) | undefined;
   if (!sede?.recebedor?.id) return null;
   const privado = (await refPrivadoRecebedor(tid, sedeId).get()).data() as RecebedorSede | undefined;
-  // Sedes antigas guardavam tudo no documento público: aproveita e move para o privado
-  const base = { ...(sede.recebedor as RecebedorSede), ...(privado ?? {}) };
+  // O id e a situação valem os da sede (pública); o privado completa titular e banco.
+  // Sedes antigas guardavam tudo no documento público: aproveita e move para o privado.
+  const base = { ...(privado ?? {}), ...(sede.recebedor as RecebedorSede) };
   const r = await pg.obterRecebedor(base.id);
   const kycStatus = r.kyc_details?.status ?? null;
   let kycUrl: string | null = null;

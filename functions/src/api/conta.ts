@@ -7,7 +7,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { URL_APP, WEB_API_KEY, ESCALA_PUBLICA } from "../config";
-import { auth, db, FieldValue, Timestamp } from "../util/firebase";
+import { auth, db, Timestamp } from "../util/firebase";
 import { cpfValido, soDigitos } from "../util/validacao";
 
 const MAX_TENTATIVAS = 5;
@@ -21,6 +21,12 @@ const INCORRETO = "CPF ou senha incorretos. Se preferir, entre com o seu e-mail.
  * compra, o seu login com CPF continua funcionando (sem efeito para login anônimo).
  */
 const MAX_CONTAS_POR_CPF = 5;
+/** Chamado quando um pedido é PAGO: ligar um CPF a uma conta custa uma compra, não só um pedido em aberto. */
+export async function registrarCpfDoPagamento(uid: string, cpf: string) {
+  const u = await auth.getUser(uid).catch(() => null);
+  await registrarCpfDaConta(uid, cpf, !u?.email || u.providerData.length === 0);
+}
+
 export async function registrarCpfDaConta(uid: string, cpf: string, anonimo: boolean) {
   if (anonimo || !cpfValido(cpf)) return;
   const ref = refLoginCpf(cpf);
@@ -76,10 +82,8 @@ export const entrarComCpf = onCall(ESCALA_PUBLICA, async (req) => {
 
   const emails = [...new Set((await Promise.all(uids.map((u) => auth.getUser(u).catch(() => null)))).map((u) => u?.email).filter((e): e is string => !!e))];
   for (const email of emails) {
-    if (await senhaConfere(email, senha)) {
-      await ref.update({ tentativas: 0, janelaAte: FieldValue.delete() });
-      return { email };
-    }
+    // O contador não zera no acerto: ele é do CPF (compartilhado pelas contas ligadas a ele) e só expira com o tempo.
+    if (await senhaConfere(email, senha)) return { email };
   }
   throw new HttpsError("permission-denied", INCORRETO);
 });

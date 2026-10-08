@@ -18,9 +18,13 @@ set -euo pipefail
 PROJETO="${1:-somos-organizada}"
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 COFRE="$HOME/.somos-organizada/$PROJETO"
-EMAILS_PLATAFORMA="${PLATAFORMA_EMAILS:-conversaoblack@gmail.com,guisodrep@gmail.com}"
-# Domínio próprio já ligado no Firebase Hosting. Vazio (DOMINIO= bash ...) = usar o endereço .web.app
-DOMINIO="${DOMINIO-somosorganizada.com.br}"
+# E-mails da equipe da plataforma: usados só quando functions/.env ainda não tem a lista, ou quando você passa
+# PLATAFORMA_EMAILS=... explicitamente (aí eles são somados aos que já estão lá; para tirar alguém, edite o .env).
+EMAILS_EXPLICITOS="${PLATAFORMA_EMAILS:-}"
+EMAILS_PADRAO="conversaoblack@gmail.com,guisodrep@gmail.com"
+# Domínio próprio já ligado no Firebase Hosting. Só o projeto principal usa somosorganizada.com.br por padrão;
+# outro projeto (teste) fica no .web.app, a menos que DOMINIO=... seja informado.
+if [ "$PROJETO" = "somos-organizada" ]; then DOMINIO="${DOMINIO-somosorganizada.com.br}"; else DOMINIO="${DOMINIO:-}"; fi
 if [ -n "$DOMINIO" ]; then URL_SITE="https://$DOMINIO"; else URL_SITE="https://$PROJETO.web.app"; fi
 
 passo() { printf '\n\033[1;32m▶ %s\033[0m\n' "$*"; }
@@ -94,19 +98,23 @@ else
 fi
 
 passo "Parâmetros das functions"
-# Cria ou atualiza functions/.env: endereço do site (links de e-mail, convites e webhook) e e-mails da equipe.
-# Preserva o resto (WEB_API_KEY, MAX_INSTANCIAS, EMAIL_REMETENTE...).
+# Cria ou atualiza functions/.env, preservando o resto (WEB_API_KEY, MAX_INSTANCIAS, EMAIL_REMETENTE...):
+# - URL_APP (links de e-mail, convites e webhook): o domínio quando houver; senão só cria se faltar;
+# - PLATAFORMA_EMAILS: padrão só se faltar; PLATAFORMA_EMAILS=... na linha de comando soma à lista.
 touch functions/.env
 node -e '
   const fs = require("fs");
-  const [url, emails] = process.argv.slice(1);
+  const [url, temDominio, explicitos, padrao] = process.argv.slice(1);
   const linhas = fs.readFileSync("functions/.env", "utf8").split("\n").filter(Boolean);
-  const valor = (k) => (linhas.find((l) => l.startsWith(k + "=")) || "").slice(k.length + 1);
-  const equipe = [...new Set([...valor("PLATAFORMA_EMAILS").split(","), ...emails.split(",")].map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  const valor = (k) => { const l = linhas.find((x) => x.startsWith(k + "=")); return l === undefined ? null : l.slice(k.length + 1); };
+  const urlFinal = temDominio === "1" || valor("URL_APP") === null ? url : valor("URL_APP");
+  const atuais = valor("PLATAFORMA_EMAILS");
+  const base = atuais === null ? padrao : atuais;
+  const equipe = [...new Set([...base.split(","), ...explicitos.split(",")].map((e) => e.trim().toLowerCase()).filter(Boolean))];
   const resto = linhas.filter((l) => !/^(URL_APP|PLATAFORMA_EMAILS)=/.test(l));
-  fs.writeFileSync("functions/.env", [`URL_APP=${url}`, `PLATAFORMA_EMAILS=${equipe.join(",")}`, ...resto].join("\n") + "\n");
-' "$URL_SITE" "$EMAILS_PLATAFORMA"
-echo "functions/.env: URL_APP=$URL_SITE"
+  fs.writeFileSync("functions/.env", [`URL_APP=${urlFinal}`, `PLATAFORMA_EMAILS=${equipe.join(",")}`, ...resto].join("\n") + "\n");
+' "$URL_SITE" "$([ -n "$DOMINIO" ] && echo 1 || echo 0)" "$EMAILS_EXPLICITOS" "$EMAILS_PADRAO"
+grep '^URL_APP=' functions/.env
 grep '^PLATAFORMA_EMAILS=' functions/.env
 
 passo "Configuração do app Web"

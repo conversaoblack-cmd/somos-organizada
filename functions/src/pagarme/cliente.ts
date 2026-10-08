@@ -175,6 +175,11 @@ export class Pagarme {
   obterPedido(id: string) {
     return this.req<PgPedido>("GET", `/orders/${encodeURIComponent(id)}`);
   }
+  /** Acha o pedido pelo nosso código (id do pedido no Firestore), para conciliar pedidos que travaram. */
+  async buscarPedidoPorCodigo(code: string): Promise<PgPedido | null> {
+    const r = await this.req<{ data?: PgPedido[] }>("GET", `/orders?code=${encodeURIComponent(code)}&size=1`);
+    return r.data?.find((o) => o.code === code) ?? null;
+  }
   cancelarCobranca(chargeId: string) {
     return this.req<PgCharge>("DELETE", `/charges/${encodeURIComponent(chargeId)}`);
   }

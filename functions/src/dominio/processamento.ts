@@ -9,6 +9,7 @@ import { competencia } from "../util/datas";
 import { avancarCiclo } from "./precos";
 import { pagoIntegral, type PgPedido, type PgFatura } from "../pagarme/cliente";
 import { notificarPedidoPago } from "../email/avisos";
+import { registrarCpfDoPagamento } from "../api/conta";
 import type { Evento, Ingresso, Liquidacao, Pedido, Socio, StatusSocio, Torcida } from "./tipos";
 
 type Tx = FirebaseFirestore.Transaction;
@@ -71,6 +72,9 @@ export async function confirmarPedidoPago(tid: string, pedidoId: string, pg: PgP
   const r = await confirmarNaTransacao(tid, pedidoId, pg, segredoQr);
   // E-mail de confirmação (com chave única: repetir não duplica). Nunca derruba a confirmação.
   await notificarPedidoPago(tid, pedidoId);
+  // Liga o CPF de quem pagou à conta dele (para entrar com CPF depois)
+  const p = (await refs.pedido(tid, pedidoId).get()).data() as Pedido | undefined;
+  if (p?.status === "pago" && p.comprador?.cpf) await registrarCpfDoPagamento(p.uid, p.comprador.cpf).catch(() => undefined);
   return r;
 }
 
@@ -206,7 +210,7 @@ export async function confirmarFaturaSocio(tid: string, socioUid: string, fatura
     const mes = competencia();
 
     const fimCiclo = fatura.cycle?.end_at ? new Date(fatura.cycle.end_at) : avancarCiclo(new Date(), s.intervalo, s.intervaloQtd);
-    const novoStatus = statusAposPagamento(s.status, torcida.aprovacaoManualSocio);
+    const novoStatus = s.bloqueadoPelaDiretoria ? s.status : statusAposPagamento(s.status, torcida.aprovacaoManualSocio);
     const primeiraAdesao = !s.matricula;
     const upd: Record<string, unknown> = {
       status: novoStatus,
@@ -282,7 +286,8 @@ export async function estornarPedido(tid: string, pedidoId: string, motivo: "est
       if (s && torcida.destinoMensalidade !== "principal") sedeBase = s.sedeId;
       // Mensalidade estornada (ou chargeback): tira da validade o ciclo que esse pagamento tinha comprado
       if (s?.validoAte && p.cicloNovo) {
-        const comprado = p.cicloAnterior ? p.cicloNovo.toMillis() - p.cicloAnterior.toMillis() : s.validoAte.toMillis() - (p.pagoEm?.toMillis() ?? s.validoAte.toMillis());
+        const inicio = p.cicloAnterior?.toMillis() ?? p.pagoEm?.toMillis() ?? p.criadoEm.toMillis();
+        const comprado = p.cicloNovo.toMillis() - inicio; // só o ciclo que ESTE pagamento comprou
         const novaValidade = s.validoAte.toMillis() - Math.max(0, comprado);
         let novoStatus = s.status;
         if (!p.cicloAnterior && s.validoAte.toMillis() === p.cicloNovo.toMillis()) novoStatus = "cancelado"; // estornou a adesão

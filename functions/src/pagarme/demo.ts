@@ -117,6 +117,11 @@ export class PagarmeDemo extends Pagarme {
     return this.ler<PgPedido>("orders", id);
   }
 
+  override async buscarPedidoPorCodigo(code: string): Promise<PgPedido | null> {
+    const q = await this.col("orders").where("code", "==", code).limit(1).get();
+    return q.empty ? null : (q.docs[0].data() as PgPedido);
+  }
+
   /** Simula o cliente pagando o Pix. */
   async pagarPix(orderId: string): Promise<PgPedido> {
     const p = await this.obterPedido(orderId);

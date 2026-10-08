@@ -1,4 +1,6 @@
 import { avisarCartaoRecusado, avisarRenovacaoPix } from "../email/avisos";
+import { aplicarRespostaPedido } from "./ingressos";
+import { migrarRecebedoresAntigos } from "./recebedores";
 import { FALHA_TECNICA } from "../pagarme/recusas";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions/v2";
@@ -50,7 +52,22 @@ export const expirarPedidos = onSchedule(
       .limit(100)
       .get();
     for (const doc of travados.docs) {
-      await encerrarPedidoNaoPago(torcidaDe(doc.ref), doc.id, "falhou", "Falha ao iniciar o pagamento.").catch(() => undefined);
+      const tid = torcidaDe(doc.ref);
+      try {
+        // Antes de desistir, pergunta à Pagar.me: o pedido pode ter sido criado (e até pago) e só a gravação local falhou
+        const p = doc.data() as Pedido;
+        const pg = await pagarmeDaTorcida(tid);
+        const pedidoPg = p.pagarme?.orderId ? await pg.obterPedido(p.pagarme.orderId) : await pg.buscarPedidoPorCodigo(doc.id);
+        if (pedidoPg) {
+          await aplicarRespostaPedido(tid, doc.id, pedidoPg, p.expiraEm?.toDate() ?? new Date(Date.now() + PADROES.pixExpiraSegundos * 1000));
+          continue;
+        }
+      } catch (e) {
+        logger.error("Falha ao conciliar pedido travado", { tid, pedidoId: doc.id, erro: String(e) });
+        // tenta de novo na próxima rodada, sem liberar lugares de algo que pode ter sido pago (até 1 dia)
+        if (Date.now() - (doc.get("criadoEm") as Timestamp).toMillis() < dias(1)) continue;
+      }
+      await encerrarPedidoNaoPago(tid, doc.id, "falhou", "Falha ao iniciar o pagamento.").catch(() => undefined);
     }
   },
 );
@@ -59,6 +76,7 @@ export const expirarPedidos = onSchedule(
 export const rotinaSocios = onSchedule(
   { schedule: "10 7 * * *", timeZone: FUSO, secrets: [MASTER_KEY, QR_HMAC, EMAIL_API_KEY], timeoutSeconds: 540 },
   async () => {
+    await migrarRecebedoresAntigos().catch((e) => logger.error("Migração de recebedores", { erro: String(e) }));
     const agora = Date.now();
     const torcidas = new Map<string, Torcida | null>();
     const torcida = async (tid: string) => {

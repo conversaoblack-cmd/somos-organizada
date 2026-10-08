@@ -70,10 +70,12 @@ service cloud.firestore {
           && request.resource.data.get('recebedor', null) == resource.data.get('recebedor', null);
         allow delete: if false; // desativar com ativa=false para não quebrar histórico
 
-        // Dados da conta de recebimento (titular, banco, link da prova de vida): só o usuário da própria subsede.
-        // A diretoria vê apenas a situação (campo "recebedor" da sede, público).
+        // Dados da conta de recebimento (titular, banco, link da prova de vida): só quem cadastrou, e enquanto for
+        // o usuário daquela subsede. A diretoria vê apenas a situação (campo "recebedor" da sede, público) e não
+        // consegue ler os dados criando outro usuário para a subsede.
         match /privado/{doc} {
-          allow read: if membro(tid) && papel(tid) == 'subsede' && sedeDoMembro(tid) == sedeId;
+          allow read: if membro(tid) && papel(tid) == 'subsede' && sedeDoMembro(tid) == sedeId
+            && resource.data.cadastradoPor == request.auth.uid;
           allow write: if false;
         }
       }

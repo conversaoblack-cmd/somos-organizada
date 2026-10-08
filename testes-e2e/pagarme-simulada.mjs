@@ -76,7 +76,10 @@ export function iniciar(porta = 4010) {
     if (!autorizado(req)) return responder(401, { message: "Authorization has been denied for this request." });
     chamadas.push({ metodo: req.method, caminho: url.pathname, corpo: json });
 
-    if (req.method === "GET" && url.pathname === "/orders") return responder(200, { data: [] });
+    if (req.method === "GET" && url.pathname === "/orders") {
+      const code = url.searchParams.get("code");
+      return responder(200, { data: code ? [...pedidos.values()].filter((p) => p.code === code) : [] });
+    }
     if (req.method === "POST" && url.pathname === "/customers") {
       const c = { id: id("cus"), ...json };
       clientes.set(c.id, c);
