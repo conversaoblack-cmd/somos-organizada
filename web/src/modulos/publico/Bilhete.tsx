@@ -1,5 +1,6 @@
 import { cpfMascarado, dataExtensa, hora } from "@/lib/formatos";
-import { cx, QrCode, Selo } from "@/ui";
+import { cx, Selo } from "@/ui";
+import { QrCode } from "@/ui/qr";
 
 const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 

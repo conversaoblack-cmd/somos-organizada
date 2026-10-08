@@ -2,7 +2,7 @@
 import { useState, type ReactNode } from "react";
 import { Timestamp } from "firebase/firestore";
 import { getDownloadURL, ref as refStorage, uploadBytes } from "firebase/storage";
-import { storage } from "@/lib/firebase";
+import { storage } from "@/lib/armazenamento";
 import { mensagemDeErro } from "@/lib/api";
 import { copiarTexto } from "@/lib/servicos";
 import { Aviso, Botao, Carregando, cx, Icone, Modal, useToast, Vazio, type NomeIcone, type Tom } from "@/ui";

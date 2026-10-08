@@ -5,7 +5,8 @@ import { mensagemDeErro } from "@/lib/api";
 import { dataCurta, dataExtensa, hora, iniciais, moeda, paraData, periodicidadeCurta, taxa } from "@/lib/formatos";
 import type { ComId, Ingresso, Plano, Socio, Torcida } from "@/lib/tipos";
 import { useDocumento } from "@/hooks/dados";
-import { Aviso, Botao, BotaoLink, Cartao, cx, Girando, Icone, QrCode } from "@/ui";
+import { Aviso, Botao, BotaoLink, Cartao, cx, Girando, Icone } from "@/ui";
+import { QrCode } from "@/ui/qr";
 import { buscarQrCarteirinha, usePagarMensalidade } from "./acoes";
 import { AvisoFalhaCartao, useFalhaCobranca } from "./CartaoCobranca";
 import {

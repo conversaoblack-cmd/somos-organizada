@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { collection, orderBy, query, where } from "firebase/firestore";
 import { getDownloadURL, ref as refStorage } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { storage } from "@/lib/armazenamento";
 import { api, mensagemDeErro } from "@/lib/api";
 import {
   dataCurta,

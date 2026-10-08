@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getDownloadURL, ref } from "firebase/storage";
-import { storage } from "@/lib/firebase";
+import { storage } from "@/lib/armazenamento";
 import { registrarErro } from "@/lib/erros";
 import { paraData } from "@/lib/formatos";
 import type { Socio } from "@/lib/tipos";

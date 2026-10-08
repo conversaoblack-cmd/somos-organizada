@@ -9,7 +9,8 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { ref, uploadBytes } from "firebase/storage";
-import { auth, storage } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
+import { storage } from "@/lib/armazenamento";
 import { api, mensagemDeErro } from "@/lib/api";
 import { buscarCep } from "@/lib/servicos";
 import {

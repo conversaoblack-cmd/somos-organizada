@@ -4,7 +4,8 @@ import { copiarTexto } from "@/lib/servicos";
 import { cpfMascarado, dataExtensa, dataHora, hora, paraData } from "@/lib/formatos";
 import type { ComId, Evento, Ingresso, Torcida } from "@/lib/tipos";
 import { useDocumento, type Estado } from "@/hooks/dados";
-import { Aviso, BotaoIcone, BotaoLink, cx, Esqueleto, Icone, Modal, QrCode, Selo, useToast, Vazio } from "@/ui";
+import { Aviso, BotaoIcone, BotaoLink, cx, Esqueleto, Icone, Modal, Selo, useToast, Vazio } from "@/ui";
+import { QrCode } from "@/ui/qr";
 import { useTelaAcesa } from "./comum";
 
 const fmtSP = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", ...o });

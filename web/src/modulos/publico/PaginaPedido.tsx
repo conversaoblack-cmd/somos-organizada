@@ -8,7 +8,8 @@ import { useTorcida } from "@/hooks/torcida";
 import type { Ingresso, Pedido } from "@/lib/tipos";
 import { moeda } from "@/lib/formatos";
 import { copiarTexto } from "@/lib/servicos";
-import { Aviso, Botao, BotaoLink, Carregando, Cartao, Icone, QrCode, useToast, Vazio } from "@/ui";
+import { Aviso, Botao, BotaoLink, Carregando, Cartao, Icone, useToast, Vazio } from "@/ui";
+import { QrCode } from "@/ui/qr";
 import { CabecalhoTorcida, LinhaValor } from "./comum";
 import { Bilhete, type DadosBilhete } from "./Bilhete";
 
