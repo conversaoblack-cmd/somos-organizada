@@ -122,7 +122,8 @@ export const atualizarCartao = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, 
   try {
     const ficha = await salvarCartao(tid, socio, (d.cartao ?? {}) as Record<string, unknown>, socio.endereco);
     const emDia = socio.status === "ativo" && !!socio.validoAte && socio.validoAte.toMillis() > Date.now();
-    if (emDia || socio.status === "suspenso" || socio.status === "cancelado") return { cobrado: false, status: socio.status };
+    // em_analise já pagou e espera a diretoria aprovar: trocar o cartão não pode gerar nova cobrança
+    if (emDia || ["suspenso", "cancelado", "em_analise"].includes(socio.status)) return { cobrado: false, status: socio.status };
     const r = await criarCobrancaSocio({ tid, torcida, socio: ficha, metodo: "cartao", renovacao: !!socio.matricula, expiraSeg: PADROES.pixExpiraSegundos });
     if (typeof r.resultado === "object") throw new HttpsError("aborted", r.resultado.falhou);
     const atual = (await refs.socio(tid, uid).get()).data() as Socio;
@@ -197,6 +198,9 @@ export const aderirSocio = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, asyn
     const [sSnap, cSnap] = await Promise.all([tx.get(sRef), tx.get(cpfRef)]);
     const atual = sSnap.data() as Socio | undefined;
     if (atual && ATIVOS.includes(atual.status)) throw new HttpsError("already-exists", "Você já é sócio desta torcida.");
+    if (atual?.bloqueadoPelaDiretoria && atual.status === "cancelado") {
+      throw new HttpsError("failed-precondition", "Sua associação foi cancelada pela diretoria. Fale com ela para voltar.");
+    }
     if (cSnap.exists && cSnap.get("uid") !== uid) throw new HttpsError("already-exists", "Este CPF já está cadastrado como sócio nesta torcida.");
     if (atual && atual.cpf !== cpf) tx.delete(refs.cpf(tid, atual.cpf));
     tx.set(cpfRef, { uid });
@@ -238,9 +242,13 @@ export const aderirSocio = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, asyn
 export const pagarMensalidade = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, async (req) => {
   const uid = exigirLogin(req);
   const tid = texto((req.data ?? {}).tid, "torcida", { max: 40 });
-  const torcida = await torcidaVendendo(tid, { permitirNaoPublicada: true });
+  const torcida = await torcidaVendendo(tid, { permitirNaoPublicada: true, modulo: "socios" });
   const socio = (await refs.socio(tid, uid).get()).data() as Socio | undefined;
   if (!socio) throw new HttpsError("not-found", "Ficha de sócio não encontrada.");
+  // Suspenso ou cancelado pela diretoria não se reativa pagando: precisa falar com a diretoria
+  if (socio.status === "suspenso" || (socio.status === "cancelado" && socio.bloqueadoPelaDiretoria)) {
+    throw new HttpsError("failed-precondition", "Sua associação está suspensa ou cancelada. Fale com a diretoria da torcida.");
+  }
   if (socio.cobrancaAbertaId) {
     const aberto = (await refs.pedido(tid, socio.cobrancaAbertaId).get()).data() as Pedido | undefined;
     if (aberto?.status === "aguardando" && aberto.pix && aberto.pix.expiraEm.toMillis() > Date.now() + 60_000) {
@@ -321,6 +329,8 @@ export const alterarStatusSocio = onCall(async (req) => {
     }
     tx.update(sRef, {
       status: novo,
+      // Cancelamento pela diretoria é decisão dela: o sócio não se reativa sozinho pagando ou se associando de novo
+      bloqueadoPelaDiretoria: acao === "cancelar" || acao === "suspender",
       atualizadoEm: FieldValue.serverTimestamp(),
       historico: FieldValue.arrayUnion({ acao, por: membro.uid, em: Timestamp.now(), de: s.status, para: novo }),
     });

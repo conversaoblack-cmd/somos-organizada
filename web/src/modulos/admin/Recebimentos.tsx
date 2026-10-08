@@ -3,6 +3,8 @@ import { api, mensagemDeErro, type DadosRecebedor } from "@/lib/api";
 import { buscarCep } from "@/lib/servicos";
 import { centavosDeTexto, cpfValido, dataHora, emailValido, mascaraCpf, moeda, soDigitos, taxa, telefoneValido } from "@/lib/formatos";
 import { Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, OpcoesCartao, QrCode, Selecao, useToast } from "@/ui";
+import { useDocumento } from "@/hooks/dados";
+import type { RecebedorSede } from "@/lib/tipos";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
 import { BANCOS, infoRecebedor, nomeBanco, podeCadastrarRecebedor, SeloRecebedor } from "./recebedor";
@@ -50,7 +52,9 @@ export default function Recebimentos() {
   useTourPagina("recebimentos");
   const avisar = useToast();
   const sede = sedes.find((s) => s.id === sedeEscopo);
-  const r = sede?.recebedor;
+  // Titular, banco e link da prova de vida ficam num documento que só esta subsede lê
+  const privado = useDocumento<RecebedorSede>(sedeEscopo && sede?.recebedor ? `torcidas/${tid}/sedes/${sedeEscopo}/privado/recebedor` : null);
+  const r: RecebedorSede | undefined = sede?.recebedor ? { ...(privado.dados ?? {}), ...sede.recebedor } : undefined;
   const splitAtivo = torcida.pagamentos?.splitAtivo === true;
   const [atualizando, setAtualizando] = useState(false);
   const [formAberto, setFormAberto] = useState(false);
@@ -126,10 +130,10 @@ export default function Recebimentos() {
               </div>
               <div>
                 <Linha rotulo="Banco">
-                  {r.banco.codigo} · {nomeBanco(r.banco.codigo)}
+                  {r.banco ? `${r.banco.codigo} · ${nomeBanco(r.banco.codigo)}` : "—"}
                 </Linha>
                 <Linha rotulo="Agência / conta">
-                  {r.banco.agencia} / {r.banco.conta}
+                  {r.banco ? `${r.banco.agencia} / ${r.banco.conta}` : "—"}
                 </Linha>
               </div>
             </div>

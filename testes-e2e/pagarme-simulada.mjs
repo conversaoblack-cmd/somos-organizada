@@ -63,6 +63,16 @@ export function iniciar(porta = 4010) {
       pagar(p);
       return responder(200, p);
     }
+    // Controle do teste: estorno na Pagar.me (total ou parcial, em centavos via ?valor=)
+    if (req.method === "POST" && url.pathname.startsWith("/__estornar/")) {
+      const p = pedidos.get(url.pathname.split("/").pop());
+      if (!p) return responder(404, {});
+      const c = p.charges[0];
+      const valor = Number(url.searchParams.get("valor") ?? c.amount);
+      c.canceled_amount = (c.canceled_amount ?? 0) + valor;
+      if (c.canceled_amount >= c.amount) c.status = "refunded";
+      return responder(200, p);
+    }
     if (!autorizado(req)) return responder(401, { message: "Authorization has been denied for this request." });
     chamadas.push({ metodo: req.method, caminho: url.pathname, corpo: json });
 

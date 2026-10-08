@@ -8,14 +8,14 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { MASTER_KEY, URL_APP } from "../config";
-import { refs, FieldValue } from "../util/firebase";
+import { db, refs, Timestamp } from "../util/firebase";
 import { cpfValido, emailValido, mascararCpf, soDigitos, telefoneBR, texto, umDe, inteiro } from "../util/validacao";
 import { exigirMembro } from "../dominio/permissoes";
 import { RECEBEDOR_ATIVO } from "../dominio/split";
 import { pagarmeDaTorcida } from "../pagarme/credenciais";
 import { RECEBEDOR_PRINCIPAL_DEMO } from "../pagarme/demo";
 import { PagarmeErro, type Pagarme } from "../pagarme/cliente";
-import type { RecebedorSede, Sede, Torcida } from "../dominio/tipos";
+import type { RecebedorPublico, RecebedorSede, Sede, Torcida } from "../dominio/tipos";
 
 /** Status que exigem a prova de vida (KYC) do titular. */
 const PRECISA_KYC = new Set(["registration", "affiliation"]);
@@ -27,12 +27,23 @@ function erroPagarme(e: unknown, padrao: string): never {
   throw new HttpsError("internal", padrao);
 }
 
+const refPrivadoRecebedor = (tid: string, sedeId: string) => db.doc(`torcidas/${tid}/sedes/${sedeId}/privado/recebedor`);
+
+const publico = (r: RecebedorSede): RecebedorPublico => ({ id: r.id, status: r.status, kycStatus: r.kycStatus ?? null, atualizadoEm: r.atualizadoEm });
+
+/** Grava a situação na sede (pública) e os dados completos no documento privado da subsede. */
+async function gravarRecebedor(tid: string, sedeId: string, r: RecebedorSede) {
+  await Promise.all([refs.sede(tid, sedeId).update({ recebedor: publico(r) }), refPrivadoRecebedor(tid, sedeId).set(r)]);
+}
+
 /** Atualiza status do recebedor (e o link da prova de vida, quando ainda pendente). */
 export async function sincronizarRecebedor(tid: string, sedeId: string, pg: Pagarme): Promise<RecebedorSede | null> {
-  const ref = refs.sede(tid, sedeId);
-  const sede = (await ref.get()).data() as Sede | undefined;
+  const sede = (await refs.sede(tid, sedeId).get()).data() as (Sede & { recebedor?: Partial<RecebedorSede> }) | undefined;
   if (!sede?.recebedor?.id) return null;
-  const r = await pg.obterRecebedor(sede.recebedor.id);
+  const privado = (await refPrivadoRecebedor(tid, sedeId).get()).data() as RecebedorSede | undefined;
+  // Sedes antigas guardavam tudo no documento público: aproveita e move para o privado
+  const base = { ...(sede.recebedor as RecebedorSede), ...(privado ?? {}) };
+  const r = await pg.obterRecebedor(base.id);
   const kycStatus = r.kyc_details?.status ?? null;
   let kycUrl: string | null = null;
   let kycExpiraEm: string | null = null;
@@ -46,16 +57,19 @@ export async function sincronizarRecebedor(tid: string, sedeId: string, pg: Paga
     }
   }
   const atualizado: RecebedorSede = {
-    ...sede.recebedor,
+    ...base,
     status: r.status,
     kycStatus,
     kycUrl,
     kycExpiraEm,
-    atualizadoEm: FieldValue.serverTimestamp() as unknown as RecebedorSede["atualizadoEm"],
+    atualizadoEm: Timestamp.now(),
   };
-  await ref.update({ recebedor: atualizado });
+  await gravarRecebedor(tid, sedeId, atualizado);
   return atualizado;
 }
+
+/** O que cada um pode ver na resposta: a subsede vê tudo; a diretoria só a situação. */
+export const paraQuemPediu = (papel: string, r: RecebedorSede | null) => (r && papel !== "subsede" ? publico(r) : r);
 
 /** Diretoria informa o recebedor principal (rp_...) da conta Pagar.me da torcida e liga o split. */
 export const configurarSplit = onCall({ secrets: [MASTER_KEY] }, async (req) => {
@@ -186,9 +200,9 @@ export const cadastrarRecebedor = onCall({ secrets: [MASTER_KEY] }, async (req) 
       kycUrl: null,
       kycExpiraEm: null,
       cadastradoPor: membro.uid,
-      atualizadoEm: FieldValue.serverTimestamp() as unknown as RecebedorSede["atualizadoEm"],
+      atualizadoEm: Timestamp.now(),
     };
-    await sedeRef.update({ recebedor });
+    await gravarRecebedor(tid, sedeId, recebedor);
     const sincronizado = await sincronizarRecebedor(tid, sedeId, pg);
     return { recebedor: sincronizado ?? recebedor };
   } catch (err) {
@@ -207,7 +221,7 @@ export const atualizarRecebedor = onCall({ secrets: [MASTER_KEY] }, async (req) 
   try {
     const r = await sincronizarRecebedor(tid, sedeId, pg);
     if (!r) throw new HttpsError("not-found", "Esta sede ainda não cadastrou a conta de recebimento.");
-    return { recebedor: r };
+    return { recebedor: paraQuemPediu(membro.papel, r) };
   } catch (e) {
     erroPagarme(e, "Não foi possível consultar a Pagar.me.");
   }

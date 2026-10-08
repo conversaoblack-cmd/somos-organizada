@@ -84,12 +84,20 @@ export function mensagemErroPagarme(e: PagarmeErro): string {
 export async function aplicarRespostaPedido(tid: string, pedidoId: string, pg: PgPedido, expiraEm: Date) {
   const charge = pg.charges?.[0];
   const t = charge?.last_transaction;
-  await refs.pedido(tid, pedidoId).update({
-    status: "aguardando",
-    pagarme: { orderId: pg.id, chargeId: charge?.id ?? null },
-    ...(t?.qr_code
-      ? { pix: { qrCode: t.qr_code, qrCodeUrl: t.qr_code_url ?? null, expiraEm: Timestamp.fromDate(t.expires_at ? new Date(t.expires_at) : expiraEm) } }
-      : {}),
+  const pRef = refs.pedido(tid, pedidoId);
+  await db.runTransaction(async (tx) => {
+    const atual = (await tx.get(pRef)).data() as Pedido | undefined;
+    if (!atual) return;
+    const upd: Record<string, unknown> = { pagarme: { orderId: pg.id, chargeId: charge?.id ?? null } };
+    // O webhook da Pagar.me pode chegar antes desta resposta e já ter confirmado (ou encerrado) o pedido:
+    // nunca volta um pedido pago/encerrado para "aguardando" (isso faria o pagamento ser processado duas vezes).
+    if (atual.status === "criando") {
+      upd.status = "aguardando";
+      if (t?.qr_code) {
+        upd.pix = { qrCode: t.qr_code, qrCodeUrl: t.qr_code_url ?? null, expiraEm: Timestamp.fromDate(t.expires_at ? new Date(t.expires_at) : expiraEm) };
+      }
+    }
+    tx.update(pRef, upd);
   });
   if (pg.status === "paid") {
     await confirmarPedidoPago(tid, pedidoId, pg, QR_HMAC.value());
@@ -192,6 +200,7 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
     return { ...c, eventoNome: ev.nome, split: divisao.split };
   });
 
+  let criadoNaPagarme = false;
   try {
     const pg = await pagarmeDaTorcida(tid);
     const items = calc.itens.map((it, i) => ({
@@ -208,12 +217,19 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
       payments: [pagamentoPg(metodo, torcida, d, PADROES.pixExpiraSegundos, { split: calc.split })],
       metadata: { torcidaId: tid, pedidoId: pedidoRef.id, tipo: "ingresso" },
     });
+    criadoNaPagarme = true;
     await registrarCpfDaConta(uid, comprador.cpf, req.auth?.token.firebase?.sign_in_provider === "anonymous");
     const resultado = await aplicarRespostaPedido(tid, pedidoRef.id, resposta, expiraEm);
     if (typeof resultado === "object") throw new HttpsError("aborted", resultado.falhou);
     return { pedidoId: pedidoRef.id, status: resultado };
   } catch (e) {
     if (e instanceof HttpsError && e.code === "aborted") throw e;
+    if (criadoNaPagarme) {
+      // A cobrança já existe na Pagar.me (pode até já estar paga): não encerra nem libera os lugares.
+      // O webhook ou o "Já paguei" (verificarPedido) concilia; o comprador vai para a tela do pedido.
+      logger.error("Pedido criado na Pagar.me, mas a confirmação local falhou", { tid, pedidoId: pedidoRef.id, erro: String(e) });
+      return { pedidoId: pedidoRef.id, status: "aguardando" as const };
+    }
     await encerrarPedidoNaoPago(tid, pedidoRef.id, "falhou", e instanceof Error ? e.message : "erro").catch(() => undefined);
     logger.error("Falha ao criar pedido na Pagar.me", { tid, pedidoId: pedidoRef.id, erro: String(e) });
     if (e instanceof PagarmeErro) throw new HttpsError("unavailable", mensagemErroPagarme(e));

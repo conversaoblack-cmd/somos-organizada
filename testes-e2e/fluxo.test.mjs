@@ -184,6 +184,15 @@ test("3b. subsede: convite, conta de recebimento com prova de vida, evento aprov
   const sede = await aDb.doc(`torcidas/${ctx.tid}/sedes/${ctx.subsede}`).get();
   assert.equal(sede.get("recebedor").status, "active");
 
+  // dados bancários do titular ficam só com a subsede; a página pública e a diretoria veem só a situação
+  const sedePublica = (await aDb.doc(`torcidas/${ctx.tid}/sedes/${ctx.subsede}`).get()).get("recebedor");
+  assert.deepEqual(Object.keys(sedePublica).sort(), ["atualizadoEm", "id", "kycStatus", "status"]);
+  const privado = await getDoc(doc(sub.db, `torcidas/${ctx.tid}/sedes/${ctx.subsede}/privado/recebedor`));
+  assert.equal(privado.get("nomeTitular"), "Coordenador Quarto Distrito");
+  await negado(getDoc(doc(dir.db, `torcidas/${ctx.tid}/sedes/${ctx.subsede}/privado/recebedor`)));
+  const viaDiretoria = await dir.chamar("atualizarRecebedor", { tid: ctx.tid, sedeId: ctx.subsede });
+  assert.equal(viaDiretoria.recebedor.nomeTitular, undefined);
+
   // agora a diretoria aprova (publica)
   await updateDoc(doc(dir.db, `torcidas/${ctx.tid}/eventos/${ev.id}`), { status: "publicado" });
   // depois de publicado, a subsede não altera mais o evento
@@ -629,6 +638,73 @@ test("17. conta do torcedor: ingresso no CPF do sócio aparece no painel dele; l
   await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "12345678909", senha: SENHA }), /incorretos/); // CPF sem conta: mesma resposta
   for (let i = 0; i < 5; i++) await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: "errada-123" }), /incorretos/);
   await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: SENHA }), /Muitas tentativas/);
+});
+
+test("18. segurança: convite não toma conta existente; estorno só com confirmação da Pagar.me; sócio cancelado não volta sozinho", async () => {
+  const { tid, dir } = { tid: ctx.tid, dir: ctx.dir };
+  // convidar o e-mail de uma conta que já existe não gera link de senha (ninguém troca a senha de outra pessoa)
+  const conv = await dir.chamar("convidarMembro", { tid, email: "equipe@somos.test", nome: "Equipe", papel: "portaria" });
+  assert.equal(conv.contaNova, false);
+  assert.equal(conv.linkDefinirSenha ?? null, null);
+  const novo = await dir.chamar("convidarMembro", { tid, email: "porteiro2@brasil.test", nome: "Porteiro Dois", papel: "portaria" });
+  assert.equal(novo.contaNova, true);
+  assert.equal(novo.linkDefinirSenha ?? null, null); // nem para conta nova: o link vai só por e-mail ao convidado
+
+  // compra de 2 ingressos no cartão
+  const ev = await addDoc(collection(dir.db, `torcidas/${tid}/eventos`), {
+    nome: "Jogo do estorno", sedeId: ctx.sedePrincipal, data: Timestamp.fromMillis(Date.now() + 9 * 86400_000),
+    valorSocio: 5000, valorPublico: 5000, capacidade: 10, vendidos: 0, reservados: 0, status: "publicado",
+  });
+  const b = navegador("estorno");
+  await createUserWithEmailAndPassword(b.auth, "estorno@x.test", SENHA);
+  const r = await b.chamar("criarPedidoIngresso", {
+    tid, eventoId: ev.id, metodo: "cartao",
+    comprador: { nome: "Compra Estorno", email: "estorno@x.test", cpf: "86288366757", telefone: "71988880001" },
+    titulares: [{ nome: "Compra Estorno", cpf: "86288366757" }, { nome: "Amigo Estorno", cpf: "11144477735" }],
+    cartao: { token: "tok_ok", endereco: { cep: "40000000", logradouro: "Rua E", numero: "1", bairro: "Centro", cidade: "Salvador", uf: "BA" } },
+  });
+  assert.equal(r.status, "pago");
+  const ped = (await aDb.doc(`torcidas/${tid}/pedidos/${r.pedidoId}`).get()).data();
+  const evento = (id) => ({ id, type: "charge.refunded", data: { id: ped.pagarme.chargeId, order: { id: ped.pagarme.orderId } } });
+  const situacao = async () => (await aDb.collection(`torcidas/${tid}/ingressos`).where("pedidoId", "==", r.pedidoId).get()).docs.map((d) => d.get("status"));
+
+  // webhook forjado (sem estorno de verdade na Pagar.me) não cancela nada
+  assert.equal(await webhook(tid, ctx.webhookToken, evento("hook_forjado")), 200);
+  assert.deepEqual(await situacao(), ["valido", "valido"]);
+  // estorno parcial: não cancela tudo, fica marcado para a diretoria
+  await fetch(`http://127.0.0.1:4010/__estornar/${ped.pagarme.orderId}?valor=5500`, { method: "POST" });
+  assert.equal(await webhook(tid, ctx.webhookToken, evento("hook_parcial")), 200);
+  assert.deepEqual(await situacao(), ["valido", "valido"]);
+  assert.equal((await aDb.doc(`torcidas/${tid}/pedidos/${r.pedidoId}`).get()).get("estornoParcial").valor, 5500);
+  // estorno do restante: agora sim cancela
+  await fetch(`http://127.0.0.1:4010/__estornar/${ped.pagarme.orderId}?valor=5500`, { method: "POST" });
+  assert.equal(await webhook(tid, ctx.webhookToken, evento("hook_total")), 200);
+  assert.deepEqual(await situacao(), ["cancelado", "cancelado"]);
+  assert.equal((await aDb.doc(`torcidas/${tid}/pedidos/${r.pedidoId}`).get()).get("status"), "estornado");
+
+  // sócio: adesão no Pix estornada → validade volta e a associação é cancelada
+  const s = navegador("socio-estorno");
+  await createUserWithEmailAndPassword(s.auth, "socioestorno@x.test", SENHA);
+  const ad = await s.chamar("aderirSocio", {
+    tid, planoId: "mensal", sedeId: ctx.sedePrincipal, metodo: "pix",
+    dados: { nome: "Sócio Estorno", cpf: "12345678909", telefone: "71977770002", nascimento: "1992-02-02",
+      endereco: { cep: "40000000", logradouro: "Rua S", numero: "2", bairro: "Centro", cidade: "Salvador", uf: "BA" } },
+  });
+  const pedSocio = (await aDb.doc(`torcidas/${tid}/pedidos/${ad.pedidoId}`).get()).data();
+  await fetch(`http://127.0.0.1:4010/__pagar/${pedSocio.pagarme.orderId}`, { method: "POST" });
+  assert.equal((await s.chamar("verificarPedido", { tid, pedidoId: ad.pedidoId })).status, "pago");
+  const uidS = s.auth.currentUser.uid;
+  assert.equal((await aDb.doc(`torcidas/${tid}/socios/${uidS}`).get()).get("status"), "ativo");
+  await fetch(`http://127.0.0.1:4010/__estornar/${pedSocio.pagarme.orderId}`, { method: "POST" });
+  const pedSocioPago = (await aDb.doc(`torcidas/${tid}/pedidos/${ad.pedidoId}`).get()).data();
+  assert.equal(await webhook(tid, ctx.webhookToken, { id: "hook_socio", type: "charge.chargedback", data: { id: pedSocioPago.pagarme.chargeId, order: { id: pedSocioPago.pagarme.orderId } } }), 200);
+  assert.equal((await aDb.doc(`torcidas/${tid}/socios/${uidS}`).get()).get("status"), "cancelado");
+
+  // cancelado pela diretoria não se reativa pagando nem se associando de novo
+  const s2 = navegador("socio-cancelado");
+  await signInWithEmailAndPassword(s2.auth, "socio@x.test", SENHA);
+  await dir.chamar("alterarStatusSocio", { tid, socioUid: s2.auth.currentUser.uid, acao: "cancelar" });
+  await assert.rejects(s2.chamar("pagarMensalidade", { tid }), /cancelada/);
 });
 
 test("13. Storage: sócio envia a própria foto; estranhos são barrados", async () => {

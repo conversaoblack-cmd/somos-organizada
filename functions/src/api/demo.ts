@@ -6,7 +6,7 @@ import { exigirLogin } from "../dominio/permissoes";
 import { confirmarPedidoPago } from "../dominio/processamento";
 import { pagarmeDaTorcida } from "../pagarme/credenciais";
 import { PagarmeDemo } from "../pagarme/demo";
-import { sincronizarRecebedor } from "./recebedores";
+import { paraQuemPediu, sincronizarRecebedor } from "./recebedores";
 import type { Membro } from "../dominio/permissoes";
 import type { Pedido, Torcida } from "../dominio/tipos";
 
@@ -45,5 +45,5 @@ export const simularDemo = onCall({ secrets: [MASTER_KEY, QR_HMAC, EMAIL_API_KEY
   if (!recebedorId) throw new HttpsError("failed-precondition", "Esta sede ainda não cadastrou a conta de recebimento.");
   await pg.aprovarRecebedor(recebedorId);
   const r = await sincronizarRecebedor(tid, sedeId, pg);
-  return { recebedor: r };
+  return { recebedor: paraQuemPediu(ativo.papel, r) };
 });

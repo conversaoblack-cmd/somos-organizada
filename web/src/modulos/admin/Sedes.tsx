@@ -7,7 +7,7 @@ import { Botao, BotaoIcone, CabecalhoPagina, Campo, Cartao, cx, Gaveta, Icone, S
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
 import { Confirmar, EstadoLista } from "./util";
-import { infoRecebedor, nomeBanco, SeloRecebedor } from "./recebedor";
+import { infoRecebedor, SeloRecebedor } from "./recebedor";
 
 interface Form {
   nome: string;
@@ -87,7 +87,7 @@ export default function Sedes() {
               </div>
               <p className="text-xs mt-1 text-texto-2">
                 {s.recebedor
-                  ? `${s.recebedor.nomeTitular} · ${nomeBanco(s.recebedor.banco.codigo)} · ag. ${s.recebedor.banco.agencia} · conta ${s.recebedor.banco.conta}`
+                  ? "Cadastrada pelo responsável da subsede. Por segurança, os dados bancários ficam só com ele."
                   : "O responsável cadastra pelo painel da subsede, em Recebimentos. Sem ela, os eventos da subsede não podem ser publicados."}
               </p>
             </div>

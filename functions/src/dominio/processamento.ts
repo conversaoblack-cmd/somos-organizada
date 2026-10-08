@@ -156,7 +156,8 @@ function confirmarNaTransacao(tid: string, pedidoId: string, pg: PgPedido, segre
     const atual = s.validoAte?.toDate();
     const base = atual && atual > agora ? atual : agora;
     const validoAte = avancarCiclo(base, s.intervalo, s.intervaloQtd);
-    const novoStatus = statusAposPagamento(s.status, torcida.aprovacaoManualSocio);
+    // Cancelado/suspenso pela diretoria continua assim mesmo se uma cobrança antiga for paga
+    const novoStatus = s.bloqueadoPelaDiretoria ? s.status : statusAposPagamento(s.status, torcida.aprovacaoManualSocio);
     const primeiraAdesao = !s.matricula;
 
     const updSocio: Record<string, unknown> = {
@@ -187,7 +188,8 @@ function confirmarNaTransacao(tid: string, pedidoId: string, pg: PgPedido, segre
     somarStats(tx, tid, mes, {
       receitaSocios: p.valorBase, taxaServico: p.taxa, pedidosPagos: 1, ...(primeiraAdesao ? { novosSocios: 1 } : {}),
     });
-    tx.update(pRef, { status: "pago", pagoEm: FieldValue.serverTimestamp() });
+    // Guarda o ciclo que este pagamento comprou: se ele for estornado, a validade volta junto
+    tx.update(pRef, { status: "pago", pagoEm: FieldValue.serverTimestamp(), cicloAnterior: s.validoAte ?? null, cicloNovo: Timestamp.fromDate(validoAte) });
     return { socioStatus: novoStatus };
   });
 }
@@ -259,7 +261,7 @@ export async function encerrarPedidoNaoPago(
 }
 
 /** Estorno feito na Pagar.me: cancela ingressos e lança valores negativos no extrato. */
-export async function estornarPedido(tid: string, pedidoId: string) {
+export async function estornarPedido(tid: string, pedidoId: string, motivo: "estorno" | "chargeback" = "estorno") {
   return db.runTransaction(async (tx) => {
     const pRef = refs.pedido(tid, pedidoId);
     const p = (await tx.get(pRef)).data() as Pedido | undefined;
@@ -275,8 +277,19 @@ export async function estornarPedido(tid: string, pedidoId: string) {
       sedeBase = ev?.sedeId ?? sedeBase;
       tx.update(refs.evento(tid, p.eventoId), { vendidos: FieldValue.increment(-ingressos.length) });
     } else if (p.socioUid) {
-      const s = (await tx.get(refs.socio(tid, p.socioUid))).data() as Socio | undefined;
+      const sRef = refs.socio(tid, p.socioUid);
+      const s = (await tx.get(sRef)).data() as Socio | undefined;
       if (s && torcida.destinoMensalidade !== "principal") sedeBase = s.sedeId;
+      // Mensalidade estornada (ou chargeback): tira da validade o ciclo que esse pagamento tinha comprado
+      if (s?.validoAte && p.cicloNovo) {
+        const comprado = p.cicloAnterior ? p.cicloNovo.toMillis() - p.cicloAnterior.toMillis() : s.validoAte.toMillis() - (p.pagoEm?.toMillis() ?? s.validoAte.toMillis());
+        const novaValidade = s.validoAte.toMillis() - Math.max(0, comprado);
+        let novoStatus = s.status;
+        if (!p.cicloAnterior && s.validoAte.toMillis() === p.cicloNovo.toMillis()) novoStatus = "cancelado"; // estornou a adesão
+        else if (novaValidade < Date.now() && (s.status === "ativo" || s.status === "em_analise")) novoStatus = "inadimplente";
+        tx.update(sRef, { validoAte: Timestamp.fromMillis(novaValidade), status: novoStatus, atualizadoEm: FieldValue.serverTimestamp() });
+        if (novoStatus !== s.status) contarMudancaStatus(tx, tid, s.status, novoStatus);
+      }
     }
     for (const snap of ingressos) {
       if (snap.exists && snap.get("status") === "valido") tx.update(snap.ref, { status: "cancelado" });
@@ -296,7 +309,7 @@ export async function estornarPedido(tid: string, pedidoId: string) {
       taxaServico: -p.taxa,
       estornos: 1,
     });
-    tx.update(pRef, { status: "estornado", estornadoEm: FieldValue.serverTimestamp() });
+    tx.update(pRef, { status: "estornado", motivoEstorno: motivo, estornadoEm: FieldValue.serverTimestamp() });
     return true;
   });
 }

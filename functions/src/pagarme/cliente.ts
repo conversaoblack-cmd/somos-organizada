@@ -91,6 +91,8 @@ export interface PgCharge {
   status: string;
   amount: number;
   paid_amount?: number;
+  /** valor já devolvido/cancelado (estorno total ou parcial) */
+  canceled_amount?: number;
   payment_method: string;
   last_transaction?: PgTransacao;
 }

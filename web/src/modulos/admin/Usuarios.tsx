@@ -14,21 +14,24 @@ import { BotaoCopiar, Confirmar, EstadoLista } from "./util";
 interface Convite {
   nome: string;
   email: string;
-  link: string;
+  painel: string;
+  contaNova: boolean;
   emailEnviado: boolean;
 }
 
 /**
- * Gera o convite (acesso + link para definir a senha) e dispara o e-mail automático do Firebase,
- * que leva a pessoa de volta ao painel desta torcida depois de criar a senha.
+ * Dá o acesso e, se a conta é nova, o Firebase manda o e-mail de criar senha direto para o convidado.
+ * O link de senha nunca aparece para quem convidou: só o convidado define a própria senha (anti-fraude:
+ * ninguém da diretoria consegue entrar como diretor da subsede e trocar a conta de recebimento dele).
  */
 async function enviarConvite(args: { tid: string; slug: string; nome: string; email: string; papel: Papel; sedeId?: string }): Promise<Convite> {
   const { tid, slug, nome, email, papel, sedeId } = args;
   const r = await api.convidarMembro({ tid, nome, email, papel, ...(papel !== "diretoria" && sedeId ? { sedeId } : {}) });
-  const emailEnviado = await sendPasswordResetEmail(auth, email, { url: `${location.origin}/${slug}/admin` })
-    .then(() => true)
-    .catch(() => false);
-  return { nome, email, link: r.linkDefinirSenha, emailEnviado };
+  const painel = `${location.origin}/${slug}/admin`;
+  const emailEnviado = r.contaNova
+    ? await sendPasswordResetEmail(auth, email, { url: painel }).then(() => true).catch(() => false)
+    : false;
+  return { nome, email, painel, contaNova: r.contaNova, emailEnviado };
 }
 
 const DESCRICAO_PAPEL: Record<Papel, string> = {
@@ -130,29 +133,36 @@ export default function Usuarios() {
       <Modal aberto={!!link} fechar={() => setLink(null)} titulo="Convite enviado" descricao={link ? `${link.nome} já tem acesso ao painel.` : undefined}>
         {link && (
           <div className="space-y-4">
-            {link.emailEnviado ? (
+            {!link.contaNova ? (
+              <Aviso tom="sucesso" titulo="Acesso liberado">
+                <strong className="text-texto">{link.email}</strong> já tem conta na Somos Organizada: é só entrar no painel com a senha de sempre.
+              </Aviso>
+            ) : link.emailEnviado ? (
               <Aviso tom="sucesso" titulo="E-mail enviado">
-                Enviamos um e-mail para <strong className="text-texto">{link.email}</strong> com o link para criar a senha. Se não chegar em alguns minutos (confira o
-                spam), use o link abaixo.
+                Enviamos para <strong className="text-texto">{link.email}</strong> o link para criar a senha. Só essa pessoa recebe o link: ninguém mais vê a senha
+                dela, nem a diretoria.
               </Aviso>
             ) : (
-              <Aviso tom="alerta" titulo="Não conseguimos enviar o e-mail automático">
-                Envie o link abaixo para <strong className="text-texto">{link.email}</strong> pelo WhatsApp ou copie e mande como preferir.
+              <Aviso tom="alerta" titulo="Não conseguimos enviar o e-mail agora">
+                Peça para <strong className="text-texto">{link.email}</strong> abrir o painel e tocar em “Esqueci minha senha” para criar a senha.
               </Aviso>
             )}
-            <div className="rounded-2xl border border-linha bg-superficie-2 p-3 text-xs font-mono break-all text-texto-2 max-h-28 overflow-y-auto">{link.link}</div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <BotaoCopiar texto={link.link} rotulo="Copiar link" variante="contorno" className="h-11 flex-1" />
+              <BotaoCopiar texto={link.painel} rotulo="Copiar endereço do painel" variante="contorno" className="h-11 flex-1" />
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Olá, ${link.nome}! Você foi convidado(a) para o painel. Defina sua senha neste link e depois entre com o e-mail ${link.email}: ${link.link}`)}`}
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  link.contaNova
+                    ? `Olá, ${link.nome}! Você foi convidado(a) para o painel. Abra o e-mail que enviamos para ${link.email} e crie sua senha. Depois entre em ${link.painel}. Não chegou? Lá mesmo toque em “Esqueci minha senha”.`
+                    : `Olá, ${link.nome}! Você já tem acesso ao painel: entre em ${link.painel} com o seu e-mail ${link.email} e a senha de sempre.`,
+                )}`}
                 target="_blank"
                 rel="noreferrer"
                 className="flex-1 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-2xl font-semibold bg-primaria text-sobre-primaria hover:brightness-110"
               >
-                Enviar no WhatsApp
+                Avisar no WhatsApp
               </a>
             </div>
-            <p className="text-xs text-texto-3">O link expira em algumas horas. Se vencer, use “Esqueci minha senha” na tela de login.</p>
+
           </div>
         )}
       </Modal>

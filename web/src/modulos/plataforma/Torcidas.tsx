@@ -259,7 +259,7 @@ interface Criada {
   slug: string;
   nome: string;
   diretor: string;
-  linkDefinirSenha: string;
+  linkDefinirSenha: string | null;
 }
 
 function NovaTorcida({ aberto, fechar, aoCriar, slugsUsados }: { aberto: boolean; fechar: () => void; aoCriar: () => void; slugsUsados: string[] }) {
@@ -407,9 +407,9 @@ function ResultadoCriacao({ c }: { c: Criada }) {
   const painel = `${pagina}/admin`;
   const mensagem =
     `Olá, ${c.diretor.split(" ")[0]}! A ${c.nome} já está na Somos Organizada.\n\n` +
-    `1) Defina sua senha: ${c.linkDefinirSenha}\n` +
-    `2) Painel da diretoria: ${painel}\n` +
-    `3) Página da torcida: ${pagina}\n\n` +
+    (c.linkDefinirSenha
+      ? `1) Defina sua senha: ${c.linkDefinirSenha}\n2) Painel da diretoria: ${painel}\n3) Página da torcida: ${pagina}\n\n`
+      : `Você já tem conta: entre com a senha de sempre.\n1) Painel da diretoria: ${painel}\n2) Página da torcida: ${pagina}\n\n`) +
     `No painel, comece por Pagamentos (conta Pagar.me da torcida). Qualquer dúvida, use o botão de ajuda.`;
   const avisar = useToast();
   return (
@@ -425,8 +425,14 @@ function ResultadoCriacao({ c }: { c: Criada }) {
       </div>
       <LinhaCopiar rotulo="Página pública" valor={pagina} abrir />
       <LinhaCopiar rotulo="Painel da diretoria" valor={painel} abrir />
-      <LinhaCopiar rotulo="Link para definir a senha (diretor)" valor={c.linkDefinirSenha} />
-      <Aviso tom="alerta">O link de senha é pessoal: envie só para o diretor.</Aviso>
+      {c.linkDefinirSenha ? (
+        <>
+          <LinhaCopiar rotulo="Link para definir a senha (diretor)" valor={c.linkDefinirSenha} />
+          <Aviso tom="alerta">O link de senha é pessoal: envie só para o diretor.</Aviso>
+        </>
+      ) : (
+        <Aviso tom="info">Este e-mail já tem conta na Somos Organizada: o diretor entra com a senha que já usa.</Aviso>
+      )}
       <div className="flex flex-col sm:flex-row gap-2">
         <a
           href={`https://wa.me/?text=${encodeURIComponent(mensagem)}`}

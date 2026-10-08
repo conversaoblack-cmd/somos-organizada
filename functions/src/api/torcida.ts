@@ -79,13 +79,16 @@ export async function concederAcesso(args: {
   papel: Papel;
   sedeId?: string;
   convidadoPor: string;
+  devolverLink?: boolean;
 }) {
   const { tid, email, nome, papel, sedeId, convidadoPor } = args;
   let usuario;
+  let contaNova = false;
   try {
     usuario = await auth.getUserByEmail(email);
   } catch {
     usuario = await auth.createUser({ email, displayName: nome, password: tokenAleatorio(18) });
+    contaNova = true;
   }
   const membro: Membro & Record<string, unknown> = {
     uid: usuario.uid,
@@ -99,8 +102,12 @@ export async function concederAcesso(args: {
   };
   await refs.membro(tid, usuario.uid).set(membro, { merge: true });
   await db.doc(`usuarios/${usuario.uid}/acessos/${tid}`).set({ papel, sedeId: sedeId ?? null, ativo: true });
-  const link = await auth.generatePasswordResetLink(email, { url: `${URL_APP.value()}/entrar` });
-  return { uid: usuario.uid, linkDefinirSenha: link };
+  // Link de definir senha só para conta recém-criada e só para quem pediu explicitamente (equipe da plataforma).
+  // Nunca para conta que já existe: quem convida poderia trocar a senha de outra pessoa e entrar no lugar dela.
+  // No convite da diretoria o link vai só por e-mail, direto para o convidado (ninguém mais vê a senha).
+  const linkDefinirSenha =
+    contaNova && args.devolverLink ? await auth.generatePasswordResetLink(email, { url: `${URL_APP.value()}/entrar` }) : null;
+  return { uid: usuario.uid, contaNova, linkDefinirSenha };
 }
 
 export const convidarMembro = onCall(async (req) => {

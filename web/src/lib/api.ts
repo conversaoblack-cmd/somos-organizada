@@ -131,7 +131,7 @@ export const api = {
   obterWebhookUrl: chamar<{ tid: string }, { webhookUrl: string | null }>("obterWebhookUrl"),
   convidarMembro: chamar<
     { tid: string; email: string; nome: string; papel: Papel; sedeId?: string },
-    { uid: string; linkDefinirSenha: string }
+    { uid: string; contaNova: boolean }
   >("convidarMembro"),
   atualizarMembro: chamar<
     { tid: string; uid: string; papel?: Papel; sedeId?: string | null; ativo?: boolean },
@@ -189,7 +189,7 @@ export const api = {
   reivindicarPlataforma: chamar<Record<string, never>, { ok: boolean }>("reivindicarPlataforma"),
   criarTorcida: chamar<
     { nome: string; slug: string; diretor: { nome: string; email: string }; nomeSedePrincipal?: string; mensalidadeSaas?: number },
-    { torcidaId: string; slug: string; linkDefinirSenha: string }
+    { torcidaId: string; slug: string; linkDefinirSenha: string | null }
   >("criarTorcida"),
   atualizarTorcidaPlataforma: chamar<
     {

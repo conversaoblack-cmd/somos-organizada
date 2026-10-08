@@ -43,24 +43,29 @@ export interface Torcida {
 }
 
 /** Status do recebedor na Pagar.me: registration, affiliation, active, refused, suspended, blocked, inactive. */
-export interface RecebedorSede {
+/** Parte pública (fica na sede, que é pública): só o que a página e a diretoria precisam saber. */
+export interface RecebedorPublico {
   id: string;
   status: string;
   kycStatus?: string | null;
+  atualizadoEm: Timestamp;
+}
+
+/** Dados completos: torcidas/{tid}/sedes/{sedeId}/privado/recebedor, visíveis só para a própria subsede. */
+export interface RecebedorSede extends RecebedorPublico {
   nomeTitular: string;
   documentoMascarado: string;
   banco: { codigo: string; agencia: string; conta: string };
   kycUrl?: string | null;
   kycExpiraEm?: string | null;
   cadastradoPor: string;
-  atualizadoEm: Timestamp;
 }
 
 export interface Sede {
   nome: string;
   tipo: "principal" | "subsede";
   ativa: boolean;
-  recebedor?: RecebedorSede;
+  recebedor?: RecebedorPublico;
 }
 
 export type Liquidacao = "split" | "torcida";
@@ -126,6 +131,8 @@ export interface Socio {
   motivoFalhaCobranca?: string;
   /** Recusa definitiva no cartão: a cobrança automática para até o sócio trocar o cartão. */
   cobrancaCartaoPausada?: boolean;
+  /** Suspenso/cancelado pela diretoria: não volta sozinho pagando. */
+  bloqueadoPelaDiretoria?: boolean;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
@@ -160,6 +167,9 @@ export interface Pedido {
   expiraEm?: Timestamp;
   criadoEm: Timestamp;
   pagoEm?: Timestamp;
+  /** sócio: validade antes e depois deste pagamento (para desfazer em caso de estorno) */
+  cicloAnterior?: Timestamp | null;
+  cicloNovo?: Timestamp;
 }
 
 export interface Ingresso {

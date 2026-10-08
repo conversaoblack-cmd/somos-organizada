@@ -47,18 +47,23 @@ export interface Torcida {
 }
 
 /** Conta de recebimento da subsede na Pagar.me (gravada só pelo servidor). */
-export interface RecebedorSede {
+/** Situação pública da conta de recebimento (fica na sede). */
+export interface RecebedorPublico {
   id: string;
   /** registration | affiliation | active | refused | suspended | blocked | inactive */
   status: string;
   kycStatus?: string | null;
-  nomeTitular: string;
-  documentoMascarado: string;
-  banco: { codigo: string; agencia: string; conta: string };
+  atualizadoEm?: Timestamp;
+}
+
+/** Dados completos: sedes/{id}/privado/recebedor, visíveis só para o usuário da própria subsede. */
+export interface RecebedorSede extends RecebedorPublico {
+  nomeTitular?: string;
+  documentoMascarado?: string;
+  banco?: { codigo: string; agencia: string; conta: string };
   kycUrl?: string | null;
   kycExpiraEm?: string | null;
-  cadastradoPor: string;
-  atualizadoEm?: Timestamp;
+  cadastradoPor?: string;
 }
 
 export interface Sede {
@@ -70,7 +75,7 @@ export interface Sede {
   bairro?: string;
   endereco?: string;
   responsavel?: string;
-  recebedor?: RecebedorSede;
+  recebedor?: RecebedorPublico;
 }
 
 export type Intervalo = "mes" | "ano";

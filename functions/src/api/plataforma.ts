@@ -66,7 +66,7 @@ export async function criarTorcidaInterno(args: {
       criadoEm: FieldValue.serverTimestamp(),
     });
   });
-  const acesso = await concederAcesso({ tid: tRef.id, email: diretor.email, nome: diretor.nome, papel: "diretoria", convidadoPor: criadoPor });
+  const acesso = await concederAcesso({ tid: tRef.id, email: diretor.email, nome: diretor.nome, papel: "diretoria", devolverLink: true, convidadoPor: criadoPor });
   return { torcidaId: tRef.id, slug, linkDefinirSenha: acesso.linkDefinirSenha };
 }
 

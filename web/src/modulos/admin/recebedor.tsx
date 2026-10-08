@@ -1,4 +1,4 @@
-import type { RecebedorSede, Sede } from "@/lib/tipos";
+import type { RecebedorPublico, Sede } from "@/lib/tipos";
 import { Selo, type Tom } from "@/ui";
 
 export const RECEBEDOR_ATIVO = "active";
@@ -13,12 +13,12 @@ const STATUS: Record<string, { rotulo: string; tom: Tom; explicacao: string }> =
   inactive: { rotulo: "Inativa", tom: "neutro", explicacao: "A conta está inativa. Cadastre de novo para voltar a receber." },
 };
 
-export function infoRecebedor(r: RecebedorSede | undefined | null) {
+export function infoRecebedor(r: RecebedorPublico | undefined | null) {
   if (!r) return { rotulo: "Sem conta", tom: "neutro" as Tom, explicacao: "A subsede ainda não cadastrou a conta de recebimento." };
   return STATUS[r.status] ?? { rotulo: r.status, tom: "neutro" as Tom, explicacao: "Situação informada pela Pagar.me." };
 }
 
-export function SeloRecebedor({ r, className }: { r: RecebedorSede | undefined | null; className?: string }) {
+export function SeloRecebedor({ r, className }: { r: RecebedorPublico | undefined | null; className?: string }) {
   const i = infoRecebedor(r);
   return (
     <Selo tom={i.tom} ponto className={className}>
@@ -28,7 +28,7 @@ export function SeloRecebedor({ r, className }: { r: RecebedorSede | undefined |
 }
 
 /** Pode cadastrar (de novo) a conta: sem cadastro ou recusada/inativa/bloqueada. */
-export const podeCadastrarRecebedor = (r: RecebedorSede | undefined | null) => !r || ["refused", "inactive", "blocked"].includes(r.status);
+export const podeCadastrarRecebedor = (r: RecebedorPublico | undefined | null) => !r || ["refused", "inactive", "blocked"].includes(r.status);
 
 export const recebedorAtivo = (s: Sede | undefined | null) => !!s && (s.tipo === "principal" || s.recebedor?.status === RECEBEDOR_ATIVO);
 

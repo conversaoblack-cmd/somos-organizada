@@ -77,8 +77,19 @@ async function processar(tid: string, tipo: string, evento: EventoPg, pg: Pagarm
     const pedidoId = pedidoPg.code || pedidoPg.metadata?.pedidoId;
     if (!pedidoId || !(await refs.pedido(tid, pedidoId).get()).exists) return "pedido_externo";
 
-    if (tipo === "charge.refunded" || tipo === "charge.chargedback") {
-      return (await estornarPedido(tid, pedidoId)) ? "estornado" : "ignorado";
+    if (tipo === "charge.refunded" || tipo === "charge.chargedback" || tipo === "charge.partial_canceled") {
+      // O corpo do webhook não é assinado: quem decide é a cobrança relida na API da Pagar.me
+      const ch = pedidoPg.charges?.find((c) => c.id === data.id) ?? pedidoPg.charges?.[0];
+      const st = ch?.status ?? "";
+      if (["refunded", "chargedback", "canceled"].includes(st) && (ch?.canceled_amount ?? ch?.amount ?? 0) >= (ch?.amount ?? 0)) {
+        return (await estornarPedido(tid, pedidoId, st === "chargedback" ? "chargeback" : "estorno")) ? "estornado" : "ignorado";
+      }
+      if ((ch?.canceled_amount ?? 0) > 0) {
+        // Estorno parcial (ex.: 1 de 4 ingressos): não cancela tudo; fica marcado para a diretoria resolver
+        await refs.pedido(tid, pedidoId).update({ estornoParcial: { valor: ch!.canceled_amount, em: FieldValue.serverTimestamp() } });
+        return "estorno_parcial_manual";
+      }
+      return "estorno_nao_confirmado";
     }
     if (pedidoPg.status === "paid") {
       await confirmarPedidoPago(tid, pedidoId, pedidoPg, QR_HMAC.value());
