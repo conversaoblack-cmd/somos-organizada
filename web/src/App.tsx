@@ -114,9 +114,19 @@ function Rotas() {
   );
 }
 
+/** Página nova começa do topo (o React Router mantém a rolagem da anterior). Âncoras (#comprar) e abas (?aba=) não mexem. */
+function RolarAoTopo() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (!location.hash) window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
 export function App() {
   return (
     <LimiteDeErro>
+      <RolarAoTopo />
       <Suspense fallback={<TelaCarregando />}>
         <Rotas />
       </Suspense>

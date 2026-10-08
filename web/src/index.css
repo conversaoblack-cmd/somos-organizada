@@ -93,6 +93,10 @@
   /* toque responde na hora (sem a espera do toque duplo), sem o flash cinza do Android */
   html { -webkit-tap-highlight-color: transparent; }
   a, button, input, select, textarea, label, summary, [role="button"], [role="tab"] { touch-action: manipulation; }
+  /* Botão flutuante de ajuda: some quando há janela/gaveta aberta e, no celular, a página ganha espaço
+     no fim para ele não tapar preço, etiqueta ou botão do último item */
+  body:not([data-camadas="0"])[data-camadas] [data-botao-ajuda] { display: none; }
+  @media (max-width: 1023px) { body:has([data-botao-ajuda]) { padding-bottom: 5rem; } }
   /* select nativo legível no modo escuro do Windows/Android */
   select, option { background-color: var(--color-superficie-2); color: var(--color-texto); }
   @media (prefers-reduced-motion: reduce) {

@@ -17,6 +17,7 @@ function useCamada(aberto: boolean, fechar: () => void, ref: React.RefObject<HTM
     if (!aberto) return;
     const id = Symbol("camada");
     pilha.push(id);
+    document.body.dataset.camadas = String(pilha.length);
     if (travas++ === 0) {
       overflowAntes = document.body.style.overflow;
       document.body.style.overflow = "hidden";
@@ -46,6 +47,7 @@ function useCamada(aberto: boolean, fechar: () => void, ref: React.RefObject<HTM
     return () => {
       window.removeEventListener("keydown", tecla);
       pilha.splice(pilha.indexOf(id), 1);
+      document.body.dataset.camadas = String(pilha.length);
       if (--travas === 0) document.body.style.overflow = overflowAntes;
       // devolve o foco a quem abriu (botão "Editar", "Excluir"...)
       if (antes && document.contains(antes)) antes.focus({ preventScroll: true });

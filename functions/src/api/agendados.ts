@@ -2,6 +2,7 @@ import { avisarCartaoRecusado, avisarRenovacaoPix } from "../email/avisos";
 import { aplicarRespostaPedido } from "./ingressos";
 import { migrarRecebedoresAntigos } from "./recebedores";
 import { FALHA_TECNICA } from "../pagarme/recusas";
+import { randomInt } from "node:crypto";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions/v2";
 import { EMAIL_API_KEY, FUSO, MASTER_KEY, PADROES, QR_HMAC } from "../config";
@@ -13,6 +14,34 @@ import { criarCobrancaSocio, sincronizarFaturas } from "./socios";
 import type { Pedido, Socio, StatusSocio, Torcida } from "../dominio/tipos";
 
 const torcidaDe = (ref: FirebaseFirestore.DocumentReference) => ref.parent.parent!.id;
+
+/** Mesmo alfabeto do link curto (web/src/lib/eventos.ts): sem 0/o, 1/l/i. */
+const ALFABETO_EVENTO = "abcdefghjkmnpqrstuvwxyz23456789";
+export function codigoEvento(): string {
+  return Array.from({ length: 6 }, () => ALFABETO_EVENTO[randomInt(ALFABETO_EVENTO.length)]).join("");
+}
+
+/**
+ * Eventos criados antes do link curto (/torcida/e/codigo) ganham o código, para todo link divulgado ser curto.
+ * Só eventos futuros (os passados não são mais divulgados). Idempotente: quem já tem código não muda.
+ */
+export async function darCodigoAosEventos(): Promise<number> {
+  let n = 0;
+  const torcidas = await db.collection("torcidas").select().get();
+  for (const t of torcidas.docs) {
+    const futuros = await t.ref.collection("eventos").where("data", ">=", Timestamp.fromMillis(Date.now() - dias(1))).get();
+    for (const e of futuros.docs) {
+      if (e.get("codigo")) continue;
+      await db.runTransaction(async (tx) => {
+        const atual = await tx.get(e.ref);
+        if (!atual.exists || atual.get("codigo")) return;
+        tx.update(e.ref, { codigo: codigoEvento() });
+        n++;
+      });
+    }
+  }
+  return n;
+}
 
 /** A cada 15 min: pedidos vencidos. Antes de expirar, confere na Pagar.me se não foram pagos no último segundo. */
 export const expirarPedidos = onSchedule(
@@ -77,6 +106,7 @@ export const rotinaSocios = onSchedule(
   { schedule: "10 7 * * *", timeZone: FUSO, secrets: [MASTER_KEY, QR_HMAC, EMAIL_API_KEY], timeoutSeconds: 540 },
   async () => {
     await migrarRecebedoresAntigos().catch((e) => logger.error("Migração de recebedores", { erro: String(e) }));
+    await darCodigoAosEventos().catch((e) => logger.error("Código curto dos eventos", { erro: String(e) }));
     const agora = Date.now();
     const torcidas = new Map<string, Torcida | null>();
     const torcida = async (tid: string) => {

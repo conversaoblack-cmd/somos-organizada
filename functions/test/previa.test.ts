@@ -45,3 +45,8 @@ test("prévia da torcida usa textos e banner; sem imagem vira cartão simples", 
   assert.doesNotMatch(sem, /og:image/);
   assert.match(sem, /twitter:card" content="summary"/);
 });
+
+test("código curto de evento gerado no servidor segue o formato das regras", async () => {
+  const { codigoEvento } = await import("../src/api/agendados");
+  for (let i = 0; i < 200; i++) assert.match(codigoEvento(), /^[a-hjkmnp-z2-9]{6}$/);
+});

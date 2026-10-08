@@ -235,15 +235,15 @@ export function Tour({
           />
         )}
 
-        <div className="mt-4 flex items-center gap-2">
-          <div className="flex gap-1 mr-auto" aria-hidden="true">
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+          <div className="flex gap-1 mr-auto basis-full sm:basis-auto mb-1 sm:mb-0" aria-hidden="true">
             {passos.map((_, n) => (
               <span key={n} className={cx("h-1.5 rounded-full transition-all", n === i ? "w-5 bg-primaria" : "w-1.5 bg-superficie-3")} />
             ))}
           </div>
           {video && !(i === 0 && !celular) && (
-            <Botao variante="fantasma" tamanho="sm" icone="camera" onClick={() => setVerVideo((v) => !v)}>
-              {verVideo ? "Esconder vídeo" : "Ver vídeo"}
+            <Botao variante="fantasma" tamanho="sm" icone="camera" onClick={() => setVerVideo((v) => !v)} aria-label={verVideo ? "Esconder vídeo" : "Ver vídeo"}>
+              <span className="hidden min-[400px]:inline">{verVideo ? "Esconder vídeo" : "Ver vídeo"}</span>
             </Botao>
           )}
           {i === 0 ? (
