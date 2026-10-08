@@ -149,27 +149,41 @@ echo "web/.env.production.local gerado (e WEB_API_KEY em functions/.env)."
 passo "Build do front-end"
 npm --prefix web run build
 
-passo "Deploy (pode levar alguns minutos na primeira vez)"
+passo "Deploy do site, regras e índices"
 echo "Se o Firebase perguntar se pode dar ao Storage acesso de leitura ao Firestore, responda Y."
-# Projeto novo: o Google limita CPU por região. Enquanto uma function é atualizada, a versão velha e a nova
-# coexistem por alguns instantes, então uma falha de cota pode ser passageira: tenta o deploy completo de novo
-# (completo, para não deixar site, regras ou índices para trás).
-LOG_DEPLOY="$(mktemp)"
-if ! firebase deploy --project "$PROJETO" 2>&1 | tee "$LOG_DEPLOY"; then
-  aviso "Parte do deploy falhou. Tentando o deploy completo de novo em 90s..."
-  sleep 90
-  if ! firebase deploy --project "$PROJETO" 2>&1 | tee "$LOG_DEPLOY"; then
-    if grep -q "Quota exceeded for total allowable CPU" "$LOG_DEPLOY"; then
-      rm -f "$LOG_DEPLOY"
-      falha "Cota de CPU do Google esgotada nesta região. Escolha um caminho e rode o script de novo:
-  a) diminuir o fôlego: em functions/.env coloque MAX_INSTANCIAS=1 e MAX_INSTANCIAS_PUBLICAS=3;
-  b) pedir aumento: console.cloud.google.com/iam-admin/quotas → 'Total CPU allocation' em southamerica-east1."
-    fi
-    rm -f "$LOG_DEPLOY"
-    falha "O deploy falhou duas vezes. Veja a mensagem acima (ou mande um print) e rode o script de novo."
-  fi
+if ! firebase deploy --except functions --project "$PROJETO"; then
+  aviso "Falhou; tentando de novo em 30s..."
+  sleep 30
+  firebase deploy --except functions --project "$PROJETO" || falha "O deploy do site/regras falhou duas vezes. Mande um print do erro acima."
 fi
-rm -f "$LOG_DEPLOY"
+
+passo "Deploy das functions em lotes"
+# Projeto novo tem cota baixa de CPU por região, e cada function sobe um servidor de verificação enquanto é
+# atualizada. Mandar as 39 de uma vez estoura a cota; em lotes pequenos, uma leva termina antes da próxima.
+npm --prefix functions run build >/dev/null
+read -r -a FUNCOES <<< "$(node -e "process.stdout.write(Object.keys(require('./functions/lib/index.js')).join(' '))")"
+LOTE="${LOTE_FUNCOES:-6}"
+FALHAS=""
+TOTAL_LOTES=$(( (${#FUNCOES[@]} + LOTE - 1) / LOTE ))
+for ((i = 0; i < ${#FUNCOES[@]}; i += LOTE)); do
+  GRUPO=("${FUNCOES[@]:i:LOTE}")
+  ALVO="$(printf 'functions:%s,' "${GRUPO[@]}")"; ALVO="${ALVO%,}"
+  echo; echo "Lote $(( i / LOTE + 1 ))/$TOTAL_LOTES: ${GRUPO[*]}"
+  OK=0
+  for TENTATIVA in 1 2 3; do
+    if firebase deploy --only "$ALVO" --project "$PROJETO"; then OK=1; break; fi
+    [ "$TENTATIVA" = 3 ] || { aviso "Lote falhou (tentativa $TENTATIVA/3). Esperando 60s para o Google liberar a CPU..."; sleep 60; }
+  done
+  [ "$OK" = 1 ] || FALHAS="$FALHAS ${GRUPO[*]}"
+done
+if [ -n "$FALHAS" ]; then
+  falha "Não subiram:$FALHAS
+Rode o script de novo (ele refaz tudo e as que já subiram passam rápido). Se repetir:
+  a) lotes menores: LOTE_FUNCOES=3 bash scripts/implantar.sh
+  b) menos fôlego: em functions/.env coloque MAX_INSTANCIAS=1 e MAX_INSTANCIAS_PUBLICAS=3
+  c) aumento de cota: console.cloud.google.com/iam-admin/quotas → 'Total CPU allocation' em southamerica-east1"
+fi
+echo "Todas as ${#FUNCOES[@]} functions no ar."
 
 passo "Domínio autorizado no login (Firebase Authentication)"
 # Sem isso, login, convite e "esqueci minha senha" falham no domínio próprio. Feito sozinho se o gcloud estiver
