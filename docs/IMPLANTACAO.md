@@ -98,9 +98,14 @@ O primeiro deploy demora (cria funções, índices e agendamentos). Se o CLI per
 
 ## 7. Domínio
 
-Console → Hosting → **Adicionar domínio personalizado** → `somosorganizada.com.br` (e `www`).
-Siga os registros DNS indicados. O domínio hoje aponta para o site antigo no `brasil-estrutura`:
-remova-o de lá antes, para o Firebase liberar.
+1. Firebase Console → Hosting → **Adicionar domínio personalizado**: `somosorganizada.com.br` e
+   `www.somosorganizada.com.br` (redirecionando para o principal). Se o domínio estava em outro projeto,
+   remova de lá antes.
+2. No Registro.br, deixe só o que o Firebase pedir (A `199.36.158.100`, TXT `hosting-site=...` e o CNAME do www).
+3. Rode `bash scripts/implantar.sh`: ele grava `URL_APP=https://somosorganizada.com.br` em `functions/.env`
+   (links de e-mail, convites e webhook) e, se o `gcloud` estiver logado, autoriza o domínio no login do
+   Firebase. Sem `gcloud`: Authentication → Configurações → Domínios autorizados → adicione os dois.
+   Para outro domínio: `DOMINIO=meudominio.com.br bash scripts/implantar.sh`.
 
 ## 8. Primeiro acesso da equipe
 

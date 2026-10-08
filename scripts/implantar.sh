@@ -18,7 +18,10 @@ set -euo pipefail
 PROJETO="${1:-somos-organizada}"
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 COFRE="$HOME/.somos-organizada/$PROJETO"
-EMAILS_PLATAFORMA="${PLATAFORMA_EMAILS:-conversaoblack@gmail.com}"
+EMAILS_PLATAFORMA="${PLATAFORMA_EMAILS:-conversaoblack@gmail.com,guisodrep@gmail.com}"
+# Domínio próprio já ligado no Firebase Hosting. Vazio (DOMINIO= bash ...) = usar o endereço .web.app
+DOMINIO="${DOMINIO-somosorganizada.com.br}"
+if [ -n "$DOMINIO" ]; then URL_SITE="https://$DOMINIO"; else URL_SITE="https://$PROJETO.web.app"; fi
 
 passo() { printf '\n\033[1;32m▶ %s\033[0m\n' "$*"; }
 aviso() { printf '\033[1;33m⚠ %s\033[0m\n' "$*"; }
@@ -91,12 +94,20 @@ else
 fi
 
 passo "Parâmetros das functions"
-if [ ! -f functions/.env ]; then
-  printf 'URL_APP=https://%s.web.app\nPLATAFORMA_EMAILS=%s\n' "$PROJETO" "$EMAILS_PLATAFORMA" > functions/.env
-  echo "functions/.env criado (URL_APP=https://$PROJETO.web.app)."
-else
-  echo "functions/.env já existe, mantido:"; cat functions/.env
-fi
+# Cria ou atualiza functions/.env: endereço do site (links de e-mail, convites e webhook) e e-mails da equipe.
+# Preserva o resto (WEB_API_KEY, MAX_INSTANCIAS, EMAIL_REMETENTE...).
+touch functions/.env
+node -e '
+  const fs = require("fs");
+  const [url, emails] = process.argv.slice(1);
+  const linhas = fs.readFileSync("functions/.env", "utf8").split("\n").filter(Boolean);
+  const valor = (k) => (linhas.find((l) => l.startsWith(k + "=")) || "").slice(k.length + 1);
+  const equipe = [...new Set([...valor("PLATAFORMA_EMAILS").split(","), ...emails.split(",")].map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  const resto = linhas.filter((l) => !/^(URL_APP|PLATAFORMA_EMAILS)=/.test(l));
+  fs.writeFileSync("functions/.env", [`URL_APP=${url}`, `PLATAFORMA_EMAILS=${equipe.join(",")}`, ...resto].join("\n") + "\n");
+' "$URL_SITE" "$EMAILS_PLATAFORMA"
+echo "functions/.env: URL_APP=$URL_SITE"
+grep '^PLATAFORMA_EMAILS=' functions/.env
 
 passo "Configuração do app Web"
 JSON_APPS="$(firebase apps:list WEB --project "$PROJETO" --json 2>/dev/null || echo '{}')"
@@ -152,14 +163,44 @@ if ! firebase deploy --project "$PROJETO" 2>&1 | tee "$LOG_DEPLOY"; then
 fi
 rm -f "$LOG_DEPLOY"
 
+passo "Domínio autorizado no login (Firebase Authentication)"
+# Sem isso, login, convite e "esqueci minha senha" falham no domínio próprio. Feito sozinho se o gcloud estiver
+# instalado e logado; senão, é um clique no console.
+AUTH_OK=0
+if [ -n "$DOMINIO" ] && command -v gcloud >/dev/null 2>&1 && TOKEN="$(gcloud auth print-access-token 2>/dev/null)"; then
+  API="https://identitytoolkit.googleapis.com/admin/v2/projects/$PROJETO/config"
+  CFG="$(curl -fsS -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJETO" "$API" 2>/dev/null || true)"
+  if [ -n "$CFG" ]; then
+    CORPO="$(node -e '
+      const cfg = JSON.parse(process.argv[1]); const d = process.argv[2];
+      const atuais = cfg.authorizedDomains || [];
+      const novos = [...new Set([...atuais, d, "www." + d])];
+      if (novos.length !== atuais.length) process.stdout.write(JSON.stringify({ authorizedDomains: novos }));
+    ' "$CFG" "$DOMINIO" 2>/dev/null || echo ERRO)"
+    if [ "$CORPO" = "ERRO" ]; then
+      :
+    elif [ -z "$CORPO" ]; then
+      echo "$DOMINIO já está autorizado."; AUTH_OK=1
+    elif curl -fsS -X PATCH -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJETO" -H "Content-Type: application/json" \
+      "$API?updateMask=authorizedDomains" -d "$CORPO" >/dev/null 2>&1; then
+      echo "$DOMINIO e www.$DOMINIO autorizados."; AUTH_OK=1
+    fi
+  fi
+fi
+unset TOKEN
+if [ -n "$DOMINIO" ] && [ "$AUTH_OK" != "1" ]; then
+  aviso "Confira no console: Authentication → Configurações → Domínios autorizados → adicione $DOMINIO e www.$DOMINIO"
+  echo "   https://console.firebase.google.com/project/$PROJETO/authentication/settings"
+fi
+
 passo "Pronto!"
 cat <<FIM
-Página:      https://$PROJETO.web.app
-Plataforma:  https://$PROJETO.web.app/plataforma   (entre com $EMAILS_PLATAFORMA)
+Site:        $URL_SITE
+Plataforma:  $URL_SITE/plataforma   (equipe: $(grep '^PLATAFORMA_EMAILS=' functions/.env | cut -d= -f2))
 Chaves:      $COFRE   ← guarde também num cofre de senhas
 
 Próximos passos:
   1. Abra /plataforma, crie a conta com o e-mail acima, confirme o e-mail e clique em "Ativar acesso da equipe".
   2. Crie a primeira torcida e mande o link de senha para o diretor.
-  3. Quando apontar o domínio próprio, troque URL_APP em functions/.env e rode este script de novo.
+  3. Domínio próprio: confira se $DOMINIO está em Authentication → Configurações → Domínios autorizados.
 FIM
