@@ -161,8 +161,14 @@ passo "Deploy das functions em lotes"
 # Projeto novo tem cota baixa de CPU por região, e cada function sobe um servidor de verificação enquanto é
 # atualizada. Mandar as 39 de uma vez estoura a cota; em lotes pequenos, uma leva termina antes da próxima.
 npm --prefix functions run build >/dev/null
-read -r -a FUNCOES <<< "$(node -e "process.stdout.write(Object.keys(require('./functions/lib/index.js')).join(' '))")"
-LOTE="${LOTE_FUNCOES:-6}"
+# Ordem: primeiro as de painel/rotina (menos instâncias, liberam cota ao atualizar), por último as do torcedor
+read -r -a FUNCOES <<< "$(node -e "
+  const m = require('./functions/lib/index.js');
+  const publica = (n) => String(m[n] && m[n].__endpoint && m[n].__endpoint.maxInstances).includes('PUBLICAS');
+  const nomes = Object.keys(m);
+  process.stdout.write([...nomes.filter((n) => !publica(n)), ...nomes.filter(publica)].join(' '));
+")"
+LOTE="${LOTE_FUNCOES:-3}"
 FALHAS=""
 TOTAL_LOTES=$(( (${#FUNCOES[@]} + LOTE - 1) / LOTE ))
 for ((i = 0; i < ${#FUNCOES[@]}; i += LOTE)); do

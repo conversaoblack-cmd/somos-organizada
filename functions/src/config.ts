@@ -22,10 +22,11 @@ export const PLATAFORMA_EMAILS = defineString("PLATAFORMA_EMAILS", { default: "c
 
 // Cota de CPU por região do Cloud Run = soma de (vCPU × máx. instâncias) de todas as funções, e projeto
 // novo tem cota baixa. Cada instância (1 vCPU) atende 80 pedidos ao mesmo tempo (o trabalho é quase todo
-// espera de Firestore e Pagar.me). Padrão enxuto e mais fôlego só onde o torcedor está (ESCALA_PUBLICA).
+// espera de Firestore e Pagar.me). Padrão enxuto (1 instância = 80 pedidos simultâneos; painéis e rotinas)
+// e 3 instâncias (240 simultâneos) onde o torcedor está (ESCALA_PUBLICA). Total: 28×1 + 11×3 = 61 vCPU.
 // Ajustável por projeto em functions/.env, sem mexer no código: MAX_INSTANCIAS e MAX_INSTANCIAS_PUBLICAS.
-export const MAX_INSTANCIAS = defineInt("MAX_INSTANCIAS", { default: 2 });
-export const MAX_INSTANCIAS_PUBLICAS = defineInt("MAX_INSTANCIAS_PUBLICAS", { default: 5 });
+export const MAX_INSTANCIAS = defineInt("MAX_INSTANCIAS", { default: 1 });
+export const MAX_INSTANCIAS_PUBLICAS = defineInt("MAX_INSTANCIAS_PUBLICAS", { default: 3 });
 setGlobalOptions({ region: REGIAO, maxInstances: MAX_INSTANCIAS, cpu: 1, concurrency: 80, memory: "512MiB" });
 /** Compra, pagamento, aviso da Pagar.me, carteirinha, login por CPF e portaria. */
 export const ESCALA_PUBLICA = { maxInstances: MAX_INSTANCIAS_PUBLICAS };
