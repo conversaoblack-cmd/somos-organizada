@@ -55,21 +55,32 @@ passo "Rodando os testes de regra de negócio"
 npm --prefix functions test >/dev/null && echo "Testes OK"
 
 passo "Chaves de segurança (MASTER_KEY e QR_HMAC)"
+# REGRA DE OURO: num projeto que já existe, este script NUNCA cria nem troca a MASTER_KEY/QR_HMAC.
+# Trocar a MASTER_KEY deixaria ilegíveis as chaves Pagar.me das torcidas; trocar a QR_HMAC invalidaria
+# todos os ingressos e carteirinhas. A existência é conferida pelos METADADOS do segredo (secrets:get), que
+# qualquer conta com acesso ao projeto enxerga, e não pelo valor (que contas "Editor" não podem ler).
+# Chave nova só com pedido explícito (CRIAR_CHAVES=1) e confirmação digitada, para projeto novo.
 mkdir -p "$COFRE"
 chmod 700 "$COFRE"
 for SEGREDO in MASTER_KEY QR_HMAC; do
   ARQ="$COFRE/$SEGREDO"
-  if firebase functions:secrets:access "$SEGREDO" --project "$PROJETO" >/dev/null 2>&1; then
-    echo "$SEGREDO já existe no Secret Manager. Mantido sem alteração."
-    [ -f "$ARQ" ] || aviso "Não há cópia local de $SEGREDO nesta máquina (ela foi criada em outro computador). Tudo bem, só não apague o segredo no Google."
-  else
-    if [ ! -f "$ARQ" ]; then
-      node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" > "$ARQ"
-      chmod 600 "$ARQ"
-      echo "$SEGREDO gerada."
-    fi
+  if firebase functions:secrets:get "$SEGREDO" --project "$PROJETO" >/dev/null 2>&1; then
+    echo "$SEGREDO já existe no Secret Manager. Mantida sem alteração."
+    [ -f "$ARQ" ] || aviso "Não há cópia local de $SEGREDO nesta máquina (ela foi criada em outro computador). Tudo bem: a chave de verdade fica no Google."
+  elif [ "${RESTAURAR_CHAVES:-0}" = "1" ] && [ -f "$ARQ" ]; then
     firebase functions:secrets:set "$SEGREDO" --data-file "$ARQ" --project "$PROJETO" >/dev/null
-    echo "$SEGREDO gravada no Secret Manager."
+    echo "$SEGREDO restaurada no Secret Manager a partir da cópia local."
+  elif [ "${CRIAR_CHAVES:-0}" = "1" ]; then
+    echo "Vai CRIAR uma $SEGREDO nova no projeto '$PROJETO'. Só faça isso em projeto novo, sem torcidas."
+    read -r -p "Para confirmar, digite o nome do projeto: " CONFIRMA
+    [ "$CONFIRMA" = "$PROJETO" ] || falha "Confirmação diferente do nome do projeto. Nada foi criado."
+    [ -f "$ARQ" ] || { node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" > "$ARQ"; chmod 600 "$ARQ"; }
+    firebase functions:secrets:set "$SEGREDO" --data-file "$ARQ" --project "$PROJETO" >/dev/null
+    echo "$SEGREDO criada e gravada no Secret Manager."
+  else
+    falha "Não consegui confirmar a $SEGREDO no Secret Manager do projeto '$PROJETO'. Nada foi alterado.
+Quase sempre é login: rode 'firebase login:list' e confira se é a conta dona do projeto (troque com 'firebase logout' e 'firebase login').
+NUNCA crie chave nova num projeto que já tem torcidas. Só em projeto novo: CRIAR_CHAVES=1 bash scripts/implantar.sh"
   fi
 done
 echo "Cópia de segurança local: $COFRE (somente seu usuário consegue ler)"
@@ -77,7 +88,7 @@ echo "Cópia de segurança local: $COFRE (somente seu usuário consegue ler)"
 passo "E-mails automáticos (Brevo ou Resend)"
 # A chave é digitada aqui no terminal (não aparece na tela), vai direto para o Secret Manager e o arquivo
 # temporário é apagado. Nunca cole essa chave em chat. Para trocar depois: TROCAR_EMAIL=1 bash scripts/implantar.sh
-if firebase functions:secrets:access EMAIL_API_KEY --project "$PROJETO" >/dev/null 2>&1 && [ "${TROCAR_EMAIL:-0}" != "1" ]; then
+if firebase functions:secrets:get EMAIL_API_KEY --project "$PROJETO" >/dev/null 2>&1 && [ "${TROCAR_EMAIL:-0}" != "1" ]; then
   echo "EMAIL_API_KEY já existe no Secret Manager. Mantida."
 else
   CHAVE_EMAIL=""

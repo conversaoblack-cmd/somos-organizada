@@ -120,6 +120,16 @@ Passos:
      Configurações → Domínios autorizados → adicione os três).
    Para outro domínio: `DOMINIO=meudominio.com.br bash scripts/implantar.sh`.
 
+### Chaves de segurança: nunca recriar
+
+`scripts/implantar.sh` nunca cria nem troca a MASTER_KEY e a QR_HMAC de um projeto que já existe: ele confere a
+existência pelos metadados do segredo e, se não conseguir confirmar (login com outra conta, falta de permissão,
+sem internet), **para sem alterar nada**. Trocar a MASTER_KEY deixaria ilegíveis as chaves Pagar.me das torcidas;
+trocar a QR_HMAC invalidaria ingressos e carteirinhas. Casos especiais, sempre de propósito:
+- projeto novo, sem torcidas: `CRIAR_CHAVES=1 bash scripts/implantar.sh` (pede para digitar o nome do projeto);
+- segredo apagado por engano no Google: `RESTAURAR_CHAVES=1 bash scripts/implantar.sh` (usa a cópia local da
+  máquina onde a chave foi criada, em `~/.somos-organizada/<projeto>`).
+
 ## 8. Primeiro acesso da equipe
 
 1. Abra `https://somosorganizada.com.br/plataforma`, crie a conta com o e-mail de `PLATAFORMA_EMAILS`
