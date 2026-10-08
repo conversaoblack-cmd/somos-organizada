@@ -135,8 +135,17 @@ node -e '
   const atuais = valor("PLATAFORMA_EMAILS");
   const base = atuais === null ? padrao : atuais;
   const equipe = [...new Set([...base.split(","), ...explicitos.split(",")].map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  // Parâmetros com valor padrão no código (functions/src/config.ts): o Firebase CLI só usa o padrão se alguém
+  // responder à pergunta; em modo não interativo (Claude local, CI) ele trava. Grava os padrões quando faltam,
+  // sem mexer em valor que já esteja no .env (ex.: MAX_INSTANCIAS ajustado para a cota do projeto).
+  const PADROES = {
+    EMAIL_REMETENTE: "\"Somos Organizada <nao-responda@somosorganizada.com.br>\"",
+    MAX_INSTANCIAS: "1",
+    MAX_INSTANCIAS_PUBLICAS: "3",
+  };
+  const faltando = Object.entries(PADROES).filter(([k]) => valor(k) === null).map(([k, v]) => `${k}=${v}`);
   const resto = linhas.filter((l) => !/^(URL_APP|PLATAFORMA_EMAILS)=/.test(l));
-  fs.writeFileSync("functions/.env", [`URL_APP=${urlFinal}`, `PLATAFORMA_EMAILS=${equipe.join(",")}`, ...resto].join("\n") + "\n");
+  fs.writeFileSync("functions/.env", [`URL_APP=${urlFinal}`, `PLATAFORMA_EMAILS=${equipe.join(",")}`, ...resto, ...faltando].join("\n") + "\n");
 ' "$URL_SITE" "$([ -n "$DOMINIO" ] && echo 1 || echo 0)" "$EMAILS_EXPLICITOS" "$EMAILS_PADRAO"
 grep '^URL_APP=' functions/.env
 grep '^PLATAFORMA_EMAILS=' functions/.env
