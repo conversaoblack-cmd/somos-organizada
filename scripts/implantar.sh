@@ -33,8 +33,21 @@ falha() { printf '\033[1;31m✖ %s\033[0m\n' "$*"; exit 1; }
 
 cd "$RAIZ"
 
-passo "Atualizando o código"
-git pull --ff-only 2>/dev/null || aviso "Não consegui atualizar via git pull; seguindo com o código desta pasta."
+passo "Atualizando o código (GitHub é a fonte da verdade)"
+# Mac e Windows trabalham no mesmo projeto: só implanta o que está no GitHub, nunca uma cópia local diferente.
+[ -z "$(git status --porcelain)" ] || { git status --short; falha "Há alterações nesta pasta que não estão no GitHub (acima). Envie (git add/commit/push) ou descarte antes de implantar."; }
+# Bloco único (o bash lê inteiro antes de executar): se o pull trouxer uma versão nova deste script,
+# reinicia com ela em vez de continuar lendo um arquivo que mudou no meio do caminho.
+{
+  ANTES="$(git hash-object scripts/implantar.sh)"
+  git pull --ff-only || falha "Não consegui atualizar com o GitHub (sem internet, sem login do Git ou histórico divergente). Nada foi implantado."
+  if [ "$ANTES" != "$(git hash-object scripts/implantar.sh)" ]; then
+    echo "O script de implantação foi atualizado pelo GitHub; reiniciando com a versão nova..."
+    exec bash scripts/implantar.sh "$@"
+  fi
+}
+[ "$(git rev-list --count "@{u}..HEAD" 2>/dev/null || echo 0)" = 0 ] || falha "Esta pasta tem commits que não estão no GitHub. Rode git push antes de implantar."
+echo "Código em dia com o GitHub: $(git log --oneline -1)"
 
 passo "Conferindo ferramentas"
 command -v node >/dev/null || falha "Node.js não encontrado. Instale a versão 22: https://nodejs.org"
@@ -252,6 +265,9 @@ if [ -n "$DOMINIO" ] && [ "$AUTH_OK" != "1" ]; then
   aviso "Confira no console: Authentication → Configurações → Domínios autorizados → adicione $DOMINIO, www.$DOMINIO${HOST_PLATAFORMA:+ e $HOST_PLATAFORMA}"
   echo "   https://console.firebase.google.com/project/$PROJETO/authentication/settings"
 fi
+
+passo "Conferência final (o que está de fato respondendo em produção)"
+bash scripts/verificar.sh "$PROJETO" || aviso "A conferência apontou algo acima. Functions com 403/429/503 costumam resolver rodando este script de novo daqui a alguns minutos."
 
 passo "Pronto!"
 cat <<FIM
