@@ -113,7 +113,7 @@ export function Login({
           </button>
         )}
         {permitirCadastro && (
-          <button type="button" onClick={() => { setCriando(!criando); setErro(null); }} className="w-full text-sm font-semibold text-primaria py-1">
+          <button type="button" onClick={() => { setCriando(!criando); setErro(null); }} className="w-full text-sm font-semibold text-primaria-texto py-1">
             {criando ? "Já tenho conta: entrar" : "Primeiro acesso? Criar conta"}
           </button>
         )}

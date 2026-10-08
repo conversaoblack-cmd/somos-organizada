@@ -172,7 +172,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
       {torcida.tema?.logoUrl ? (
         <img src={torcida.tema.logoUrl} alt="" className="size-10 rounded-xl object-cover bg-superficie-2" />
       ) : (
-        <span className="size-10 rounded-xl bg-primaria/15 text-primaria grid place-items-center">
+        <span className="size-10 rounded-xl bg-primaria/15 text-primaria-texto grid place-items-center">
           <Icone nome="escudo" className="size-5" />
         </span>
       )}

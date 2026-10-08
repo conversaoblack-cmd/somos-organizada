@@ -448,7 +448,7 @@ function ResultadoCriacao({ c }: { c: Criada }) {
           Copiar mensagem
         </Botao>
       </div>
-      <Link to={rp(`/torcidas/${c.torcidaId}`)} className="inline-flex items-center gap-1.5 text-sm text-primaria font-semibold hover:underline">
+      <Link to={rp(`/torcidas/${c.torcidaId}`)} className="inline-flex items-center gap-1.5 text-sm text-primaria-texto font-semibold hover:underline">
         Ver detalhes da torcida <Icone nome="setaDireita" className="size-4" />
       </Link>
     </div>

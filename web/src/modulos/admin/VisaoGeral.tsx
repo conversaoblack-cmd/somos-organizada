@@ -262,7 +262,7 @@ export default function VisaoGeral() {
               <p className="text-sm text-texto-3 mt-1">ativos</p>
             </div>
             <div>
-              <p className="text-xl font-bold leading-none numeros text-primaria">+{r.mes.novosSocios ?? 0}</p>
+              <p className="text-xl font-bold leading-none numeros text-primaria-texto">+{r.mes.novosSocios ?? 0}</p>
               <p className="text-sm text-texto-3 mt-1">novos no mês</p>
             </div>
           </div>
@@ -318,7 +318,7 @@ export default function VisaoGeral() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold truncate group-hover:text-primaria">{e.nome}</p>
+                        <p className="font-semibold truncate group-hover:text-primaria-texto">{e.nome}</p>
                         {e.status === "rascunho" && <Selo>Rascunho</Selo>}
                       </div>
                       <p className="text-xs text-texto-3 truncate mb-2">
@@ -346,7 +346,7 @@ export default function VisaoGeral() {
             <ul className="divide-y divide-linha -my-3">
               {pagos.map((p) => (
                 <li key={p.id} className="flex items-center gap-3 py-3">
-                  <span className={`size-10 shrink-0 rounded-xl grid place-items-center ${p.tipo === "ingresso" ? "bg-primaria/12 text-primaria" : "bg-secundaria/15 text-secundaria"}`}>
+                  <span className={`size-10 shrink-0 rounded-xl grid place-items-center ${p.tipo === "ingresso" ? "bg-primaria/12 text-primaria-texto" : "bg-secundaria/15 text-secundaria"}`}>
                     <Icone nome={p.tipo === "ingresso" ? "ingresso" : "estrela"} className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">

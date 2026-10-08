@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 export const app = initializeApp({
@@ -13,7 +13,8 @@ export const app = initializeApp({
 
 export const auth = getAuth(app);
 auth.languageCode = "pt-BR";
-export const db = getFirestore(app);
+// Cache no aparelho: carteirinha, ingressos e dados já vistos abrem mesmo com internet ruim (portaria, estádio).
+export const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 export const fns = getFunctions(app, "southamerica-east1");
 
 export const USANDO_EMULADORES = import.meta.env.VITE_USAR_EMULADORES === "true";

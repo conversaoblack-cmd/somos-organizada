@@ -87,7 +87,7 @@ function TelaAviso({ icone, titulo, children }: { icone: "relogio" | "cadeado"; 
       <main className="relative flex-1 grid place-items-center px-6 py-16">
         <div className="max-w-md text-center">
           <span className="mx-auto mb-6 grid place-items-center size-16 rounded-2xl bg-superficie-2 border border-linha">
-            <Icone nome={icone} className="size-7 text-primaria" />
+            <Icone nome={icone} className="size-7 text-primaria-texto" />
           </span>
           <h1 className="font-display uppercase text-3xl sm:text-4xl tracking-tight">{titulo}</h1>
           <div className="mt-4 text-texto-2">{children}</div>

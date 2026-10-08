@@ -64,7 +64,7 @@ export default function Sedes() {
 
   const item = (s: ComId<Sede>) => (
     <Cartao key={s.id} className={cx("p-4 sm:p-5 flex items-start gap-4", s.ativa === false && "opacity-60")}>
-      <span className={cx("size-11 shrink-0 rounded-2xl grid place-items-center", s.tipo === "principal" ? "bg-primaria/15 text-primaria" : "bg-superficie-2 text-texto-2")}>
+      <span className={cx("size-11 shrink-0 rounded-2xl grid place-items-center", s.tipo === "principal" ? "bg-primaria/15 text-primaria-texto" : "bg-superficie-2 text-texto-2")}>
         <Icone nome={s.tipo === "principal" ? "escudo" : "casa"} className="size-5" />
       </span>
       <div className="min-w-0 flex-1">

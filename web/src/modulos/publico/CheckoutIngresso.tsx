@@ -204,7 +204,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
           {/* Sócio x público */}
           {socioPreco ? (
             <div className="flex items-center gap-3 rounded-2xl border border-primaria/40 bg-primaria/10 p-4">
-              <Icone nome="escudo" className="size-6 text-primaria shrink-0" />
+              <Icone nome="escudo" className="size-6 text-primaria-texto shrink-0" />
               <div className="text-sm">
                 <p className="font-semibold">Preço de sócio liberado</p>
                 <p className="text-texto-2">Seu ingresso sai por {moeda(cot.valorSocio)}. Acompanhantes pagam o valor público.</p>
@@ -222,7 +222,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
               onClick={() => setLoginAberto(true)}
               className="w-full flex items-center gap-3 rounded-2xl border border-dashed border-linha-forte p-4 text-left hover:border-primaria transition-colors"
             >
-              <Icone nome="escudo" className="size-6 text-primaria shrink-0" />
+              <Icone nome="escudo" className="size-6 text-primaria-texto shrink-0" />
               <span className="text-sm flex-1">
                 <span className="font-semibold block">É sócio? Pague {moeda(cot.valorSocio)}</span>
                 <span className="text-texto-2">Entre na sua conta para liberar o preço de sócio.</span>
@@ -290,7 +290,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
             {!uidLogado && (
               <button
                 type="button"
-                className="text-sm text-primaria font-semibold"
+                className="text-sm text-primaria-texto font-semibold"
                 onClick={() => setComprador((c) => ({ ...c, nome: titulares[0].nome, cpf: titulares[0].cpf }))}
               >
                 Usar os dados do ingresso 1
@@ -298,7 +298,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
             )}
             {!uidLogado && (
               <button type="button" className="block text-sm text-texto-2" onClick={() => setLoginAberto(true)}>
-                Já tem conta? <span className="font-semibold text-primaria">Entrar</span>
+                Já tem conta? <span className="font-semibold text-primaria-texto">Entrar</span>
               </button>
             )}
             <Campo rotulo="Nome" value={comprador.nome} onChange={(v) => setComprador({ ...comprador, nome: v })} erro={erros.cnome} autoComplete="name" />
@@ -405,7 +405,7 @@ function EntrarSocio({ aoEntrar }: { aoEntrar: () => void }) {
         subtitulo="Use seu CPF ou e-mail e a senha. Sócios liberam o preço de sócio."
         aceitaCpf
         rodape={
-          <a href={`/${torcida.slug}?aba=socios`} className="font-semibold text-primaria">
+          <a href={`/${torcida.slug}?aba=socios`} className="font-semibold text-primaria-texto">
             Ainda não é sócio? Conheça os planos
           </a>
         }

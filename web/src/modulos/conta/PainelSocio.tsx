@@ -152,7 +152,7 @@ function Pendente({ tid, torcida, ficha }: { tid: string; torcida: Torcida; fich
             <Icone nome="relogio" className="size-6" />
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-primaria">Quase lá</p>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-primaria-texto">Quase lá</p>
             <h2 className="text-xl font-bold leading-tight mt-0.5">Falta concluir o pagamento</h2>
             <p className="text-sm text-texto-2 mt-1">
               Sua ficha no plano <strong className="text-texto">{ficha.planoNome}</strong> está pronta. Pague {moeda(total)} pelo Pix para ativar a carteirinha e o preço de sócio.
@@ -245,7 +245,7 @@ export default function PainelSocio() {
       <div className="min-h-[calc(100dvh-4rem)] grid place-items-center py-10">
         <div className="w-full flex flex-col items-center">
           <div className="mb-6 flex items-center gap-2 text-sm text-texto-2">
-            <Icone nome="escudo" className="size-5 text-primaria" /> Carteirinha, ingressos e mensalidade num só lugar
+            <Icone nome="escudo" className="size-5 text-primaria-texto" /> Carteirinha, ingressos e mensalidade num só lugar
           </div>
           <Login
             titulo="Minha conta"
@@ -254,7 +254,7 @@ export default function PainelSocio() {
             rodape={
               <>
                 Ainda não é sócio?{" "}
-                <Link to={`/${torcida.slug}?aba=socios`} className="font-semibold text-primaria hover:underline">
+                <Link to={`/${torcida.slug}?aba=socios`} className="font-semibold text-primaria-texto hover:underline">
                   Associe-se
                 </Link>
               </>
@@ -273,7 +273,7 @@ export default function PainelSocio() {
           <p className="text-sm text-texto-2 mt-1">{usuario!.email}</p>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border border-primaria/40 bg-primaria/10 p-4">
-          <Icone nome="escudo" className="size-8 text-primaria shrink-0" />
+          <Icone nome="escudo" className="size-8 text-primaria-texto shrink-0" />
           <div className="flex-1 text-sm">
             <p className="font-semibold">Seja sócio da {torcida.nome}</p>
             <p className="text-texto-2">Carteirinha digital e preço de sócio nos ingressos.</p>

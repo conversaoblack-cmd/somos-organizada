@@ -29,6 +29,12 @@
   --cor-secundaria: #ffcc00;
   --cor-sobre-primaria: #ffffff;
   --cor-sobre-secundaria: #111111;
+  /* derivadas por lib/tema.ts (contraste garantido com o fundo); estes são os valores do tema padrão */
+  --cor-primaria-texto: #3872ff;
+  --cor-sucesso: #22c55e;
+  --cor-alerta: #f59e0b;
+  --cor-perigo: #ef4444;
+  --cor-info: #3b82f6;
   color-scheme: dark;
 }
 
@@ -49,11 +55,13 @@
   --color-sobre-primaria: var(--cor-sobre-primaria);
   --color-secundaria: var(--cor-secundaria);
   --color-sobre-secundaria: var(--cor-sobre-secundaria);
+  /* texto na cor da torcida: sempre legível sobre o fundo (use text-primaria-texto, não text-primaria) */
+  --color-primaria-texto: var(--cor-primaria-texto);
 
-  --color-sucesso: #22c55e;
-  --color-alerta: #f59e0b;
-  --color-perigo: #ef4444;
-  --color-info: #3b82f6;
+  --color-sucesso: var(--cor-sucesso);
+  --color-alerta: var(--cor-alerta);
+  --color-perigo: var(--cor-perigo);
+  --color-info: var(--cor-info);
 
   --radius-cartao: 1.25rem;
   --animate-surgir: surgir 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -82,6 +90,11 @@
   ::selection { background: var(--color-secundaria); color: var(--color-sobre-secundaria); }
   :focus-visible { outline: 2px solid var(--color-secundaria); outline-offset: 2px; }
   input, select, textarea, button { font: inherit; color: inherit; }
+  /* toque responde na hora (sem a espera do toque duplo), sem o flash cinza do Android */
+  html { -webkit-tap-highlight-color: transparent; }
+  a, button, input, select, textarea, label, summary, [role="button"], [role="tab"] { touch-action: manipulation; }
+  /* select nativo legível no modo escuro do Windows/Android */
+  select, option { background-color: var(--color-superficie-2); color: var(--color-texto); }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }

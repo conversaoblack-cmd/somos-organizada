@@ -61,7 +61,7 @@ export function CabecalhoTorcida() {
             ehSocio ? "bg-primaria/15 text-texto border border-primaria/40" : "border border-linha-forte hover:bg-superficie-2",
           )}
         >
-          <Icone nome={ehSocio ? "escudo" : "usuario"} className={cx("size-4", ehSocio && "text-primaria")} />
+          <Icone nome={ehSocio ? "escudo" : "usuario"} className={cx("size-4", ehSocio && "text-primaria-texto")} />
           {ehSocio ? (
             <>
               <span className="sm:hidden">Carteirinha</span>

@@ -238,7 +238,7 @@ export function CartaoSocio({
                 ) : (
                   <div className="aspect-square rounded-[22px] bg-superficie-2 border border-linha grid place-items-center text-center p-6">
                     {qr.carregando ? (
-                      <Girando className="size-8 text-primaria" />
+                      <Girando className="size-8 text-primaria-texto" />
                     ) : (
                       <div>
                         <Icone nome="cadeado" className="size-9 mx-auto text-texto-3" />
@@ -493,7 +493,7 @@ export default function AbaCarteirinha({
                 {dataExtensa(proximo.eventoData)} · {hora(proximo.eventoData)}
               </span>
             </span>
-            <Icone nome="qr" className="size-6 text-texto-3 group-hover:text-primaria transition-colors" />
+            <Icone nome="qr" className="size-6 text-texto-3 group-hover:text-primaria-texto transition-colors" />
           </Link>
         )}
 
@@ -512,7 +512,7 @@ export default function AbaCarteirinha({
             <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">
               {plano.beneficios.map((b) => (
                 <li key={b} className="flex items-start gap-2.5 text-sm">
-                  <span className="mt-0.5 size-5 shrink-0 rounded-full bg-primaria/15 text-primaria grid place-items-center">
+                  <span className="mt-0.5 size-5 shrink-0 rounded-full bg-primaria/15 text-primaria-texto grid place-items-center">
                     <Icone nome="check" className="size-3.5" strokeWidth={2.5} />
                   </span>
                   {b}

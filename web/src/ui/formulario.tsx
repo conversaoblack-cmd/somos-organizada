@@ -4,8 +4,9 @@ import { Icone, type NomeIcone } from "./icones";
 import { mascaraCartao, mascaraCep, mascaraCpf, mascaraTelefone, mascaraValidade } from "@/lib/formatos";
 
 const base =
-  "w-full h-12 rounded-2xl bg-superficie-2 border border-linha px-4 text-[15px] placeholder:text-texto-3 " +
-  "outline-none transition-colors focus:border-primaria focus:bg-superficie-3 disabled:opacity-60";
+  // 16 px no celular: abaixo disso o iPhone dá zoom ao tocar no campo
+  "w-full h-12 rounded-2xl bg-superficie-2 border border-linha px-4 text-base sm:text-[15px] placeholder:text-texto-3 " +
+  "outline-none transition-colors focus:border-primaria focus:bg-superficie-3 focus-visible:ring-2 focus-visible:ring-primaria-texto/60 disabled:opacity-60";
 
 export type Mascara = "cpf" | "telefone" | "cep" | "cartao" | "validade" | "moeda";
 
@@ -103,19 +104,29 @@ export function Selecao({
   const gerado = useId();
   const idCampo = id ?? gerado;
   return (
-    <div className={className}>
+    <div className={className} data-erro={erro ? "" : undefined}>
       {rotulo && (
         <label htmlFor={idCampo} className="block text-sm font-medium text-texto-2 mb-1.5">
           {rotulo}
         </label>
       )}
       <div className="relative">
-        <select id={idCampo} className={cx(base, "appearance-none pr-10", erro && "border-perigo")} {...props}>
+        <select
+          id={idCampo}
+          aria-invalid={!!erro}
+          aria-describedby={erro || dica ? `${idCampo}-ajuda` : undefined}
+          className={cx(base, "appearance-none pr-10", erro && "border-perigo")}
+          {...props}
+        >
           {children}
         </select>
         <Icone nome="chevronBaixo" className="size-4 absolute right-4 top-1/2 -translate-y-1/2 text-texto-3 pointer-events-none" />
       </div>
-      {(erro || dica) && <p className={cx("text-xs mt-1.5", erro ? "text-perigo" : "text-texto-3")}>{erro || dica}</p>}
+      {(erro || dica) && (
+        <p id={`${idCampo}-ajuda`} className={cx("text-xs mt-1.5", erro ? "text-perigo" : "text-texto-3")}>
+          {erro || dica}
+        </p>
+      )}
     </div>
   );
 }

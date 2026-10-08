@@ -207,7 +207,7 @@ export function Tour({
         style={estiloBalao}
       >
         <div className="flex items-start gap-3">
-          <span className="size-9 shrink-0 rounded-xl bg-primaria/15 text-primaria grid place-items-center">
+          <span className="size-9 shrink-0 rounded-xl bg-primaria/15 text-primaria-texto grid place-items-center">
             <Icone nome={i === 0 ? "info" : "setaDireita"} className="size-5" />
           </span>
           <div className="min-w-0 flex-1">

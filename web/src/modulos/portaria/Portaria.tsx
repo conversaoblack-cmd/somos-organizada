@@ -166,7 +166,7 @@ function EscolherEvento({ tid, membro, escolher }: { tid: string; membro: Membro
         <div className="mt-6 space-y-7">
           {!!grupos.hoje.length && (
             <section>
-              <h2 className="text-xs font-bold uppercase tracking-[.18em] text-primaria mb-2.5">Hoje</h2>
+              <h2 className="text-xs font-bold uppercase tracking-[.18em] text-primaria-texto mb-2.5">Hoje</h2>
               <ul className="space-y-3">{grupos.hoje.map((e) => item(e, true))}</ul>
             </section>
           )}

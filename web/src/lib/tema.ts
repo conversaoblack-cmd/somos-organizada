@@ -55,6 +55,23 @@ export const corSobre = (hex: string) => (contraste(hex, "#FFFFFF") >= contraste
 
 export const corValida = (c: string) => /^#[0-9A-Fa-f]{6}$/.test(c);
 
+/** Cores de estado (pago, atenção, erro, informação): ajustadas ao fundo de cada torcida para continuarem legíveis. */
+const ESTADOS = { sucesso: "#22C55E", alerta: "#F59E0B", perigo: "#EF4444", info: "#3B82F6" } as const;
+
+/**
+ * A mesma cor, clareada (fundo escuro) ou escurecida (fundo claro) até ter contraste mínimo com o fundo.
+ * Usada para TEXTO na cor da torcida: o vermelho do Rubro-negro ou o azul do Tricolor viram um tom legível.
+ */
+export function legivel(cor: string, fundo: string, minimo = 4.5): string {
+  if (contraste(cor, fundo) >= minimo) return cor;
+  const alvoCor = luminancia(fundo) < 0.4 ? "#FFFFFF" : "#000000";
+  for (let p = 0.05; p <= 1; p += 0.05) {
+    const c = misturar(cor, alvoCor, p);
+    if (contraste(c, fundo) >= minimo) return c;
+  }
+  return alvoCor;
+}
+
 export function aplicarTema(tema: Partial<Tema> | undefined, alvo: HTMLElement = document.documentElement) {
   const t = { ...TEMA_PADRAO, ...(tema ?? {}) };
   const ok = (c: string, padrao: string) => (corValida(c) ? c : padrao);
@@ -67,6 +84,8 @@ export function aplicarTema(tema: Partial<Tema> | undefined, alvo: HTMLElement =
   alvo.style.setProperty("--cor-secundaria", secundaria);
   alvo.style.setProperty("--cor-sobre-primaria", corSobre(primaria));
   alvo.style.setProperty("--cor-sobre-secundaria", corSobre(secundaria));
+  alvo.style.setProperty("--cor-primaria-texto", legivel(primaria, fundo));
+  for (const [nome, cor] of Object.entries(ESTADOS)) alvo.style.setProperty(`--cor-${nome}`, legivel(cor, fundo));
   alvo.style.colorScheme = luminancia(fundo) < 0.4 ? "dark" : "light";
   if (alvo === document.documentElement) document.querySelector('meta[name="theme-color"]')?.setAttribute("content", fundo);
 }

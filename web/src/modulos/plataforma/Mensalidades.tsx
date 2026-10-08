@@ -147,7 +147,7 @@ export default function Mensalidades() {
       />
       {erro && <Aviso tom="perigo" className="mb-4">{erro}</Aviso>}
       {!cfg.carregando && !cfg.pix.chave && (
-        <Aviso tom="alerta" className="mb-6" titulo="Chave Pix da plataforma não configurada" acao={<Link to={rp("/configuracoes")} className="text-sm font-semibold text-primaria hover:underline">Configurar agora</Link>}>
+        <Aviso tom="alerta" className="mb-6" titulo="Chave Pix da plataforma não configurada" acao={<Link to={rp("/configuracoes")} className="text-sm font-semibold text-primaria-texto hover:underline">Configurar agora</Link>}>
           As faturas novas sairão sem Pix copia e cola.
         </Aviso>
       )}

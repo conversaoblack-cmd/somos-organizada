@@ -122,7 +122,7 @@ function TelaPix({ pedido }: { pedido: Pedido & { id: string } }) {
         </Aviso>
       )}
       <div className="text-center">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primaria">Pague com Pix</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primaria-texto">Pague com Pix</p>
         <h1 className="text-3xl font-bold mt-2 numeros">{moeda(pedido.total)}</h1>
         <p className="text-texto-2 mt-1">{pedido.tipo === "ingresso" ? pedido.eventoNome : "Mensalidade de sócio"}</p>
       </div>
@@ -243,7 +243,7 @@ function SocioConfirmado() {
   const { torcida } = useTorcida();
   return (
     <div className="space-y-6 text-center py-6 animate-surgir">
-      <div className="mx-auto size-20 rounded-full bg-primaria/15 text-primaria grid place-items-center">
+      <div className="mx-auto size-20 rounded-full bg-primaria/15 text-primaria-texto grid place-items-center">
         <Icone nome="escudo" className="size-10" />
       </div>
       <div>

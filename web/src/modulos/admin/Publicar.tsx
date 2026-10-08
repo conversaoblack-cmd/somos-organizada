@@ -71,7 +71,7 @@ export function ExplicacaoCobranca() {
         "As vendas de ingressos e mensalidades caem na conta da torcida, não passam pela Somos Organizada.",
       ].map((t) => (
         <li key={t} className="flex gap-2">
-          <Icone nome="check" className="size-4 text-primaria shrink-0 mt-0.5" />
+          <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" />
           {t}
         </li>
       ))}
@@ -259,7 +259,7 @@ function ItemChecklist({ ok, titulo, detalhe, para, base, recomendado }: { ok: b
         <p className="text-xs text-texto-3">{detalhe}</p>
       </div>
       {!ok && (
-        <Link to={`${base}/${para}`} className="text-sm font-semibold text-primaria hover:underline shrink-0">
+        <Link to={`${base}/${para}`} className="text-sm font-semibold text-primaria-texto hover:underline shrink-0">
           Resolver
         </Link>
       )}

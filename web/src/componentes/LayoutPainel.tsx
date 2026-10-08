@@ -52,7 +52,7 @@ export function LayoutPainel({
         >
           {({ isActive }) => (
             <>
-              <Icone nome={m.icone} className={cx("size-5", isActive && "text-primaria")} />
+              <Icone nome={m.icone} className={cx("size-5", isActive && "text-primaria-texto")} />
               <span className="flex-1">{m.rotulo}</span>
               {!!m.contador && <span className="text-xs font-bold rounded-full bg-secundaria text-sobre-secundaria px-2 py-0.5">{m.contador}</span>}
             </>

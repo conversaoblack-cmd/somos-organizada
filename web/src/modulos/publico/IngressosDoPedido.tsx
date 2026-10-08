@@ -35,7 +35,7 @@ export default function IngressosDoPedido() {
         ) : (
           <div className="space-y-5">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primaria">Seus ingressos</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primaria-texto">Seus ingressos</p>
               <h1 className="text-2xl font-bold mt-1">{estado.evento}</h1>
             </div>
             {estado.bilhetes.map((b) => (

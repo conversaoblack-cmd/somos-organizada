@@ -286,7 +286,7 @@ export default function Financeiro() {
                         <span
                           className={cx(
                             "size-9 shrink-0 rounded-xl grid place-items-center",
-                            l.natureza === "taxa" ? "bg-sucesso/12 text-sucesso" : l.origem === "ingresso" ? "bg-primaria/12 text-primaria" : "bg-secundaria/15 text-secundaria",
+                            l.natureza === "taxa" ? "bg-sucesso/12 text-sucesso" : l.origem === "ingresso" ? "bg-primaria/12 text-primaria-texto" : "bg-secundaria/15 text-secundaria",
                           )}
                         >
                           <Icone nome={l.natureza === "taxa" ? "dinheiro" : l.origem === "ingresso" ? "ingresso" : "estrela"} className="size-4" />

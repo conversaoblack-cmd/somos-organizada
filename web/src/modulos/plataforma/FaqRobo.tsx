@@ -158,7 +158,7 @@ function Testador({ faqs }: { faqs: ComId<Faq>[] }) {
   return (
     <Cartao className="p-5 sm:p-6 xl:sticky xl:top-24">
       <h2 className="font-bold flex items-center gap-2">
-        <Icone nome="chat" className="size-5 text-primaria" /> Testar o robô
+        <Icone nome="chat" className="size-5 text-primaria-texto" /> Testar o robô
       </h2>
       <p className="text-sm text-texto-3 mt-1 mb-4">Mesmo algoritmo do botão de ajuda (pontuação mínima {PONTUACAO_MINIMA}).</p>
       <div className="space-y-3">

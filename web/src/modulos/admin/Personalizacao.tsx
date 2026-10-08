@@ -468,7 +468,7 @@ function Previa({ f }: { f: Form }) {
                   <div className="flex items-end justify-between mt-3">
                     <div>
                       <p className="text-[11px] text-texto-3">Sócio a partir de</p>
-                      <p className="font-bold text-primaria">{moeda(12000 + taxa(12000, pct))}</p>
+                      <p className="font-bold text-primaria-texto">{moeda(12000 + taxa(12000, pct))}</p>
                     </div>
                     <span className="h-8 px-3 rounded-lg bg-primaria text-sobre-primaria text-xs font-semibold inline-flex items-center">Comprar</span>
                   </div>
@@ -499,7 +499,7 @@ function Previa({ f }: { f: Form }) {
                 <ul className="mt-3 space-y-1.5 text-xs">
                   {(plano?.beneficios?.length ? plano.beneficios.slice(0, 3) : ["Preço de sócio nos eventos", "Carteirinha digital"]).map((b) => (
                     <li key={b} className="flex gap-1.5 text-texto-2">
-                      <Icone nome="check" className="size-3.5 text-primaria shrink-0 mt-px" />
+                      <Icone nome="check" className="size-3.5 text-primaria-texto shrink-0 mt-px" />
                       {b}
                     </li>
                   ))}

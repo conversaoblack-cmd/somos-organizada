@@ -169,12 +169,12 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
             <Linha rotulo="Pagamento">
               {pix ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <Icone nome="pix" className="size-4 text-primaria" /> Pix a cada ciclo
+                  <Icone nome="pix" className="size-4 text-primaria-texto" /> Pix a cada ciclo
                 </span>
               ) : (
                 <span className="block text-right">
                   <span className="inline-flex items-center gap-1.5">
-                    <Icone nome="cartao" className="size-4 text-primaria shrink-0" />
+                    <Icone nome="cartao" className="size-4 text-primaria-texto shrink-0" />
                     Cartão <span className="font-mono">•••• {final}</span>
                   </span>
                   <span className="block text-xs font-medium text-texto-3">cobrança automática a cada período</span>
@@ -216,7 +216,7 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
             {pix ? (
               <>
                 <div className="flex items-center gap-3">
-                  <span className="size-11 shrink-0 rounded-2xl bg-primaria/15 text-primaria grid place-items-center">
+                  <span className="size-11 shrink-0 rounded-2xl bg-primaria/15 text-primaria-texto grid place-items-center">
                     <Icone nome="pix" className="size-6" />
                   </span>
                   <div>
@@ -252,7 +252,7 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
             ) : (
               <>
                 <div className="flex items-center gap-3">
-                  <span className="size-11 shrink-0 rounded-2xl bg-primaria/15 text-primaria grid place-items-center">
+                  <span className="size-11 shrink-0 rounded-2xl bg-primaria/15 text-primaria-texto grid place-items-center">
                     <Icone nome="cartao" className="size-6" />
                   </span>
                   <div>

@@ -67,7 +67,7 @@ export default function Dashboard() {
               tom="info"
               titulo={`${plural(resumo.solicitacoesPendentes, "cadastro de torcida aguardando", "cadastros de torcida aguardando")} aprovação`}
               acao={
-                <Link to={rp("/solicitacoes")} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primaria hover:underline">
+                <Link to={rp("/solicitacoes")} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primaria-texto hover:underline">
                   Ver solicitações <Icone nome="setaDireita" className="size-4" />
                 </Link>
               }

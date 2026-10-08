@@ -354,7 +354,7 @@ function PassoVerificar({ usuario, aoVerificar }: { usuario: User; aoVerificar: 
       <Titulo titulo="Confirme seu e-mail">Para proteger a torcida, precisamos confirmar que o e-mail é seu.</Titulo>
       <Cartao className="p-6 sm:p-7 space-y-5">
         <div className="flex items-center gap-4">
-          <span className="size-14 shrink-0 rounded-2xl bg-primaria/15 text-primaria grid place-items-center">
+          <span className="size-14 shrink-0 rounded-2xl bg-primaria/15 text-primaria-texto grid place-items-center">
             <Icone nome="enviar" className="size-7" />
           </span>
           <div className="min-w-0">
@@ -769,13 +769,13 @@ function Formulario({ usuario }: { usuario: User }) {
               <p className="font-semibold">Como funciona a cobrança</p>
               <ul className="space-y-1.5 text-texto-2">
                 <li className="flex gap-2">
-                  <Icone nome="check" className="size-4 text-primaria shrink-0 mt-0.5" /> Nada é cobrado até você publicar o site.
+                  <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" /> Nada é cobrado até você publicar o site.
                 </li>
                 <li className="flex gap-2">
-                  <Icone nome="check" className="size-4 text-primaria shrink-0 mt-0.5" /> Mensalidade fixa, paga só no Pix, sem multa nem juros.
+                  <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" /> Mensalidade fixa, paga só no Pix, sem multa nem juros.
                 </li>
                 <li className="flex gap-2">
-                  <Icone nome="check" className="size-4 text-primaria shrink-0 mt-0.5" /> O dinheiro de ingressos e sócios cai direto na conta da torcida.
+                  <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" /> O dinheiro de ingressos e sócios cai direto na conta da torcida.
                 </li>
               </ul>
               <label className="flex gap-3 items-start pt-2 cursor-pointer">
@@ -820,7 +820,7 @@ function Resumo({ titulo, editar, children }: { titulo: string; editar: () => vo
     <Cartao className="p-5">
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold">{titulo}</h2>
-        <button type="button" onClick={editar} className="text-sm text-primaria font-semibold inline-flex items-center gap-1 hover:underline">
+        <button type="button" onClick={editar} className="text-sm text-primaria-texto font-semibold inline-flex items-center gap-1 hover:underline">
           <Icone nome="lapis" className="size-4" /> Editar
         </button>
       </div>
@@ -930,7 +930,7 @@ function EmAnalise({ s, aoRecomecar }: { s: ComId<SolicitacaoTorcida>; aoRecomec
         <PassoLista n={2}>Quando aprovar, esta página muda sozinha e mostra o botão para entrar no painel.</PassoLista>
         <PassoLista n={3}>Você entra com este mesmo e-mail e senha. Pode fechar a página e voltar depois em {location.host}/cadastro.</PassoLista>
       </ol>
-      <a href={contato} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 mt-6 text-sm font-semibold text-primaria hover:underline">
+      <a href={contato} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 mt-6 text-sm font-semibold text-primaria-texto hover:underline">
         <Icone nome="whatsapp" className="size-4" /> Tem pressa? Fale com a equipe
       </a>
     </Cartao>

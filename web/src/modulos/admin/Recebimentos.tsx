@@ -219,16 +219,16 @@ export default function Recebimentos() {
         </div>
         <ul className="mt-4 space-y-2 text-sm text-texto-2">
           <li className="flex gap-2">
-            <Icone nome="check" className="size-4 text-primaria shrink-0 mt-0.5" />A subsede paga as tarifas da Pagar.me sobre a parte dela e responde por contestações (chargeback) dos eventos dela.
+            <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" />A subsede paga as tarifas da Pagar.me sobre a parte dela e responde por contestações (chargeback) dos eventos dela.
           </li>
           <li className="flex gap-2">
-            <Icone nome="check" className="size-4 text-primaria shrink-0 mt-0.5" />
+            <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" />
             {mensalidadeNaSede
               ? "Mensalidades dos sócios da sua subsede também caem nesta conta (a taxa de serviço continua com a torcida)."
               : "Mensalidades de sócio ficam com a sede principal (decisão da diretoria)."}
           </li>
           <li className="flex gap-2">
-            <Icone nome="check" className="size-4 text-primaria shrink-0 mt-0.5" />
+            <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" />
             Sem conta ativa, a diretoria não consegue aprovar os eventos da sua subsede.
           </li>
         </ul>

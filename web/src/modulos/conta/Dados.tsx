@@ -101,7 +101,7 @@ export default function AbaDados({ tid, torcida, ficha }: { tid: string; torcida
               <p className="font-semibold">Precisa corrigir algum dado?</p>
               <p className="text-sm text-texto-2 mt-1">Para alterar dados, fale com a diretoria. Assim mantemos sua carteirinha segura e conferida.</p>
               {contato && (
-                <a href={contato} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primaria hover:underline">
+                <a href={contato} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primaria-texto hover:underline">
                   <Icone nome={torcida.contato?.whatsapp ? "whatsapp" : "enviar"} className="size-4" /> Falar com a diretoria
                 </a>
               )}

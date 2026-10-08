@@ -72,7 +72,7 @@ function Bilhete({ i, abrir, apagado }: { i: ComId<Ingresso>; abrir: () => void;
       <div className="relative min-w-0 flex-1 rounded-r-[22px] bg-superficie border-y border-r border-linha py-4 pr-4 pl-1">
         <div className="flex items-start justify-between gap-2">
           <p className="font-bold leading-snug line-clamp-2 text-[15px]">{i.eventoNome}</p>
-          <Icone nome="qr" className="size-6 shrink-0 text-texto-3 group-hover:text-primaria transition-colors" />
+          <Icone nome="qr" className="size-6 shrink-0 text-texto-3 group-hover:text-primaria-texto transition-colors" />
         </div>
         <p className="mt-2 text-sm font-medium truncate">{i.titularNome}</p>
         <p className="text-xs text-texto-3 font-mono numeros">CPF {cpfMascarado(i.titularCpf)}</p>
@@ -100,7 +100,7 @@ function ModalIngresso({ i, tid, fechar }: { i: ComId<Ingresso>; tid: string; fe
       <div className="-mt-1">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wider text-primaria">{dataExtensa(i.eventoData)} · {hora(i.eventoData)}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-primaria-texto">{dataExtensa(i.eventoData)} · {hora(i.eventoData)}</p>
             <h2 className="text-xl font-bold leading-tight mt-0.5">{i.eventoNome}</h2>
             {evento?.local && (
               <p className="text-sm text-texto-2 mt-1 flex items-center gap-1.5">

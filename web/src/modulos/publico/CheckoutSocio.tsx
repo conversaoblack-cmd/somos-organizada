@@ -254,7 +254,7 @@ export default function CheckoutSocio() {
     return (
       <Moldura>
         <div className="text-center py-8 space-y-5 animate-surgir">
-          <div className="mx-auto size-20 rounded-full bg-primaria/15 text-primaria grid place-items-center">
+          <div className="mx-auto size-20 rounded-full bg-primaria/15 text-primaria-texto grid place-items-center">
             <Icone nome="escudo" className="size-10" />
           </div>
           <h1 className="text-3xl font-bold">{concluido === "em_analise" ? "Pagamento aprovado!" : "Bem-vindo, sócio!"}</h1>
@@ -339,7 +339,7 @@ export default function CheckoutSocio() {
                     titulo="Entrar"
                     subtitulo="Use sua conta para continuar a associação."
                     rodape={
-                      <button type="button" className="font-semibold text-primaria" onClick={() => setModoConta("criar")}>
+                      <button type="button" className="font-semibold text-primaria-texto" onClick={() => setModoConta("criar")}>
                         Criar uma conta nova
                       </button>
                     }
@@ -393,7 +393,7 @@ export default function CheckoutSocio() {
                   <div className="text-sm">
                     <p className="font-semibold">Foto 3x4 para a carteirinha</p>
                     <p className="text-texto-3">Rosto de frente, fundo claro. Você pode tirar agora com o celular.</p>
-                    <button type="button" className="text-primaria font-semibold mt-1" onClick={() => inputFoto.current?.click()}>
+                    <button type="button" className="text-primaria-texto font-semibold mt-1" onClick={() => inputFoto.current?.click()}>
                       {foto ? "Trocar foto" : "Adicionar foto"}
                     </button>
                   </div>
@@ -493,7 +493,7 @@ export default function CheckoutSocio() {
           <aside className="lg:sticky lg:top-24 order-first lg:order-none">
             <Cartao className="p-5 space-y-4">
               <div className="flex items-center gap-3">
-                <span className="size-11 rounded-2xl bg-primaria/15 text-primaria grid place-items-center">
+                <span className="size-11 rounded-2xl bg-primaria/15 text-primaria-texto grid place-items-center">
                   <Icone nome="escudo" className="size-6" />
                 </span>
                 <div>
@@ -510,7 +510,7 @@ export default function CheckoutSocio() {
                 <ul className={cx("space-y-2 pt-3 border-t border-linha", etapa > 0 && "hidden lg:block")}>
                   {plano.beneficios.map((b) => (
                     <li key={b} className="flex gap-2 text-sm text-texto-2">
-                      <Icone nome="check" className="size-4 text-primaria shrink-0 mt-0.5" /> {b}
+                      <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" /> {b}
                     </li>
                   ))}
                 </ul>

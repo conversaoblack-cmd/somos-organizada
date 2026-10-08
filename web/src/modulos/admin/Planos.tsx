@@ -138,7 +138,7 @@ export default function Planos() {
                 <ul className="mt-4 space-y-2 text-sm">
                   {p.beneficios.map((b) => (
                     <li key={b} className="flex gap-2">
-                      <Icone nome="check" className="size-4 text-primaria shrink-0 mt-0.5" />
+                      <Icone nome="check" className="size-4 text-primaria-texto shrink-0 mt-0.5" />
                       <span className="text-texto-2">{b}</span>
                     </li>
                   ))}

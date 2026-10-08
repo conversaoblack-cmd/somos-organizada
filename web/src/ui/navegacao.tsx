@@ -28,8 +28,8 @@ export function Abas<T extends string>({
             aria-selected={ativo}
             onClick={() => onChange(o.valor)}
             className={cx(
-              "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all flex-1 whitespace-nowrap",
-              grande ? "h-12 px-6 text-base" : "h-9 px-4 text-sm",
+              "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors flex-1 whitespace-nowrap",
+              grande ? "h-12 px-6 text-base" : "h-11 sm:h-9 px-4 text-sm",
               ativo ? "bg-primaria text-sobre-primaria shadow" : "text-texto-2 hover:text-texto",
             )}
           >
@@ -47,7 +47,9 @@ export function Abas<T extends string>({
 
 /** Indicador de etapas do checkout. */
 export function Etapas({ etapas, atual }: { etapas: string[]; atual: number }) {
+  const nome = etapas[Math.min(atual, etapas.length - 1)];
   return (
+    <div>
     <ol className="flex items-center gap-2" aria-label="Etapas">
       {etapas.map((e, i) => {
         const feito = i < atual;
@@ -68,5 +70,12 @@ export function Etapas({ etapas, atual }: { etapas: string[]; atual: number }) {
         );
       })}
     </ol>
+    {/* No celular os nomes não cabem ao lado das bolinhas: mostra o passo atual por extenso */}
+    {atual < etapas.length && (
+      <p className="sm:hidden mt-2 text-xs font-semibold text-texto-2" aria-live="polite">
+        Passo {atual + 1} de {etapas.length}: <span className="text-texto">{nome}</span>
+      </p>
+    )}
+    </div>
   );
 }

@@ -128,7 +128,7 @@ function EntrarPorTorcida({ aoUsarEmail }: { aoUsarEmail: () => void }) {
         <button type="button" onClick={aoUsarEmail} className="text-texto-2 hover:text-texto">
           Não lembro o endereço: entrar com e-mail
         </button>
-        <Link to="/cadastro" className="font-semibold text-primaria hover:underline">
+        <Link to="/cadastro" className="font-semibold text-primaria-texto hover:underline">
           Cadastrar minha torcida
         </Link>
       </div>
@@ -180,7 +180,7 @@ function EntrarEquipe({ aoInformarTorcida }: { aoInformarTorcida: () => void }) 
           subtitulo="Diretoria, subsede e portaria."
           rodape={
             <span className="flex flex-col gap-2">
-              <Link to="/cadastro" className="font-semibold text-primaria hover:underline">
+              <Link to="/cadastro" className="font-semibold text-primaria-texto hover:underline">
                 Cadastrar minha torcida
               </Link>
               <button type="button" onClick={aoInformarTorcida} className="hover:text-texto">
@@ -247,7 +247,7 @@ function PainelLink({ para, titulo, detalhe }: { para: string; titulo: string; d
   const classe = "flex items-center gap-3 rounded-2xl border border-linha p-4 hover:border-primaria hover:bg-superficie-2 transition-colors";
   const conteudo = (
     <>
-      <span className="size-10 rounded-xl bg-primaria/15 text-primaria grid place-items-center">
+      <span className="size-10 rounded-xl bg-primaria/15 text-primaria-texto grid place-items-center">
         <Icone nome="painel" className="size-5" />
       </span>
       <span className="flex-1 min-w-0">

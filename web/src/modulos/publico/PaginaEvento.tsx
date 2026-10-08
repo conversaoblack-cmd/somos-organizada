@@ -234,7 +234,7 @@ function ConteudoEvento({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }
 function InfoLinha({ icone, titulo, sub }: { icone: "calendario" | "local"; titulo: string; sub?: string }) {
   return (
     <div className="flex gap-3 rounded-2xl bg-superficie-2 p-3.5">
-      <Icone nome={icone} className="size-5 text-primaria shrink-0 mt-0.5" />
+      <Icone nome={icone} className="size-5 text-primaria-texto shrink-0 mt-0.5" />
       <div className="min-w-0">
         <p className="font-semibold text-sm leading-snug line-clamp-2">{titulo.charAt(0).toUpperCase() + titulo.slice(1)}</p>
         {sub && <p className="text-xs text-texto-3 truncate mt-0.5">{sub}</p>}

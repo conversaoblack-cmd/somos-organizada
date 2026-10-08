@@ -179,7 +179,7 @@ export default function Pagamentos() {
         <Passo n={1} titulo="Crie a conta da torcida na Pagar.me" feito={pag.configurado && !demo}>
           <p>
             Entre em{" "}
-            <a href="https://pagar.me" target="_blank" rel="noreferrer" className="text-primaria font-semibold hover:underline">
+            <a href="https://pagar.me" target="_blank" rel="noreferrer" className="text-primaria-texto font-semibold hover:underline">
               pagar.me
             </a>{" "}
             e clique em <strong>Criar conta</strong>. Use os dados da torcida (CNPJ da associação) ou de quem for responsável pelo dinheiro.

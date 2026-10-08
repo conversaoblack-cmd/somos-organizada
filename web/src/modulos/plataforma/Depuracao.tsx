@@ -90,7 +90,7 @@ export default function Depuracao({ tid }: { tid: string }) {
 
       <Cartao className="p-5 sm:p-6">
         <h2 className="font-bold mb-3 flex items-center gap-2">
-          <Icone nome="checkCirculo" className="size-5 text-primaria" /> Checklist de saúde
+          <Icone nome="checkCirculo" className="size-5 text-primaria-texto" /> Checklist de saúde
         </h2>
         <ul className="grid gap-2 md:grid-cols-2">
           {saude.map((s, i) => (

@@ -193,7 +193,7 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
               pagamentos e publica quando estiver pronto.
             </p>
             {resultadoAprovacao.torcidaId && (
-              <Link to={rp(`/torcidas/${resultadoAprovacao.torcidaId}`)} className="inline-flex items-center gap-1.5 font-semibold text-primaria hover:underline">
+              <Link to={rp(`/torcidas/${resultadoAprovacao.torcidaId}`)} className="inline-flex items-center gap-1.5 font-semibold text-primaria-texto hover:underline">
                 Ver torcida no painel <Icone nome="setaDireita" className="size-4" />
               </Link>
             )}

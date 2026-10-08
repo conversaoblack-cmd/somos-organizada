@@ -42,7 +42,7 @@ export function CartaoEvento({ evento, sede, slug, destaque }: { evento: ComId<E
           destaque ? "absolute top-4 left-4 rounded-2xl bg-fundo/85 backdrop-blur px-3 py-2 border border-linha" : "w-20 sm:w-24 border-r border-dashed border-linha-forte bg-superficie-2/60",
         )}
       >
-        <span className="text-[11px] font-bold tracking-widest text-primaria">{mesAbrev(evento.data)}</span>
+        <span className="text-[11px] font-bold tracking-widest text-primaria-texto">{mesAbrev(evento.data)}</span>
         <span className="font-display text-3xl leading-none numeros">{diaDoMes(evento.data)}</span>
         <span className="text-[11px] text-texto-3 mt-1">{hora(evento.data)}</span>
       </div>
@@ -60,7 +60,7 @@ export function CartaoEvento({ evento, sede, slug, destaque }: { evento: ComId<E
             </Selo>
           ) : null}
         </div>
-        <h3 className="font-bold text-[17px] leading-snug group-hover:text-primaria transition-colors line-clamp-2">{evento.nome}</h3>
+        <h3 className="font-bold text-[17px] leading-snug group-hover:text-primaria-texto transition-colors line-clamp-2">{evento.nome}</h3>
         <p className="text-sm text-texto-2 mt-1 flex items-center gap-1.5 truncate">
           <Icone nome="local" className="size-4 shrink-0 text-texto-3" />
           <span className="truncate">{evento.local || dataExtensa(evento.data)}</span>
@@ -69,7 +69,7 @@ export function CartaoEvento({ evento, sede, slug, destaque }: { evento: ComId<E
           <div className="flex gap-4 text-sm">
             <span>
               <span className="block text-[11px] uppercase tracking-wide text-texto-3">Sócio</span>
-              <span className="font-bold text-primaria numeros">{evento.valorSocio ? moedaCurta(evento.valorSocio) : "Grátis"}</span>
+              <span className="font-bold text-primaria-texto numeros">{evento.valorSocio ? moedaCurta(evento.valorSocio) : "Grátis"}</span>
             </span>
             <span>
               <span className="block text-[11px] uppercase tracking-wide text-texto-3">Público</span>

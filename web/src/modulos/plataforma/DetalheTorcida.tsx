@@ -127,7 +127,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
                 <li>Cartão: {torcida.pagamentos?.cartao ? "habilitado" : "desabilitado"}</li>
                 {torcida.pagamentos?.descritorFatura && <li>Descritor na fatura: {torcida.pagamentos.descritorFatura}</li>}
               </ul>
-              <Link to={rp(`/torcidas/${id}/depuracao`)} className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-primaria hover:underline">
+              <Link to={rp(`/torcidas/${id}/depuracao`)} className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-primaria-texto hover:underline">
                 Ver webhooks e pedidos na depuração <Icone nome="setaDireita" className="size-4" />
               </Link>
             </Cartao>

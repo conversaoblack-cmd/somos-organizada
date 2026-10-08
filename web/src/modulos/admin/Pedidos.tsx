@@ -163,7 +163,7 @@ export default function Pedidos() {
             {filtrados.map((p) => (
               <button key={p.id} type="button" onClick={() => setAberto(p)} className="text-left min-w-0 w-full">
                 <Cartao className="p-4 flex items-center gap-3 active:bg-superficie-2">
-                  <span className={cx("size-10 shrink-0 rounded-xl grid place-items-center", p.tipo === "ingresso" ? "bg-primaria/12 text-primaria" : "bg-secundaria/15 text-secundaria")}>
+                  <span className={cx("size-10 shrink-0 rounded-xl grid place-items-center", p.tipo === "ingresso" ? "bg-primaria/12 text-primaria-texto" : "bg-secundaria/15 text-secundaria")}>
                     <Icone nome={p.tipo === "ingresso" ? "ingresso" : "estrela"} className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -247,7 +247,7 @@ function DetalhePedido({ p, fechar }: { p: ComId<PedidoPg> | null; fechar: () =>
         <Linha rotulo="CPF">{cpfMascarado(p.comprador?.cpf ?? "")}</Linha>
         <Linha rotulo="Telefone">
           {tel ? (
-            <a href={`https://wa.me/${numeroWhatsapp(tel)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primaria hover:underline">
+            <a href={`https://wa.me/${numeroWhatsapp(tel)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primaria-texto hover:underline">
               <Icone nome="whatsapp" className="size-4" /> {mascaraTelefone(tel)}
             </a>
           ) : (
@@ -261,7 +261,7 @@ function DetalhePedido({ p, fechar }: { p: ComId<PedidoPg> | null; fechar: () =>
           <h3 className="text-sm font-semibold text-texto-3 uppercase tracking-wide mb-1">Itens</h3>
           <p className="text-sm mb-2">
             {p.eventoId ? (
-              <Link to={`${base}/eventos/${p.eventoId}`} onClick={fechar} className="font-semibold hover:text-primaria">
+              <Link to={`${base}/eventos/${p.eventoId}`} onClick={fechar} className="font-semibold hover:text-primaria-texto">
                 {p.eventoNome}
               </Link>
             ) : (

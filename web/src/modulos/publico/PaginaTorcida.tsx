@@ -179,7 +179,7 @@ function AbaEventos({
               <span className="text-texto-3 font-normal"> · {lista.length}</span>
             </p>
             {dia && (
-              <button type="button" className="text-sm text-primaria font-semibold" onClick={() => setDia(null)}>
+              <button type="button" className="text-sm text-primaria-texto font-semibold" onClick={() => setDia(null)}>
                 Ver mês inteiro
               </button>
             )}
@@ -196,7 +196,7 @@ function AbaEventos({
               {filtrados.length > 0 && (
                 <button
                   type="button"
-                  className="mt-2 text-primaria font-semibold text-sm"
+                  className="mt-2 text-primaria-texto font-semibold text-sm"
                   onClick={() => {
                     const d = filtrados[0].data.toDate();
                     setMes(new Date(d.getFullYear(), d.getMonth(), 1));
@@ -224,7 +224,7 @@ function AbaSocios() {
     <div className="space-y-10">
       <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 items-end">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primaria mb-3">Programa oficial de sócios</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primaria-texto mb-3">Programa oficial de sócios</p>
           <h2 className="font-display uppercase text-3xl sm:text-5xl leading-[0.95]">Faça parte de verdade</h2>
         </div>
         <p className="text-texto-2 sm:text-lg">
@@ -272,7 +272,7 @@ function AbaSocios() {
           ["cadeado", "Pagamento seguro", "Pix ou cartão com cobrança automática. Cancele quando quiser."],
         ].map(([ic, t, d]) => (
           <div key={t} className="rounded-cartao border border-linha p-5">
-            <Icone nome={ic as "qr"} className="size-6 text-primaria" />
+            <Icone nome={ic as "qr"} className="size-6 text-primaria-texto" />
             <p className="font-semibold mt-3">{t}</p>
             <p className="text-sm text-texto-2 mt-1">{d}</p>
           </div>
@@ -308,7 +308,7 @@ function CartaoPlano({ plano, pct, slug, desativado }: { plano: ComId<Plano>; pc
         <ul className="mt-6 space-y-2.5 flex-1">
           {plano.beneficios.map((b) => (
             <li key={b} className="flex gap-2.5 text-sm">
-              <Icone nome="check" className="size-5 text-primaria shrink-0" />
+              <Icone nome="check" className="size-5 text-primaria-texto shrink-0" />
               <span>{b}</span>
             </li>
           ))}

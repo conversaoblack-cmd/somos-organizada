@@ -16,14 +16,15 @@ const VARIANTES: Record<Variante, string> = {
   suave: "bg-superficie-2 text-texto hover:bg-superficie-3",
 };
 const TAMANHOS: Record<Tamanho, string> = {
-  sm: "h-9 px-3.5 text-sm gap-1.5 rounded-xl",
+  // 44 px no celular (dedo), 36 px no computador
+  sm: "h-11 sm:h-9 px-3.5 text-sm gap-1.5 rounded-xl",
   md: "h-11 px-5 text-[15px] gap-2 rounded-2xl",
   lg: "h-14 px-7 text-base gap-2.5 rounded-2xl",
 };
 
 export function classesBotao(variante: Variante = "primaria", tamanho: Tamanho = "md", largo = false) {
   return cx(
-    "inline-flex items-center justify-center font-semibold whitespace-nowrap select-none transition-all duration-150",
+    "inline-flex items-center justify-center font-semibold whitespace-nowrap select-none transition-[transform,filter,background-color,color,box-shadow] duration-150",
     "active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none",
     VARIANTES[variante],
     TAMANHOS[tamanho],
@@ -86,7 +87,7 @@ export function BotaoIcone({
       aria-label={rotulo}
       title={rotulo}
       className={cx(
-        "inline-grid place-items-center size-10 rounded-xl text-texto-2 hover:text-texto hover:bg-superficie-2 transition-colors disabled:opacity-40",
+        "inline-grid place-items-center size-11 sm:size-10 rounded-xl text-texto-2 hover:text-texto hover:bg-superficie-2 transition-colors disabled:opacity-40",
         className,
       )}
       {...props}
@@ -108,7 +109,7 @@ export function Girando({ className = "size-5" }: { className?: string }) {
 export function Carregando({ texto, className }: { texto?: string; className?: string }) {
   return (
     <div className={cx("flex flex-col items-center justify-center gap-3 py-16 text-texto-3", className)} role="status">
-      <Girando className="size-7 text-primaria" />
+      <Girando className="size-7 text-primaria-texto" />
       {texto && <p className="text-sm">{texto}</p>}
     </div>
   );
@@ -154,7 +155,7 @@ const TONS: Record<Tom, string> = {
   perigo: "bg-perigo/12 text-perigo border-perigo/25",
   info: "bg-info/12 text-info border-info/25",
   neutro: "bg-superficie-2 text-texto-2 border-linha",
-  primaria: "bg-primaria/15 text-primaria border-primaria/30",
+  primaria: "bg-primaria/15 text-primaria-texto border-primaria/30",
 };
 
 export function Selo({ tom = "neutro", children, className, ponto }: { tom?: Tom; children: ReactNode; className?: string; ponto?: boolean }) {
@@ -247,7 +248,7 @@ export function Avatar({ nome, url, tamanho = "size-10", className }: { nome: st
   return url ? (
     <img src={url} alt="" className={cx(tamanho, "rounded-full object-cover bg-superficie-2", className)} />
   ) : (
-    <span className={cx(tamanho, "rounded-full grid place-items-center bg-primaria/15 text-primaria font-bold text-sm", className)}>{ini}</span>
+    <span className={cx(tamanho, "rounded-full grid place-items-center bg-primaria/15 text-primaria-texto font-bold text-sm", className)}>{ini}</span>
   );
 }
 

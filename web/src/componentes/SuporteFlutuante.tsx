@@ -435,7 +435,7 @@ function NovoChamado({
   if (!logado) {
     return (
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
-        <div className="size-12 rounded-2xl bg-primaria/15 text-primaria grid place-items-center">
+        <div className="size-12 rounded-2xl bg-primaria/15 text-primaria-texto grid place-items-center">
           <Icone nome="cadeado" className="size-6" />
         </div>
         <p className="font-semibold text-lg">Entre para falar com a equipe</p>

@@ -291,7 +291,7 @@ function Conversa({ chamado, voltar }: { chamado: ComId<Chamado>; voltar: () => 
             </div>
           )}
           <div className="flex items-end gap-2">
-            <BotaoIcone icone="raio" rotulo="Respostas rápidas" onClick={() => setRapidas((v) => !v)} className={cx(rapidas && "text-primaria")} />
+            <BotaoIcone icone="raio" rotulo="Respostas rápidas" onClick={() => setRapidas((v) => !v)} className={cx(rapidas && "text-primaria-texto")} />
             <textarea
               ref={campo}
               value={texto}
@@ -344,7 +344,7 @@ function PainelDiagnostico({ chamado }: { chamado: ComId<Chamado> }) {
           className="flex items-center justify-between gap-2 rounded-xl border border-linha px-3 py-2.5 mb-3 text-sm font-semibold hover:bg-superficie-2"
         >
           <span className="flex items-center gap-2">
-            <Icone nome="bug" className="size-4 text-primaria" />
+            <Icone nome="bug" className="size-4 text-primaria-texto" />
             Depuração de {chamado.torcidaNome || "torcida"}
           </span>
           <Icone nome="chevronDireita" className="size-4 text-texto-3" />

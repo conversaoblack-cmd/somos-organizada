@@ -344,13 +344,13 @@ function DetalheSocio({ s, fechar }: { s: ComId<Socio> | null; fechar: () => voi
         <Linha rotulo="CPF">{mascaraCpf(s.cpf)}</Linha>
         <Linha rotulo="Nascimento">{s.nascimento ? s.nascimento.split("-").reverse().join("/") : "—"}</Linha>
         <Linha rotulo="E-mail">
-          <a href={`mailto:${s.email}`} className="hover:text-primaria">
+          <a href={`mailto:${s.email}`} className="hover:text-primaria-texto">
             {s.email}
           </a>
         </Linha>
         <Linha rotulo="Telefone">
           {tel ? (
-            <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primaria hover:underline">
+            <a href={`https://wa.me/${tel}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primaria-texto hover:underline">
               <Icone nome="whatsapp" className="size-4" /> {mascaraTelefone(s.telefone)}
             </a>
           ) : (
