@@ -58,6 +58,8 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   `landing/cliente.ts`. Torcida de exemplo no botão do topo: `VITE_SLUG_DEMO=<endereço>` em `web/.env.production.local`.
 - Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável
   pelas regras). Padrão de UX e próximas melhorias: `docs/UX.md` (leia antes de mexer em tela).
+- Skills de UX/UI instaladas em `.claude/skills/` (carregam sozinhas em qualquer sessão). Para mexer em tela,
+  comece pela `somos-organizada-ux`: ela diz qual usar e quais regras do projeto vencem as de terceiros.
 - Estrutura: `functions/` (back-end), `web/` (front-end), `firestore.rules`, `storage.rules`, `scripts/`
   (implantar e verificar), `testes-e2e/` (emuladores + Pagar.me simulada), `docs/IMPLANTACAO.md` (guia completo).
 - Arquivos locais que **não** vão para o Git e são recriados pelo `implantar.sh`: `functions/.env` e

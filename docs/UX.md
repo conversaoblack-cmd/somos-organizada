@@ -59,14 +59,18 @@ com tecnologia, celular simples e internet pré-paga.
 4. **Modelos de evento** no painel (caravana, festa, jogo) com campos já preenchidos.
 5. **Painel em 1 toque no celular**: atalhos para "Novo evento", "Divulgar link" e "Vendas de hoje".
 
-## Skills de UX/UI para quem desenvolve com Claude Code
+## Skills de UX/UI (instaladas no projeto)
 
-Conferidas no GitHub em 08/10/2026 (todas com mais de 1.000 estrelas e 500 forks):
+Ficam em `.claude/skills/` e carregam sozinhas em qualquer sessão do Claude Code (Mac, Windows, nuvem).
+Comece pela `somos-organizada-ux`. Todas foram lidas e testadas contra o nosso código antes de entrar;
+origem, versão, licença e o que foi ajustado estão em `.claude/skills/README.md`.
 
-| Skill | Estrelas | Forks | Para quê | Instalar |
-|---|---|---|---|---|
-| [anthropics/skills](https://github.com/anthropics/skills) (frontend-design e outras, oficial) | 180k | 21,3k | Interfaces com cara própria, fugindo do visual genérico | `/plugin marketplace add anthropics/skills` |
-| [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | 133,9k | 14,2k | Sistema de design: estilos, paletas, fontes, regras de UX | `/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill` |
-| [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) | 93,8k | 6,4k | Layout, tipografia, espaçamento e movimento com "bom gosto" | `npx skills add https://github.com/Leonxlnx/taste-skill` |
-| [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | 78,6k | 4,7k | Comandos de crítica, auditoria e polimento de telas | `/plugin marketplace add pbakaus/impeccable` |
-| [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | 32,1k | 2,8k | 100+ regras de acessibilidade, desempenho e UX; boas práticas de React | `npx skills add vercel-labs/agent-skills` |
+| Skill | Para quê | Estrelas / forks (08/10/2026) |
+|---|---|---|
+| `somos-organizada-ux` (nossa) | Qual skill usar e quais regras do projeto vencem | — |
+| `frontend-design` (Anthropic) | Direção visual própria, sem "cara de gerado por IA" | 180k / 21,3k |
+| `impeccable` (sem scripts) | Crítica com nota, harden, textos e erros, onboarding | 78,6k / 4,7k |
+| `web-design-guidelines` (Vercel, regras fixas) | Checklist técnico com `arquivo:linha` | 32,1k / 2,8k |
+| `react-best-practices` (Vercel) | Tamanho do app e desempenho do React | 32,1k / 2,8k |
+
+Avaliadas e deixadas de fora: `ui-ux-pro-max`, `taste-skill` e `redesign-skill` (motivo no README das skills).
