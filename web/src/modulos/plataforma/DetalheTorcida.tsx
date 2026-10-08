@@ -1,4 +1,4 @@
-import { rp } from "@/lib/hosts";
+import { rp, origemTorcidas } from "@/lib/hosts";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useColecao, useDocumento } from "@/hooks/dados";
@@ -43,7 +43,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
       </Cartao>
     );
   }
-  const pagina = `${location.origin}/${torcida.slug}`;
+  const pagina = `${origemTorcidas()}/${torcida.slug}`;
 
   return (
     <>

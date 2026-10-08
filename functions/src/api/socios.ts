@@ -6,7 +6,7 @@ import { gerarQr } from "../util/cripto";
 import { cpfValido, endereco, soDigitos, telefoneBR, texto, umDe, type Pessoa } from "../util/validacao";
 import { calcularMensalidade } from "../dominio/precos";
 import { exigirEscopoSede, exigirLogin, exigirMembro } from "../dominio/permissoes";
-import { confirmarFaturaSocio, contarMudancaStatus, encerrarPedidoNaoPago } from "../dominio/processamento";
+import { confirmarFaturaSocio, confirmarPedidoPago, contarMudancaStatus, encerrarPedidoNaoPago } from "../dominio/processamento";
 import { pagarmeDaTorcida } from "../pagarme/credenciais";
 import { clientePg, enderecoPg } from "../pagarme/montagem";
 import { dividir } from "../dominio/split";
@@ -26,20 +26,42 @@ function pessoaDoSocio(s: Socio): Pessoa {
  * próprio sistema, porque a assinatura da Pagar.me não aceita split). Com a torcida no modo
  * "sede do sócio" e a subsede com recebedor ativo, o valor do plano vai direto para a subsede.
  */
-/** Cancela na Pagar.me e encerra localmente uma cobrança de sócio ainda não paga (sem efeito se já paga/encerrada). */
-export async function fecharCobrancaAberta(tid: string, pedidoId: string | null) {
-  if (!pedidoId) return;
+/**
+ * Fecha a cobrança de sócio ainda em aberto antes de abrir outra (uma por vez).
+ * - Se a Pagar.me já recebeu, confirma o pagamento e devolve o id (quem chamou não cria outra cobrança).
+ * - Só marca como cancelada aqui depois de cancelar de fato na Pagar.me; se não conseguir, interrompe.
+ * - Cobrança ainda sendo criada por outro clique: pede para aguardar (evita duas cobranças vivas).
+ */
+export async function fecharCobrancaAberta(tid: string, pedidoId: string | null): Promise<{ jaPago: string } | null> {
+  if (!pedidoId) return null;
   const p = (await refs.pedido(tid, pedidoId).get()).data() as Pedido | undefined;
-  if (!p || (p.status !== "aguardando" && p.status !== "criando")) return;
-  const chargeId = p.pagarme?.chargeId;
-  if (chargeId) {
-    const pg = await pagarmeDaTorcida(tid);
-    // Se a Pagar.me já recebeu, não encerra: o webhook/"Já paguei" confirma normalmente
-    const pedidoPg = p.pagarme?.orderId ? await pg.obterPedido(p.pagarme.orderId).catch(() => null) : null;
-    if (pedidoPg?.status === "paid") return;
-    await pg.cancelarCobranca(chargeId).catch(() => undefined);
+  if (!p || (p.status !== "aguardando" && p.status !== "criando")) return null;
+  const pg = await pagarmeDaTorcida(tid);
+  let pedidoPg = p.pagarme?.orderId ? await pg.obterPedido(p.pagarme.orderId) : await pg.buscarPedidoPorCodigo(pedidoId);
+  if (!pedidoPg && p.status === "criando" && Date.now() - p.criadoEm.toMillis() < 2 * 60_000) {
+    throw new HttpsError("failed-precondition", "Já existe um pagamento sendo gerado. Aguarde alguns segundos e tente de novo.");
+  }
+  if (pedidoPg?.status === "paid") {
+    await confirmarPedidoPago(tid, pedidoId, pedidoPg, QR_HMAC.value());
+    return { jaPago: pedidoId };
+  }
+  const chargeId = pedidoPg?.charges?.[0]?.id ?? p.pagarme?.chargeId;
+  if (chargeId && pedidoPg?.status !== "canceled" && pedidoPg?.status !== "failed") {
+    try {
+      await pg.cancelarCobranca(chargeId);
+    } catch (e) {
+      // Pode ter sido paga neste instante: confere de novo antes de desistir
+      pedidoPg = await pg.obterPedido(pedidoPg?.id ?? p.pagarme!.orderId!).catch(() => null);
+      if (pedidoPg?.status === "paid") {
+        await confirmarPedidoPago(tid, pedidoId, pedidoPg, QR_HMAC.value());
+        return { jaPago: pedidoId };
+      }
+      logger.error("Não foi possível cancelar a cobrança anterior", { tid, pedidoId, erro: String(e) });
+      throw new HttpsError("unavailable", "Não conseguimos cancelar a cobrança anterior agora. Tente de novo em instantes.");
+    }
   }
   await encerrarPedidoNaoPago(tid, pedidoId, "cancelado", "Substituída por uma nova cobrança.");
+  return null;
 }
 
 export async function criarCobrancaSocio(args: {
@@ -62,7 +84,8 @@ export async function criarCobrancaSocio(args: {
   const divisao = dividir(torcida, sede, valores.valorBase, valores.taxa);
   // Só uma cobrança em aberto por sócio: a anterior é cancelada na Pagar.me e encerrada aqui, para um Pix antigo
   // (de outro plano ou valor) não poder ser pago depois e liberar o ciclo errado.
-  await fecharCobrancaAberta(tid, socio.cobrancaAbertaId ?? null);
+  const anteriorPago = await fecharCobrancaAberta(tid, socio.cobrancaAbertaId ?? null);
+  if (anteriorPago) return { pedidoId: anteriorPago.jaPago, resultado: "pago" as const };
   const pedidoRef = refs.pedidos(tid).doc();
   const expiraEm = new Date(Date.now() + expiraSeg * 1000);
   const pedido: Pedido = {
@@ -211,14 +234,14 @@ export const aderirSocio = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, asyn
   const valores = calcularMensalidade(plano.valor, pct);
 
   // Ficha + trava de CPF (um CPF = um sócio por torcida)
-  const anterior = ((await refs.socio(tid, uid).get()).data() as Socio | undefined)?.cobrancaAbertaId ?? null;
-  await fecharCobrancaAberta(tid, anterior);
+  let anterior: string | null = null;
   const socio = await db.runTransaction(async (tx) => {
     const sRef = refs.socio(tid, uid);
     const cpfRef = refs.cpf(tid, cpf);
     const [sSnap, cSnap] = await Promise.all([tx.get(sRef), tx.get(cpfRef)]);
     const atual = sSnap.data() as Socio | undefined;
     if (atual && ATIVOS.includes(atual.status)) throw new HttpsError("already-exists", "Você já é sócio desta torcida.");
+    anterior = atual?.cobrancaAbertaId ?? null;
     if (atual?.bloqueadoPelaDiretoria && atual.status === "cancelado") {
       throw new HttpsError("failed-precondition", "Sua associação foi cancelada pela diretoria. Fale com ela para voltar.");
     }
@@ -236,6 +259,12 @@ export const aderirSocio = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, asyn
     contarMudancaStatus(tx, tid, atual?.status ?? null, "pendente_pagamento");
     return ficha;
   });
+  // Validação passou: agora sim fecha a cobrança anterior (de outro plano/valor) antes de abrir a nova
+  const anteriorPago = await fecharCobrancaAberta(tid, anterior);
+  if (anteriorPago) {
+    const atualizado = (await refs.socio(tid, uid).get()).data() as Socio;
+    return { modo: "pedido", pedidoId: anteriorPago.jaPago, status: atualizado.status === "pendente_pagamento" ? "aguardando" : "pago" };
+  }
 
   try {
     if (metodo === "pix") {
@@ -354,7 +383,7 @@ export const alterarStatusSocio = onCall(async (req) => {
     tx.update(sRef, {
       status: novo,
       // Cancelamento pela diretoria é decisão dela: o sócio não se reativa sozinho pagando ou se associando de novo
-      bloqueadoPelaDiretoria: acao === "cancelar" || acao === "suspender",
+      bloqueadoPelaDiretoria: membro.papel === "diretoria" && (acao === "cancelar" || acao === "suspender") ? true : acao === "reativar" ? false : s.bloqueadoPelaDiretoria ?? false,
       atualizadoEm: FieldValue.serverTimestamp(),
       historico: FieldValue.arrayUnion({ acao, por: membro.uid, em: Timestamp.now(), de: s.status, para: novo }),
     });

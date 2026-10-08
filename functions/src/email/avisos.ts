@@ -61,7 +61,7 @@ export function notificarPedidoPago(tid: string, pedidoId: string) {
     if (!ficha?.email) return;
     await enviarUmaVez(tid, `socio-pago-${pedidoId}`, "socio_confirmado", emailSocioConfirmado({
       torcida, url: link(torcida, "/socio"), nome: ficha.nome, email: ficha.email, renovacao: !!p.renovacao,
-      plano: ficha.planoNome, validoAte: ficha.validoAte?.toDate() ?? null, total: p.total, matricula: ficha.matricula,
+      plano: p.plano?.nome ?? ficha.planoNome, validoAte: ficha.validoAte?.toDate() ?? null, total: p.total, matricula: ficha.matricula,
       emAnalise: ficha.status === "em_analise",
     }));
   });

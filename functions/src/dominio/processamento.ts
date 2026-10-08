@@ -170,7 +170,8 @@ function confirmarNaTransacao(tid: string, pedidoId: string, pg: PgPedido, segre
     const updSocio: Record<string, unknown> = {
       status: novoStatus,
       validoAte: Timestamp.fromDate(validoAte),
-      cobrancaAbertaId: null,
+      // só solta a cobrança em aberto se for esta; uma mais nova continua sendo acompanhada
+      ...(s.cobrancaAbertaId === pedidoId || !s.cobrancaAbertaId ? { cobrancaAbertaId: null } : {}),
       // pagamento confirmado: some o aviso de "cobrança recusada"
       ultimaFalhaCobranca: FieldValue.delete(),
       motivoFalhaCobranca: FieldValue.delete(),

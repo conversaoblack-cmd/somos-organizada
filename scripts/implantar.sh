@@ -132,9 +132,17 @@ JSON_CFG="$(firebase apps:sdkconfig WEB "$APP_ID" --project "$PROJETO" --json)"
 # plataforma.<domínio> já responde com o site; senão o painel continua em <domínio>/plataforma.
 HOST_PLATAFORMA=""
 if [ -n "$DOMINIO" ]; then
-  if curl -fsS -m 20 "https://plataforma.$DOMINIO/" 2>/dev/null | grep -q "<title>Somos Organizada</title>"; then
+  # Já ligado num deploy anterior? Mantém (uma falha de rede agora não pode desligar o subdomínio).
+  JA_LIGADO="$(grep -s '^VITE_HOST_PLATAFORMA=' web/.env.production.local | cut -d= -f2 || true)"
+  NO_AR=0
+  for _ in 1 2 3; do
+    if curl -fsS -m 20 "https://plataforma.$DOMINIO/" 2>/dev/null | grep -q "<title>Somos Organizada</title>"; then NO_AR=1; break; fi
+    sleep 3
+  done
+  if [ "$NO_AR" = 1 ] || [ "$JA_LIGADO" = "plataforma.$DOMINIO" ]; then
     HOST_PLATAFORMA="plataforma.$DOMINIO"
     echo "Painel da equipe: https://$HOST_PLATAFORMA (o endereço $URL_SITE/plataforma redireciona para lá)"
+    [ "$NO_AR" = 1 ] || aviso "plataforma.$DOMINIO não respondeu agora, mas já estava ligado: mantido."
   else
     aviso "plataforma.$DOMINIO ainda não está no ar: o painel da equipe continua em $URL_SITE/plataforma."
     echo "   Para separar: Firebase Hosting → Adicionar domínio personalizado → plataforma.$DOMINIO, cole os registros no Registro.br e rode este script de novo."
@@ -149,7 +157,7 @@ node -e '
     `VITE_FIREBASE_STORAGE_BUCKET=${c.storageBucket || c.projectId + ".firebasestorage.app"}`,
     `VITE_FIREBASE_APP_ID=${c.appId}`,
     `VITE_VERSAO=${new Date().toISOString().slice(0, 10)}`,
-    ...(process.argv[2] ? [`VITE_HOST_PLATAFORMA=${process.argv[2]}`] : []),
+    ...(process.argv[2] ? [`VITE_HOST_PLATAFORMA=${process.argv[2]}`, `VITE_HOST_PRINCIPAL=${process.argv[3]}`] : []),
   ];
   const fs = require("fs");
   fs.writeFileSync("web/.env.production.local", linhas.join("\n") + "\n");

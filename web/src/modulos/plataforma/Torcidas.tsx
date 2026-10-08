@@ -1,4 +1,4 @@
-import { rp } from "@/lib/hosts";
+import { rp, origemTorcidas } from "@/lib/hosts";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { api, mensagemDeErro } from "@/lib/api";
@@ -361,7 +361,7 @@ function NovaTorcida({ aberto, fechar, aoCriar, slugsUsados }: { aberto: boolean
               setSlug(v.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40));
             }}
             erro={(tentou || slugEditado) && erros.slug}
-            dica={`${location.origin}/${slugFinal || "endereco"}`}
+            dica={`${origemTorcidas()}/${slugFinal || "endereco"}`}
             icone="link"
           />
           <Campo rotulo="Nome da sede principal" value={sede} onChange={setSede} placeholder="Sede principal" />
@@ -404,7 +404,7 @@ function LinhaCopiar({ rotulo, valor, abrir }: { rotulo: string; valor: string; 
 }
 
 function ResultadoCriacao({ c }: { c: Criada }) {
-  const pagina = `${location.origin}/${c.slug}`;
+  const pagina = `${origemTorcidas()}/${c.slug}`;
   const painel = `${pagina}/admin`;
   const mensagem =
     `Olá, ${c.diretor.split(" ")[0]}! A ${c.nome} já está na Somos Organizada.\n\n` +

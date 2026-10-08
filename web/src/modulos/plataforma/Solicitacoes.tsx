@@ -1,4 +1,4 @@
-import { rp } from "@/lib/hosts";
+import { rp, origemTorcidas } from "@/lib/hosts";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { collection, orderBy, query } from "firebase/firestore";
@@ -140,7 +140,7 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
   }, [aprovada]);
   const avisar = useToast();
   const e = s.endereco;
-  const pagina = `${location.origin}/${s.slug}`;
+  const pagina = `${origemTorcidas()}/${s.slug}`;
 
   async function aprovar() {
     setSalvando(true);
@@ -186,8 +186,8 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
       {resultadoAprovacao && (
         <Aviso tom="sucesso" titulo="Torcida criada">
           <div className="space-y-3 mt-2">
-            <LinkCopiar rotulo="Página da torcida" valor={`${location.origin}/${resultadoAprovacao.slug}`} />
-            <LinkCopiar rotulo="Painel da diretoria" valor={`${location.origin}/${resultadoAprovacao.slug}/admin`} />
+            <LinkCopiar rotulo="Página da torcida" valor={`${origemTorcidas()}/${resultadoAprovacao.slug}`} />
+            <LinkCopiar rotulo="Painel da diretoria" valor={`${origemTorcidas()}/${resultadoAprovacao.slug}/admin`} />
             <p>
               O diretor entra com a <strong>mesma conta que criou no cadastro</strong> ({s.email}) — não precisa de senha nova. O site nasce fora do ar; ele configura
               pagamentos e publica quando estiver pronto.

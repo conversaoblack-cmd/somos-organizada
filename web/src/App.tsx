@@ -87,9 +87,9 @@ function IrPara({ url }: { url: string }) {
   return <TelaCarregando />;
 }
 
-function RotasPlataformaSeparada() {
+/** Rotas do site. No subdomínio da plataforma (quando configurado) só existe o painel da equipe, na raiz. */
+function Rotas() {
   const { pathname, search } = useLocation();
-  // No subdomínio da plataforma só existe o painel da equipe, direto na raiz (sem /plataforma no endereço)
   if (noHostPlataforma()) {
     return (
       <Routes>
@@ -103,7 +103,10 @@ function RotasPlataformaSeparada() {
       <Route path="/" element={<Inicio />} />
       <Route path="/entrar" element={<Entrar />} />
       <Route path="/cadastro" element={<Cadastro />} />
-      <Route path="/plataforma/*" element={<IrPara url={urlPlataforma(pathname.replace(/^\/plataforma/, "") + search)} />} />
+      <Route
+        path="/plataforma/*"
+        element={plataformaSeparada ? <IrPara url={urlPlataforma(pathname.replace(/^\/plataforma/, "") + search)} /> : <PainelPlataforma />}
+      />
       <Route path="/:slug/*" element={<RotasTorcida />} />
     </Routes>
   );
@@ -113,17 +116,7 @@ export function App() {
   return (
     <LimiteDeErro>
       <Suspense fallback={<TelaCarregando />}>
-        {plataformaSeparada ? (
-          <RotasPlataformaSeparada />
-        ) : (
-          <Routes>
-            <Route path="/" element={<Inicio />} />
-            <Route path="/entrar" element={<Entrar />} />
-            <Route path="/cadastro" element={<Cadastro />} />
-            <Route path="/plataforma/*" element={<PainelPlataforma />} />
-            <Route path="/:slug/*" element={<RotasTorcida />} />
-          </Routes>
-        )}
+        <Rotas />
       </Suspense>
     </LimiteDeErro>
   );

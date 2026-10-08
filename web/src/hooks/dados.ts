@@ -20,23 +20,26 @@ export interface Estado<T> {
 
 /** Documento em tempo real. Passe null para não assinar. */
 export function useDocumento<T>(caminho: string | null): Estado<ComId<T> | null> {
-  const [estado, setEstado] = useState<Estado<ComId<T> | null>>({ dados: null, carregando: !!caminho, erro: null });
+  // O estado guarda de qual caminho ele é: logo depois de o caminho mudar (ex.: o login terminou), o render
+  // ainda não tem a resposta nova e precisa aparecer como "carregando", não como "documento inexistente".
+  const [estado, setEstado] = useState<Estado<ComId<T> | null> & { de: string | null }>({ dados: null, carregando: !!caminho, erro: null, de: caminho });
   useEffect(() => {
     if (!caminho) {
-      setEstado({ dados: null, carregando: false, erro: null });
+      setEstado({ dados: null, carregando: false, erro: null, de: null });
       return;
     }
-    setEstado((e) => ({ ...e, carregando: true }));
+    setEstado((e) => ({ ...e, carregando: true, de: caminho }));
     return onSnapshot(
       doc(db, caminho) as DocumentReference<T>,
-      (s) => setEstado({ dados: s.exists() ? ({ id: s.id, ...s.data() } as ComId<T>) : null, carregando: false, erro: null }),
+      (s) => setEstado({ dados: s.exists() ? ({ id: s.id, ...s.data() } as ComId<T>) : null, carregando: false, erro: null, de: caminho }),
       (erro) => {
         registrarErro(erro, `doc ${caminho}`);
-        setEstado({ dados: null, carregando: false, erro });
+        setEstado({ dados: null, carregando: false, erro, de: caminho });
       },
     );
   }, [caminho]);
-  return estado;
+  if (estado.de !== caminho) return { dados: null, carregando: !!caminho, erro: null };
+  return { dados: estado.dados, carregando: estado.carregando, erro: estado.erro };
 }
 
 /**
