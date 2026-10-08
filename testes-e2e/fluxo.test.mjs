@@ -701,6 +701,19 @@ test("18. segurança: convite não toma conta existente; estorno só com confirm
   assert.equal(await webhook(tid, ctx.webhookToken, { id: "hook_socio", type: "charge.chargedback", data: { id: pedSocioPago.pagarme.chargeId, order: { id: pedSocioPago.pagarme.orderId } } }), 200);
   assert.equal((await aDb.doc(`torcidas/${tid}/socios/${uidS}`).get()).get("status"), "cancelado");
 
+  // trocar de plano com um Pix barato em aberto: o Pix antigo é cancelado e, se pago, nunca libera o plano mais longo
+  await setDoc(doc(dir.db, `torcidas/${tid}/planos/anual`), { nome: "Anual", valor: 12000, intervalo: "ano", intervaloQtd: 1, pix: true, cartao: true, ativo: true });
+  const t = navegador("troca-plano");
+  await createUserWithEmailAndPassword(t.auth, "trocaplano@x.test", SENHA);
+  const dadosT = { nome: "Troca Plano", cpf: "71460238001", telefone: "71977770003", nascimento: "1993-03-03",
+    endereco: { cep: "40000000", logradouro: "Rua T", numero: "3", bairro: "Centro", cidade: "Salvador", uf: "BA" } };
+  const barato = await t.chamar("aderirSocio", { tid, planoId: "mensal", sedeId: ctx.sedePrincipal, metodo: "pix", dados: dadosT });
+  const caro = await t.chamar("aderirSocio", { tid, planoId: "anual", sedeId: ctx.sedePrincipal, metodo: "pix", dados: dadosT });
+  assert.equal((await aDb.doc(`torcidas/${tid}/pedidos/${barato.pedidoId}`).get()).get("status"), "cancelado");
+  const pCaro = (await aDb.doc(`torcidas/${tid}/pedidos/${caro.pedidoId}`).get()).data();
+  assert.equal(pCaro.plano.intervalo, "ano");
+  assert.equal(pCaro.total, 13200);
+
   // cancelado pela diretoria não se reativa pagando nem se associando de novo
   const s2 = navegador("socio-cancelado");
   await signInWithEmailAndPassword(s2.auth, "socio@x.test", SENHA);

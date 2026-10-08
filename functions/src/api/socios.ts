@@ -6,7 +6,7 @@ import { gerarQr } from "../util/cripto";
 import { cpfValido, endereco, soDigitos, telefoneBR, texto, umDe, type Pessoa } from "../util/validacao";
 import { calcularMensalidade } from "../dominio/precos";
 import { exigirEscopoSede, exigirLogin, exigirMembro } from "../dominio/permissoes";
-import { confirmarFaturaSocio, contarMudancaStatus } from "../dominio/processamento";
+import { confirmarFaturaSocio, contarMudancaStatus, encerrarPedidoNaoPago } from "../dominio/processamento";
 import { pagarmeDaTorcida } from "../pagarme/credenciais";
 import { clientePg, enderecoPg } from "../pagarme/montagem";
 import { dividir } from "../dominio/split";
@@ -26,6 +26,22 @@ function pessoaDoSocio(s: Socio): Pessoa {
  * próprio sistema, porque a assinatura da Pagar.me não aceita split). Com a torcida no modo
  * "sede do sócio" e a subsede com recebedor ativo, o valor do plano vai direto para a subsede.
  */
+/** Cancela na Pagar.me e encerra localmente uma cobrança de sócio ainda não paga (sem efeito se já paga/encerrada). */
+export async function fecharCobrancaAberta(tid: string, pedidoId: string | null) {
+  if (!pedidoId) return;
+  const p = (await refs.pedido(tid, pedidoId).get()).data() as Pedido | undefined;
+  if (!p || (p.status !== "aguardando" && p.status !== "criando")) return;
+  const chargeId = p.pagarme?.chargeId;
+  if (chargeId) {
+    const pg = await pagarmeDaTorcida(tid);
+    // Se a Pagar.me já recebeu, não encerra: o webhook/"Já paguei" confirma normalmente
+    const pedidoPg = p.pagarme?.orderId ? await pg.obterPedido(p.pagarme.orderId).catch(() => null) : null;
+    if (pedidoPg?.status === "paid") return;
+    await pg.cancelarCobranca(chargeId).catch(() => undefined);
+  }
+  await encerrarPedidoNaoPago(tid, pedidoId, "cancelado", "Substituída por uma nova cobrança.");
+}
+
 export async function criarCobrancaSocio(args: {
   tid: string;
   torcida: Torcida;
@@ -44,6 +60,9 @@ export async function criarCobrancaSocio(args: {
   const sede =
     torcida.destinoMensalidade === "sede_do_socio" ? ((await refs.sede(tid, socio.sedeId).get()).data() as Sede | undefined) : undefined;
   const divisao = dividir(torcida, sede, valores.valorBase, valores.taxa);
+  // Só uma cobrança em aberto por sócio: a anterior é cancelada na Pagar.me e encerrada aqui, para um Pix antigo
+  // (de outro plano ou valor) não poder ser pago depois e liberar o ciclo errado.
+  await fecharCobrancaAberta(tid, socio.cobrancaAbertaId ?? null);
   const pedidoRef = refs.pedidos(tid).doc();
   const expiraEm = new Date(Date.now() + expiraSeg * 1000);
   const pedido: Pedido = {
@@ -56,6 +75,7 @@ export async function criarCobrancaSocio(args: {
     sedeId: socio.sedeId,
     socioUid: socio.uid,
     planoId: socio.planoId,
+    plano: { nome: socio.planoNome, intervalo: socio.intervalo, intervaloQtd: socio.intervaloQtd, valor: socio.valorPlano },
     renovacao,
     liquidacao: divisao.liquidacao,
     expiraEm: Timestamp.fromDate(expiraEm),
@@ -191,6 +211,8 @@ export const aderirSocio = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, asyn
   const valores = calcularMensalidade(plano.valor, pct);
 
   // Ficha + trava de CPF (um CPF = um sócio por torcida)
+  const anterior = ((await refs.socio(tid, uid).get()).data() as Socio | undefined)?.cobrancaAbertaId ?? null;
+  await fecharCobrancaAberta(tid, anterior);
   const socio = await db.runTransaction(async (tx) => {
     const sRef = refs.socio(tid, uid);
     const cpfRef = refs.cpf(tid, cpf);
@@ -318,6 +340,10 @@ export const alterarStatusSocio = onCall(async (req) => {
         break;
       case "reativar":
         if (s.status !== "suspenso" && s.status !== "cancelado") throw new HttpsError("failed-precondition", "Sócio não está suspenso.");
+        // Desfazer um cancelamento (ou um bloqueio da diretoria) é decisão da diretoria, não da subsede
+        if ((s.status === "cancelado" || s.bloqueadoPelaDiretoria) && membro.papel !== "diretoria") {
+          throw new HttpsError("permission-denied", "Só a diretoria reativa um sócio cancelado ou bloqueado por ela.");
+        }
         novo = emDia ? "ativo" : "inadimplente";
         break;
       case "cancelar":

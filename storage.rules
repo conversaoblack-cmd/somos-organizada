@@ -15,10 +15,18 @@ service firebase.storage {
       return request.resource.size < maxMb * 1024 * 1024 && request.resource.contentType.matches('image/(jpeg|png|webp)');
     }
 
-    // Logo, banner e imagens de evento: públicos, editados pela diretoria/subsede
+    // Imagens públicas da torcida
     match /torcidas/{tid}/publico/{arquivo=**} {
       allow read: if true;
-      allow write: if membroAtivo(tid) && papel(tid) in ['diretoria', 'subsede'] && imagem(5);
+    }
+    // Escudo e banner: só a diretoria
+    match /torcidas/{tid}/publico/marca/{arquivo=**} {
+      allow write: if membroAtivo(tid) && papel(tid) == 'diretoria' && imagem(5);
+    }
+    // Imagens de evento: a subsede envia arquivos novos; trocar ou apagar um existente é da diretoria
+    match /torcidas/{tid}/publico/eventos/{arquivo=**} {
+      allow create: if membroAtivo(tid) && papel(tid) in ['diretoria', 'subsede'] && imagem(5);
+      allow update, delete: if membroAtivo(tid) && papel(tid) == 'diretoria' && (request.resource == null || imagem(5));
     }
 
     // Foto 3x4 do sócio: o próprio sócio envia; diretoria e portaria consultam

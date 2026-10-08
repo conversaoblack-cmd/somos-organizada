@@ -159,6 +159,8 @@ export interface Pedido {
   /** sócio */
   socioUid?: string;
   planoId?: string;
+  /** sócio: retrato do plano no momento da cobrança — o ciclo liberado é o do plano que foi pago */
+  plano?: { nome: string; intervalo: Intervalo; intervaloQtd: number; valor: number };
   renovacao?: boolean;
   pagarme?: { orderId?: string; chargeId?: string };
   /** split = valor base caiu direto no recebedor da subsede; torcida = caiu na conta da torcida. */

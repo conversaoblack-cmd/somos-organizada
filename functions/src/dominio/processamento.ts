@@ -159,7 +159,10 @@ function confirmarNaTransacao(tid: string, pedidoId: string, pg: PgPedido, segre
     const agora = new Date();
     const atual = s.validoAte?.toDate();
     const base = atual && atual > agora ? atual : agora;
-    const validoAte = avancarCiclo(base, s.intervalo, s.intervaloQtd);
+    // O ciclo é o do plano que ESTE pedido pagou (retrato na cobrança), nunca o plano atual da ficha:
+    // trocar de plano depois de gerar um Pix barato não transforma esse Pix num plano mais longo.
+    const planoPago = p.plano ?? { nome: s.planoNome, intervalo: s.intervalo, intervaloQtd: s.intervaloQtd, valor: s.valorPlano };
+    const validoAte = avancarCiclo(base, planoPago.intervalo, planoPago.intervaloQtd);
     // Cancelado/suspenso pela diretoria continua assim mesmo se uma cobrança antiga for paga
     const novoStatus = s.bloqueadoPelaDiretoria ? s.status : statusAposPagamento(s.status, torcida.aprovacaoManualSocio);
     const primeiraAdesao = !s.matricula;
@@ -183,11 +186,11 @@ function confirmarNaTransacao(tid: string, pedidoId: string, pg: PgPedido, segre
     const sedeBase = torcida.destinoMensalidade === "principal" ? torcida.sedePrincipalId : s.sedeId;
     lancar(tx, tid, `${pedidoId}_base`, {
       origem: "socio", referencia: pedidoId, sedeId: sedeBase, natureza: "base",
-      valor: p.valorBase, competencia: mes, descricao: `Mensalidade · ${s.planoNome} · ${s.nome}`, liquidacao: p.liquidacao,
+      valor: p.valorBase, competencia: mes, descricao: `Mensalidade · ${planoPago.nome} · ${s.nome}`, liquidacao: p.liquidacao,
     });
     lancar(tx, tid, `${pedidoId}_taxa`, {
       origem: "socio", referencia: pedidoId, sedeId: torcida.sedePrincipalId, natureza: "taxa",
-      valor: p.taxa, competencia: mes, descricao: `Taxa de serviço · ${s.planoNome}`,
+      valor: p.taxa, competencia: mes, descricao: `Taxa de serviço · ${planoPago.nome}`,
     });
     somarStats(tx, tid, mes, {
       receitaSocios: p.valorBase, taxaServico: p.taxa, pedidosPagos: 1, ...(primeiraAdesao ? { novosSocios: 1 } : {}),
