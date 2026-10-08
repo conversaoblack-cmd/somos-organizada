@@ -3,9 +3,10 @@
  * Fases: conta → verificar e-mail → torcida → responsável → entidade → revisão → em análise.
  * O pedido fica em `solicitacoes` e só vira torcida depois da aprovação da equipe Somos Organizada.
  */
+import { enviarConfirmacaoEmail } from "@/lib/emailsConta";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router";
-import { createUserWithEmailAndPassword, sendEmailVerification, signOut, updateProfile, type User } from "firebase/auth";
+import { createUserWithEmailAndPassword, signOut, updateProfile, type User } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
@@ -211,7 +212,7 @@ function PassoConta() {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), senha);
       await updateProfile(cred.user, { displayName: nome.trim() });
       try {
-        await sendEmailVerification(cred.user, { url: `${location.origin}/cadastro` });
+        await enviarConfirmacaoEmail(cred.user, `${location.origin}/cadastro`);
         sessionStorage.setItem(`somos-verificacao:${cred.user.uid}`, String(Date.now()));
       } catch {
         /* o passo seguinte permite reenviar */
@@ -289,7 +290,7 @@ function PassoVerificar({ usuario, aoVerificar }: { usuario: User; aoVerificar: 
 
   async function enviar() {
     try {
-      await sendEmailVerification(usuario, { url: `${location.origin}/cadastro` });
+      await enviarConfirmacaoEmail(usuario, `${location.origin}/cadastro`);
       try {
         sessionStorage.setItem(chave, String(Date.now()));
       } catch {

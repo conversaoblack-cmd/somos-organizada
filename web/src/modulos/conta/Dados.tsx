@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { enviarRedefinicaoSenha } from "@/lib/emailsConta";
+import { mensagemDeErro } from "@/lib/api";
 import { auth } from "@/lib/firebase";
 import { cpfMascarado, mascaraCep, mascaraTelefone } from "@/lib/formatos";
 import type { ComId, Sede, Socio, Torcida } from "@/lib/tipos";
@@ -38,13 +39,14 @@ export default function AbaDados({ tid, torcida, ficha }: { tid: string; torcida
   async function alterarSenha() {
     setEnviando(true);
     try {
-      await sendPasswordResetEmail(auth, email, { url: `${location.origin}/${torcida.slug}/socio` });
-    } catch {
-      // Não revelamos se o e-mail existe; a mensagem é a mesma.
-    } finally {
-      setEnviando(false);
+      await enviarRedefinicaoSenha(email, `${location.origin}/${torcida.slug}/socio`);
       setEnviado(true);
       avisar("Enviamos o link para o seu e-mail.", "sucesso");
+    } catch (erro) {
+      // Sem internet ou muitas tentativas: dizer a verdade, não "enviamos"
+      avisar(mensagemDeErro(erro), "erro");
+    } finally {
+      setEnviando(false);
     }
   }
 

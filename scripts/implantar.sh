@@ -274,10 +274,13 @@ if ! firebase deploy --except functions --project "$PROJETO"; then
 fi
 
 passo "Domínio autorizado no login (Firebase Authentication)"
-# Sem isso, login, convite e "esqueci minha senha" falham no domínio próprio. Feito sozinho se o gcloud estiver
-# instalado e logado; senão, é um clique no console.
+# Hosting e Authentication têm listas separadas: conectar o domínio no Hosting não autoriza o login nele.
+# Sem isso, confirmar e-mail, convite e "esqueci minha senha" falham no domínio próprio
+# ("Domain not allowlisted by project"). Feito sozinho com o login do Firebase CLI (ou do gcloud, se houver).
 AUTH_OK=0
-if [ -n "$DOMINIO" ] && command -v gcloud >/dev/null 2>&1 && TOKEN="$(gcloud auth print-access-token 2>/dev/null)"; then
+TOKEN="$(node scripts/token-firebase.cjs 2>/dev/null || true)"
+[ -z "$TOKEN" ] && command -v gcloud >/dev/null 2>&1 && TOKEN="$(gcloud auth print-access-token 2>/dev/null || true)"
+if [ -n "$DOMINIO" ] && [ -n "$TOKEN" ]; then
   API="https://identitytoolkit.googleapis.com/admin/v2/projects/$PROJETO/config"
   CFG="$(curl -fsS -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJETO" "$API" 2>/dev/null || true)"
   if [ -n "$CFG" ]; then
@@ -293,7 +296,7 @@ if [ -n "$DOMINIO" ] && command -v gcloud >/dev/null 2>&1 && TOKEN="$(gcloud aut
       echo "$DOMINIO já está autorizado."; AUTH_OK=1
     elif curl -fsS -X PATCH -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJETO" -H "Content-Type: application/json" \
       "$API?updateMask=authorizedDomains" -d "$CORPO" >/dev/null 2>&1; then
-      echo "$DOMINIO e www.$DOMINIO autorizados."; AUTH_OK=1
+      echo "$DOMINIO, www.$DOMINIO${HOST_PLATAFORMA:+ e $HOST_PLATAFORMA} autorizados no login."; AUTH_OK=1
     fi
   fi
 fi

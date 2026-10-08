@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { api, mensagemDeErro } from "@/lib/api";
+import { api, ehErroDeConexao, mensagemDeErro } from "@/lib/api";
 import { aplicarTema, temaDoPainel } from "@/lib/tema";
 import { cpfValido, dataExtensa, hora, paraData, relativo } from "@/lib/formatos";
 import type { ComId, Evento, Membro, Papel } from "@/lib/tipos";
@@ -196,7 +196,7 @@ const VISUAL: Record<Resultado["resultado"], { titulo: string; fundo: string; ic
   cancelado: { titulo: "Cancelado", fundo: "bg-perigo", icone: "xCirculo" },
   outro_evento: { titulo: "Outro evento", fundo: "bg-perigo", icone: "xCirculo" },
   nao_encontrado: { titulo: "Não encontrado", fundo: "bg-perigo", icone: "xCirculo" },
-  erro_conexao: { titulo: "Sem conexão", fundo: "bg-perigo", icone: "alerta" },
+  erro_conexao: { titulo: "Sem conexão", fundo: "bg-info", icone: "alerta" },
 };
 
 function TelaResultado({ r, proximo, tentarDeNovo }: { r: Resultado; proximo: () => void; tentarDeNovo: () => void }) {
@@ -314,7 +314,7 @@ const COR_HIST: Record<Resultado["resultado"], string> = {
   cancelado: "bg-perigo",
   outro_evento: "bg-perigo",
   nao_encontrado: "bg-perigo",
-  erro_conexao: "bg-perigo",
+  erro_conexao: "bg-info",
 };
 
 function Leitura({ tid, eventoId, membro, trocar }: { tid: string; eventoId: string; membro: Membro; trocar: () => void }) {
@@ -344,11 +344,13 @@ function Leitura({ tid, eventoId, membro, trocar }: { tid: string; eventoId: str
         const resp = await api.validarEntrada({ tid, eventoId, ...entrada });
         r = { ...resp, em: Date.now(), entrada };
       } catch (e) {
-        const msg = mensagemDeErro(e);
-        const conexao = /conex|unavailable|network|internet/i.test(msg) || !navigator.onLine;
-        r = { resultado: conexao ? "erro_conexao" : "invalido", mensagem: msg, em: Date.now(), entrada };
+        // Internet ruim NÃO é ingresso inválido: só o servidor diz se é inválido. Falha de rede pede nova leitura.
+        const conexao = ehErroDeConexao(e);
+        r = conexao
+          ? { resultado: "erro_conexao", mensagem: "A internet falhou. Isso não quer dizer que o ingresso é inválido: toque em Tentar de novo.", em: Date.now(), entrada }
+          : { resultado: "invalido", mensagem: mensagemDeErro(e), em: Date.now(), entrada };
       }
-      feedback(r.resultado === "liberado" ? "ok" : r.resultado === "ja_usado" ? "aviso" : "erro");
+      feedback(r.resultado === "liberado" ? "ok" : r.resultado === "ja_usado" || r.resultado === "erro_conexao" ? "aviso" : "erro");
       if (r.resultado === "liberado") {
         setLiberadas((n) => {
           gravar(chaveSessao, String(n + 1));

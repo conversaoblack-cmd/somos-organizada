@@ -1,7 +1,8 @@
 import { rp } from "@/lib/hosts";
+import { enviarConfirmacaoEmail } from "@/lib/emailsConta";
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router";
-import { sendEmailVerification, signOut, type User } from "firebase/auth";
+import { signOut, type User } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
@@ -116,7 +117,7 @@ function SemPermissao({ usuario, aoAtivar }: { usuario: User; aoAtivar: () => Pr
   async function enviarVerificacao() {
     setErro(null);
     try {
-      await sendEmailVerification(usuario, { url: `${location.origin}${rp("/")}` });
+      await enviarConfirmacaoEmail(usuario, `${location.origin}${rp("/")}`);
       setAviso("Enviamos o link de verificação para o seu e-mail. Depois de confirmar, toque em “Já verifiquei”.");
     } catch (e) {
       setErro(mensagemDeErro(e));

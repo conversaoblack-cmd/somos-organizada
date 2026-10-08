@@ -6,13 +6,51 @@ import type { Endereco, Papel, RecebedorSede, StatusTorcida, Stats, Tema } from 
 // Todas as ações passam pela function única "api" (functions/src/api/central.ts).
 const portaApi = httpsCallable<{ acao: string; dados: unknown }, unknown>(fns, "api");
 
-function chamar<E, S>(nome: string) {
-  return async (dados: E): Promise<S> => (await portaApi({ acao: nome, dados })).data as S;
+// Portaria: fila andando não espera 70 s (padrão do SDK). Em 10 s sem resposta, vira "Sem conexão" e o porteiro lê de novo.
+const portaApiRapida = httpsCallable<{ acao: string; dados: unknown }, unknown>(fns, "api", { timeout: 10_000 });
+
+function chamar<E, S>(nome: string, rapida = false) {
+  return async (dados: E): Promise<S> => (await (rapida ? portaApiRapida : portaApi)({ acao: nome, dados })).data as S;
+}
+
+/** Erros do Firebase (login, banco, rede) em português: nunca mostrar "auth/..." ou texto em inglês ao torcedor. */
+const MENSAGENS_FIREBASE: Record<string, string> = {
+  "auth/network-request-failed": "Sem internet. Confira a conexão e tente de novo.",
+  "auth/too-many-requests": "Muitas tentativas seguidas. Espere alguns minutos e tente de novo.",
+  "auth/invalid-email": "E-mail inválido. Confira o que foi digitado.",
+  "auth/missing-password": "Digite sua senha.",
+  "auth/user-disabled": "Esta conta foi desativada. Fale com a diretoria da torcida.",
+  "auth/email-already-in-use": "Este e-mail já tem conta. Entre com a sua senha ou use “Esqueci minha senha”.",
+  "auth/weak-password": "Senha fraca: use pelo menos 8 caracteres.",
+  "auth/requires-recent-login": "Por segurança, saia e entre de novo antes de fazer isso.",
+  "auth/expired-action-code": "Este link expirou. Peça um novo.",
+  "auth/invalid-action-code": "Este link já foi usado ou não é válido. Peça um novo.",
+  "auth/unauthorized-continue-uri": "Não foi possível enviar o e-mail agora. Avise a equipe Somos Organizada.",
+  "auth/quota-exceeded": "Limite de envios atingido por hoje. Tente de novo mais tarde.",
+  "functions/deadline-exceeded": "O servidor demorou para responder. Confira a internet e tente de novo.",
+  "functions/resource-exhausted": "Muitos pedidos ao mesmo tempo. Espere um instante e tente de novo.",
+  "deadline-exceeded": "O servidor demorou para responder. Confira a internet e tente de novo.",
+  "resource-exhausted": "Muitos pedidos ao mesmo tempo. Espere um instante e tente de novo.",
+  "failed-precondition": "Não foi possível concluir agora. Atualize a página e tente de novo.",
+};
+
+/** Falha de rede (sem sinal, sinal fraco, servidor fora): para telas que precisam tratar diferente (ex.: portaria). */
+export function ehErroDeConexao(e: unknown): boolean {
+  const code = String((e as { code?: string })?.code ?? "");
+  const msg = String((e as { message?: string })?.message ?? "");
+  return (
+    (typeof navigator !== "undefined" && !navigator.onLine) ||
+    /^(functions\/)?(unavailable|deadline-exceeded|internal|resource-exhausted)$/.test(code) ||
+    code === "auth/network-request-failed" ||
+    (e instanceof TypeError && /fetch|network|load failed/i.test(msg))
+  );
 }
 
 /** Mensagem amigável a partir de um erro de callable/Firestore. */
 export function mensagemDeErro(e: unknown): string {
   const bruto = e as Partial<FunctionsError> & { message?: string; code?: string };
+  if (bruto?.code && MENSAGENS_FIREBASE[bruto.code]) return MENSAGENS_FIREBASE[bruto.code];
+  if (e instanceof TypeError && /fetch|network|load failed/i.test(bruto.message ?? "")) return "Sem internet. Confira a conexão e tente de novo.";
   // o SDK às vezes acrescenta o status HTTP no fim ("... [409]")
   const err = { ...bruto, code: bruto?.code, message: bruto?.message?.replace(/\s*\[\d{3}\]$/, "") };
   if (err?.code === "functions/unavailable" || err?.code === "unavailable") {
@@ -22,7 +60,11 @@ export function mensagemDeErro(e: unknown): string {
     return err.message && !/Missing or insufficient/i.test(err.message) ? err.message : "Você não tem permissão para isso.";
   }
   if (err?.code === "functions/internal" && (!err.message || err.message === "internal")) return "Erro inesperado. Tente novamente.";
-  return err?.message?.replace(/^Firebase: /, "") || "Algo deu errado. Tente novamente.";
+  // Mensagem crua do SDK (em inglês, "Firebase: Error (auth/...)") nunca vai para a tela
+  if (!err?.message || /^Firebase:|\(auth\/|^[a-z-]+$/.test(err.message) || /[A-Za-z]+ [a-z]+ (is|was|not|has) /.test(err.message)) {
+    return err?.code?.startsWith("firestore/") || err?.code === "unavailable" ? "Sem conexão com o servidor. Tente de novo." : "Algo deu errado. Tente novamente.";
+  }
+  return err.message;
 }
 
 export interface DadosPessoa {
@@ -151,7 +193,7 @@ export const api = {
       eventoNome?: string;
       usadoEm?: number | null;
     }
-  >("validarEntrada"),
+  >("validarEntrada", true),
 
   // ── Modo demonstração ────────────────────────────────
   simularDemo: chamar<

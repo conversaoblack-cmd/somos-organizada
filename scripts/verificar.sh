@@ -6,7 +6,8 @@
 #   1. Git: branch, alterações locais que não estão no GitHub, se está atrás ou à frente do GitHub
 #   2. Firebase: conta em uso nesta pasta e se as chaves existem no Secret Manager (só metadados, nunca o valor)
 #   3. Functions: cada uma das esperadas pelo código responde em produção?
-#   4. Site e painel da plataforma no ar
+#   4. Domínios autorizados no login (sem eles, e-mail de confirmação e de senha falham)
+#   5. Site e painel da plataforma no ar
 # Sai com código 1 se algo precisar de atenção.
 set -uo pipefail
 
@@ -91,7 +92,19 @@ else
   ruim "não consegui compilar functions/ para saber a lista esperada (rode: npm --prefix functions install)"
 fi
 
-titulo "4. Site"
+titulo "4. Login no domínio (Authentication → domínios autorizados)"
+TOKEN="$(node scripts/token-firebase.cjs 2>/dev/null || true)"
+if [ -n "$TOKEN" ]; then
+  DOMS="$(curl -fsS -m 20 -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJETO" "https://identitytoolkit.googleapis.com/admin/v2/projects/$PROJETO/config" 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log((JSON.parse(s).authorizedDomains||[]).join(" "))}catch{}})')"
+  for D in somosorganizada.com.br plataforma.somosorganizada.com.br; do
+    case " $DOMS " in *" $D "*) ok "$D autorizado no login" ;; *) ruim "$D NÃO autorizado no login: e-mail de confirmação e de senha falham (rode bash scripts/implantar.sh)" ;; esac
+  done
+else
+  atencao "não consegui conferir os domínios do login (faça firebase login com a conta do projeto)"
+fi
+unset TOKEN
+
+titulo "5. Site"
 for U in "https://somosorganizada.com.br/" "https://plataforma.somosorganizada.com.br/"; do
   if curl -fsS -m 20 "$U" 2>/dev/null | grep -Eq "<title>[^<]*Somos Organizada"; then ok "$U no ar"; else atencao "$U não respondeu com o site"; fi
 done

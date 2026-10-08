@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { enviarRedefinicaoSenha } from "@/lib/emailsConta";
 import { collection } from "firebase/firestore";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
 import { emailValido } from "@/lib/formatos";
 import type { ComId, Membro, Papel } from "@/lib/tipos";
@@ -29,7 +29,7 @@ async function enviarConvite(args: { tid: string; slug: string; nome: string; em
   const r = await api.convidarMembro({ tid, nome, email, papel, ...(papel !== "diretoria" && sedeId ? { sedeId } : {}) });
   const painel = `${location.origin}/${slug}/admin`;
   const emailEnviado = r.contaNova
-    ? await sendPasswordResetEmail(auth, email, { url: painel }).then(() => true).catch(() => false)
+    ? await enviarRedefinicaoSenha(email, painel).then(() => true).catch(() => false)
     : false;
   return { nome, email, painel, contaNova: r.contaNova, emailEnviado };
 }

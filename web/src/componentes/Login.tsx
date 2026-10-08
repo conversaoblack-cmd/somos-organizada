@@ -1,8 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
+import { enviarConfirmacaoEmail, enviarRedefinicaoSenha } from "@/lib/emailsConta";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { emailValido, soDigitos } from "@/lib/formatos";
-import { api, mensagemDeErro } from "@/lib/api";
+import { api, ehErroDeConexao, mensagemDeErro } from "@/lib/api";
 import { Aviso, Botao, Campo, Cartao } from "@/ui";
 
 function traduzir(codigo: string): string {
@@ -62,7 +63,7 @@ export function Login({
     try {
       if (criando) {
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), senha);
-        await sendEmailVerification(cred.user, { url: location.href }).catch(() => undefined);
+        await enviarConfirmacaoEmail(cred.user, location.href).catch(() => undefined);
         return;
       }
       await signInWithEmailAndPassword(auth, email.trim(), senha);
@@ -76,11 +77,14 @@ export function Login({
   async function esqueci() {
     setErro(null);
     if (!emailValido(email)) return setErro(aceitaCpf && !email.includes("@") && email ? "Para redefinir a senha, digite o seu e-mail (não o CPF)." : "Digite seu e-mail acima para receber o link.");
+    setAviso(null);
     try {
-      await sendPasswordResetEmail(auth, email.trim(), { url: `${location.origin}${location.pathname}` });
+      await enviarRedefinicaoSenha(email.trim(), `${location.origin}${location.pathname}`);
       setAviso("Enviamos um link para redefinir sua senha. Confira também o spam.");
-    } catch {
-      setAviso("Se este e-mail estiver cadastrado, você receberá o link em instantes.");
+    } catch (e) {
+      // Falha de rede ou excesso de tentativas é erro de verdade; e-mail sem conta segue com a mesma resposta (não revelamos quem tem conta)
+      if (ehErroDeConexao(e) || /too-many-requests|quota/.test(String((e as { code?: string })?.code))) setErro(mensagemDeErro(e));
+      else setAviso("Se este e-mail estiver cadastrado, você receberá o link em instantes.");
     }
   }
 
