@@ -33,7 +33,7 @@ function navegador() {
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
   const fns = getFunctions(app, "southamerica-east1");
   connectFunctionsEmulator(fns, "127.0.0.1", 5001);
-  return { auth, db, chamar: async (nome, dados) => (await httpsCallable(fns, nome)(dados)).data };
+  return { auth, db, chamar: async (nome, dados) => (await httpsCallable(fns, "api")({ acao: nome, dados })).data };
 }
 
 const existente = await aDb.doc("slugs/brasil").get();

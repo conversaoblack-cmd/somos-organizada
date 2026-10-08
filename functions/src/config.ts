@@ -27,6 +27,8 @@ export const PLATAFORMA_EMAILS = defineString("PLATAFORMA_EMAILS", { default: "c
 // Ajustável por projeto em functions/.env, sem mexer no código: MAX_INSTANCIAS e MAX_INSTANCIAS_PUBLICAS.
 export const MAX_INSTANCIAS = defineInt("MAX_INSTANCIAS", { default: 1 });
 export const MAX_INSTANCIAS_PUBLICAS = defineInt("MAX_INSTANCIAS_PUBLICAS", { default: 3 });
+/** Instâncias da function "api" (porta única de todas as chamadas do site; 80 pedidos simultâneos cada). */
+export const MAX_INSTANCIAS_API = defineInt("MAX_INSTANCIAS_API", { default: 10 });
 setGlobalOptions({ region: REGIAO, maxInstances: MAX_INSTANCIAS, cpu: 1, concurrency: 80, memory: "512MiB" });
 /** Compra, pagamento, aviso da Pagar.me, carteirinha, login por CPF e portaria. */
 export const ESCALA_PUBLICA = { maxInstances: MAX_INSTANCIAS_PUBLICAS };

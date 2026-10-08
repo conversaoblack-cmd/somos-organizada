@@ -3,9 +3,11 @@ import { httpsCallable, type FunctionsError } from "firebase/functions";
 import { fns } from "./firebase";
 import type { Endereco, Papel, RecebedorSede, StatusTorcida, Stats } from "./tipos";
 
+// Todas as ações passam pela function única "api" (functions/src/api/central.ts).
+const portaApi = httpsCallable<{ acao: string; dados: unknown }, unknown>(fns, "api");
+
 function chamar<E, S>(nome: string) {
-  const fn = httpsCallable<E, S>(fns, nome);
-  return async (dados: E): Promise<S> => (await fn(dados)).data;
+  return async (dados: E): Promise<S> => (await portaApi({ acao: nome, dados })).data as S;
 }
 
 /** Mensagem amigável a partir de um erro de callable/Firestore. */

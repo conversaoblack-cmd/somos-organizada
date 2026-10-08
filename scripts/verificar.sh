@@ -47,7 +47,7 @@ else
 fi
 
 titulo "3. Functions em produção"
-if [ ! -f functions/lib/index.js ]; then npm --prefix functions run build >/dev/null 2>&1 || true; fi
+npm --prefix functions run build >/dev/null 2>&1 || true  # sempre do código atual (lib antiga enganaria a lista)
 if [ -f functions/lib/index.js ]; then
   node -e '
     const [projeto, regiao] = process.argv.slice(1);
@@ -58,17 +58,20 @@ if [ -f functions/lib/index.js ]; then
       let boas = 0;
       for (const [nome, f] of Object.entries(m)) {
         if (tipo(f) === "agendada") { agendadas.push(nome); continue; }
-        let st = 0;
+        let st = 0, corpo = "";
         for (let t = 0; t < 2; t++) {
           try {
             const r = await fetch(`https://${regiao}-${projeto}.cloudfunctions.net/${nome}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{\"data\":{}}", signal: AbortSignal.timeout(20000) });
             st = r.status;
+            corpo = await r.text();
           } catch { st = 0; }
           if (st !== 429 && st < 500 && st !== 0) break;
           await new Promise((ok) => setTimeout(ok, 1500));
         }
-        // 200/400/401 = a function rodou e respondeu (recusou o pedido vazio, como deve)
-        if ([200, 400, 401].includes(st)) boas++;
+        // O nosso código respondeu (recusando o pedido vazio, como deve) quando a resposta não é a página HTML
+        // de erro do Google. 403/404 em HTML = sem permissão pública ou inexistente; 429/5xx = sem servidor.
+        const doGoogle = /^\s*<html/i.test(corpo);
+        if (st > 0 && st < 500 && st !== 429 && !doGoogle) boas++;
         else ruins.push(`${nome} (${st === 403 ? "403: sem permissão pública, deploy incompleto" : st === 404 ? "404: não existe" : st === 429 || st >= 500 ? `${st}: não consegue subir servidor, deploy incompleto` : st || "sem resposta"})`);
         await new Promise((ok) => setTimeout(ok, 250));
       }

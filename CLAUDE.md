@@ -13,8 +13,21 @@ nunca uma pasta local.
 3. Só implante com o Git limpo e em dia (`git status` vazio, nada atrás nem à frente do GitHub).
    O `scripts/implantar.sh` recusa sozinho se não estiver.
 4. Uma implantação por vez: não rode o `implantar.sh` em dois computadores ao mesmo tempo.
-5. Implantar = `bash scripts/implantar.sh`. Nunca `firebase deploy` solto: o script faz em lotes, por causa
-   da cota de CPU do projeto, e confere tudo no final.
+5. Implantar = `bash scripts/implantar.sh`. Nunca `firebase deploy` solto: o script sobe as functions antes
+   do site, em lotes (cota de CPU do Cloud Run na região), oferece remover functions antigas e confere tudo no final.
+
+## Desenho das functions (não volte a espalhar)
+
+Cada function é um serviço do Cloud Run e todas dividem a mesma cota de CPU da região. Com 39 functions
+separadas o deploy estourava a cota e deixava metade fora do ar (403/429). Por isso são só **5**:
+
+- `api`: porta única de todas as chamadas do painel e do site. O front chama `httpsCallable("api")` com
+  `{ acao, dados }` e `functions/src/api/central.ts` repassa para o handler (mapa `ACOES`).
+  **Ação nova = handler `onCall` no módulo + uma linha no `ACOES`.** Não exporte no `index.ts`.
+- `pagarmeWebhook` (HTTP, recebe a Pagar.me) e as agendadas `expirarPedidos`, `rotinaSocios`, `rotinaSaas`.
+
+O `implantar.sh` lista as functions publicadas que não existem mais no código e só apaga se o dono digitar
+`sim` (ou `REMOVER_ANTIGAS=1`).
 
 ## Proibido sem pedido explícito do dono
 

@@ -246,7 +246,7 @@ Quem paga o quê:
 - **Torcida e subsedes**: tarifas da Pagar.me nas vendas de ingresso e mensalidades de sócio (na conta delas).
 
 
-- Cloud Functions: chamadas de checkout, webhook e 2 rotinas agendadas (a cada 15 min e diária).
+- Cloud Functions: 5 serviços (a `api`, que atende todas as chamadas, o webhook e 3 rotinas agendadas).
 - Firestore: leituras do painel e da página pública.
-- Cloud Scheduler: 2 jobs (fica dentro da cota gratuita: 3 jobs por conta).
-- Secret Manager: 2 segredos (centavos por mês).
+- Cloud Scheduler: 3 jobs (cabe na cota gratuita de 3 jobs por conta).
+- Secret Manager: 3 segredos (centavos por mês).

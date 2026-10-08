@@ -142,6 +142,7 @@ node -e '
     EMAIL_REMETENTE: "\"Somos Organizada <nao-responda@somosorganizada.com.br>\"",
     MAX_INSTANCIAS: "1",
     MAX_INSTANCIAS_PUBLICAS: "3",
+    MAX_INSTANCIAS_API: "10",
   };
   const faltando = Object.entries(PADROES).filter(([k]) => valor(k) === null).map(([k, v]) => `${k}=${v}`);
   const resto = linhas.filter((l) => !/^(URL_APP|PLATAFORMA_EMAILS)=/.test(l));
@@ -203,26 +204,46 @@ echo "web/.env.production.local gerado (e WEB_API_KEY em functions/.env)."
 passo "Build do front-end"
 npm --prefix web run build
 
-passo "Deploy do site, regras e índices"
-echo "Se o Firebase perguntar se pode dar ao Storage acesso de leitura ao Firestore, responda Y."
-if ! firebase deploy --except functions --project "$PROJETO"; then
-  aviso "Falhou; tentando de novo em 30s..."
-  sleep 30
-  firebase deploy --except functions --project "$PROJETO" || falha "O deploy do site/regras falhou duas vezes. Mande um print do erro acima."
+passo "Functions antigas"
+# Desde a porta única "api" (functions/src/api/central.ts) o projeto tem só 5 functions. As 35 antigas,
+# de antes disso, não são mais chamadas pelo site e ocupam a cota de CPU da região: precisam sair.
+npm --prefix functions run build >/dev/null
+read -r -a FUNCOES <<< "$(node -e "process.stdout.write(Object.keys(require('./functions/lib/index.js')).join(' '))")"
+PUBLICADAS="$(firebase functions:list --project "$PROJETO" --json 2>/dev/null | node -e '
+  let t = ""; process.stdin.on("data", (d) => (t += d)).on("end", () => {
+    try {
+      const lista = JSON.parse(t).result || [];
+      process.stdout.write(lista.map((f) => f.id || String(f.name || "").split("/").pop()).filter(Boolean).join(" "));
+    } catch { process.stdout.write("ERRO"); }
+  });')"
+if [ "$PUBLICADAS" = "ERRO" ]; then
+  aviso "Não consegui listar as functions publicadas; sigo sem remover nenhuma."
+else
+  ANTIGAS=""
+  for F in $PUBLICADAS; do
+    case " ${FUNCOES[*]} " in *" $F "*) ;; *) ANTIGAS="$ANTIGAS $F" ;; esac
+  done
+  if [ -z "$ANTIGAS" ]; then
+    echo "Nenhuma function antiga publicada."
+  else
+    echo "Publicadas mas fora do código atual:$ANTIGAS"
+    REMOVER="${REMOVER_ANTIGAS:-0}"
+    if [ "$REMOVER" != "1" ] && [ -t 0 ]; then
+      read -r -p "Remover essas functions antigas agora? O site não usa mais nenhuma delas (digite sim): " RESP
+      [ "$RESP" = "sim" ] && REMOVER=1
+    fi
+    if [ "$REMOVER" = "1" ]; then
+      # shellcheck disable=SC2086
+      firebase functions:delete $ANTIGAS --region southamerica-east1 --project "$PROJETO" --force || falha "Não consegui remover as functions antigas. Mande um print do erro acima."
+      echo "Functions antigas removidas."
+    else
+      aviso "Mantidas. Sem removê-las a cota de CPU pode faltar para as novas (para remover sem pergunta: REMOVER_ANTIGAS=1)."
+    fi
+  fi
 fi
 
-passo "Deploy das functions em lotes"
-# Projeto novo tem cota baixa de CPU por região, e cada function sobe um servidor de verificação enquanto é
-# atualizada. Mandar as 39 de uma vez estoura a cota; em lotes pequenos, uma leva termina antes da próxima.
-npm --prefix functions run build >/dev/null
-# Ordem: primeiro as de painel/rotina (menos instâncias, liberam cota ao atualizar), por último as do torcedor
-read -r -a FUNCOES <<< "$(node -e "
-  const m = require('./functions/lib/index.js');
-  const publica = (n) => String(m[n] && m[n].__endpoint && m[n].__endpoint.maxInstances).includes('PUBLICAS');
-  const nomes = Object.keys(m);
-  process.stdout.write([...nomes.filter((n) => !publica(n)), ...nomes.filter(publica)].join(' '));
-")"
-LOTE="${LOTE_FUNCOES:-3}"
+passo "Deploy das functions"
+LOTE="${LOTE_FUNCOES:-2}"
 FALHAS=""
 TOTAL_LOTES=$(( (${#FUNCOES[@]} + LOTE - 1) / LOTE ))
 for ((i = 0; i < ${#FUNCOES[@]}; i += LOTE)); do
@@ -238,12 +259,19 @@ for ((i = 0; i < ${#FUNCOES[@]}; i += LOTE)); do
 done
 if [ -n "$FALHAS" ]; then
   falha "Não subiram:$FALHAS
-Rode o script de novo (ele refaz tudo e as que já subiram passam rápido). Se repetir:
-  a) lotes menores: LOTE_FUNCOES=3 bash scripts/implantar.sh
-  b) menos fôlego: em functions/.env coloque MAX_INSTANCIAS=1 e MAX_INSTANCIAS_PUBLICAS=3
-  c) aumento de cota: console.cloud.google.com/iam-admin/quotas → 'Total CPU allocation' em southamerica-east1"
+Rode o script de novo. Se repetir: confira se as functions antigas foram removidas (passo anterior) ou peça
+aumento de cota: console.cloud.google.com/iam-admin/quotas → 'Total CPU allocation' em southamerica-east1"
 fi
 echo "Todas as ${#FUNCOES[@]} functions no ar."
+
+passo "Deploy do site, regras e índices"
+# Depois das functions: o site novo chama a porta "api", que precisa já estar no ar.
+echo "Se o Firebase perguntar se pode dar ao Storage acesso de leitura ao Firestore, responda Y."
+if ! firebase deploy --except functions --project "$PROJETO"; then
+  aviso "Falhou; tentando de novo em 30s..."
+  sleep 30
+  firebase deploy --except functions --project "$PROJETO" || falha "O deploy do site/regras falhou duas vezes. Mande um print do erro acima."
+fi
 
 passo "Domínio autorizado no login (Firebase Authentication)"
 # Sem isso, login, convite e "esqueci minha senha" falham no domínio próprio. Feito sozinho se o gcloud estiver
@@ -281,7 +309,7 @@ bash scripts/verificar.sh "$PROJETO" || aviso "A conferência apontou algo acima
 passo "Pronto!"
 cat <<FIM
 Site:        $URL_SITE
-Plataforma:  ${HOST_PLATAFORMA:+https://$HOST_PLATAFORMA}${HOST_PLATAFORMA:-$URL_SITE/plataforma}   (equipe: $(grep '^PLATAFORMA_EMAILS=' functions/.env | cut -d= -f2))
+Plataforma:  $([ -n "$HOST_PLATAFORMA" ] && echo "https://$HOST_PLATAFORMA" || echo "$URL_SITE/plataforma")   (equipe: $(grep '^PLATAFORMA_EMAILS=' functions/.env | cut -d= -f2))
 Chaves:      $COFRE   ← guarde também num cofre de senhas
 
 Próximos passos:

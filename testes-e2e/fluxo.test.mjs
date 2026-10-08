@@ -32,7 +32,7 @@ function navegador(nome) {
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
   const fns = getFunctions(app, REGIAO);
   connectFunctionsEmulator(fns, "127.0.0.1", 5001);
-  const chamar = async (nomeFn, dados) => (await httpsCallable(fns, nomeFn)(dados)).data;
+  const chamar = async (nomeFn, dados) => (await httpsCallable(fns, "api")({ acao: nomeFn, dados })).data;
   const storage = getStorage(app, "demo-somos.appspot.com");
   connectStorageEmulator(storage, "127.0.0.1", 9199);
   const enviar = (caminho) => uploadBytes(sRef(storage, caminho), PNG, { contentType: "image/png" });
