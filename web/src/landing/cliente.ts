@@ -1,6 +1,5 @@
 /**
  * Script da página inicial (pequeno de propósito: a página já chega pronta em HTML).
- * - menu "Entrar": fecha ao clicar fora ou apertar Esc;
  * - calculadora da taxa de serviço;
  * - preços atualizados com o que a equipe configurou (plataforma/publico), lidos pela API REST do Firestore.
  */
@@ -8,20 +7,6 @@ import "../index.css";
 import { CALCULO_INICIAL, calcularTaxa, reais } from "./calculo";
 import { PLANOS_SAAS_PADRAO } from "@/lib/tipos";
 let valorPequena = PLANOS_SAAS_PADRAO.pequena.valor;
-
-// Menu "Entrar"
-const menu = document.querySelector<HTMLDetailsElement>("[data-menu-entrar]");
-if (menu) {
-  document.addEventListener("click", (e) => {
-    if (menu.open && !menu.contains(e.target as Node)) menu.open = false;
-  });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && menu.open) {
-      menu.open = false;
-      menu.querySelector("summary")?.focus();
-    }
-  });
-}
 
 // Calculadora
 const form = document.querySelector<HTMLFormElement>("[data-calculadora]");

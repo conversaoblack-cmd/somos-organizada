@@ -1,6 +1,6 @@
 import { plataformaSeparada, urlPlataforma } from "@/lib/hosts";
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -9,7 +9,7 @@ import { useColecao, useUsuario } from "@/hooks/dados";
 import { dataHora } from "@/lib/formatos";
 import type { SolicitacaoTorcida } from "@/lib/tipos";
 import { Login } from "@/componentes/Login";
-import { Abas, Botao, Carregando, Cartao, Icone, Selo, Vazio } from "@/ui";
+import { Botao, Carregando, Cartao, Icone, Selo, Vazio } from "@/ui";
 import { slugDoNome } from "./planos";
 
 interface Acesso {
@@ -21,16 +21,16 @@ interface Acesso {
 
 const ROTULO_PAPEL: Record<string, string> = { diretoria: "Diretoria", subsede: "Subsede", portaria: "Portaria" };
 
-type Perfil = "equipe" | "torcedor";
-
 /**
- * Entrada única do site: a equipe da torcida (diretoria, subsede, portaria) faz login aqui e vê os painéis liberados;
- * o sócio ou torcedor informa a torcida e vai para a área dele na página da torcida.
+ * Entrar no site da Somos Organizada é só para a equipe da torcida (diretoria, subsede, portaria).
+ * Primeiro a pessoa diz qual é a torcida e vai para o login do painel dela (/torcida/admin, com as cores dela):
+ * assim ninguém entra no lugar errado. Quem não lembra o endereço entra com e-mail e escolhe o painel na lista.
+ * Sócio e comprador de ingresso entram pelo site da própria torcida.
  */
 export default function Entrar() {
-  const [params, setParams] = useSearchParams();
-  const perfil: Perfil = params.get("perfil") === "torcedor" ? "torcedor" : "equipe";
-  const mudarPerfil = (p: Perfil) => setParams(p === "torcedor" ? { perfil: "torcedor" } : {}, { replace: true });
+  const usuario = useUsuario();
+  const [comEmail, setComEmail] = useState(false);
+  const logado = !!usuario && !usuario.isAnonymous;
   useEffect(() => {
     aplicarTema(TEMA_PAINEL);
     document.title = "Entrar · Somos Organizada";
@@ -40,38 +40,43 @@ export default function Entrar() {
       <Link to="/" className="font-display uppercase tracking-tight text-sm text-texto-2 hover:text-texto mb-8">
         Somos Organizada
       </Link>
-      <Abas<Perfil>
-        className="mb-6 flex w-full max-w-md [&>button]:h-11 [&>button]:px-2"
-        valor={perfil}
-        onChange={mudarPerfil}
-        opcoes={[
-          { valor: "equipe", rotulo: "Equipe da torcida", icone: "painel" },
-          { valor: "torcedor", rotulo: "Sócio ou torcedor", icone: "usuario" },
-        ]}
-      />
-      <div className="w-full flex-1 flex justify-center items-start">{perfil === "torcedor" ? <EntrarTorcedor /> : <EntrarEquipe aoSerTorcedor={() => mudarPerfil("torcedor")} />}</div>
+      <div className="w-full flex-1 flex justify-center items-start">
+        {usuario === undefined ? (
+          <Carregando />
+        ) : logado || comEmail ? (
+          <EntrarEquipe aoInformarTorcida={() => setComEmail(false)} />
+        ) : (
+          <EntrarPorTorcida aoUsarEmail={() => setComEmail(true)} />
+        )}
+      </div>
     </div>
   );
 }
 
-/** Sócio e torcedor entram pela página da torcida: aqui só descobrimos qual é. */
-function EntrarTorcedor() {
+/** Passo 1: qual é a torcida? Depois o login acontece no painel dela. */
+function EntrarPorTorcida({ aoUsarEmail }: { aoUsarEmail: () => void }) {
   const navegar = useNavigate();
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState<string | null>(null);
+  const [emAnalise, setEmAnalise] = useState(false);
   const [buscando, setBuscando] = useState(false);
-  // Aceita o endereço inteiro colado (somosorganizada.com.br/bamor/socio) ou só o nome da torcida
+  // Aceita o endereço inteiro colado (somosorganizada.com.br/bamor/admin) ou só o nome da torcida
   const slug = slugDoNome(texto.trim().replace(/^https?:\/\//i, "").replace(/^[^/]*somosorganizada\.com\.br\//i, "").split(/[/?#]/)[0] ?? "");
 
-  async function ir(e: FormEvent) {
+  async function continuar(e: FormEvent) {
     e.preventDefault();
-    if (!slug) return setErro("Digite o endereço ou o nome da sua torcida.");
+    setEmAnalise(false);
+    if (!slug) return setErro("Digite o endereço da torcida.");
     setErro(null);
     setBuscando(true);
     try {
       const s = await getDoc(doc(db, "slugs", slug));
-      if (!s.exists() || !s.get("torcidaId")) return setErro("Não encontramos essa torcida. Confira o endereço com a diretoria (ele aparece no link de compra).");
-      navegar(`/${slug}/socio`);
+      if (s.get("torcidaId")) return navegar(`/${slug}/admin`);
+      if (s.exists()) {
+        setEmAnalise(true);
+        return setErro("O cadastro desta torcida ainda está em análise pela equipe.");
+      }
+      setErro("Não encontramos essa torcida. Confira o endereço (é o que vem depois de somosorganizada.com.br/).");
     } catch {
       setErro("Não foi possível conferir agora. Verifique a internet e tente de novo.");
     } finally {
@@ -80,10 +85,10 @@ function EntrarTorcedor() {
   }
 
   return (
-    <Cartao className="w-full max-w-md p-7 h-fit animate-surgir">
-      <h1 className="text-2xl font-bold">Área do sócio e do torcedor</h1>
-      <p className="text-texto-2 mt-1">Carteirinha, mensalidade e ingressos ficam na página da sua torcida. Qual é ela?</p>
-      <form onSubmit={ir} className="mt-6" noValidate>
+    <Cartao className="w-full max-w-md p-7 sm:p-8 h-fit animate-surgir">
+      <h1 className="text-2xl font-bold">Painel da torcida</h1>
+      <p className="text-texto-2 mt-1">Diretoria, subsede e portaria. Primeiro, qual é a sua torcida?</p>
+      <form onSubmit={continuar} className="mt-6" noValidate>
         <label htmlFor="entrar-torcida" className="block text-sm font-medium text-texto-2 mb-1.5">
           Endereço da torcida
         </label>
@@ -97,6 +102,7 @@ function EntrarTorcedor() {
             className="flex-1 min-w-0 bg-transparent outline-none font-semibold"
             autoCapitalize="none"
             autoCorrect="off"
+            autoComplete="off"
             spellCheck={false}
             autoFocus
             aria-invalid={!!erro}
@@ -104,18 +110,36 @@ function EntrarTorcedor() {
           />
         </div>
         <p id="entrar-torcida-ajuda" className={`text-xs mt-1.5 ${erro ? "text-perigo" : "text-texto-3"}`} aria-live="polite">
-          {erro ?? "Pode colar o link que a torcida divulga."}
+          {erro ?? "Pode colar o link do site da torcida."}
+          {emAnalise && (
+            <>
+              {" "}
+              <Link to="/cadastro" className="underline font-semibold">
+                Ver meu cadastro
+              </Link>
+            </>
+          )}
         </p>
         <Botao type="submit" largo tamanho="lg" className="mt-5" carregando={buscando} iconeDireita="setaDireita">
-          Ir para a minha área
+          Continuar
         </Botao>
       </form>
-      <p className="text-xs text-texto-3 mt-5">Lá você entra com o e-mail ou o CPF e a senha que criou na compra ou na associação.</p>
+      <div className="mt-6 pt-5 border-t border-linha flex flex-col gap-2 text-sm text-center">
+        <button type="button" onClick={aoUsarEmail} className="text-texto-2 hover:text-texto">
+          Não lembro o endereço: entrar com e-mail
+        </button>
+        <Link to="/cadastro" className="font-semibold text-primaria hover:underline">
+          Cadastrar minha torcida
+        </Link>
+      </div>
+      <p className="mt-6 text-xs text-texto-3 text-center">
+        É sócio ou comprou ingresso? Entre pelo botão <strong className="text-texto-2">Entrar</strong> no site da sua torcida.
+      </p>
     </Cartao>
   );
 }
 
-function EntrarEquipe({ aoSerTorcedor }: { aoSerTorcedor: () => void }) {
+function EntrarEquipe({ aoInformarTorcida }: { aoInformarTorcida: () => void }) {
   const usuario = useUsuario();
   const [acessos, setAcessos] = useState<Acesso[] | null>(null);
   const [plataforma, setPlataforma] = useState(false);
@@ -159,8 +183,8 @@ function EntrarEquipe({ aoSerTorcedor }: { aoSerTorcedor: () => void }) {
               <Link to="/cadastro" className="font-semibold text-primaria hover:underline">
                 Cadastrar minha torcida
               </Link>
-              <button type="button" onClick={aoSerTorcedor} className="hover:text-texto">
-                Sou sócio ou torcedor
+              <button type="button" onClick={aoInformarTorcida} className="hover:text-texto">
+                Informar o endereço da torcida
               </button>
             </span>
           }
@@ -190,13 +214,8 @@ function EntrarEquipe({ aoSerTorcedor }: { aoSerTorcedor: () => void }) {
               <Vazio
                 icone="cadeado"
                 titulo="Nenhum painel liberado"
-                acao={
-                  <Botao variante="contorno" tamanho="sm" onClick={aoSerTorcedor}>
-                    Sou sócio ou torcedor
-                  </Botao>
-                }
               >
-                Este e-mail não tem acesso de diretoria, subsede ou portaria.
+                Este e-mail não tem acesso de diretoria, subsede ou portaria. Se você é sócio ou comprou ingresso, entre pelo site da sua torcida.
               </Vazio>
             )}
             {!plataforma && !acessos.length && !minhas.some((m) => m.status === "pendente") && (

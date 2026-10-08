@@ -112,7 +112,7 @@ function Cabecalho() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
-          <MenuEntrar />
+          <BotaoEntrar />
           <a
             href="/cadastro"
             className="hidden sm:inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-primaria text-sobre-primaria text-sm font-bold hover:brightness-110"
@@ -125,36 +125,17 @@ function Cabecalho() {
   );
 }
 
-/** "Entrar" leva cada pessoa para o lugar certo: painel da torcida ou área do sócio. Sem JavaScript (details). */
-function MenuEntrar() {
-  const opcoes: { href: string; icone: NomeIcone; titulo: string; detalhe: string }[] = [
-    { href: "/entrar", icone: "painel", titulo: "Diretoria, subsede ou portaria", detalhe: "Painel de gestão da torcida" },
-    { href: "/entrar?perfil=torcedor", icone: "usuario", titulo: "Sócio ou torcedor", detalhe: "Carteirinha, mensalidade e ingressos" },
-  ];
+/** "Entrar" no nosso site é só para a equipe da torcida; sócio e torcedor entram pelo site da própria torcida. */
+function BotaoEntrar() {
   return (
-    <details className="relative" data-menu-entrar>
-      <summary className="list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-2 h-10 pl-3.5 pr-3 rounded-xl border border-linha-forte text-sm font-semibold cursor-pointer select-none hover:bg-superficie-2">
-        <Icone nome="usuario" className="size-4" />
-        Entrar
-        <Icone nome="chevronBaixo" className="size-4 text-texto-2" />
-      </summary>
-      <div className="absolute right-0 mt-2 w-[min(calc(100vw-2rem),320px)] rounded-2xl border border-linha-forte bg-superficie-2 p-2 shadow-2xl shadow-black/50">
-        {opcoes.map((o) => (
-          <a key={o.href} href={o.href} className="flex items-center gap-3 rounded-xl p-3 hover:bg-superficie-3">
-            <span className="size-10 shrink-0 rounded-xl bg-primaria/15 text-destaque grid place-items-center">
-              <Icone nome={o.icone} className="size-5" />
-            </span>
-            <span className="min-w-0">
-              <span className="block font-semibold text-sm">{o.titulo}</span>
-              <span className="block text-xs text-texto-2">{o.detalhe}</span>
-            </span>
-          </a>
-        ))}
-        <p className="px-3 pt-2 pb-1 text-xs text-texto-2 border-t border-linha mt-1">
-          Ainda não usa? <a href="/cadastro" className="font-semibold text-texto underline underline-offset-2">Cadastre a sua torcida</a>
-        </p>
-      </div>
-    </details>
+    <a
+      href="/entrar"
+      className="inline-flex items-center gap-2 h-10 px-3.5 rounded-xl border border-linha-forte text-sm font-semibold hover:bg-superficie-2"
+      title="Painel da diretoria, subsede e portaria"
+    >
+      <Icone nome="painel" className="size-4" />
+      Entrar
+    </a>
   );
 }
 
@@ -717,8 +698,7 @@ function Rodape() {
         <nav aria-label="Acesso" className="text-sm">
           <p className="font-semibold">Acesso</p>
           <ul className="mt-3 space-y-2 text-texto-2">
-            <li><a className="hover:text-texto" href="/entrar">Painel da torcida</a></li>
-            <li><a className="hover:text-texto" href="/entrar?perfil=torcedor">Área do sócio</a></li>
+            <li><a className="hover:text-texto" href="/entrar">Painel da diretoria</a></li>
             <li><a className="hover:text-texto" href={LINK_WHATSAPP} target="_blank" rel="noopener">WhatsApp da equipe</a></li>
           </ul>
         </nav>

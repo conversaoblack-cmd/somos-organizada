@@ -10,7 +10,7 @@ export const TEMA_PADRAO: Tema = {
 
 /** Tema do painel da plataforma e do login geral. */
 export const TEMA_PAINEL: Tema = {
-  corPrimaria: "#3D78FF",
+  corPrimaria: "#2E6BFF",
   corSecundaria: "#FACC15",
   corFundo: "#0A0D14",
   corTexto: "#EEF1F7",

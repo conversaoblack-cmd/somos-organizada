@@ -1,5 +1,5 @@
 import { useEffect, useMemo, type ReactNode } from "react";
-import { Navigate, Route, Routes } from "react-router";
+import { Link, Navigate, Route, Routes } from "react-router";
 import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -52,7 +52,14 @@ export default function PainelDiretoria() {
         <Login
           titulo="Painel da diretoria"
           subtitulo={torcida.nome}
-          rodape={<>Acesso restrito a diretoria, subsedes e portaria. Peça um convite à diretoria da torcida.</>}
+          rodape={
+            <>
+              Acesso restrito a diretoria, subsedes e portaria. Peça um convite à diretoria da torcida.
+              <Link to="/entrar" className="block mt-2 font-semibold text-texto-2 hover:text-texto">
+                Não é esta torcida? Trocar
+              </Link>
+            </>
+          }
         />
       </Centro>
     );

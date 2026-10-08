@@ -70,7 +70,7 @@ export function CabecalhoTorcida() {
           ) : usuario && !usuario.isAnonymous ? (
             "Minha conta"
           ) : (
-            "Área do sócio"
+            "Entrar"
           )}
         </Link>
       </div>
