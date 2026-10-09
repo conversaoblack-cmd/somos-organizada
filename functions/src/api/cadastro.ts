@@ -106,17 +106,26 @@ export const avaliarSolicitacao = onCall(async (req) => {
     await db.runTransaction(async (tx) => {
       const s = await tx.get(refs.slug(sol.slug));
       if (s.get("solicitacaoId") === id) tx.delete(refs.slug(sol.slug));
-      // libera o horário da chamada de verificação, se havia um marcado
-      if (sol.verificacao?.horarioId) tx.delete(db.doc(`agendaVerificacao/${sol.verificacao.horarioId}`));
       tx.update(ref, { status: "recusada", motivo, avaliadoPor: quem, avaliadoEm: FieldValue.serverTimestamp() });
     });
     await avisarResultado(sol, "recusada", { motivo });
     return { status: "recusada" };
   }
-  // Os dados de torcida são públicos: só aprova depois da chamada de vídeo feita e gravada (verificacaoVideo.ts)
-  if (sol.verificacao?.status !== "realizada") {
-    throw new HttpsError("failed-precondition", "Faça a chamada de verificação em vídeo e marque como feita antes de aprovar.");
+  // Os dados de torcida são públicos: só aprova com o vídeo de verificação enviado e conferido pela equipe
+  if (sol.verificacao?.status !== "enviado" || !sol.verificacao?.videoPath) {
+    throw new HttpsError("failed-precondition", "O responsável ainda não enviou o vídeo de verificação.");
   }
+  const c = (d.conferencia ?? {}) as Record<string, unknown>;
+  const testemunhas = inteiro(c.testemunhas ?? 0, "testemunhas", { min: 0, max: 50 });
+  if (testemunhas < 2) throw new HttpsError("failed-precondition", "O vídeo precisa mostrar pelo menos 2 testemunhas da diretoria ou do conselho.");
+  if (c.documentoConferido !== true || c.sedeConferida !== true) {
+    throw new HttpsError("failed-precondition", "Confirme que conferiu no vídeo o documento do responsável e a sede.");
+  }
+  // Registro da conferência (só a plataforma lê): prova de quem aprovou e o que foi visto
+  await db.doc(`verificacoesVideo/${id}`).set({
+    solicitacaoId: id, videoPath: sol.verificacao.videoPath, testemunhas, documentoConferido: true, sedeConferida: true,
+    observacoes: texto(c.observacoes, "observações", { max: 1000, obrigatorio: false }), conferidoPor: quem, conferidoEm: FieldValue.serverTimestamp(),
+  });
 
   const r = await criarTorcidaInterno({
     nome: sol.nomeTorcida,

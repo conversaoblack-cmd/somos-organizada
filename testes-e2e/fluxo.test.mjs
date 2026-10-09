@@ -9,7 +9,7 @@ import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator, doc, getDoc, getDocs, query, where, setDoc, updateDoc, addDoc, collection, Timestamp } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator, httpsCallable } from "firebase/functions";
-import { getStorage, connectStorageEmulator, ref as sRef, uploadBytes } from "firebase/storage";
+import { getStorage, connectStorageEmulator, ref as sRef, uploadBytes, getBytes } from "firebase/storage";
 import { iniciar, chamadas } from "./pagarme-simulada.mjs";
 
 const PROJETO = "demo-somos";
@@ -35,7 +35,7 @@ function navegador(nome) {
   const chamar = async (nomeFn, dados) => (await httpsCallable(fns, "api")({ acao: nomeFn, dados })).data;
   const storage = getStorage(app, "demo-somos.appspot.com");
   connectStorageEmulator(storage, "127.0.0.1", 9199);
-  const enviar = (caminho) => uploadBytes(sRef(storage, caminho), PNG, { contentType: "image/png" });
+  const enviar = (caminho, tipo = "image/png") => uploadBytes(sRef(storage, caminho), PNG, { contentType: tipo });
   return { auth, db, chamar, enviar };
 }
 
@@ -46,6 +46,7 @@ async function webhook(tid, token, corpo) {
   return r.status;
 }
 
+const negadoStorage = (promessa) => assert.rejects(promessa, (e) => /unauthorized|permission/i.test(`${e?.code} ${e?.message}`));
 const negado = async (promessa) => {
   await assert.rejects(promessa, (e) => /permission|PERMISSION_DENIED|insufficient/i.test(String(e?.code ?? e?.message)));
 };
@@ -654,33 +655,45 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
   // diretor vê o próprio pedido; diretor não aprova a si mesmo
   assert.equal((await getDoc(doc(b.db, `solicitacoes/${sol.solicitacaoId}`))).get("status"), "pendente");
   await assert.rejects(b.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true }), /equipe Somos Organizada/);
-  // verificação em vídeo: sem a chamada feita, a equipe não aprova
-  await assert.rejects(ctx.plat.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true }), /verificação em vídeo/);
-  const { horarios } = await b.chamar("horariosVerificacao", {});
-  assert.ok(horarios.length > 10, "agenda com horários livres");
-  await assert.rejects(b.chamar("agendarVerificacao", { horario: "2020-01-01T10:00" }), /não está disponível/);
-  const ag = await b.chamar("agendarVerificacao", { horario: horarios[0] });
-  assert.equal(ag.status, "agendada");
-  // o horário some para os outros; remarcar troca e libera o anterior
-  assert.ok(!(await ctx.plat.chamar("horariosVerificacao", {})).horarios.includes(horarios[0]));
-  await b.chamar("agendarVerificacao", { horario: horarios[1] });
-  assert.equal((await aDb.doc(`agendaVerificacao/${horarios[0]}`).get()).exists, false);
-  assert.equal((await aDb.doc(`agendaVerificacao/${horarios[1]}`).get()).get("solicitacaoId"), sol.solicitacaoId);
-  const v = (await getDoc(doc(b.db, `solicitacoes/${sol.solicitacaoId}`))).get("verificacao");
-  assert.equal(v.status, "agendada");
-  assert.equal(v.horarioId, horarios[1]);
-  // equipe: só a plataforma registra; exige 2 testemunhas, documento e sede conferidos
-  await assert.rejects(b.chamar("atualizarVerificacao", { id: sol.solicitacaoId, acao: "realizada" }), /equipe Somos Organizada/);
-  await assert.rejects(ctx.plat.chamar("atualizarVerificacao", { id: sol.solicitacaoId, acao: "link", link: "meet.google.com/x" }), /https/);
-  await ctx.plat.chamar("atualizarVerificacao", { id: sol.solicitacaoId, acao: "link", link: "https://meet.google.com/abc-defg-hij" });
+  // vídeo de verificação: sem o vídeo enviado, a equipe não aprova
+  await assert.rejects(ctx.plat.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true }), /vídeo de verificação/);
+  const pasta = `verificacoes/${u.uid}/${sol.solicitacaoId}`;
+  // só vídeo, e só na pasta da própria conta
+  await negadoStorage(b.enviar(`${pasta}/foto.png`));
+  await negadoStorage(b.enviar(`verificacoes/outra-conta/${sol.solicitacaoId}/v.mp4`, "video/mp4"));
+  await b.enviar(`${pasta}/video-1.mp4`, "video/mp4");
+  await assert.rejects(b.chamar("registrarVideoVerificacao", { caminho: `verificacoes/outra/${sol.solicitacaoId}/video-1.mp4` }), /inválido/);
+  await assert.rejects(b.chamar("registrarVideoVerificacao", { caminho: `${pasta}/nao-existe.mp4` }), /Não encontramos/);
+  assert.equal((await b.chamar("registrarVideoVerificacao", { caminho: `${pasta}/video-1.mp4` })).status, "enviado");
+  let v = (await getDoc(doc(b.db, `solicitacoes/${sol.solicitacaoId}`))).get("verificacao");
+  assert.equal(v.status, "enviado");
+  assert.equal(v.videoPath, `${pasta}/video-1.mp4`);
+  // outra pessoa não vê o vídeo; o envio não pode ser trocado por cima (é a prova)
+  const curioso = navegador("curioso-video");
+  await signInAnonymously(curioso.auth);
+  await negadoStorage(getBytes(sRef(getStorage(curioso.auth.app, "demo-somos.appspot.com"), `${pasta}/video-1.mp4`)));
+  await negadoStorage(b.enviar(`${pasta}/video-1.mp4`, "video/mp4"));
+  // equipe pede outro vídeo; diretor reenvia
+  await assert.rejects(b.chamar("pedirNovoVideo", { id: sol.solicitacaoId, motivo: "Faltou testemunha" }), /equipe Somos Organizada/);
+  await ctx.plat.chamar("pedirNovoVideo", { id: sol.solicitacaoId, motivo: "Só apareceu 1 testemunha" });
+  v = (await getDoc(doc(b.db, `solicitacoes/${sol.solicitacaoId}`))).get("verificacao");
+  assert.equal(v.status, "refazer");
+  await assert.rejects(ctx.plat.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true }), /vídeo de verificação/);
+  await b.enviar(`${pasta}/video-2.mp4`, "video/mp4");
+  await b.chamar("registrarVideoVerificacao", { caminho: `${pasta}/video-2.mp4` });
+  // aprovar exige a conferência da equipe (2 testemunhas, documento e sede)
+  await assert.rejects(ctx.plat.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true }), /2 testemunhas/);
   await assert.rejects(
-    ctx.plat.chamar("atualizarVerificacao", { id: sol.solicitacaoId, acao: "realizada", gravacao: "Drive/x.mp4", testemunhas: 1, documentoConferido: true, sedeConferida: true }),
-    /2 testemunhas/,
+    ctx.plat.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true, conferencia: { testemunhas: 2, documentoConferido: true, sedeConferida: false } }),
+    /documento do responsável e a sede/,
   );
-  await ctx.plat.chamar("atualizarVerificacao", { id: sol.solicitacaoId, acao: "realizada", gravacao: "Drive/x.mp4", testemunhas: 2, documentoConferido: true, sedeConferida: true });
-  // o registro (onde ficou a gravação) não é lido pelo diretor
+  const ap = await ctx.plat.chamar("avaliarSolicitacao", {
+    id: sol.solicitacaoId, aprovar: true, conferencia: { testemunhas: 3, documentoConferido: true, sedeConferida: true, observacoes: "ok" },
+  });
+  const reg = (await aDb.doc(`verificacoesVideo/${sol.solicitacaoId}`).get()).data();
+  assert.equal(reg.videoPath, `${pasta}/video-2.mp4`);
+  assert.equal(reg.testemunhas, 3);
   await negado(getDoc(doc(b.db, `verificacoesVideo/${sol.solicitacaoId}`)));
-  const ap = await ctx.plat.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true });
   assert.equal(ap.slug, "furia-azul");
   const t = await aDb.doc(`torcidas/${ap.torcidaId}`).get();
   assert.equal(t.get("status"), "implantacao");

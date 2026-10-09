@@ -5,7 +5,7 @@ import { collection, orderBy, query, type Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
 import { useColecao, useDocumento } from "@/hooks/dados";
-import { quandoChamada } from "../inicio/VerificacaoVideo";
+import { ROTEIRO_VIDEO } from "../inicio/VerificacaoVideo";
 import { cpfMascarado, dataHora, mascaraCep, mascaraCpf, mascaraTelefone, relativo } from "@/lib/formatos";
 import { copiarTexto } from "@/lib/servicos";
 import type { ComId, SolicitacaoTorcida } from "@/lib/tipos";
@@ -135,6 +135,13 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
   const [tentou, setTentou] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [aprovada, setAprovada] = useState<{ slug: string; torcidaId?: string } | null>(null);
+  // Conferência do vídeo, dentro da aprovação
+  const [testemunhas, setTestemunhas] = useState("2");
+  const [documento, setDocumento] = useState(false);
+  const [sedeOk, setSedeOk] = useState(false);
+  const [obs, setObs] = useState("");
+  const videoOk = s.verificacao?.status === "enviado";
+  const conferido = Number(testemunhas) >= 2 && documento && sedeOk;
   const topo = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (aprovada) topo.current?.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -146,7 +153,11 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
   async function aprovar() {
     setSalvando(true);
     try {
-      const r = await api.avaliarSolicitacao({ id: s.id, aprovar: true });
+      const r = await api.avaliarSolicitacao({
+        id: s.id,
+        aprovar: true,
+        conferencia: { testemunhas: Number(testemunhas), documentoConferido: documento, sedeConferida: sedeOk, observacoes: obs.trim() },
+      });
       setAprovada({ slug: r.slug ?? s.slug, torcidaId: r.torcidaId });
       setConfirmarAprovacao(false);
       avisar("Torcida aprovada e criada.", "sucesso");
@@ -207,7 +218,7 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
         </Aviso>
       )}
 
-      {s.status !== "recusada" && <BlocoVerificacao s={s} />}
+      {s.status !== "recusada" && <BlocoVideo s={s} />}
 
       <Bloco titulo="Torcida">
         <Item r="Nome" v={s.nomeTorcida} />
@@ -252,8 +263,8 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
         <Item r="Cidade" v={e ? `${e.cidade}/${e.uf}` : ""} />
       </Bloco>
 
-      {s.status === "pendente" && !aprovada && s.verificacao?.status !== "realizada" && (
-        <p className="text-sm text-texto-3">Para aprovar, registre antes a chamada de verificação em vídeo (no quadro acima).</p>
+      {s.status === "pendente" && !aprovada && !videoOk && (
+        <p className="text-sm text-texto-3">Para aprovar, o responsável precisa enviar o vídeo de verificação (quadro acima).</p>
       )}
       {s.status === "pendente" && !aprovada && (
         <div className="flex flex-col sm:flex-row gap-2 pt-2">
@@ -264,8 +275,8 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
             icone="check"
             onClick={() => setConfirmarAprovacao(true)}
             className="sm:flex-[2]"
-            disabled={s.verificacao?.status !== "realizada"}
-            title={s.verificacao?.status !== "realizada" ? "Registre a chamada de verificação em vídeo antes de aprovar" : undefined}
+            disabled={!videoOk}
+            title={!videoOk ? "Aguardando o vídeo de verificação" : undefined}
           >
             Aprovar e criar torcida
           </Botao>
@@ -281,15 +292,28 @@ function DetalheSolicitacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
             <Botao variante="fantasma" onClick={() => setConfirmarAprovacao(false)}>
               Cancelar
             </Botao>
-            <Botao icone="check" carregando={salvando} onClick={aprovar}>
+            <Botao icone="check" carregando={salvando} onClick={aprovar} disabled={!conferido}>
               Aprovar
             </Botao>
           </div>
         }
       >
-        <p className="text-sm">
-          Vamos criar <strong>{s.nomeTorcida}</strong> em <strong>/{s.slug}</strong> e dar acesso de diretoria a <strong>{s.email}</strong>.
-        </p>
+        <div className="space-y-4 text-sm">
+          <p>
+            Vamos criar <strong>{s.nomeTorcida}</strong> em <strong>/{s.slug}</strong> e dar acesso de diretoria a <strong>{s.email}</strong>.
+          </p>
+          <p className="font-semibold">No vídeo, você conferiu:</p>
+          <label className="flex items-start gap-3 min-h-11">
+            <input type="checkbox" className="size-5 mt-0.5 accent-[var(--color-primaria)]" checked={documento} onChange={(e) => setDocumento(e.target.checked)} />
+            O documento com foto do responsável: nome e CPF batem com o cadastro.
+          </label>
+          <label className="flex items-start gap-3 min-h-11">
+            <input type="checkbox" className="size-5 mt-0.5 accent-[var(--color-primaria)]" checked={sedeOk} onChange={(e) => setSedeOk(e.target.checked)} />
+            A sede (fachada e espaço), batendo com o endereço informado.
+          </label>
+          <Campo rotulo="Testemunhas que aparecem com documento" inputMode="numeric" value={testemunhas} onChange={(x) => setTestemunhas(x.replace(/\D/g, "").slice(0, 2))} className="max-w-40" erro={Number(testemunhas) < 2 && "Mínimo de 2."} />
+          <AreaTexto rotulo="Observações (opcional)" value={obs} onChange={(e) => setObs(e.target.value)} maxLength={1000} />
+        </div>
       </Modal>
       <Modal
         aberto={recusando}
@@ -333,71 +357,42 @@ function LinkCopiar({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
-/** O que a equipe confere na chamada de verificação (2 a 5 minutos, gravada). */
-const ROTEIRO_CHAMADA = [
-  "Avise que a chamada é gravada e só serve como prova de quem fez o cadastro (prevenção à fraude). Peça o \"de acordo\" em voz alta.",
-  "Responsável: nome completo, CPF e cargo. Documento com foto ao lado do rosto; nome e CPF batem com o cadastro.",
-  "Sede: mostrar a fachada (nome ou símbolo da torcida) e o espaço por dentro; o endereço bate com o informado.",
-  "Testemunhas (pelo menos 2, da diretoria ou do conselho): nome, cargo e documento com foto de cada uma.",
-  "Cada testemunha confirma em voz alta que o responsável representa a torcida e pode criar a conta e receber os valores.",
-  "Torcida: nome oficial, clube, ano de fundação, sócios e subsedes. Se houver, mostrar estatuto, ata da eleição e cartão do CNPJ.",
-  "Dinheiro: em nome de quem fica a conta Pagar.me (CPF do responsável ou CNPJ da torcida). Ingressos e mensalidades caem nela.",
-  "Encerramento: o responsável declara \"Eu, (nome), declaro que as informações são verdadeiras e que represento a (torcida)\".",
-];
-
-function BlocoVerificacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
+/** Vídeo de verificação: a equipe assiste, confere pelo roteiro e aprova (ou pede outro vídeo). */
+function BlocoVideo({ s }: { s: ComId<SolicitacaoTorcida> }) {
   const avisar = useToast();
   const v = s.verificacao;
-  const registro = useDocumento<{ gravacao: string; testemunhas: number; observacoes?: string; realizadaEm?: Timestamp }>(
-    v?.status === "realizada" ? `verificacoesVideo/${s.id}` : null,
-  );
-  const [link, setLink] = useState(v?.link ?? "");
-  const [enviandoLink, setEnviandoLink] = useState(false);
-  const [feita, setFeita] = useState(false);
-  const [faltou, setFaltou] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [erroVideo, setErroVideo] = useState<string | null>(null);
+  const [pedindo, setPedindo] = useState(false);
+  const [motivo, setMotivo] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const [gravacao, setGravacao] = useState("");
-  const [testemunhas, setTestemunhas] = useState("2");
-  const [documento, setDocumento] = useState(false);
-  const [sede, setSede] = useState(false);
-  const [obs, setObs] = useState("");
-  const [erro, setErro] = useState<string | null>(null);
+  const registro = useDocumento<{ testemunhas: number; observacoes?: string; conferidoEm?: Timestamp }>(s.status === "aprovada" ? `verificacoesVideo/${s.id}` : null);
 
-  async function enviarLink() {
-    setEnviandoLink(true);
-    try {
-      const r = await api.atualizarVerificacao({ id: s.id, acao: "link", link: link.trim() });
-      avisar(r.emailEnviado ? "Link enviado por e-mail ao responsável." : "Link salvo. O e-mail não saiu: mande pelo WhatsApp.", r.emailEnviado ? "sucesso" : "info");
-    } catch (e) {
-      avisar(mensagemDeErro(e), "erro");
-    } finally {
-      setEnviandoLink(false);
-    }
-  }
-  async function marcarFeita() {
-    setErro(null);
-    if (gravacao.trim().length < 3) return setErro("Diga onde ficou a gravação.");
-    if (Number(testemunhas) < 2) return setErro("São necessárias pelo menos 2 testemunhas.");
-    if (!documento || !sede) return setErro("Confirme o documento e a sede.");
+  useEffect(() => {
+    let ativo = true;
+    setUrl(null);
+    setErroVideo(null);
+    if (!v?.videoPath) return;
+    void import("firebase/storage")
+      .then(async ({ getDownloadURL, ref }) => {
+        const { storage } = await import("@/lib/armazenamento");
+        return getDownloadURL(ref(storage, v.videoPath!));
+      })
+      .then((u) => ativo && setUrl(u))
+      .catch((e) => ativo && setErroVideo(mensagemDeErro(e)));
+    return () => {
+      ativo = false;
+    };
+  }, [v?.videoPath]);
+
+  async function pedirOutro() {
+    if (motivo.trim().length < 3) return;
     setSalvando(true);
     try {
-      await api.atualizarVerificacao({
-        id: s.id, acao: "realizada", gravacao: gravacao.trim(), testemunhas: Number(testemunhas), documentoConferido: true, sedeConferida: true, observacoes: obs.trim(),
-      });
-      setFeita(false);
-      avisar("Chamada registrada. Agora dá para aprovar.", "sucesso");
-    } catch (e) {
-      setErro(mensagemDeErro(e));
-    } finally {
-      setSalvando(false);
-    }
-  }
-  async function naoCompareceu() {
-    setSalvando(true);
-    try {
-      await api.atualizarVerificacao({ id: s.id, acao: "nao_compareceu" });
-      setFaltou(false);
-      avisar("Horário liberado. O responsável recebeu o pedido para remarcar.", "sucesso");
+      await api.pedirNovoVideo({ id: s.id, motivo: motivo.trim() });
+      setPedindo(false);
+      setMotivo("");
+      avisar("Pedido enviado. O responsável recebeu o motivo por e-mail.", "sucesso");
     } catch (e) {
       avisar(mensagemDeErro(e), "erro");
     } finally {
@@ -406,121 +401,90 @@ function BlocoVerificacao({ s }: { s: ComId<SolicitacaoTorcida> }) {
   }
 
   const situacao =
-    v?.status === "realizada" ? (
-      <Selo tom="sucesso" ponto>Feita</Selo>
-    ) : v?.status === "agendada" ? (
-      <Selo tom="info" ponto>Marcada</Selo>
-    ) : v?.status === "remarcar" ? (
-      <Selo tom="alerta" ponto>Precisa remarcar</Selo>
+    s.status === "aprovada" ? (
+      <Selo tom="sucesso" ponto>Conferido</Selo>
+    ) : v?.status === "enviado" ? (
+      <Selo tom="info" ponto>Recebido</Selo>
+    ) : v?.status === "refazer" ? (
+      <Selo tom="alerta" ponto>Novo vídeo pedido</Selo>
     ) : (
-      <Selo tom="alerta" ponto>Sem horário</Selo>
+      <Selo tom="alerta" ponto>Aguardando o vídeo</Selo>
     );
 
   return (
     <section className="rounded-2xl border border-primaria/40 p-4 space-y-3" data-verificacao-video="">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Verificação em vídeo</h3>
+        <h3 className="text-sm font-semibold">Vídeo de verificação</h3>
         {situacao}
       </div>
-      {v?.inicio && v.status === "agendada" && (
-        <p className="text-sm">
-          <strong className="first-letter:uppercase inline-block">{quandoChamada(v.inicio.toDate())}</strong> (Brasília) · na sede, com 2 testemunhas
-        </p>
-      )}
-      {!v?.inicio && s.status === "pendente" && <p className="text-sm text-texto-2">O responsável ainda não escolheu o horário. Ele recebe o pedido ao entrar em /cadastro.</p>}
-
-      {s.status === "pendente" && v?.status === "agendada" && (
+      {!v?.videoPath && <p className="text-sm text-texto-2">O responsável ainda não enviou o vídeo. Ele vê o pedido ao entrar em /cadastro.</p>}
+      {v?.status === "refazer" && v.motivoRefazer && <p className="text-sm text-texto-2">Motivo do pedido: {v.motivoRefazer}</p>}
+      {v?.videoPath && (
         <>
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
-            <Campo
-              rotulo="Link da chamada (Google Meet, Zoom…)"
-              value={link}
-              onChange={setLink}
-              placeholder="https://meet.google.com/…"
-              className="flex-1"
-              autoCapitalize="none"
-              spellCheck={false}
-            />
-            <Botao variante="contorno" icone="enviar" carregando={enviandoLink} onClick={enviarLink} disabled={!/^https:\/\//.test(link.trim())}>
-              {v.link ? "Reenviar link" : "Enviar link"}
-            </Botao>
-          </div>
-          <details className="rounded-xl bg-superficie-2 p-3 text-sm">
-            <summary className="font-semibold cursor-pointer min-h-11 sm:min-h-0 flex items-center">Roteiro da chamada</summary>
-            <ol className="mt-2 space-y-1.5 list-decimal pl-5 text-texto-2">
-              {ROTEIRO_CHAMADA.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ol>
-          </details>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Botao icone="check" onClick={() => setFeita(true)} className="sm:flex-1">
-              Chamada feita
-            </Botao>
-            <Botao variante="fantasma" onClick={() => setFaltou(true)}>
-              Não compareceu
-            </Botao>
-          </div>
+          {url ? (
+            <video src={url} controls playsInline preload="metadata" className="w-full max-h-[60vh] rounded-xl bg-black" data-video-verificacao="" />
+          ) : erroVideo ? (
+            <Aviso tom="perigo">Não foi possível abrir o vídeo: {erroVideo}</Aviso>
+          ) : (
+            <Carregando />
+          )}
+          <p className="text-xs text-texto-3">
+            {v.enviadoEm ? `Enviado em ${dataHora(v.enviadoEm)}` : ""}
+            {v.tamanho ? ` · ${(v.tamanho / 1024 / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB` : ""}
+            {url && (
+              <>
+                {" · "}
+                <a href={url} target="_blank" rel="noreferrer" className="underline">
+                  Abrir em outra aba
+                </a>
+              </>
+            )}
+          </p>
         </>
       )}
-
-      {v?.status === "realizada" && registro.dados && (
-        <dl className="divide-y divide-linha text-sm">
-          <Item r="Gravação" v={registro.dados.gravacao} />
-          <Item r="Testemunhas" v={String(registro.dados.testemunhas)} />
-          {registro.dados.realizadaEm && <Item r="Registrada em" v={dataHora(registro.dados.realizadaEm)} />}
-          {registro.dados.observacoes && <Item r="Observações" v={registro.dados.observacoes} />}
-        </dl>
+      <details className="rounded-xl bg-superficie-2 p-3 text-sm">
+        <summary className="font-semibold cursor-pointer min-h-11 sm:min-h-0 flex items-center">O que o vídeo precisa mostrar</summary>
+        <ol className="mt-2 space-y-1.5 list-decimal pl-5 text-texto-2">
+          {ROTEIRO_VIDEO.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ol>
+      </details>
+      {s.status === "pendente" && v?.status === "enviado" && (
+        <Botao variante="fantasma" icone="camera" onClick={() => setPedindo(true)}>
+          Pedir outro vídeo
+        </Botao>
+      )}
+      {s.status === "aprovada" && registro.dados && (
+        <p className="text-xs text-texto-3">
+          Conferido{registro.dados.conferidoEm ? ` em ${dataHora(registro.dados.conferidoEm)}` : ""} · {registro.dados.testemunhas} testemunhas
+          {registro.dados.observacoes ? ` · ${registro.dados.observacoes}` : ""}
+        </p>
       )}
 
       <Modal
-        aberto={feita}
-        fechar={() => !salvando && setFeita(false)}
-        titulo="Registrar a chamada feita"
-        descricao="Fica só no painel da equipe, como prova de quem fez o cadastro."
+        aberto={pedindo}
+        fechar={() => !salvando && setPedindo(false)}
+        titulo="Pedir outro vídeo"
+        descricao="O responsável recebe o motivo por e-mail e grava de novo. O resto do cadastro continua salvo."
         rodape={
           <div className="flex justify-end gap-2">
-            <Botao variante="fantasma" onClick={() => setFeita(false)} disabled={salvando}>
+            <Botao variante="fantasma" onClick={() => setPedindo(false)} disabled={salvando}>
               Cancelar
             </Botao>
-            <Botao icone="check" carregando={salvando} onClick={marcarFeita}>
-              Registrar
+            <Botao icone="enviar" carregando={salvando} onClick={pedirOutro} disabled={motivo.trim().length < 3}>
+              Enviar pedido
             </Botao>
           </div>
         }
       >
-        <div className="space-y-4">
-          <Campo rotulo="Onde ficou a gravação" value={gravacao} onChange={setGravacao} placeholder="Ex.: Drive › Verificações › 2026-10 › furia-amapa.mp4" maxLength={300} />
-          <Campo rotulo="Testemunhas presentes" inputMode="numeric" value={testemunhas} onChange={(x) => setTestemunhas(x.replace(/\D/g, "").slice(0, 2))} className="max-w-40" />
-          <label className="flex items-start gap-3 text-sm min-h-11">
-            <input type="checkbox" className="size-5 mt-0.5 accent-[var(--color-primaria)]" checked={documento} onChange={(e) => setDocumento(e.target.checked)} />
-            Conferi o documento com foto do responsável: nome e CPF batem com o cadastro.
-          </label>
-          <label className="flex items-start gap-3 text-sm min-h-11">
-            <input type="checkbox" className="size-5 mt-0.5 accent-[var(--color-primaria)]" checked={sede} onChange={(e) => setSede(e.target.checked)} />
-            Vi a sede ao vivo e ela bate com o endereço informado.
-          </label>
-          <AreaTexto rotulo="Observações (opcional)" value={obs} onChange={(e) => setObs(e.target.value)} maxLength={1000} />
-          {erro && <Aviso tom="perigo">{erro}</Aviso>}
-        </div>
-      </Modal>
-      <Modal
-        aberto={faltou}
-        fechar={() => !salvando && setFaltou(false)}
-        titulo="Não compareceu?"
-        descricao="O horário fica livre e o responsável recebe um e-mail para escolher outro."
-        rodape={
-          <div className="flex justify-end gap-2">
-            <Botao variante="fantasma" onClick={() => setFaltou(false)} disabled={salvando}>
-              Cancelar
-            </Botao>
-            <Botao variante="perigo" carregando={salvando} onClick={naoCompareceu}>
-              Liberar para remarcar
-            </Botao>
-          </div>
-        }
-      >
-        <p className="text-sm text-texto-2">Use quando ninguém entrou na chamada ou faltaram as testemunhas.</p>
+        <AreaTexto
+          rotulo="Motivo"
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          maxLength={500}
+          placeholder="Ex.: só apareceu 1 testemunha. Grave de novo com pelo menos 2, cada uma mostrando o documento."
+        />
       </Modal>
     </section>
   );

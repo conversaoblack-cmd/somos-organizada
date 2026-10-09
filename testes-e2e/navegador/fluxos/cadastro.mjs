@@ -1,8 +1,11 @@
-// Fluxo 1: cadastro de diretoria pela página principal, do "Criar conta" até marcar a chamada de verificação em vídeo e
+// Fluxo 1: cadastro de diretoria pela página principal, do "Criar conta" até enviar o vídeo de verificação e
 // chegar em "Cadastro em análise".
 // Inclui: recarregar em cada passo volta no mesmo passo; outro navegador com o mesmo e-mail continua de onde
 // parou; "Entrar" com cadastro em andamento oferece continuar.
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
+
+const VIDEO = fileURLToPath(new URL("../arquivos/verificacao.mp4", import.meta.url));
 import {
   BASE, SENHA, RODADA, novoAparelho, fecharAparelho, novaPagina, conferir, comErrosEsperados, entrar, esperar,
   novoCodigoOob, cpfAleatorio, celularAleatorio, mascaraCpf, fsConsultar, aguardar,
@@ -163,25 +166,23 @@ export async function cadastro(estado) {
     await noPasso(A, p, "Revise e envie", "voltou para a Revisão sem CNPJ");
     await p.getByText("Ainda sem CNPJ").waitFor();
   }
-  const enviar = p.getByRole("button", { name: "Enviar e marcar a chamada" });
+  const enviar = p.getByRole("button", { name: "Continuar para o vídeo" });
   assert.equal(await enviar.isDisabled(), true, "enviar exige a declaração");
   await p.getByLabel(/Declaro que represento esta torcida/).check();
   await enviar.click();
-  // Último passo: chamada de verificação em vídeo (dados de torcida são públicos; confirma quem é o responsável)
-  const tituloVideo = p.getByRole("heading", { name: "Último passo: chamada de verificação" });
+  // Último passo: vídeo de verificação (dados de torcida são públicos; o vídeo prova quem é o responsável)
+  const tituloVideo = p.getByRole("heading", { name: "Último passo: vídeo de verificação" });
   await tituloVideo.waitFor({ timeout: 30_000 });
-  await conferir(A, p, "chegou na verificação em vídeo");
+  await conferir(A, p, "chegou no vídeo de verificação");
   await p.reload();
   await tituloVideo.waitFor({ timeout: 30_000 });
-  await conferir(A, p, "recarregou e voltou para a verificação em vídeo");
-  await p.getByRole("radiogroup", { name: "Horário da chamada" }).getByRole("radio").first().waitFor({ timeout: 30_000 });
-  const segundoDia = p.getByRole("radiogroup", { name: "Dia da chamada" }).getByRole("radio").nth(1);
-  if (await segundoDia.count()) await segundoDia.click();
-  await p.getByRole("radiogroup", { name: "Horário da chamada" }).getByRole("radio").first().click();
-  await p.getByRole("button", { name: /^Confirmar / }).click();
-  await p.getByRole("heading", { name: "Cadastro em análise" }).waitFor({ timeout: 30_000 });
-  await p.getByText("Chamada de verificação marcada").waitFor();
-  await conferir(A, p, "marcou a chamada e foi para análise");
+  await conferir(A, p, "recarregou e voltou para o vídeo de verificação");
+  await p.locator("[data-escolher-video]").setInputFiles(VIDEO);
+  await p.locator("video").first().waitFor();
+  await p.getByRole("button", { name: "Enviar vídeo" }).click();
+  await p.getByRole("heading", { name: "Cadastro em análise" }).waitFor({ timeout: 60_000 });
+  await p.getByText("Vídeo de verificação recebido").waitFor();
+  await conferir(A, p, "enviou o vídeo e foi para análise");
   await p.getByText(`somosorganizada.com.br/${slug}`).waitFor();
   await p.reload();
   await p.getByRole("heading", { name: "Cadastro em análise" }).waitFor({ timeout: 30_000 });
@@ -192,8 +193,8 @@ export async function cadastro(estado) {
   assert.equal(sol.status, "pendente");
   assert.equal(sol.entidade?.tipo, enviaComCnpj ? "cnpj" : "sem_cnpj");
   assert.equal(sol.tema?.corPrimaria, "#C81E3C");
-  assert.equal(sol.verificacao?.status, "agendada", "chamada de verificação marcada");
-  assert.ok(sol.verificacao?.horarioId, "horário reservado");
+  assert.equal(sol.verificacao?.status, "enviado", "vídeo de verificação enviado");
+  assert.match(sol.verificacao?.videoPath ?? "", /^verificacoes\//);
   estado.dados.cadastro.solicitacaoId = sol._id;
   estado.dados.cadastro.aparelho = A;
   estado.dados.cadastro.pagina = p;

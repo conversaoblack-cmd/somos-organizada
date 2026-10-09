@@ -18,28 +18,18 @@ export async function aprovacao(estado) {
   await e.getByRole("heading", { name: "Solicitações" }).waitFor();
   await e.getByRole("link", { name: new RegExp(nomeTorcida) }).click();
   await e.waitForURL(new RegExp(`/solicitacoes/${solicitacaoId}`));
-  // Verificação em vídeo: sem ela não aprova; a equipe manda o link e registra a chamada feita
+  // Vídeo de verificação: a equipe assiste no painel e aprova conferindo documento, sede e testemunhas
   const aprovarBtn = e.getByRole("button", { name: "Aprovar e criar torcida" });
-  assert.equal(await aprovarBtn.isDisabled(), true, "aprovar exige a chamada de verificação");
   const quadro = e.locator("[data-verificacao-video]");
-  await quadro.getByText("Marcada").waitFor({ timeout: 30_000 });
-  await quadro.getByLabel(/Link da chamada/).fill("https://meet.google.com/abc-defg-hij");
-  await quadro.getByRole("button", { name: "Enviar link" }).click();
-  await e.getByText(/Link (enviado|salvo)/).first().waitFor({ timeout: 30_000 });
-  // o diretor vê o link na página do cadastro, sem recarregar
-  await p.getByRole("link", { name: "Entrar na chamada" }).waitFor({ timeout: 30_000 });
-  await conferir(A, p, "cadastro mostrou o link da chamada");
-  await quadro.getByRole("button", { name: "Chamada feita" }).click();
-  const reg = e.getByRole("dialog", { name: "Registrar a chamada feita" });
-  await reg.getByLabel("Onde ficou a gravação").fill("Drive › Verificações › teste-navegador.mp4");
-  await reg.getByLabel(/Conferi o documento/).check();
-  await reg.getByLabel(/Vi a sede ao vivo/).check();
-  await reg.getByRole("button", { name: "Registrar" }).click();
-  await reg.waitFor({ state: "detached", timeout: 30_000 });
-  await quadro.getByText("Feita").waitFor({ timeout: 30_000 });
-  await conferir(E, e, "equipe registrou a chamada de verificação");
+  await quadro.getByText("Recebido").waitFor({ timeout: 30_000 });
+  await quadro.locator("[data-video-verificacao]").waitFor({ timeout: 30_000 });
+  await conferir(E, e, "equipe vê o vídeo de verificação");
   await aprovarBtn.click();
-  await e.getByRole("dialog", { name: "Aprovar cadastro?" }).getByRole("button", { name: "Aprovar", exact: true }).click();
+  const modal = e.getByRole("dialog", { name: "Aprovar cadastro?" });
+  assert.equal(await modal.getByRole("button", { name: "Aprovar", exact: true }).isDisabled(), true, "aprovar exige a conferência do vídeo");
+  await modal.getByLabel(/documento com foto do responsável/).check();
+  await modal.getByLabel(/A sede/).check();
+  await modal.getByRole("button", { name: "Aprovar", exact: true }).click();
   await e.getByText("Torcida criada").waitFor({ timeout: 30_000 });
   await conferir(E, e, "equipe aprovou a solicitação");
   await fecharAparelho(E);

@@ -70,9 +70,8 @@ export const ACOES: Record<string, Acao> = {
   verConvite: convite.verConvite,
   aceitarConvite: convite.aceitarConvite,
   redefinirSenhaPorEmail: senha.redefinirSenhaPorEmail,
-  horariosVerificacao: verificacaoVideo.horariosVerificacao,
-  agendarVerificacao: verificacaoVideo.agendarVerificacao,
-  atualizarVerificacao: verificacaoVideo.atualizarVerificacao,
+  registrarVideoVerificacao: verificacaoVideo.registrarVideoVerificacao,
+  pedirNovoVideo: verificacaoVideo.pedirNovoVideo,
 } as unknown as Record<string, Acao>;
 
 export const api = onCall(

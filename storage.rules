@@ -35,6 +35,13 @@ service firebase.storage {
       allow write: if logado() && request.auth.uid == uid && imagem(3);
     }
 
+    // Vídeo de verificação do cadastro da torcida: só quem enviou e a equipe veem; ninguém troca nem apaga (é a prova)
+    match /verificacoes/{uid}/{arquivo=**} {
+      allow read: if (logado() && request.auth.uid == uid) || plataforma();
+      allow create: if logado() && request.auth.uid == uid && resource == null
+        && request.resource.size < 500 * 1024 * 1024 && request.resource.contentType.matches('video/.*');
+    }
+
     // Anexos de suporte (prints)
     match /suporte/{uid}/{arquivo} {
       allow read: if (logado() && request.auth.uid == uid) || plataforma();
