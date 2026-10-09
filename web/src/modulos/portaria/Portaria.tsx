@@ -36,7 +36,14 @@ function gravar(chave: string, valor: string | null) {
 }
 
 type RespostaValidacao = Awaited<ReturnType<typeof api.validarEntrada>>;
-type Resultado = (RespostaValidacao | { resultado: "erro_conexao"; mensagem: string }) & { em: number; entrada: Entrada };
+type Resultado = (RespostaValidacao | { resultado: "erro_conexao"; mensagem: string }) & {
+  em: number;
+  entrada: Entrada;
+  /** "Já utilizado" logo depois de uma conferência cancelada: pode ter sido ela que liberou. */
+  talvezCancelada?: boolean;
+};
+/** Se uma conferência cancelada chegou a liberar, o "Já utilizado" seguinte avisa por este tempo. */
+const JANELA_CANCELADA_MS = 2 * 60_000;
 type Entrada = { qr: string } | { cpf: string } | { codigo: string };
 
 const CSS_PORTARIA = `
@@ -200,7 +207,7 @@ function EscolherEvento({ tid, membro, escolher }: { tid: string; membro: Membro
             {e.status === "encerrado" && <span className="rounded-full bg-superficie-3 text-texto-2 text-[11px] font-bold px-2 py-0.5">Encerrado</span>}
           </span>
           <span className="block text-lg font-bold leading-snug mt-0.5 line-clamp-2">{e.nome}</span>
-          {e.local && <span className="block text-sm text-texto-2 truncate">{e.local}</span>}
+          {e.local && <span className="block text-sm text-texto-2 line-clamp-2 break-words">{e.local}</span>}
           <span className="block text-sm font-semibold text-texto-3 numeros">
             {num(e.entradas)} de {num(e.vendidos)} entraram
           </span>
@@ -303,7 +310,7 @@ function TelaResultado({ r, proximo, tentarDeNovo }: { r: Resultado; proximo: ()
         className="flex-1 min-h-0 overflow-y-auto px-5 pt-[max(env(safe-area-inset-top),1.25rem)] pb-4 flex flex-col items-center justify-center text-center"
         onClick={() => liberado && setSegurando(true)}
       >
-        <div className={cx("so-pop", !liberado && r.resultado !== "ja_usado" && "so-tremer")}>
+        <div className={cx("so-pop", !liberado && r.resultado !== "ja_usado" && r.resultado !== "erro_conexao" && "so-tremer")}>
           <Icone nome={v.icone} className="size-28 sm:size-32" strokeWidth={2.2} />
         </div>
         <h2 className="mt-2 font-display text-[44px] sm:text-6xl leading-none uppercase tracking-tight">{v.titulo}</h2>
@@ -312,6 +319,11 @@ function TelaResultado({ r, proximo, tentarDeNovo }: { r: Resultado; proximo: ()
           <p className="mt-3 text-xl font-bold">
             Entrou às {r.usadoEm ? hora(r.usadoEm) : "—"}
             {r.usadoEm ? <span className="block text-base font-semibold opacity-75">{relativo(r.usadoEm)}</span> : null}
+          </p>
+        )}
+        {r.talvezCancelada && (
+          <p className="mt-3 max-w-md rounded-2xl bg-black/12 px-4 py-3 text-base font-bold">
+            Pode ter sido a leitura que você cancelou agora há pouco. Confira o nome e o documento com foto.
           </p>
         )}
         {!liberado && r.resultado !== "ja_usado" && <p className="mt-3 text-lg font-semibold max-w-md">{r.mensagem}</p>}
@@ -422,6 +434,10 @@ function Leitura({
   const trocouSozinho = useRef(false);
   const ultimo = useRef<{ texto: string; em: number }>({ texto: "", em: 0 });
   const ocupado = useRef(false);
+  // Cada conferência ganha um número; a resposta de uma conferência cancelada chega com número velho e é ignorada.
+  const tentativaAtual = useRef(0);
+  const inicioTentativa = useRef(0);
+  const cancelada = useRef<{ inicio: number; em: number } | null>(null);
   const campo = useRef<HTMLInputElement>(null);
 
   useEffect(() => gravar("portaria:modo", modo), [modo]);
@@ -430,6 +446,8 @@ function Leitura({
     async (entrada: Entrada) => {
       if (ocupado.current) return;
       ocupado.current = true;
+      const minha = ++tentativaAtual.current;
+      inicioTentativa.current = Date.now();
       setValidando(true);
       let r: Resultado;
       try {
@@ -442,13 +460,27 @@ function Leitura({
           ? { resultado: "erro_conexao", mensagem: "A internet falhou. Isso não quer dizer que o ingresso é inválido: toque em Tentar de novo.", em: Date.now(), entrada }
           : { resultado: "invalido", mensagem: mensagemDeErro(e), em: Date.now(), entrada };
       }
-      feedback(r.resultado === "liberado" ? "ok" : r.resultado === "ja_usado" || r.resultado === "erro_conexao" ? "aviso" : "erro");
-      if (r.resultado === "liberado") {
+      const contarLiberada = () =>
         setLiberadas((n) => {
           gravar(chaveSessao, String(n + 1));
           return n + 1;
         });
+      if (minha !== tentativaAtual.current) {
+        // O porteiro cancelou esta conferência: a resposta atrasada não toma a tela nem toca som.
+        // Se o servidor chegou a liberar, a entrada aconteceu: conta e fica nas "Últimas leituras".
+        if (r.resultado === "liberado") {
+          contarLiberada();
+          setHistorico((h) => [r, ...h].slice(0, 30));
+        }
+        return;
       }
+      const c = cancelada.current;
+      if (r.resultado === "ja_usado" && c && Date.now() - c.em < JANELA_CANCELADA_MS && (r.usadoEm ?? 0) >= c.inicio - 60_000) {
+        r = { ...r, talvezCancelada: true };
+      }
+      if (r.resultado === "erro_conexao") feedback("conexao");
+      else feedback(r.resultado === "liberado" ? "ok" : r.resultado === "ja_usado" ? "aviso" : "erro");
+      if (r.resultado === "liberado") contarLiberada();
       setHistorico((h) => [r, ...h].slice(0, 30));
       setResultado(r);
       setValidando(false);
@@ -489,6 +521,18 @@ function Leitura({
       setTimeout(() => campo.current?.focus(), 50);
     }
   }, [modo]);
+
+  /** Desiste da conferência em andamento (internet lenta) e vai para a digitação do CPF ou do código. */
+  const cancelarConferencia = useCallback(() => {
+    tentativaAtual.current++;
+    cancelada.current = { inicio: inicioTentativa.current, em: Date.now() };
+    ocupado.current = false;
+    ultimo.current.em = Date.now();
+    setValidando(false);
+    setFalhaCamera(null);
+    setModo("digitar");
+    setTimeout(() => campo.current?.focus(), 50);
+  }, []);
 
   function tentarDeNovo(entrada: Entrada) {
     setResultado(null);
@@ -632,10 +676,17 @@ function Leitura({
                 <div className="relative">
                   <Leitor pausado={!!resultado || validando} aoLer={aoLer} aoFalhar={aoFalharCamera} />
                   {validando && (
-                    <div className="absolute inset-0 rounded-[28px] bg-black/60 grid place-items-center text-white">
-                      <div className="flex flex-col items-center gap-3">
+                    <div className="absolute inset-0 rounded-[28px] bg-black/70 grid place-items-center text-white p-4">
+                      <div className="w-full max-w-xs flex flex-col items-center gap-3 text-center">
                         <Girando className="size-10" />
                         <p className="font-bold text-lg">Conferindo…</p>
+                        <button
+                          type="button"
+                          onClick={cancelarConferencia}
+                          className="mt-3 w-full min-h-14 px-4 py-2 rounded-2xl bg-white text-black text-lg font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-xl"
+                        >
+                          <Icone nome="lapis" className="size-5 shrink-0" /> Cancelar e digitar o código
+                        </button>
                       </div>
                     </div>
                   )}
@@ -687,6 +738,15 @@ function Leitura({
                     {validando ? <Girando className="size-6" /> : <Icone nome="checkCirculo" className="size-6" />}
                     Validar entrada
                   </button>
+                  {validando && (
+                    <button
+                      type="button"
+                      onClick={cancelarConferencia}
+                      className="w-full min-h-12 rounded-2xl border-2 border-linha-forte text-lg font-bold text-texto active:scale-[0.98] transition-transform"
+                    >
+                      Cancelar
+                    </button>
+                  )}
                   <p className="text-xs text-texto-3">Pelo CPF, liberamos o ingresso válido do titular para este evento. Sempre confira o documento com foto.</p>
                 </form>
               )}

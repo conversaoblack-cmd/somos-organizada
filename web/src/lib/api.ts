@@ -1,5 +1,5 @@
 /** Chamadas às Cloud Functions (functions/src/index.ts). Todas tipadas aqui, em um só lugar. */
-import { httpsCallable, type FunctionsError } from "firebase/functions";
+import { httpsCallable } from "firebase/functions";
 import { fns } from "./firebase";
 import type { Endereco, Papel, RecebedorSede, StatusTorcida, Stats, Tema } from "./tipos";
 
@@ -13,9 +13,13 @@ function chamar<E, S>(nome: string, rapida = false) {
   return async (dados: E): Promise<S> => (await (rapida ? portaApiRapida : portaApi)({ acao: nome, dados })).data as S;
 }
 
-/** Erros do Firebase (login, banco, rede) em português: nunca mostrar "auth/..." ou texto em inglês ao torcedor. */
+const SEM_INTERNET = "Sem internet. Confira a conexão e tente de novo.";
+const SEM_CONEXAO = "Sem conexão com o servidor. Confira a internet e tente de novo.";
+const ALGO_DEU_ERRADO = "Algo deu errado. Tente novamente.";
+
+/** Erros do login e do armazenamento (códigos "auth/..." e "storage/...", sempre com texto do SDK em inglês). */
 const MENSAGENS_FIREBASE: Record<string, string> = {
-  "auth/network-request-failed": "Sem internet. Confira a conexão e tente de novo.",
+  "auth/network-request-failed": SEM_INTERNET,
   "auth/too-many-requests": "Muitas tentativas seguidas. Espere alguns minutos e tente de novo.",
   "auth/invalid-email": "E-mail inválido. Confira o que foi digitado.",
   "auth/missing-password": "Digite sua senha.",
@@ -27,12 +31,48 @@ const MENSAGENS_FIREBASE: Record<string, string> = {
   "auth/invalid-action-code": "Este link já foi usado ou não é válido. Peça um novo.",
   "auth/unauthorized-continue-uri": "Não foi possível enviar o e-mail agora. Avise a equipe Somos Organizada.",
   "auth/quota-exceeded": "Limite de envios atingido por hoje. Tente de novo mais tarde.",
-  "functions/deadline-exceeded": "O servidor demorou para responder. Confira a internet e tente de novo.",
-  "functions/resource-exhausted": "Muitos pedidos ao mesmo tempo. Espere um instante e tente de novo.",
+  "storage/unauthorized": "Você não tem permissão para enviar este arquivo.",
+  "storage/canceled": "O envio foi cancelado.",
+  "storage/retry-limit-exceeded": "O envio demorou demais. Confira a internet e tente de novo.",
+  "storage/quota-exceeded": "Limite de arquivos atingido. Avise a equipe Somos Organizada.",
+};
+
+/**
+ * Códigos padrão do Firebase (Firestore vem sem prefixo; as Cloud Functions vêm como "functions/...").
+ * Só usados quando o texto do erro é o padrão do SDK, em inglês: as mensagens do nosso back-end já vêm em português.
+ */
+const MENSAGENS_POR_CODIGO: Record<string, string> = {
+  unavailable: SEM_CONEXAO,
   "deadline-exceeded": "O servidor demorou para responder. Confira a internet e tente de novo.",
   "resource-exhausted": "Muitos pedidos ao mesmo tempo. Espere um instante e tente de novo.",
   "failed-precondition": "Não foi possível concluir agora. Atualize a página e tente de novo.",
+  "not-found": "Não encontramos o que você procurou. Pode ter sido apagado: atualize a página.",
+  aborted: "Outra alteração aconteceu ao mesmo tempo. Tente de novo.",
+  "invalid-argument": "Algum dado não foi aceito. Confira o que foi preenchido e tente de novo.",
+  unauthenticated: "Sua sessão expirou. Entre de novo para continuar.",
+  "permission-denied": "Você não tem permissão para isso.",
+  "already-exists": "Isso já está cadastrado.",
+  cancelled: "A operação foi interrompida. Tente de novo.",
+  "out-of-range": "Algum valor está fora do permitido. Confira e tente de novo.",
+  unimplemented: "Esta função não está disponível nesta versão. Atualize a página.",
+  internal: "Erro inesperado. Confira a internet e tente de novo.",
+  "data-loss": ALGO_DEU_ERRADO,
+  unknown: ALGO_DEU_ERRADO,
 };
+
+/** Palavras que só aparecem nos textos do SDK em inglês ("Missing or insufficient permissions.", "No document to update: ..."). */
+const INGLES =
+  /\b(the|is|was|are|were|not|has|have|had|does|did|because|cannot|could|failed|failure|error|missing|insufficient|permissions?|documents?|client|offline|function|request|response|network|deadline|exceeded|unknown|internal|unavailable|requires|query|backend|called|with|undefined|null|object|property|already|exists|found|invalid|to|of|and|update|instance|deleted|cancell?ed|something|went|wrong|please|try|again|you|your|this|that|been|an|or|it|at|by|from)\b/i;
+
+/** Texto padrão do SDK do Firebase (inglês ou só o código), que nunca vai para a tela. */
+function textoDoSdk(msg: string): boolean {
+  if (!msg) return true;
+  if (/^[A-Za-z_-]+\.?$/.test(msg)) return true; // só o código: "internal", "not-found", "INTERNAL", "Unauthenticated"
+  if (/^Firebase\b|\((auth|storage|functions|firestore|app)\//.test(msg)) return true; // "Firebase: Error (auth/...)", "Firebase Storage: ..."
+  if (/^Pagar\.me:/.test(msg)) return false; // recusa da Pagar.me repassada pelo nosso back-end: ajuda a diretoria a corrigir os dados
+  if (/[áàâãéêíóôõúç]/i.test(msg)) return false; // português
+  return INGLES.test(msg);
+}
 
 /** Falha de rede (sem sinal, sinal fraco, servidor fora): para telas que precisam tratar diferente (ex.: portaria). */
 export function ehErroDeConexao(e: unknown): boolean {
@@ -42,29 +82,27 @@ export function ehErroDeConexao(e: unknown): boolean {
     (typeof navigator !== "undefined" && !navigator.onLine) ||
     /^(functions\/)?(unavailable|deadline-exceeded|internal|resource-exhausted)$/.test(code) ||
     code === "auth/network-request-failed" ||
+    code === "storage/retry-limit-exceeded" ||
     (e instanceof TypeError && /fetch|network|load failed/i.test(msg))
   );
 }
 
-/** Mensagem amigável a partir de um erro de callable/Firestore. */
+/**
+ * Mensagem amigável a partir de um erro de callable/Firestore/login. Nunca mostra texto em inglês nem "auth/...":
+ * as mensagens do nosso back-end (HttpsError) e do front (new Error("...")) já vêm em português e aparecem como estão;
+ * o texto padrão do SDK vira uma frase em português pelo código.
+ */
 export function mensagemDeErro(e: unknown): string {
-  const bruto = e as Partial<FunctionsError> & { message?: string; code?: string };
-  if (bruto?.code && MENSAGENS_FIREBASE[bruto.code]) return MENSAGENS_FIREBASE[bruto.code];
-  if (e instanceof TypeError && /fetch|network|load failed/i.test(bruto.message ?? "")) return "Sem internet. Confira a conexão e tente de novo.";
-  // o SDK às vezes acrescenta o status HTTP no fim ("... [409]")
-  const err = { ...bruto, code: bruto?.code, message: bruto?.message?.replace(/\s*\[\d{3}\]$/, "") };
-  if (err?.code === "functions/unavailable" || err?.code === "unavailable") {
-    return err.message && !/^unavailable$/i.test(err.message) ? err.message : "Sem conexão com o servidor. Tente de novo.";
-  }
-  if (err?.code === "permission-denied" || err?.code === "functions/permission-denied") {
-    return err.message && !/Missing or insufficient/i.test(err.message) ? err.message : "Você não tem permissão para isso.";
-  }
-  if (err?.code === "functions/internal" && (!err.message || err.message === "internal")) return "Erro inesperado. Tente novamente.";
-  // Mensagem crua do SDK (em inglês, "Firebase: Error (auth/...)") nunca vai para a tela
-  if (!err?.message || /^Firebase:|\(auth\/|^[a-z-]+$/.test(err.message) || /[A-Za-z]+ [a-z]+ (is|was|not|has) /.test(err.message)) {
-    return err?.code?.startsWith("firestore/") || err?.code === "unavailable" ? "Sem conexão com o servidor. Tente de novo." : "Algo deu errado. Tente novamente.";
-  }
-  return err.message;
+  const bruto = e as { code?: unknown; message?: unknown } | null | undefined;
+  const code = typeof bruto?.code === "string" ? bruto.code : "";
+  // o SDK das functions acrescenta o status HTTP no fim ("... [409]")
+  const msg = (typeof bruto?.message === "string" ? bruto.message : typeof e === "string" ? e : "").replace(/\s*\[\d{3}\]$/, "").trim();
+  if (MENSAGENS_FIREBASE[code]) return MENSAGENS_FIREBASE[code];
+  if (e instanceof TypeError && /fetch|network|load failed/i.test(msg)) return SEM_INTERNET;
+  if (!code.startsWith("auth/") && !code.startsWith("storage/") && !textoDoSdk(msg)) return msg;
+  const base = code.replace(/^(functions|firestore)\//, "");
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return SEM_INTERNET;
+  return MENSAGENS_POR_CODIGO[base] ?? ALGO_DEU_ERRADO;
 }
 
 export interface DadosPessoa {

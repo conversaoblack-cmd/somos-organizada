@@ -101,7 +101,7 @@ function ItemEvento({ e, sede, destaque }: { e: Evento & { id: string }; sede: s
       </div>
       <div className="min-w-0 flex-1">
         <p className="font-semibold line-clamp-2 break-words">{e.nome}</p>
-        <p className="text-sm text-texto-3 truncate">
+        <p className="text-sm text-texto-3 line-clamp-2 break-words">
           {dataExtensa(e.data)} · {hora(e.data)} · {e.local || sede}
         </p>
       </div>

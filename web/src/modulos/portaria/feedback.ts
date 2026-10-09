@@ -37,7 +37,7 @@ function vibrar(padrao: number | number[]) {
   }
 }
 
-export type TipoFeedback = "ok" | "aviso" | "erro" | "leitura";
+export type TipoFeedback = "ok" | "aviso" | "erro" | "leitura" | "conexao";
 
 export function feedback(tipo: TipoFeedback) {
   prepararAudio();
@@ -55,6 +55,11 @@ export function feedback(tipo: TipoFeedback) {
       tom(660, 0, 0.14, "triangle", 0.28);
       tom(660, 0.2, 0.14, "triangle", 0.28);
       vibrar([120, 80, 120]);
+      break;
+    case "conexao": // sem internet NÃO é ingresso inválido: dois bipes curtos e suaves descendo, vibração curtinha
+      tom(784, 0, 0.09, "sine", 0.2);
+      tom(523, 0.13, 0.09, "sine", 0.2);
+      vibrar(40);
       break;
     case "erro": // zumbido grave
       tom(196, 0, 0.22, "square", 0.16);
