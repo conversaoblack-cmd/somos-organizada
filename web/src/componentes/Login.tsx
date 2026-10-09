@@ -40,6 +40,8 @@ export function Login({
   extra,
   permitirCadastro,
   aceitaCpf,
+  emailInicial,
+  avisoInicial,
 }: {
   titulo: string;
   subtitulo?: ReactNode;
@@ -48,10 +50,14 @@ export function Login({
   permitirCadastro?: boolean;
   /** Torcedor pode entrar com CPF no lugar do e-mail. */
   aceitaCpf?: boolean;
+  /** Já preenche o e-mail (ex.: quem tentou criar conta com um e-mail que já existe). */
+  emailInicial?: string;
+  /** Explicação no topo do formulário (ex.: "digite sua senha para continuar de onde parou"). */
+  avisoInicial?: ReactNode;
 }) {
   const tid = useTorcidaOpcional()?.tid;
   const [criando, setCriando] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(emailInicial ?? "");
   const [senha, setSenha] = useState("");
   const [verSenha, setVerSenha] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -134,6 +140,7 @@ export function Login({
       <h1 className="text-2xl font-bold">{titulo}</h1>
       {subtitulo && <p className="text-texto-2 mt-1">{subtitulo}</p>}
       <form onSubmit={entrar} className="mt-6 space-y-4" noValidate>
+        {avisoInicial && !erro && <Aviso tom="info">{avisoInicial}</Aviso>}
         <Campo
           rotulo={usaCpf ? "CPF ou e-mail" : "E-mail"}
           type={usaCpf ? "text" : "email"}

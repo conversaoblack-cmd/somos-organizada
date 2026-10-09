@@ -189,6 +189,16 @@ service cloud.firestore {
       allow read, write: if logado() && request.auth.uid == uid;
     }
 
+    // Rascunho do cadastro de torcida: continua de onde parou em qualquer aparelho. Só o dono lê e grava.
+    match /usuarios/{uid}/rascunhos/{doc} {
+      allow read, delete: if logado() && request.auth.uid == uid;
+      allow create, update: if logado() && request.auth.uid == uid && doc == 'cadastroTorcida'
+        && request.resource.data.keys().hasOnly(['dados', 'passo', 'atualizadoEm'])
+        && request.resource.data.dados is map && request.resource.data.dados.size() <= 30
+        && request.resource.data.passo is int && request.resource.data.passo >= 2 && request.resource.data.passo <= 5
+        && request.resource.data.atualizadoEm is int;
+    }
+
     match /usuarios/{uid}/acessos/{tid} {
       allow read: if logado() && request.auth.uid == uid;
       allow write: if false;

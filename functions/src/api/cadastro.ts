@@ -80,6 +80,8 @@ export const solicitarTorcida = onCall(async (req) => {
       uid, email, status: "pendente", nomeTorcida, slug, clube, estimativaSocios, quantidadeSubsedes: subsedes,
       responsavel, entidade, endereco: end, tema, criadoEm: FieldValue.serverTimestamp(),
     });
+    // O rascunho (com CPF) não é mais necessário: o pedido enviado é a fonte agora
+    tx.delete(db.doc(`usuarios/${uid}/rascunhos/cadastroTorcida`));
   });
   return { solicitacaoId: ref.id, status: "pendente" };
 });

@@ -5,7 +5,7 @@ import { collection, doc, getDoc, getDocs, query, where } from "firebase/firesto
 import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { aplicarTema, TEMA_PAINEL } from "@/lib/tema";
-import { useColecao, useUsuario } from "@/hooks/dados";
+import { useColecao, useDocumento, useUsuario } from "@/hooks/dados";
 import { dataHora } from "@/lib/formatos";
 import type { SolicitacaoTorcida } from "@/lib/tipos";
 import { Login } from "@/componentes/Login";
@@ -155,7 +155,9 @@ function EntrarEquipe({ aoInformarTorcida }: { aoInformarTorcida: () => void }) 
     .filter((x) => x.status !== "aprovada")
     .sort((a, b) => (b.criadoEm?.toMillis?.() ?? 0) - (a.criadoEm?.toMillis?.() ?? 0))
     .slice(0, 1);
-
+  // Cadastro de torcida começado e não enviado (rascunho da conta, ou e-mail ainda sem confirmar): oferece continuar
+  const rascunho = useDocumento<{ passo: number }>(logado ? `usuarios/${usuario!.uid}/rascunhos/cadastroTorcida` : null);
+  const cadastroEmAndamento = !!rascunho.dados || (logado && !usuario!.emailVerified);
 
   useEffect(() => {
     if (!usuario || usuario.isAnonymous) return setAcessos(null);
@@ -244,7 +246,7 @@ function EntrarEquipe({ aoInformarTorcida }: { aoInformarTorcida: () => void }) 
                 detalhe={ROTULO_PAPEL[a.papel] ?? a.papel}
               />
             ))}
-            {!plataforma && !acessos.length && !minhas.some((m) => m.status === "pendente") && (
+            {!plataforma && !acessos.length && !minhas.some((m) => m.status === "pendente") && !cadastroEmAndamento && (
               <Vazio
                 icone="cadeado"
                 titulo="Nenhum painel liberado"
@@ -261,8 +263,10 @@ function EntrarEquipe({ aoInformarTorcida }: { aoInformarTorcida: () => void }) 
                   <Icone nome="bandeira" className="size-5" />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block font-semibold">Cadastrar minha torcida</span>
-                  <span className="block text-sm text-texto-3">Leva uns 5 minutos e passa pela aprovação da equipe.</span>
+                  <span className="block font-semibold">{cadastroEmAndamento ? "Continuar o cadastro da minha torcida" : "Cadastrar minha torcida"}</span>
+                  <span className="block text-sm text-texto-3">
+                    {cadastroEmAndamento ? "Você começou e não terminou: volta no passo em que parou, com os dados preenchidos." : "Leva uns 5 minutos e passa pela aprovação da equipe."}
+                  </span>
                 </span>
                 <Icone nome="chevronDireita" className="size-5 text-texto-3" />
               </Link>

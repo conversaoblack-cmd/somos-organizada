@@ -7,10 +7,10 @@ import { enviarConfirmacaoEmail, CANAL_CONTA } from "@/lib/emailsConta";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router";
 import { createUserWithEmailAndPassword, signOut, updateProfile, type User } from "firebase/auth";
-import { collection, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, query, setDoc, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
-import { aplicarTema, TEMA_PADRAO } from "@/lib/tema";
+import { aplicarTema, corValida, TEMA_PADRAO } from "@/lib/tema";
 import { buscarCep } from "@/lib/servicos";
 import { cpfValido, dataHora, emailValido, mascaraCep, mascaraCpf, mascaraTelefone, soDigitos, telefoneValido } from "@/lib/formatos";
 import type { ComId, SolicitacaoTorcida } from "@/lib/tipos";
@@ -21,6 +21,7 @@ import { SLUG_VALIDO, slugDoNome } from "./planos";
 import { CoresCadastro, type Cores } from "./CoresCadastro";
 
 const DOMINIO = "somosorganizada.com.br/";
+const MSG_SLUG_SEM_CONEXAO = "Não deu para conferir agora. Verifique sua conexão.";
 const WHATSAPP = "5571994095784";
 const ETAPAS = ["Conta", "E-mail", "Torcida", "Pessoa", "Entidade", "Revisão", "Análise"];
 const RESERVADOS = new Set([
@@ -59,58 +60,74 @@ const VAZIO: Dados = {
   cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "",
 };
 
-// ── Rascunho (só neste navegador; conveniência) ─────────────────
-// Um rascunho por conta (celular emprestado não mostra os dados de outra pessoa), sem o CPF,
-// e apagado ao sair ou ao trocar de e-mail.
-const CHAVE_ANTIGA = "somos-cadastro-rascunho";
-const chaveRascunho = (uid: string) => `somos-cadastro-rascunho:${uid}`;
-function lerRascunho(uid: string): Dados {
+// ── Rascunho ────────────────────────────────────────────────────
+// Guardado na conta (Firestore, só o dono lê) para continuar de onde parou em qualquer aparelho, mesmo depois
+// de erro, queda de internet ou aba fechada; e neste navegador (sem o CPF) para abrir na hora, até sem internet.
+// Vale o mais recente dos dois. O servidor apaga o da conta quando o pedido é enviado.
+type Passo = 2 | 3 | 4 | 5;
+interface Rascunho {
+  dados: Dados;
+  passo: Passo;
+  atualizadoEm: number;
+}
+const refRascunho = (uid: string) => doc(db, `usuarios/${uid}/rascunhos/cadastroTorcida`);
+const chaveLocal = (uid: string) => `somos-cadastro:${uid}`;
+
+/** Rascunho vindo de fora (navegador ou banco) com tipo errado não pode derrubar a tela. */
+function sanear(bruto: unknown): Dados {
+  const o = (bruto && typeof bruto === "object" ? bruto : {}) as Record<string, unknown>;
+  const d = { ...VAZIO } as Record<string, unknown>;
+  for (const k of Object.keys(VAZIO)) if (typeof (VAZIO as unknown as Record<string, unknown>)[k] === "string" && typeof o[k] === "string") d[k] = (o[k] as string).slice(0, 200);
+  d.slugEditado = o.slugEditado === true;
+  d.temCnpj = o.temCnpj === "cnpj" || o.temCnpj === "sem_cnpj" ? o.temCnpj : null;
+  const c = o.cores as Record<string, unknown> | null | undefined;
+  d.cores =
+    c && typeof c === "object" && (["corPrimaria", "corSecundaria", "corFundo", "corTexto"] as const).every((k) => typeof c[k] === "string" && corValida(c[k] as string))
+      ? { corPrimaria: c.corPrimaria, corSecundaria: c.corSecundaria, corFundo: c.corFundo, corTexto: c.corTexto }
+      : null;
+  return d as unknown as Dados;
+}
+
+/** Volta para o primeiro passo que ainda falta: nunca para na revisão com o CPF em branco, por exemplo. */
+function passoSeguro(passo: unknown, d: Dados): Passo {
+  let p: Passo = passo === 3 || passo === 4 || passo === 5 ? passo : 2;
+  if (p > 2 && (d.nomeTorcida.trim().length < 2 || !d.cores)) p = 2;
+  if (p > 3 && (!cpfValido(d.respCpf) || !telefoneValido(d.respTelefone) || !d.respCargo.trim())) p = 3;
+  return p;
+}
+
+function lerLocal(uid: string): Rascunho | null {
   try {
-    localStorage.removeItem(CHAVE_ANTIGA); // versão antiga guardava CPF numa chave só para todos
-    const r = JSON.parse(localStorage.getItem(chaveRascunho(uid)) || "{}") as Partial<Dados>;
-    return { ...VAZIO, ...r, respCpf: "" };
+    const novo = localStorage.getItem(chaveLocal(uid));
+    if (novo) {
+      const r = JSON.parse(novo) as Partial<Rascunho>;
+      return { dados: sanear(r.dados), passo: (Number(r.passo) || 2) as Passo, atualizadoEm: Number(r.atualizadoEm) || 0 };
+    }
+    // versão anterior: rascunho e passo em chaves separadas (quem começou o cadastro antes desta mudança)
+    const antigo = localStorage.getItem(`somos-cadastro-rascunho:${uid}`);
+    if (!antigo) return null;
+    return { dados: sanear(JSON.parse(antigo)), passo: (Number(localStorage.getItem(`somos-cadastro-passo:${uid}`)) || 2) as Passo, atualizadoEm: 0 };
   } catch {
-    return VAZIO;
+    return null;
   }
 }
-function gravarRascunho(uid: string, d: Dados | null) {
+function gravarLocal(uid: string, r: Rascunho | null) {
   try {
-    if (d) localStorage.setItem(chaveRascunho(uid), JSON.stringify({ ...d, respCpf: undefined }));
-    else localStorage.removeItem(chaveRascunho(uid));
+    localStorage.removeItem("somos-cadastro-rascunho"); // versão antiga guardava CPF numa chave só para todos
+    localStorage.removeItem(`somos-cadastro-rascunho:${uid}`);
+    localStorage.removeItem(`somos-cadastro-passo:${uid}`);
+    if (r) localStorage.setItem(chaveLocal(uid), JSON.stringify({ ...r, dados: { ...r.dados, respCpf: undefined } }));
+    else localStorage.removeItem(chaveLocal(uid));
   } catch {
-    /* sem armazenamento: segue sem rascunho */
-  }
-}
-/**
- * Passo em que a pessoa parou: recarregar a página (queda de internet, erro, celular que fechou a aba)
- * volta exatamente para ele, não para o começo.
- */
-const chavePasso = (uid: string) => `somos-cadastro-passo:${uid}`;
-function lerPasso(uid: string): 2 | 3 | 4 | 5 {
-  try {
-    const n = Number(localStorage.getItem(chavePasso(uid)));
-    return n === 3 || n === 4 || n === 5 ? n : 2;
-  } catch {
-    return 2;
-  }
-}
-function gravarPasso(uid: string, passo: number | null) {
-  try {
-    if (passo && passo > 2) localStorage.setItem(chavePasso(uid), String(passo));
-    else localStorage.removeItem(chavePasso(uid));
-  } catch {
-    /* sem armazenamento: começa do passo 2 */
+    /* sem armazenamento: fica só o rascunho da conta */
   }
 }
 
-/** Sair da conta apagando o rascunho deste aparelho. */
+/** Sair da conta apagando o rascunho deste aparelho (o da conta fica: entrando de novo, continua de onde parou). */
 function sairApagandoRascunho() {
   const uid = auth.currentUser?.uid;
-  if (uid) {
-    gravarRascunho(uid, null);
-    gravarPasso(uid, null);
-  }
-  return signOut(auth);
+  if (uid) gravarLocal(uid, null);
+  return signOut(auth).catch(() => undefined);
 }
 
 /** Foco automático só com mouse: no celular ele abre o teclado a cada passo e cobre a tela. */
@@ -164,6 +181,20 @@ export default function Cadastro() {
   let etapa = 0;
   if (usuario === undefined || (logado && sols.carregando)) {
     conteudo = <Carregando />;
+  } else if (logado && !sols.dados.length && (sols.erro || sols.semConexao)) {
+    // Sem saber se já existe pedido enviado, não mostra o formulário (evita cadastro duplicado)
+    conteudo = (
+      <Cartao className="p-6 sm:p-7 text-center space-y-4">
+        <span className="mx-auto size-14 rounded-2xl bg-info/15 text-info grid place-items-center">
+          <Icone nome="alerta" className="size-8" />
+        </span>
+        <h1 className="text-xl font-bold">Sem conexão</h1>
+        <p className="text-texto-2">Não conseguimos abrir o seu cadastro agora. Confira a internet e toque de novo: nada do que você preencheu se perdeu.</p>
+        <Botao largo tamanho="lg" icone="atualizar" onClick={() => location.reload()}>
+          Tentar de novo
+        </Botao>
+      </Cartao>
+    );
   } else if (!logado) {
     conteudo = <PassoConta />;
   } else if (ativa || (recusada && !novoCadastro)) {
@@ -226,8 +257,17 @@ function traduzirErroConta(e: unknown): string {
   return mensagemDeErro(e);
 }
 
+/**
+ * Envio do e-mail de confirmação feito na criação da conta. Assim que a conta existe, a tela já troca para
+ * "Confirme seu e-mail" (antes de este envio terminar): ela espera este em vez de pedir outro e bater no
+ * limite de reenvio ("Muitos envios seguidos").
+ */
+let envioDaCriacao: { email: string; promessa: Promise<void> } | null = null;
+
 function PassoConta() {
   const [modo, setModo] = useState<"criar" | "entrar">("criar");
+  /** Tentou criar conta com um e-mail que já existe: provavelmente já começou o cadastro. */
+  const [jaExiste, setJaExiste] = useState<string | null>(null);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -249,16 +289,23 @@ function PassoConta() {
     if (erros.nome || erros.email || erros.senha) return;
     setCarregando(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), senha);
-      await updateProfile(cred.user, { displayName: nome.trim() });
-      try {
-        await enviarConfirmacaoEmail(cred.user, `${location.origin}/cadastro`);
-        sessionStorage.setItem(`somos-verificacao:${cred.user.uid}`, String(Date.now()));
-      } catch {
-        /* o passo seguinte permite reenviar */
-      }
+      const criacao = (async () => {
+        const cred = await createUserWithEmailAndPassword(auth, email.trim(), senha);
+        await updateProfile(cred.user, { displayName: nome.trim() }).catch(() => undefined);
+        try {
+          await enviarConfirmacaoEmail(cred.user, `${location.origin}/cadastro`);
+          sessionStorage.setItem(`somos-verificacao:${cred.user.uid}`, String(Date.now()));
+        } catch {
+          /* o passo seguinte permite reenviar */
+        }
+      })();
+      envioDaCriacao = { email: email.trim().toLowerCase(), promessa: criacao.catch(() => undefined) };
+      await criacao;
     } catch (err) {
-      setErro(traduzirErroConta(err));
+      if (String((err as { code?: string }).code ?? "").includes("email-already-in-use")) {
+        setJaExiste(email.trim());
+        setModo("entrar");
+      } else setErro(traduzirErroConta(err));
     } finally {
       setCarregando(false);
     }
@@ -279,7 +326,13 @@ function PassoConta() {
         ]}
       />
       {modo === "entrar" ? (
-        <Login titulo="Entrar" subtitulo="Use o e-mail que vai administrar a torcida." />
+        <Login
+          key={jaExiste ?? "-"}
+          titulo={jaExiste ? "Continuar meu cadastro" : "Entrar"}
+          subtitulo="Use o e-mail que vai administrar a torcida."
+          emailInicial={jaExiste ?? undefined}
+          avisoInicial={jaExiste ? "Este e-mail já tem conta. Digite a sua senha e o cadastro continua do passo em que você parou, com os dados já preenchidos." : undefined}
+        />
       ) : (
         <Cartao className="p-6 sm:p-7">
           <form onSubmit={criar} className="space-y-4" noValidate>
@@ -359,7 +412,15 @@ function PassoVerificar({ usuario, aoVerificar }: { usuario: User; aoVerificar: 
     } catch {
       /* ignora */
     }
-    if (!enviado) void enviar();
+    if (envioDaCriacao && envioDaCriacao.email === usuario.email?.toLowerCase()) {
+      // conta acabou de ser criada: o envio já está em andamento (ou terminou)
+      const emAndamento = envioDaCriacao.promessa;
+      setAviso({ tom: "info", texto: `Enviando o link para ${usuario.email}…` });
+      void emAndamento.then(() => {
+        setEspera(60);
+        setAviso({ tom: "sucesso", texto: `Enviamos o link para ${usuario.email}. Confira também o spam e as promoções.` });
+      });
+    } else if (!enviado) void enviar();
     else setAviso({ tom: "info", texto: `Enviamos um link para ${usuario.email}.` });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -375,7 +436,7 @@ function PassoVerificar({ usuario, aoVerificar }: { usuario: User; aoVerificar: 
   conferir.current = async (manual: boolean) => {
     await usuario.reload().catch(() => undefined);
     if (auth.currentUser?.emailVerified) {
-      await auth.currentUser.getIdToken(true); // o servidor exige email_verified no token
+      await auth.currentUser.getIdToken(true).catch(() => undefined); // o servidor exige email_verified no token
       aoVerificar();
       return true;
     }
@@ -450,17 +511,43 @@ function PassoVerificar({ usuario, aoVerificar }: { usuario: User; aoVerificar: 
 }
 
 // ── (c–f) Formulário ────────────────────────────────────────────
-type Passo = 2 | 3 | 4 | 5;
 type EstadoSlug = { fase: "vazio" } | { fase: "verificando" } | { fase: "ok" } | { fase: "erro"; motivo: string };
 
+/** Abre o rascunho mais recente (deste navegador ou da conta) antes de mostrar o formulário. */
 function Formulario({ usuario }: { usuario: User }) {
-  const [d, setD] = useState<Dados>(() => {
-    const r = lerRascunho(usuario.uid);
-    return { ...r, respNome: r.respNome || usuario.displayName || "" };
-  });
-  const [passo, setPasso] = useState<Passo>(() => lerPasso(usuario.uid));
+  const [inicial, setInicial] = useState<Rascunho | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    const local = lerLocal(usuario.uid);
+    // getDoc usa o cache do aparelho quando não há internet; com internet muito lenta, segue com o local
+    const remoto = getDoc(refRascunho(usuario.uid))
+      .then((snap) => {
+        const r = snap.data() as Partial<Rascunho> | undefined;
+        return r ? { dados: sanear(r.dados), passo: (Number(r.passo) || 2) as Passo, atualizadoEm: Number(r.atualizadoEm) || 0 } : null;
+      })
+      .catch(() => null);
+    void Promise.race([remoto, new Promise<null>((ok) => setTimeout(() => ok(null), 5000))]).then((r) => {
+      if (!vivo) return;
+      let escolhido = r && (!local || r.atualizadoEm >= local.atualizadoEm) ? r : local;
+      // O CPF não fica no navegador: se o rascunho da conta tem e é o mesmo cadastro, aproveita
+      if (escolhido && !escolhido.dados.respCpf && r?.dados.respCpf) escolhido = { ...escolhido, dados: { ...escolhido.dados, respCpf: r.dados.respCpf } };
+      const dados = escolhido?.dados ?? VAZIO;
+      setInicial({ dados: { ...dados, respNome: dados.respNome || usuario.displayName || "" }, passo: passoSeguro(escolhido?.passo, dados), atualizadoEm: Date.now() });
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [usuario.uid, usuario.displayName]);
+  if (!inicial) return <Carregando texto="Abrindo o seu cadastro…" />;
+  return <FormularioTorcida usuario={usuario} inicial={inicial} />;
+}
+
+function FormularioTorcida({ usuario, inicial }: { usuario: User; inicial: Rascunho }) {
+  const [d, setD] = useState<Dados>(inicial.dados);
+  const [passo, setPasso] = useState<Passo>(inicial.passo);
   const [tentou, setTentou] = useState<Record<number, boolean>>({});
   const [slug, setSlug] = useState<EstadoSlug>({ fase: "vazio" });
+  const [tentativaSlug, setTentativaSlug] = useState(0);
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [declaro, setDeclaro] = useState(false);
@@ -470,8 +557,18 @@ function Formulario({ usuario }: { usuario: User }) {
   const topo = useRef<HTMLDivElement>(null);
 
   const mudar = <K extends keyof Dados>(k: K, v: Dados[K]) => setD((x) => ({ ...x, [k]: v }));
-  useEffect(() => gravarRascunho(usuario.uid, d), [usuario.uid, d]);
-  useEffect(() => gravarPasso(usuario.uid, passo), [usuario.uid, passo]);
+  const enviado = useRef(false);
+  // Cada mudança vai para este navegador na hora e para a conta logo depois (sem internet, o Firestore guarda
+  // e envia quando a conexão voltar)
+  useEffect(() => {
+    if (enviado.current) return;
+    const r: Rascunho = { dados: d, passo, atualizadoEm: Date.now() };
+    gravarLocal(usuario.uid, r);
+    const t = setTimeout(() => {
+      if (!enviado.current) void setDoc(refRascunho(usuario.uid), r).catch(() => undefined);
+    }, 700);
+    return () => clearTimeout(t);
+  }, [usuario.uid, d, passo]);
   useEffect(() => topo.current?.scrollIntoView({ behavior: "smooth", block: "start" }), [passo]);
 
   const slugFinal = d.slugEditado ? d.slug : slugDoNome(d.nomeTorcida);
@@ -487,13 +584,13 @@ function Formulario({ usuario }: { usuario: User }) {
       api
         .slugDisponivel({ slug: slugFinal })
         .then((r) => vivo && setSlug(r.disponivel ? { fase: "ok" } : { fase: "erro", motivo: r.motivo ?? "Este endereço já está em uso." }))
-        .catch(() => vivo && setSlug({ fase: "erro", motivo: "Não deu para conferir agora. Verifique sua conexão." }));
+        .catch(() => vivo && setSlug({ fase: "erro", motivo: MSG_SLUG_SEM_CONEXAO }));
     }, 450);
     return () => {
       vivo = false;
       clearTimeout(t);
     };
-  }, [slugFinal]);
+  }, [slugFinal, tentativaSlug]);
 
   const errosTorcida = {
     nome: d.nomeTorcida.trim().length < 2 ? "Informe o nome da torcida." : null,
@@ -587,8 +684,8 @@ function Formulario({ usuario }: { usuario: User }) {
           uf: d.uf.trim().toUpperCase(),
         },
       });
-      gravarRascunho(usuario.uid, null);
-      gravarPasso(usuario.uid, null);
+      enviado.current = true; // o servidor já apagou o rascunho da conta junto com o envio
+      gravarLocal(usuario.uid, null);
       // a tela "Em análise" aparece sozinha quando a solicitação chega pelo tempo real
     } catch (e) {
       const msg = mensagemDeErro(e);
@@ -664,6 +761,11 @@ function Formulario({ usuario }: { usuario: User }) {
                       ? "Conferindo se está livre…"
                       : "Geramos a partir do nome. Você pode ajustar."}
               </p>
+              {slug.fase === "erro" && slug.motivo === MSG_SLUG_SEM_CONEXAO && (
+                <Botao variante="contorno" tamanho="sm" icone="atualizar" className="mt-2" onClick={() => setTentativaSlug((n) => n + 1)}>
+                  Conferir de novo
+                </Botao>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Campo
