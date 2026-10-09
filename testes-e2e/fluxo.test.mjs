@@ -529,6 +529,16 @@ test("12. usuário de subsede tem escopo limitado", async () => {
 });
 
 test("14. mensalidade Somos Organizada: 7 dias de atraso derrubam o site; confirmação do Pix reativa", async () => {
+  // e-mails da fatura para a diretoria: gerada (ao publicar), lembrete 2 dias antes e atraso depois do vencimento
+  const avisos = async () =>
+    (await aDb.collection(`torcidas/${ctx.tid}/emails`).get()).docs.filter((d) => d.id.startsWith(`saas-${ctx.faturaSaas}-`)).map((d) => d.get("tipo"));
+  assert.ok((await avisos()).includes("saas_gerada"), "e-mail de fatura gerada");
+  await ctx.plat.chamar("executarRotinaSaas", { agora: ctx.vencSaas - 1 * 86400_000 });
+  assert.ok((await avisos()).includes("saas_lembrete"), "lembrete 2 dias antes");
+  await ctx.plat.chamar("executarRotinaSaas", { agora: ctx.vencSaas - 1 * 86400_000 + 3600_000 });
+  assert.equal((await avisos()).filter((x) => x === "saas_lembrete").length, (await avisos()).filter((x) => x === "saas_gerada").length, "lembrete uma vez só por destinatário");
+  await ctx.plat.chamar("executarRotinaSaas", { agora: ctx.vencSaas + 2 * 86400_000 });
+  assert.ok((await avisos()).includes("saas_atraso"), "aviso de atraso");
   // diretoria avisa que pagou, mas a equipe ainda não confirmou
   await ctx.dir.chamar("informarPagamentoSaas", { tid: ctx.tid, faturaId: ctx.faturaSaas });
   await assert.rejects(ctx.dir.chamar("confirmarFaturaSaas", { tid: ctx.tid, faturaId: ctx.faturaSaas }), /equipe Somos Organizada/);
@@ -547,8 +557,10 @@ test("14. mensalidade Somos Organizada: 7 dias de atraso derrubam o site; confir
     /indisponíveis/,
   );
   await assert.rejects(ctx.dir.chamar("publicarSite", { tid: ctx.tid }), /atraso/);
+  assert.ok((await avisos()).includes("saas_bloqueio"), "aviso de site fora do ar");
   // a equipe confirma o Pix: volta ao ar
   await ctx.plat.chamar("confirmarFaturaSaas", { tid: ctx.tid, faturaId: ctx.faturaSaas });
+  assert.ok((await avisos()).includes("saas_paga"), "aviso de pagamento confirmado");
   t = await aDb.doc(`torcidas/${ctx.tid}`).get();
   assert.equal(t.get("status"), "ativa");
   assert.equal(t.get("bloqueioSaas"), false);

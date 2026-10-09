@@ -17,7 +17,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions/v2";
-import { FUSO } from "../config";
+import { EMAIL_API_KEY, FUSO } from "../config";
+import { avisarFaturaSaas } from "../email/saas";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { dias } from "../util/datas";
 import { texto } from "../util/validacao";
@@ -211,8 +212,8 @@ export async function gerarFatura(tid: string, vencimento: Date, cfg: ConfigSaas
   const valor = cfg.planos[plano].valor;
   const torcida = (await refs.torcida(tid).get()).data() as Torcida;
   const txid = `SO${tid.slice(0, 8)}${id.replace(/-/g, "")}`.replace(/[^A-Za-z0-9]/g, "");
-  await db.runTransaction(async (tx) => {
-    if ((await tx.get(ref)).exists) return;
+  const criou = await db.runTransaction(async (tx) => {
+    if ((await tx.get(ref)).exists) return false;
     const fatura: FaturaSaas = {
       competencia: id.slice(0, 7),
       plano,
@@ -228,7 +229,9 @@ export async function gerarFatura(tid: string, vencimento: Date, cfg: ConfigSaas
     };
     tx.set(ref, fatura);
     tx.set(refsSaas.assinatura(tid), { situacao: "aberta", faturaAbertaId: id }, { merge: true });
+    return true;
   });
+  if (criou) await avisarFaturaSaas(tid, id, "gerada");
   return id;
 }
 
@@ -326,6 +329,7 @@ export const confirmarFaturaSaas = onCall(async (req) => {
   if (!f) throw new HttpsError("not-found", "Fatura não encontrada.");
   if (f.status === "paga") return { ok: true };
   await ref.update({ status: "paga", pagaEm: FieldValue.serverTimestamp(), confirmadaPor: quem });
+  await avisarFaturaSaas(tid, id, "paga");
   const abertas = await refsSaas.faturas(tid).where("status", "==", "aberta").get();
   const cfg = await configSaas();
   const vencidaBloqueante = abertas.docs.some((x) => (x.get("vencimento") as Timestamp).toMillis() + dias(cfg.diasTolerancia) < Date.now());
@@ -366,8 +370,18 @@ export async function processarSaas(agora = Date.now()) {
       const vencidas = abertas.docs.filter((f) => (f.get("vencimento") as Timestamp).toMillis() < agora);
       const bloquear = vencidas.some((f) => (f.get("vencimento") as Timestamp).toMillis() + dias(cfg.diasTolerancia) < agora);
       const torcida = t.data() as Torcida & { suspensaPor?: string; bloqueioSaas?: boolean };
+      // E-mails: lembrete 2 dias antes (se ainda não avisaram que pagaram) e atraso depois do vencimento
+      for (const f of abertas.docs) {
+        const venc = (f.get("vencimento") as Timestamp).toMillis();
+        if (venc >= agora && venc - agora <= dias(2) && !f.get("informadoPagamentoEm")) await avisarFaturaSaas(tid, f.id, "lembrete");
+        if (venc < agora && venc + dias(cfg.diasTolerancia) >= agora) {
+          await avisarFaturaSaas(tid, f.id, "atraso", { diasParaBloqueio: Math.max(1, Math.ceil((venc + dias(cfg.diasTolerancia) - agora) / dias(1))) });
+        }
+      }
       if (bloquear) {
         if (!torcida.bloqueioSaas) {
+          const vencida = vencidas.find((f) => (f.get("vencimento") as Timestamp).toMillis() + dias(cfg.diasTolerancia) < agora);
+          if (vencida) await avisarFaturaSaas(tid, vencida.id, "bloqueio");
           await refs.torcida(tid).update({
             bloqueioSaas: true,
             ...(torcida.status !== "suspensa" ? { status: "suspensa", suspensaPor: "saas" } : {}),
@@ -385,7 +399,7 @@ export async function processarSaas(agora = Date.now()) {
   return resultado;
 }
 
-export const rotinaSaas = onSchedule({ schedule: "20 7 * * *", timeZone: FUSO, timeoutSeconds: 300 }, async () => {
+export const rotinaSaas = onSchedule({ schedule: "20 7 * * *", timeZone: FUSO, timeoutSeconds: 300, secrets: [EMAIL_API_KEY] }, async () => {
   const r = await processarSaas();
   logger.info("Rotina SaaS", r);
 });
