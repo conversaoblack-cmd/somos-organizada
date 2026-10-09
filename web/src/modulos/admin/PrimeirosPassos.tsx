@@ -107,7 +107,7 @@ export function usePrimeirosPassos(args: { tid: string; torcida: ComId<Torcida>;
           descricao: "Cada subsede ganha o próprio painel para criar eventos e receber.",
           feito: subsedes.length > 0 && membrosSubsede.dados.length > 0,
           opcional: true,
-          para: subsedes.length ? "usuarios?tour=admin-usuarios" : "sedes?tour=admin-sedes",
+          para: "sedes?tour=admin-sedes",
           acao: subsedes.length ? "Convidar" : "Cadastrar",
         },
         {

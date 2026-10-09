@@ -5,9 +5,11 @@ import { cifrar, tokenAleatorio } from "../util/cripto";
 import { emailValido, texto, umDe } from "../util/validacao";
 import { exigirMembro, type Membro, type Papel } from "../dominio/permissoes";
 import { Pagarme, PagarmeErro } from "../pagarme/cliente";
+import { encerrarPedidoNaoPago } from "../dominio/processamento";
 import type { PrivadoPagarme } from "../pagarme/credenciais";
 import type { Evento, Sede } from "../dominio/tipos";
 import { contarEventosAVenda, limitesDoPlano, planoDaTorcida, SAAS_PADRAO } from "./saas";
+import { enviarConvite } from "./convite";
 
 export function urlWebhook(tid: string, token: string): string {
   return `${URL_APP.value().replace(/\/$/, "")}/api/pagarme/webhook/${tid}/${token}`;
@@ -17,6 +19,25 @@ export function urlWebhook(tid: string, token: string): string {
  * Passo final do assistente "Conectar Pagar.me": a diretoria cola as chaves da conta
  * da própria torcida. Validamos na API, ciframos e devolvemos a URL de webhook.
  */
+/** Desfaz o que pertence ao ambiente anterior da Pagar.me: split, recebedores, cartões salvos e pedidos em aberto. */
+async function limparAmbienteAnterior(tid: string) {
+  await refs.torcida(tid).update({ "pagamentos.splitAtivo": false, "pagamentos.recebedorPrincipalId": FieldValue.delete() });
+  const sedes = await db.collection(`torcidas/${tid}/sedes`).get();
+  for (const s of sedes.docs) {
+    if (s.get("recebedor")) await s.ref.update({ recebedor: FieldValue.delete(), recebedorAmbienteAnterior: s.get("recebedor") });
+  }
+  const comCartao = await refs.socios(tid).where("pagarme.customerId", ">", "").get();
+  for (const s of comCartao.docs) {
+    await s.ref.update({ "pagarme.customerId": FieldValue.delete(), "pagarme.cardId": FieldValue.delete() });
+  }
+  for (const status of ["aguardando", "criando"] as const) {
+    const abertos = await refs.pedidos(tid).where("status", "==", status).limit(500).get();
+    for (const p of abertos.docs) {
+      await encerrarPedidoNaoPago(tid, p.id, "expirado", "Pagamento encerrado: a torcida trocou as chaves da Pagar.me.").catch(() => undefined);
+    }
+  }
+}
+
 export const salvarCredenciaisPagarme = onCall({ secrets: [MASTER_KEY] }, async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
@@ -46,6 +67,10 @@ export const salvarCredenciaisPagarme = onCall({ secrets: [MASTER_KEY] }, async 
 
   const privRef = refs.privadoPagarme(tid);
   const atual = (await privRef.get()).data() as PrivadoPagarme | undefined;
+  const antes = ((await refs.torcida(tid).get()).get("pagamentos") ?? {}) as { configurado?: boolean; ambiente?: string };
+  // Troca de ambiente (ex.: teste → produção): o que foi criado na Pagar.me do ambiente anterior não existe no
+  // novo (recebedores, cartões salvos, pedidos). Sem limpar, a 1ª venda real seria recusada pela Pagar.me.
+  if (antes.configurado && antes.ambiente && antes.ambiente !== cliente.ambiente) await limparAmbienteAnterior(tid);
   const webhookToken = atual?.webhookToken ?? tokenAleatorio(24);
   await privRef.set({
     skCifrada: cifrar(sk, MASTER_KEY.value()),
@@ -125,7 +150,10 @@ export const convidarMembro = onCall(async (req) => {
   const sedeId = texto(d.sedeId, "sede", { max: 40, obrigatorio: false }) || undefined;
   if (papel === "subsede" && !sedeId) throw new HttpsError("invalid-argument", "Escolha a subsede deste usuário.");
   if (sedeId && !(await refs.sede(tid, sedeId).get()).exists) throw new HttpsError("invalid-argument", "Sede inválida.");
-  return concederAcesso({ tid, email, nome, papel, sedeId, convidadoPor: quem.uid });
+  const r = await concederAcesso({ tid, email, nome, papel, sedeId, convidadoPor: quem.uid });
+  // E-mail com a cara da torcida: "você foi convidado" com botão para criar a senha (nunca o "redefinir senha" do Google)
+  const emailEnviado = await enviarConvite({ tid, uid: r.uid, email, nome, papel, sedeId, convidadoPor: quem.uid, precisaSenha: r.nuncaEntrou });
+  return { uid: r.uid, contaNova: r.contaNova, nuncaEntrou: r.nuncaEntrou, emailEnviado };
 });
 
 export const atualizarMembro = onCall(async (req) => {

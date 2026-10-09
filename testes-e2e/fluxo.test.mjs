@@ -165,7 +165,26 @@ test("3b. subsede: convite, conta de recebimento com prova de vida, evento aprov
 
   // diretoria convida o diretor da subsede
   const conv = await dir.chamar("convidarMembro", { tid: ctx.tid, email: "subsede4@brasil.test", nome: "Coordenador 4º", papel: "subsede", sedeId: ctx.subsede });
-  await aAuth.updateUser(conv.uid, { password: SENHA });
+  assert.equal(conv.contaNova, true);
+  assert.equal(conv.linkDefinirSenha ?? null, null); // quem convida nunca vê o link
+  // o convite próprio (página /convite): no emulador o link fica em _emulador; em produção só no e-mail do convidado
+  const { token, url } = (await aDb.doc(`_emulador/convite-${conv.uid}`).get()).data();
+  assert.match(url, /\/convite\?c=/);
+  assert.equal((await aDb.collection("convites").where("uid", "==", conv.uid).get()).docs.every((d) => d.id !== token), true); // guarda só o resumo
+  const convidado = navegador("convidado");
+  const visto = await convidado.chamar("verConvite", { c: token });
+  assert.equal(visto.valido, true);
+  assert.equal(visto.email, "subsede4@brasil.test");
+  assert.equal(visto.papel, "subsede");
+  assert.equal(visto.torcida.slug, "brasil-demo");
+  assert.ok(visto.sedeNome);
+  await assert.rejects(convidado.chamar("aceitarConvite", { c: token, senha: "curta" }), /8 caracteres/);
+  await assert.rejects(convidado.chamar("aceitarConvite", { c: "x".repeat(43), senha: SENHA }), /não existe/);
+  const aceito = await convidado.chamar("aceitarConvite", { c: token, senha: SENHA });
+  assert.deepEqual(aceito, { email: "subsede4@brasil.test", slug: "brasil-demo" });
+  assert.equal((await aAuth.getUser(conv.uid)).emailVerified, true); // e-mail confirmado pelo próprio convite
+  await assert.rejects(convidado.chamar("aceitarConvite", { c: token, senha: "OutraSenha123" }), /já foi usado/);
+  assert.equal((await convidado.chamar("verConvite", { c: token })).motivo, "usado");
   const sub = navegador("subsede");
   await signInWithEmailAndPassword(sub.auth, "subsede4@brasil.test", SENHA);
   ctx.sub = sub;
@@ -757,6 +776,8 @@ test("18. segurança: convite não toma conta existente; estorno só com confirm
   const conv = await dir.chamar("convidarMembro", { tid, email: "equipe@somos.test", nome: "Equipe", papel: "portaria" });
   assert.equal(conv.contaNova, false);
   assert.equal(conv.linkDefinirSenha ?? null, null);
+  assert.equal(conv.nuncaEntrou, false);
+  assert.equal((await aDb.doc(`_emulador/convite-${conv.uid}`).get()).exists, false); // conta em uso: nenhum convite de criar senha
   const novo = await dir.chamar("convidarMembro", { tid, email: "porteiro2@brasil.test", nome: "Porteiro Dois", papel: "portaria" });
   assert.equal(novo.contaNova, true);
   assert.equal(novo.linkDefinirSenha ?? null, null); // nem para conta nova: o link vai só por e-mail ao convidado
@@ -906,4 +927,18 @@ test("19. compra repetida não cobra duas vezes; sócio grátis sai sem cobranç
   const r3 = await dir.chamar("validarEntrada", { tid, eventoId: ev.id, codigo: ingresso.get("codigo"), leituraId: "outra-leitura-456" });
   assert.equal(r3.resultado, "ja_usado");
   assert.equal((await aDb.doc(`torcidas/${tid}/eventos/${ev.id}`).get()).get("entradas"), 1);
+
+  // 4) troca de ambiente da Pagar.me (aqui: demonstração → teste): o que era da conta anterior é desfeito
+  const pendente = await tor.chamar("criarPedidoIngresso", { ...compra, idCompra: "ZyXwVuTsRqPoNmLkJi98" });
+  assert.equal(pendente.status, "aguardando");
+  assert.ok((await aDb.collection(`torcidas/${tid}/socios`).where("pagarme.customerId", ">", "").get()).size > 0);
+  await dir.chamar("salvarCredenciaisPagarme", { tid, chaveSecreta: "sk_test_troca123456", chavePublica: "pk_test_troca123456" });
+  const tDepois = (await aDb.doc(`torcidas/${tid}`).get()).data();
+  assert.equal(tDepois.pagamentos.ambiente, "teste");
+  assert.equal(tDepois.pagamentos.splitAtivo, false);
+  assert.equal(tDepois.pagamentos.recebedorPrincipalId ?? null, null);
+  assert.equal((await aDb.doc(`torcidas/${tid}/pedidos/${pendente.pedidoId}`).get()).get("status"), "expirado");
+  assert.equal((await aDb.collection(`torcidas/${tid}/socios`).where("pagarme.customerId", ">", "").get()).size, 0);
+  const sedesComRecebedor = (await aDb.collection(`torcidas/${tid}/sedes`).get()).docs.filter((x) => x.get("recebedor"));
+  assert.equal(sedesComRecebedor.length, 0);
 });

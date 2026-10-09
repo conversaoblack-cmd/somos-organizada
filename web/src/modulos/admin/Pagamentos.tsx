@@ -17,6 +17,7 @@ const EVENTOS_WEBHOOK = [
   "charge.paid",
   "charge.payment_failed",
   "charge.refunded",
+  "charge.partial_canceled",
   "charge.chargedback",
   "invoice.paid",
   "invoice.payment_failed",
@@ -100,7 +101,8 @@ export default function Pagamentos() {
   }, [tid, pag.configurado]);
 
   const webhookOk = !!pag.webhookRecebidoEm;
-  const origem = location.origin;
+  // Domínio onde o torcedor paga (não onde a diretoria está agora: plataforma., *.web.app etc. dariam o errado)
+  const origem = "https://somosorganizada.com.br";
 
   return (
     <div className="max-w-4xl">
@@ -507,7 +509,9 @@ function FormChaves({ configurado, aoSalvar, sinalAbrir }: { configurado: boolea
       >
         {producao
           ? "Com as chaves de produção, as compras na página da torcida passam a ser cobradas de verdade."
-          : "As chaves atuais serão substituídas. Pedidos em andamento continuam funcionando."}
+          : "As chaves atuais serão substituídas."}
+        {configurado &&
+          " Se o ambiente mudar (teste ↔ produção), pedidos ainda não pagos são encerrados e a divisão com as subsedes, as contas de recebimento e os cartões salvos dos sócios precisam ser cadastrados de novo, porque não existem na outra conta."}
         {configurado && " O endereço de aviso (passo 5) não muda."}
       </Confirmar>
     </form>

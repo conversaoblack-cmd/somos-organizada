@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { collection, doc, serverTimestamp, setDoc, updateDoc, type DocumentReference } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
-import type { ComId, Sede } from "@/lib/tipos";
+import type { ComId, Membro, Sede } from "@/lib/tipos";
+import { useColecao } from "@/hooks/dados";
 import { Botao, BotaoIcone, CabecalhoPagina, Campo, Cartao, cx, Gaveta, Icone, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
 import { comPrazo, Confirmar, EstadoLista, mensagemGravacao, numero } from "./util";
 import { infoRecebedor, SeloRecebedor } from "./recebedor";
+import { enviarConvite, ModalConvite, ResultadoConvite, type Convite } from "./ConviteUsuario";
 
 interface Form {
   nome: string;
@@ -28,8 +30,12 @@ const formDe = (s: ComId<Sede> | null, ordem: number): Form => ({
 });
 
 export default function Sedes() {
-  const { tid, sedes, demo } = usePainel();
+  const { tid, sedes, demo, torcida } = usePainel();
   const avisar = useToast();
+  const membros = useColecao<Membro>(collection(db, `torcidas/${tid}/membros`), `membros-${tid}`);
+  const [convidarSede, setConvidarSede] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<Convite | null>(null);
+  const [reenviando, setReenviando] = useState<string | null>(null);
   const [editando, setEditando] = useState<ComId<Sede> | "nova" | null>(null);
   const [alternar, setAlternar] = useState<ComId<Sede> | null>(null);
   const [atualizando, setAtualizando] = useState<string | null>(null);
@@ -58,6 +64,18 @@ export default function Sedes() {
       setAtualizando(null);
     }
   }
+  async function reenviar(m: ComId<Membro>) {
+    setReenviando(m.id);
+    try {
+      setResultado(await enviarConvite({ tid, slug: torcida.slug, nome: m.nome || m.email, email: m.email, papel: m.papel, sedeId: m.sedeId }));
+    } catch (e) {
+      avisar(mensagemDeErro(e), "erro");
+    } finally {
+      setReenviando(null);
+    }
+  }
+  const responsaveis = (sedeId: string) => membros.dados.filter((m) => m.papel === "subsede" && m.sedeId === sedeId && m.ativo);
+
   const proximaOrdem = Math.max(0, ...sedes.map((s) => s.ordem ?? 0)) + 1;
   const principal = sedes.find((s) => s.tipo === "principal");
   const subsedes = sedes.filter((s) => s.tipo !== "principal");
@@ -90,6 +108,14 @@ export default function Sedes() {
                   ? "Cadastrada pelo responsável da subsede. Por segurança, os dados bancários ficam só com ele."
                   : "O responsável cadastra pelo painel da subsede, em Recebimentos. Sem ela, os eventos da subsede não podem ser publicados."}
               </p>
+              {!s.recebedor && s.ativa !== false && !membros.carregando && (
+                <AcessoSubsede
+                  responsaveis={responsaveis(s.id)}
+                  reenviando={reenviando}
+                  convidar={() => setConvidarSede(s.id)}
+                  reenviar={reenviar}
+                />
+              )}
             </div>
             {demo && s.recebedor && s.recebedor.status !== "active" && (
               <Botao tamanho="sm" variante="suave" icone="raio" className="shrink-0" carregando={atualizando === s.id} onClick={() => simularProvaDeVida(s.id)}>
@@ -154,7 +180,14 @@ export default function Sedes() {
         </div>
       )}
 
-      <FormSede sede={editando} proximaOrdem={proximaOrdem} fechar={() => setEditando(null)} alternar={(s) => setAlternar(s)} />
+      <FormSede sede={editando} proximaOrdem={proximaOrdem} fechar={() => setEditando(null)} alternar={(s) => setAlternar(s)} criada={(id) => setConvidarSede(id)} />
+      <ModalConvite
+        aberto={!!convidarSede}
+        fechar={() => setConvidarSede(null)}
+        sucesso={setResultado}
+        inicial={convidarSede ? { papel: "subsede", sedeId: convidarSede } : undefined}
+      />
+      <ResultadoConvite convite={resultado} fechar={() => setResultado(null)} />
 
       {alternar && (
         <Confirmar
@@ -182,11 +215,14 @@ function FormSede({
   proximaOrdem,
   fechar,
   alternar,
+  criada,
 }: {
   sede: ComId<Sede> | "nova" | null;
   proximaOrdem: number;
   fechar: () => void;
   alternar: (s: ComId<Sede>) => void;
+  /** subsede nova salva: abre o convite do responsável na sequência */
+  criada: (id: string) => void;
 }) {
   const { tid } = usePainel();
   const avisar = useToast();
@@ -226,7 +262,11 @@ function FormSede({
       } else {
         novaRef.current ??= doc(collection(db, `torcidas/${tid}/sedes`));
         await comPrazo(setDoc(novaRef.current, { ...dados, tipo: "subsede", ativa: true, criadoEm: serverTimestamp() }));
-        avisar("Subsede criada.", "sucesso");
+        avisar("Subsede criada. Agora convide o responsável.", "sucesso");
+        const id = novaRef.current.id;
+        fechar();
+        criada(id);
+        return;
       }
       fechar();
     } catch (e) {
@@ -283,8 +323,45 @@ function FormSede({
           dica="Ordem nas listas (menor primeiro)."
           className="max-w-40"
         />
-        {!existente && <p className="text-sm text-texto-3">Para dar acesso ao coordenador, convide-o em “Usuários do painel” com o papel Subsede.</p>}
+        {!existente && <p className="text-sm text-texto-3">Ao salvar, já abrimos o convite para o responsável entrar no painel da subsede.</p>}
       </form>
     </Gaveta>
+  );
+}
+
+/** Atalho no cartão da subsede sem conta de recebimento: convidar o responsável (ou reenviar o convite). */
+function AcessoSubsede({
+  responsaveis,
+  reenviando,
+  convidar,
+  reenviar,
+}: {
+  responsaveis: ComId<Membro>[];
+  reenviando: string | null;
+  convidar: () => void;
+  reenviar: (m: ComId<Membro>) => void;
+}) {
+  if (responsaveis.length === 0)
+    return (
+      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+        <span className="text-xs text-texto-3">Ninguém tem acesso ao painel desta subsede ainda.</span>
+        <Botao tamanho="sm" icone="enviar" onClick={convidar}>
+          Convidar responsável
+        </Botao>
+      </div>
+    );
+  return (
+    <ul className="mt-2.5 space-y-1.5">
+      {responsaveis.map((m) => (
+        <li key={m.id} className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-texto-2 min-w-0 truncate">
+            Responsável: <strong className="text-texto">{m.nome || m.email}</strong> <span className="text-texto-3">({m.email})</span>
+          </span>
+          <Botao tamanho="sm" variante="suave" icone="enviar" carregando={reenviando === m.id} disabled={!!reenviando && reenviando !== m.id} onClick={() => reenviar(m)}>
+            Reenviar convite
+          </Botao>
+        </li>
+      ))}
+    </ul>
   );
 }

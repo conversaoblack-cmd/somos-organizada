@@ -51,6 +51,10 @@
         "destination": "/app.html"
       },
       {
+        "source": "/convite",
+        "destination": "/app.html"
+      },
+      {
         "source": "/plataforma",
         "destination": "/app.html"
       },

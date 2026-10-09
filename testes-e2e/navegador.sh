@@ -7,7 +7,7 @@
 # Variáveis (todas opcionais):
 #   NAVEGADOR_ALVO=build   padrão: build de produção (minificado, com service worker) servido pelo vite preview (:4173)
 #   NAVEGADOR_ALVO=dev     servidor do Vite (:5173), com os avisos do React em modo de desenvolvimento
-#   NAVEGADOR_MODOS=normal,chrome-novo   NAVEGADOR_LARGURAS=360,1280   NAVEGADOR_FLUXOS=1,2,3,4,7a,5,6,7b
+#   NAVEGADOR_MODOS=normal,chrome-novo   NAVEGADOR_LARGURAS=360,1280   NAVEGADOR_FLUXOS=1,2,3,4,7a,5,6,7b,8
 #   EXIGIR_SEM_INTERNET=1  o fluxo 7 (sem internet) deixa de ser pendente e passa a reprovar a suíte
 #   NAVEGADOR_SAIDA=/tmp/somos-navegador   resumo, telas e diários das falhas
 #   CHROMIUM_PATH=...      outro executável do Chromium

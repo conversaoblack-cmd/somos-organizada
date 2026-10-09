@@ -82,7 +82,9 @@ export function Tour({
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<Retangulo | null>(null);
   const [tela, setTela] = useState({ w: typeof window !== "undefined" ? window.innerWidth : 1280, h: typeof window !== "undefined" ? window.innerHeight : 800 });
-  const [verVideo, setVerVideo] = useState(false);
+  // O vídeo abre junto com o tour (1º passo) em qualquer tela; "Ver vídeo" / "Voltar ao passo" alterna depois
+  const [verVideo, setVerVideo] = useState(true);
+  const [alturaBalao, setAlturaBalao] = useState(0);
   const balao = useRef<HTMLDivElement>(null);
   const video = useVideoTutorial(id);
   const celular = tela.w < 640;
@@ -91,9 +93,53 @@ export function Tour({
   useEffect(() => {
     if (aberto) {
       setI(0);
-      setVerVideo(false);
+      setVerVideo(true);
     }
   }, [aberto, id]);
+
+  // Altura real do balão (cresce com o vídeo): a posição usa a medida, nunca um valor presumido
+  useLayoutEffect(() => {
+    const el = balao.current;
+    if (!aberto || !el) return;
+    const medirBalao = () => setAlturaBalao(el.scrollHeight);
+    medirBalao();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(medirBalao) : null;
+    ro?.observe(el);
+    return () => {
+      ro?.disconnect();
+    };
+  }, [aberto, i, verVideo]);
+
+  // Com o tour aberto a página não rola (o destaque não "anda" com a rolagem): o tour já leva até cada item.
+  // Só o balão pode rolar por dentro, quando o texto + vídeo não cabem na tela.
+  useEffect(() => {
+    if (!aberto) return;
+    const noBalao = (e: Event) => !!balao.current && e.target instanceof Node && balao.current.contains(e.target);
+    const balaoRola = () => !!balao.current && balao.current.scrollHeight > balao.current.clientHeight + 1;
+    const travar = (e: Event) => {
+      // Rodinha: a página nunca rola; sobre o balão, rola só o balão (se ele tiver o que rolar)
+      if (e.type === "wheel") {
+        e.preventDefault();
+        if (noBalao(e) && balaoRola()) balao.current!.scrollTop += (e as WheelEvent).deltaY;
+        return;
+      }
+      // Dedo: arrastar dentro do balão que rola é permitido (overscroll-behavior: contain segura a página)
+      if (noBalao(e) && balaoRola()) return;
+      e.preventDefault();
+    };
+    const teclas = (e: KeyboardEvent) => {
+      if (balao.current && e.target instanceof Node && balao.current.contains(e.target)) return; // botões do balão (espaço, setas)
+      if (["PageUp", "PageDown", "Home", "End", " ", "ArrowUp", "ArrowDown"].includes(e.key)) e.preventDefault();
+    };
+    window.addEventListener("wheel", travar, { passive: false });
+    window.addEventListener("touchmove", travar, { passive: false });
+    window.addEventListener("keydown", teclas);
+    return () => {
+      window.removeEventListener("wheel", travar);
+      window.removeEventListener("touchmove", travar);
+      window.removeEventListener("keydown", teclas);
+    };
+  }, [aberto]);
 
   // Rola até o alvo a cada passo e acompanha a posição (rolagem, animações, resize).
   useEffect(() => {
@@ -121,9 +167,15 @@ export function Tour({
 
   const proximo = useCallback(() => {
     if (i >= passos.length - 1) concluir();
-    else setI((n) => n + 1);
+    else {
+      setI((n) => n + 1);
+      setVerVideo(false);
+    }
   }, [i, passos.length, concluir]);
-  const voltar = useCallback(() => setI((n) => Math.max(0, n - 1)), []);
+  const voltar = useCallback(() => {
+    setI((n) => Math.max(0, n - 1));
+    setVerVideo(false);
+  }, []);
 
   useEffect(() => {
     if (!aberto) return;
@@ -153,21 +205,43 @@ export function Tour({
     height: rect.height + pad * 2,
   };
 
-  // Posição do balão
-  let estiloBalao: CSSProperties = {};
+  // Posição do balão: sempre inteiro dentro da tela (se não couber, rola por dentro)
+  const alturaMax = tela.h - 2 * MARGEM;
+  let estiloBalao: CSSProperties = { maxHeight: alturaMax, overflowY: "auto", overscrollBehavior: "contain" };
   let classeBalao = "";
   if (celular) {
+    // Folha embaixo ou em cima, do lado oposto ao destaque, sem cobrir o item destacado quando houver espaço
     const alvoEmbaixo = !!rect && rect.top + rect.height / 2 > tela.h * 0.5;
+    const livre = rect ? (alvoEmbaixo ? rect.top - pad - 2 * MARGEM : tela.h - (rect.top + rect.height) - pad - 2 * MARGEM) : alturaMax;
+    estiloBalao = { ...estiloBalao, maxHeight: Math.min(alturaMax, Math.max(livre, tela.h * 0.5)) };
     classeBalao = cx("fixed inset-x-0 mx-2 rounded-[24px]", alvoEmbaixo ? "top-2" : "bottom-2");
   } else if (destaque) {
     const largura = Math.min(LARGURA_BALAO, tela.w - 2 * MARGEM);
-    const espacoBaixo = tela.h - (destaque.top + destaque.height);
-    const emBaixo = espacoBaixo > 230 || destaque.top < 230;
+    const altura = Math.min(alturaBalao || 240, alturaMax);
     const left = Math.min(Math.max(MARGEM, destaque.left + destaque.width / 2 - largura / 2), tela.w - largura - MARGEM);
-    estiloBalao = emBaixo
-      ? { top: Math.min(destaque.top + destaque.height + 14, tela.h - 220), left, width: largura }
-      : { bottom: tela.h - destaque.top + 14, left, width: largura };
-    classeBalao = "fixed rounded-[22px]";
+    const abaixo = destaque.top + destaque.height + 14;
+    const acima = destaque.top - 14 - altura;
+    let top: number;
+    if (abaixo + altura <= tela.h - MARGEM) top = abaixo;
+    else if (acima >= MARGEM) top = acima;
+    else {
+      // Não cabe nem acima nem abaixo (destaque grande ou balão com vídeo): ao lado, se houver espaço; senão, o mais
+      // perto possível do destaque, sem sair da tela
+      const direita = destaque.left + destaque.width + 14;
+      const esquerda = destaque.left - 14 - largura;
+      top = Math.min(Math.max(MARGEM, destaque.top), tela.h - altura - MARGEM);
+      if (direita + largura <= tela.w - MARGEM) {
+        estiloBalao = { ...estiloBalao, top, left: direita, width: largura };
+        classeBalao = "fixed rounded-[22px]";
+      } else if (esquerda >= MARGEM) {
+        estiloBalao = { ...estiloBalao, top, left: esquerda, width: largura };
+        classeBalao = "fixed rounded-[22px]";
+      } else top = Math.max(MARGEM, tela.h - altura - MARGEM);
+    }
+    if (!classeBalao) {
+      estiloBalao = { ...estiloBalao, top: Math.max(MARGEM, Math.min(top, tela.h - altura - MARGEM)), left, width: largura };
+      classeBalao = "fixed rounded-[22px]";
+    }
   } else {
     classeBalao = "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[24px] w-[min(92vw,420px)]";
   }
@@ -222,11 +296,11 @@ export function Tour({
         </div>
         <p className="text-[15px] text-texto-2 leading-relaxed mt-2 whitespace-pre-line">{passo.texto}</p>
 
-        {video && (verVideo || (i === 0 && !celular)) && (
+        {video && verVideo && (
           <video
             key={video}
             src={video}
-            className="mt-3 w-full rounded-xl border border-linha bg-black max-h-[40vh]"
+            className={cx("mt-3 w-full rounded-xl border border-linha bg-black object-contain", celular ? "max-h-[30dvh]" : "max-h-[36vh]")}
             autoPlay
             muted
             loop
@@ -241,9 +315,16 @@ export function Tour({
               <span key={n} className={cx("h-1.5 rounded-full transition-all", n === i ? "w-5 bg-primaria" : "w-1.5 bg-superficie-3")} />
             ))}
           </div>
-          {video && !(i === 0 && !celular) && (
-            <Botao variante="fantasma" tamanho="sm" icone="camera" onClick={() => setVerVideo((v) => !v)} aria-label={verVideo ? "Esconder vídeo" : "Ver vídeo"}>
-              <span className="hidden min-[400px]:inline">{verVideo ? "Esconder vídeo" : "Ver vídeo"}</span>
+          {video && (
+            <Botao
+              variante="fantasma"
+              tamanho="sm"
+              icone={verVideo ? "setaEsquerda" : "camera"}
+              onClick={() => setVerVideo((v) => !v)}
+              aria-label={verVideo ? "Esconder o vídeo e ver só o passo" : "Ver o vídeo"}
+              aria-pressed={verVideo}
+            >
+              <span className="hidden min-[400px]:inline">{verVideo ? "Só o passo" : "Ver vídeo"}</span>
             </Botao>
           )}
           {i === 0 ? (

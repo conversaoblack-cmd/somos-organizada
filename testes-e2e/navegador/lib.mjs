@@ -183,7 +183,7 @@ export const ERROS_SEM_INTERNET = [
 
 /**
  * Ponto de conferência: falha se houve erro de página/console, se a tela "Algo deu errado" apareceu ou
- * (celular, telas do torcedor) se a página rola na horizontal.
+ * (celular, qualquer tela) se a página rola na horizontal.
  */
 export async function conferir(ap, page, passo, { torcedor = false } = {}) {
   ap.fluxos.add(ap.estado.fluxoAtual);
@@ -196,7 +196,9 @@ export async function conferir(ap, page, passo, { torcedor = false } = {}) {
     const lista = ap.erros.map((e) => `  - (${e.quando}) ${e.tipo} em ${e.url}\n    ${e.texto.replace(/\n/g, "\n    ")}`).join("\n");
     throw new Error(`[${ap.rotulo}] ${passo}: ${ap.erros.length} erro(s) no navegador:\n${lista}`);
   }
-  if (torcedor && ap.largura <= 480) {
+  // Vale para todas as telas (painel e plataforma também): página mais larga que o celular faz o navegador reduzir o
+  // zoom e o toque cai no botão vizinho (já aconteceu: "Recusar" por cima de "Aprovar" na lista de solicitações).
+  if (ap.largura <= 480) {
     const r = await page.evaluate((largura) => {
       const sw = Math.max(document.documentElement.scrollWidth, document.body?.scrollWidth ?? 0);
       if (sw <= largura + 1) return null;

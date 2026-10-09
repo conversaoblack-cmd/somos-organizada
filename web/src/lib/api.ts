@@ -232,8 +232,23 @@ export const api = {
   obterWebhookUrl: chamar<{ tid: string }, { webhookUrl: string | null }>("obterWebhookUrl"),
   convidarMembro: chamar<
     { tid: string; email: string; nome: string; papel: Papel; sedeId?: string },
-    { uid: string; contaNova: boolean; nuncaEntrou?: boolean }
+    { uid: string; contaNova: boolean; nuncaEntrou?: boolean; emailEnviado?: boolean }
   >("convidarMembro"),
+  /** Página /convite: para quem é o convite, de qual torcida e com quais cores (sem login). */
+  verConvite: chamar<
+    { c: string },
+    {
+      valido: boolean;
+      motivo?: "invalido" | "usado" | "expirado";
+      email?: string;
+      nome?: string;
+      papel?: Papel;
+      sedeNome?: string | null;
+      torcida?: { nome: string; slug: string; tema: Partial<Tema> | null } | null;
+    }
+  >("verConvite"),
+  /** Cria a senha do convidado e confirma o e-mail; depois o site entra com e-mail e senha. */
+  aceitarConvite: chamar<{ c: string; senha: string }, { email: string; slug: string | null }>("aceitarConvite"),
   atualizarMembro: chamar<
     { tid: string; uid: string; papel?: Papel; sedeId?: string | null; ativo?: boolean },
     { ok: boolean }

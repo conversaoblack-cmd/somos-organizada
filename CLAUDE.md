@@ -59,6 +59,11 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
 - Confirmação de e-mail: o e-mail sai pelo nosso provedor (ação `enviarConfirmacaoEmail`) com link para
   `/verificar`, que confirma e continua o cadastro na mesma aba; sem provedor, cai no e-mail padrão do Firebase.
   Cadastro e compras lembram o passo (recarregar volta para onde parou).
+- Convite para o painel (diretoria, subsede, portaria): `convidarMembro` manda pelo nosso provedor o e-mail "Você foi
+  convidado" nas cores da torcida, com botão para `/convite?c=...` (`functions/src/api/convite.ts`; só o resumo do código
+  fica em `convites/`, vale 7 dias, uso único). Lá a pessoa vê o e-mail preenchido, cria a senha (e-mail fica confirmado) e
+  entra. Nunca use o "redefinir senha" do Firebase para convite (só como reserva quando o provedor falha). Atalho
+  "Convidar responsável" na página Sedes. Subsede não vê Sócios, planos, página, domínio nem usuários.
 - Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável
   pelas regras). Padrão de UX e próximas melhorias: `docs/UX.md` (leia antes de mexer em tela).
 - Skills de UX/UI instaladas em `.claude/skills/` (carregam sozinhas em qualquer sessão). Para mexer em tela,

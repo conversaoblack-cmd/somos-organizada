@@ -206,7 +206,7 @@ export default function VisaoGeral() {
       acao: "Ir para Recebimentos",
     });
   // Limite do plano Somos Organizada: amarelo a partir de 90%, vermelho no limite
-  if (uso && uso.nivelSocios !== "ok")
+  if (ehDiretoria && uso && uso.nivelSocios !== "ok")
     pendencias.push({
       tom: uso.nivelSocios === "limite" ? "perigo" : "alerta",
       titulo: `Sócios: ${numero(uso.socios)} de ${numero(uso.limites.socios)} no plano ${uso.nomePlano}`,
@@ -214,7 +214,7 @@ export default function VisaoGeral() {
       para: `${base}/plano`,
       acao: "Ver plano",
     });
-  if (uso && uso.eventos !== null && uso.nivelEventos !== "ok")
+  if (ehDiretoria && uso && uso.eventos !== null && uso.nivelEventos !== "ok")
     pendencias.push({
       tom: uso.nivelEventos === "limite" ? "perigo" : "alerta",
       titulo: `Eventos à venda: ${numero(uso.eventos)} de ${numero(uso.limites.eventos)} no plano ${uso.nomePlano}`,
@@ -222,7 +222,7 @@ export default function VisaoGeral() {
       para: `${base}/plano`,
       acao: "Ver plano",
     });
-  if (emAnalise > 0)
+  if (ehDiretoria && emAnalise > 0)
     pendencias.push({ tom: "info", titulo: `${numero(emAnalise)} ${emAnalise === 1 ? "sócio aguardando" : "sócios aguardando"} aprovação`, texto: "Pagamento confirmado, falta só a sua aprovação.", para: `${base}/socios?status=em_analise`, acao: "Revisar sócios" });
 
   const titulo = ehDiretoria ? "Visão geral" : `Visão geral · ${nomeSede(sedeEscopo)}`;
@@ -283,13 +283,24 @@ export default function VisaoGeral() {
             valor={<ValorKpi>{r.carregando ? "…" : moeda(r.mes.receitaIngressos)}</ValorKpi>}
             detalhe={`Total: ${moeda(r.geral.receitaIngressos)}`}
           />
-          <Indicador
-            rotulo="Sócios (mês)"
-            icone="usuarios"
-            tom="primaria"
-            valor={<ValorKpi>{r.carregando ? "…" : moeda(r.mes.receitaSocios)}</ValorKpi>}
-            detalhe={`Total: ${moeda(r.geral.receitaSocios)}`}
-          />
+          {ehDiretoria ? (
+            <Indicador
+              rotulo="Sócios (mês)"
+              icone="usuarios"
+              tom="primaria"
+              valor={<ValorKpi>{r.carregando ? "…" : moeda(r.mes.receitaSocios)}</ValorKpi>}
+              detalhe={`Total: ${moeda(r.geral.receitaSocios)}`}
+            />
+          ) : (
+            // Subsede não cuida de sócios (é da diretoria): no lugar, os eventos dela que ainda vão acontecer
+            <Indicador
+              rotulo="Próximos eventos"
+              icone="calendario"
+              tom="primaria"
+              valor={<ValorKpi>{eventosQ.carregando ? "…" : numero(proximos.length)}</ValorKpi>}
+              detalhe="Da sua sede"
+            />
+          )}
           {ehDiretoria ? (
             <Indicador
               rotulo="Taxa de serviço (caixa)"
@@ -320,7 +331,7 @@ export default function VisaoGeral() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr] mt-4">
+      <div className={cx("grid grid-cols-1 gap-4 mt-4", ehDiretoria && "lg:grid-cols-[1.6fr_1fr]")}>
         <Cartao className="p-5 sm:p-6 min-w-0" data-tour="grafico-receita">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
@@ -331,43 +342,45 @@ export default function VisaoGeral() {
           {r.carregando ? <Carregando /> : <GraficoReceita dados={r.historico} />}
         </Cartao>
 
-        <Cartao className="p-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold">Sócios</h2>
-            <Link to={`${base}/socios`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 min-h-11 sm:min-h-0">
-              Ver todos <Icone nome="chevronDireita" className="size-4" />
-            </Link>
-          </div>
-          <div className="flex items-end gap-6 mb-4">
-            <div>
-              <p className="text-[34px] font-bold leading-none numeros">{numero(socios.ativo)}</p>
-              <p className="text-sm text-texto-3 mt-1">ativos</p>
+        {ehDiretoria && (
+          <Cartao className="p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold">Sócios</h2>
+              <Link to={`${base}/socios`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 min-h-11 sm:min-h-0">
+                Ver todos <Icone nome="chevronDireita" className="size-4" />
+              </Link>
             </div>
-            <div>
-              <p className="text-xl font-bold leading-none numeros text-primaria-texto">+{numero(r.mes.novosSocios)}</p>
-              <p className="text-sm text-texto-3 mt-1">novos no mês</p>
+            <div className="flex items-end gap-6 mb-4">
+              <div>
+                <p className="text-[34px] font-bold leading-none numeros">{numero(socios.ativo)}</p>
+                <p className="text-sm text-texto-3 mt-1">ativos</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold leading-none numeros text-primaria-texto">+{numero(r.mes.novosSocios)}</p>
+                <p className="text-sm text-texto-3 mt-1">novos no mês</p>
+              </div>
             </div>
-          </div>
-          {totalSocios > 0 && (
-            <div className="flex h-2.5 rounded-full overflow-hidden gap-[2px] mb-4" aria-hidden="true">
-              {ORDEM_STATUS.filter((k) => (socios[k] ?? 0) > 0).map((k) => (
-                <div key={k} className={COR_STATUS[k]} style={{ width: `${((socios[k] ?? 0) / totalSocios) * 100}%` }} />
+            {totalSocios > 0 && (
+              <div className="flex h-2.5 rounded-full overflow-hidden gap-[2px] mb-4" aria-hidden="true">
+                {ORDEM_STATUS.filter((k) => (socios[k] ?? 0) > 0).map((k) => (
+                  <div key={k} className={COR_STATUS[k]} style={{ width: `${((socios[k] ?? 0) / totalSocios) * 100}%` }} />
+                ))}
+              </div>
+            )}
+            {/* 1 coluna no celular estreito: "Aguardando pagamento" não cabe em meia largura de 360 px */}
+            <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              {ORDEM_STATUS.map((k) => (
+                <li key={k} className="flex items-center justify-between gap-2">
+                  <Link to={`${base}/socios?status=${k}`} className="flex items-center gap-2 text-texto-2 hover:text-texto min-w-0 min-h-11 sm:min-h-0">
+                    <span className={`size-2 rounded-full shrink-0 ${COR_STATUS[k]}`} />
+                    <span className="leading-snug break-words">{ROTULO_STATUS_SOCIO[k]}</span>
+                  </Link>
+                  <span className="font-semibold numeros">{numero(Math.max(0, socios[k] ?? 0))}</span>
+                </li>
               ))}
-            </div>
-          )}
-          {/* 1 coluna no celular estreito: "Aguardando pagamento" não cabe em meia largura de 360 px */}
-          <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            {ORDEM_STATUS.map((k) => (
-              <li key={k} className="flex items-center justify-between gap-2">
-                <Link to={`${base}/socios?status=${k}`} className="flex items-center gap-2 text-texto-2 hover:text-texto min-w-0 min-h-11 sm:min-h-0">
-                  <span className={`size-2 rounded-full shrink-0 ${COR_STATUS[k]}`} />
-                  <span className="leading-snug break-words">{ROTULO_STATUS_SOCIO[k]}</span>
-                </Link>
-                <span className="font-semibold numeros">{numero(Math.max(0, socios[k] ?? 0))}</span>
-              </li>
-            ))}
-          </ul>
-        </Cartao>
+            </ul>
+          </Cartao>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mt-4">

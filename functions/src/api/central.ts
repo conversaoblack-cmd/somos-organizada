@@ -20,6 +20,7 @@ import * as demo from "./demo";
 import * as saas from "./saas";
 import * as cadastro from "./cadastro";
 import * as conta from "./conta";
+import * as convite from "./convite";
 
 type Acao = { run: (req: CallableRequest<unknown>) => unknown };
 
@@ -63,6 +64,8 @@ export const ACOES: Record<string, Acao> = {
   entrarComCpf: conta.entrarComCpf,
   redefinirSenhaPorCpf: conta.redefinirSenhaPorCpf,
   enviarConfirmacaoEmail: verificacao.enviarConfirmacaoEmail,
+  verConvite: convite.verConvite,
+  aceitarConvite: convite.aceitarConvite,
 } as unknown as Record<string, Acao>;
 
 export const api = onCall(

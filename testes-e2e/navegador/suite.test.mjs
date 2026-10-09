@@ -9,7 +9,7 @@ import {
   causasProvaveis, novoAparelho, novaPagina, fecharAparelho, ambienteForaDoAr,
 } from "./lib.mjs";
 import { cadastro } from "./fluxos/cadastro.mjs";
-import { aprovacao, diretoria } from "./fluxos/diretoria.mjs";
+import { aprovacao, conviteSubsede, diretoria } from "./fluxos/diretoria.mjs";
 import { compra, semInternetConta } from "./fluxos/compra.mjs";
 import { socio, semInternetSocio } from "./fluxos/socio.mjs";
 import { portaria } from "./fluxos/portaria.mjs";
@@ -112,6 +112,7 @@ for (const combo of combinacoes()) {
     fluxo(estado, "7a", "sem internet: /conta recarregada mostra o QR do ingresso", ["4"], semInternetConta, { pendente: MOTIVO_SEM_INTERNET });
     fluxo(estado, "5", "torcedor vira sócio no Pix, carteirinha com QR e benefícios, entra com CPF, esqueci a senha", ["3", "4"], socio);
     fluxo(estado, "6", "portaria valida o ingresso (código e QR), já utilizado, inválido e sem conexão", ["4"], portaria);
+    fluxo(estado, "8", "diretoria cria subsede e convida o responsável; convidado cria a senha pelo /convite e vê o painel da subsede", [], conviteSubsede);
     fluxo(estado, "7b", "sem internet: /socio e /conta recarregadas mostram carteirinha e ingresso com QR", ["5"], semInternetSocio, { pendente: MOTIVO_SEM_INTERNET });
   });
 }

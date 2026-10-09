@@ -27,6 +27,7 @@ const ETAPAS = ["Conta", "E-mail", "Torcida", "Pessoa", "Entidade", "Revisão", 
 const RESERVADOS = new Set([
   "admin", "api", "app", "assets", "conta", "login", "plataforma", "suporte", "painel", "portaria",
   "static", "www", "somos", "organizada", "termos", "privacidade", "ajuda", "sobre", "contato", "cadastro", "entrar",
+  "verificar", "convite",
 ]);
 
 interface Dados {

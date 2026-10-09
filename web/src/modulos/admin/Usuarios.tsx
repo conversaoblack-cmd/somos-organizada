@@ -1,44 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { enviarRedefinicaoSenha } from "@/lib/emailsConta";
+import { useMemo, useState } from "react";
 import { collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
-import { emailValido } from "@/lib/formatos";
 import type { ComId, Membro, Papel } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
-import { Aviso, Avatar, Botao, BotaoIcone, CabecalhoPagina, Campo, Cartao, cx, Interruptor, Modal, OpcoesCartao, Selecao, Selo, useToast } from "@/ui";
+import { Aviso, Avatar, Botao, BotaoIcone, CabecalhoPagina, Cartao, cx, Interruptor, Modal, Selecao, Selo, useToast } from "@/ui";
 import { ROTULO_PAPEL, usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
-import { BotaoCopiar, comPrazo, Confirmar, EstadoLista, mensagemGravacao } from "./util";
-
-interface Convite {
-  nome: string;
-  email: string;
-  painel: string;
-  contaNova: boolean;
-  emailEnviado: boolean;
-}
-
-/**
- * Dá o acesso e, se a conta é nova, o Firebase manda o e-mail de criar senha direto para o convidado.
- * O link de senha nunca aparece para quem convidou: só o convidado define a própria senha (anti-fraude:
- * ninguém da diretoria consegue entrar como diretor da subsede e trocar a conta de recebimento dele).
- */
-async function enviarConvite(args: { tid: string; slug: string; nome: string; email: string; papel: Papel; sedeId?: string }): Promise<Convite> {
-  const { tid, slug, nome, email, papel, sedeId } = args;
-  const r = await api.convidarMembro({ tid, nome, email, papel, ...(papel !== "diretoria" && sedeId ? { sedeId } : {}) });
-  const painel = `${location.origin}/${slug}/admin`;
-  // Conta nova, ou convidado antes que nunca criou a senha: manda o link de criar senha (de novo)
-  const precisaSenha = r.contaNova || !!r.nuncaEntrou;
-  const emailEnviado = precisaSenha ? await enviarRedefinicaoSenha(email, painel).then(() => true).catch(() => false) : false;
-  return { nome, email, painel, contaNova: precisaSenha, emailEnviado };
-}
-
-const DESCRICAO_PAPEL: Record<Papel, string> = {
-  diretoria: "Acesso total: finanças, pagamentos, sócios, planos e usuários.",
-  subsede: "Só a própria sede: eventos, sócios, pedidos e extrato dela.",
-  portaria: "Só o leitor de ingressos na entrada dos eventos.",
-};
+import { DESCRICAO_PAPEL, enviarConvite, ModalConvite, ResultadoConvite, type Convite } from "./ConviteUsuario";
+import { comPrazo, Confirmar, EstadoLista, mensagemGravacao } from "./util";
 
 export default function Usuarios() {
   const { tid, uid, nomeSede, torcida } = usePainel();
@@ -135,139 +105,8 @@ export default function Usuarios() {
       <ModalConvite aberto={convidar} fechar={() => setConvidar(false)} sucesso={(r) => setLink(r)} />
       {editando && <ModalEditar m={editando} fechar={() => setEditando(null)} />}
 
-      <Modal aberto={!!link} fechar={() => setLink(null)} titulo="Convite enviado" descricao={link ? `${link.nome} já tem acesso ao painel.` : undefined}>
-        {link && (
-          <div className="space-y-4">
-            {!link.contaNova ? (
-              <Aviso tom="sucesso" titulo="Acesso liberado">
-                <strong className="text-texto">{link.email}</strong> já tem conta na Somos Organizada: é só entrar no painel com a senha de sempre.
-              </Aviso>
-            ) : link.emailEnviado ? (
-              <Aviso tom="sucesso" titulo="E-mail enviado">
-                Enviamos para <strong className="text-texto">{link.email}</strong> o link para criar a senha. Só essa pessoa recebe o link: ninguém mais vê a senha
-                dela, nem a diretoria.
-              </Aviso>
-            ) : (
-              <Aviso tom="alerta" titulo="Não conseguimos enviar o e-mail agora">
-                Peça para <strong className="text-texto">{link.email}</strong> abrir o painel e tocar em “Esqueci minha senha” para criar a senha.
-              </Aviso>
-            )}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <BotaoCopiar texto={link.painel} rotulo="Copiar endereço do painel" variante="contorno" className="h-11 flex-1" />
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(
-                  link.contaNova
-                    ? `Olá, ${link.nome}! Você foi convidado(a) para o painel. Abra o e-mail que enviamos para ${link.email} e crie sua senha. Depois entre em ${link.painel}. Não chegou? Lá mesmo toque em “Esqueci minha senha”.`
-                    : `Olá, ${link.nome}! Você já tem acesso ao painel: entre em ${link.painel} com o seu e-mail ${link.email} e a senha de sempre.`,
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-2xl font-semibold bg-primaria text-sobre-primaria hover:brightness-110"
-              >
-                Avisar no WhatsApp
-              </a>
-            </div>
-
-          </div>
-        )}
-      </Modal>
+      <ResultadoConvite convite={link} fechar={() => setLink(null)} />
     </div>
-  );
-}
-
-function ModalConvite({ aberto, fechar, sucesso }: { aberto: boolean; fechar: () => void; sucesso: (r: Convite) => void }) {
-  const { tid, sedes, torcida } = usePainel();
-  const avisar = useToast();
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [papel, setPapel] = useState<Papel>("subsede");
-  const [sedeId, setSedeId] = useState("");
-  const [erro, setErro] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const subsedes = sedes.filter((s) => s.tipo !== "principal" && s.ativa !== false);
-
-  useEffect(() => {
-    if (aberto) {
-      setNome("");
-      setEmail("");
-      setPapel("subsede");
-      setSedeId("");
-      setErro(null);
-    }
-  }, [aberto]);
-
-  async function enviar() {
-    setErro(null);
-    if (nome.trim().length < 2) return setErro("Informe o nome.");
-    if (!emailValido(email)) return setErro("Informe um e-mail válido.");
-    if (papel === "subsede" && !sedeId) return setErro("Escolha a subsede deste usuário.");
-    setEnviando(true);
-    try {
-      sucesso(await enviarConvite({ tid, slug: torcida.slug, nome: nome.trim(), email: email.trim().toLowerCase(), papel, sedeId }));
-      avisar("Usuário convidado.", "sucesso");
-      fechar();
-    } catch (e) {
-      setErro(mensagemDeErro(e));
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  return (
-    <Modal
-      aberto={aberto}
-      fechar={() => !enviando && fechar()}
-      titulo="Convidar usuário"
-      descricao="A pessoa recebe um link para criar a senha."
-      rodape={
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-          <Botao variante="fantasma" onClick={fechar} disabled={enviando}>
-            Cancelar
-          </Botao>
-          <Botao icone="enviar" onClick={enviar} carregando={enviando}>
-            Gerar convite
-          </Botao>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        <Campo rotulo="Nome" value={nome} onChange={setNome} maxLength={64} autoComplete="off" />
-        <Campo rotulo="E-mail" type="email" value={email} onChange={setEmail} maxLength={64} autoComplete="off" />
-        <div>
-          <p className="block text-sm font-medium text-texto-2 mb-1.5">Papel</p>
-          <OpcoesCartao
-            nome="Papel"
-            colunas={1}
-            valor={papel}
-            onChange={setPapel}
-            opcoes={(["diretoria", "subsede", "portaria"] as Papel[]).map((p) => ({
-              valor: p,
-              titulo: ROTULO_PAPEL[p],
-              descricao: DESCRICAO_PAPEL[p],
-              icone: p === "diretoria" ? "escudo" : p === "subsede" ? "casa" : "qr",
-            }))}
-          />
-        </div>
-        {papel !== "diretoria" && (
-          <Selecao
-            rotulo={papel === "subsede" ? "Subsede" : "Sede (opcional)"}
-            value={sedeId}
-            onChange={(e) => setSedeId(e.target.value)}
-            dica={papel === "portaria" ? (sedeId ? "Esta portaria só confere os eventos desta sede." : "Em “Todas”, a portaria confere os eventos de todas as sedes.") : undefined}
-          >
-            <option value="">{papel === "subsede" ? "Escolha…" : "Todas"}</option>
-            {(papel === "subsede" ? subsedes : sedes).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nome}
-              </option>
-            ))}
-          </Selecao>
-        )}
-        {papel === "subsede" && subsedes.length === 0 && <Aviso tom="alerta">Cadastre uma subsede em “Sedes” antes de convidar.</Aviso>}
-        {papel === "diretoria" && <Aviso tom="alerta">Diretoria vê o dinheiro e as chaves de pagamento de {torcida.nome}. Convide só quem é da diretoria.</Aviso>}
-        {erro && <Aviso tom="perigo">{erro}</Aviso>}
-      </div>
-    </Modal>
   );
 }
 

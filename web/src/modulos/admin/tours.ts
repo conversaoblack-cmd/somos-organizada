@@ -120,10 +120,10 @@ export const TOURS: Record<string, PassoTour[]> = {
 
   // ── Subsede ──────────────────────────────────────────
   "subsede-visao-geral": [
-    { titulo: "Bem-vindo ao painel da subsede", texto: "Aqui você cria os eventos da sua subsede, acompanha as vendas, os sócios da sua região e o dinheiro." },
+    { titulo: "Bem-vindo ao painel da subsede", texto: "Aqui você cria os eventos da sua subsede, acompanha as vendas e o dinheiro que entra na conta da sua sede." },
     { alvo: "primeiros-passos", opcional: true, titulo: "Comece por aqui", texto: "Siga os primeiros passos: conta de recebimento, primeiro evento e acompanhamento das vendas." },
     { alvo: "pendencias", opcional: true, titulo: "Avisos", texto: "O que precisa da sua atenção aparece aqui, como a conta de recebimento pendente." },
-    { alvo: "kpis", titulo: "Números da sua sede", texto: "Quanto os eventos e as mensalidades da sua sede renderam e quanto você tem a receber." },
+    { alvo: "kpis", titulo: "Números da sua sede", texto: "Quanto os eventos da sua sede renderam, quantos eventos vêm por aí e quanto você tem a receber." },
     ajuda,
   ],
   "subsede-primeiros-passos": [

@@ -169,7 +169,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
       { para: `${base}/primeiros-passos`, rotulo: "Primeiros passos", icone: "lista", contador: passosPendentes || undefined, grupo: DIA },
       { para: `${base}/eventos`, rotulo: "Eventos", icone: "calendario", contador: ehDiretoria ? aprovacao.dados.length : undefined, grupo: DIA },
       { para: `${base}/pedidos`, rotulo: "Pedidos e ingressos", icone: "ingresso", grupo: DIA },
-      { para: `${base}/socios`, rotulo: "Sócios", icone: "usuarios", contador: analise.dados.length, grupo: DIA },
+      { para: `${base}/socios`, rotulo: "Sócios", icone: "usuarios", contador: analise.dados.length, so: true, grupo: DIA },
       { para: `${base}/financeiro`, rotulo: "Financeiro", icone: "dinheiro", grupo: DINHEIRO },
       ...(papel === "subsede"
         ? [{ para: `${base}/recebimentos`, rotulo: "Recebimentos", icone: "cartao" as const, contador: contaPendente ? 1 : undefined, grupo: DINHEIRO }]
@@ -243,7 +243,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
             <Route path="eventos" element={<Eventos />} />
             <Route path="eventos/:eventoId" element={<DetalheEvento />} />
             <Route path="pedidos" element={<Pedidos />} />
-            <Route path="socios" element={<Socios />} />
+            <Route path="socios" element={soDiretoria(<Socios />)} />
             <Route path="financeiro" element={<Financeiro />} />
             <Route path="recebimentos" element={papel === "subsede" ? <Recebimentos /> : <Navigate to={base} replace />} />
             <Route path="planos" element={soDiretoria(<Planos />)} />

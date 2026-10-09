@@ -1,6 +1,7 @@
 import { avisarCartaoRecusado, avisarRenovacaoPix } from "../email/avisos";
 import { aplicarRespostaPedido } from "./ingressos";
 import { migrarRecebedoresAntigos } from "./recebedores";
+import { PagarmeErro } from "../pagarme/cliente";
 import { FALHA_TECNICA } from "../pagarme/recusas";
 import { randomInt } from "node:crypto";
 import { onSchedule } from "firebase-functions/v2/scheduler";
@@ -70,6 +71,11 @@ export const expirarPedidos = onSchedule(
         }
         await encerrarPedidoNaoPago(tid, doc.id, "expirado", "Prazo de pagamento encerrado.");
       } catch (e) {
+        if (e instanceof PagarmeErro && e.status === 404) {
+          // não existe mais na Pagar.me desta torcida (ex.: criado com as chaves de teste): encerra e libera os lugares
+          await encerrarPedidoNaoPago(tid, doc.id, "expirado", "Prazo de pagamento encerrado.").catch(() => undefined);
+          continue;
+        }
         logger.error("Falha ao expirar pedido", { tid, pedidoId: doc.id, erro: String(e) });
       }
     }

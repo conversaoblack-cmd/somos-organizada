@@ -317,15 +317,16 @@ export default function Financeiro() {
           )}
 
           <section data-tour="fin-extrato">
-            <div className="flex flex-col lg:flex-row lg:items-end gap-3 justify-between mb-4">
-              <div>
+            <div className="flex flex-col xl:flex-row xl:items-end gap-3 justify-between mb-4">
+              <div className="shrink-0">
                 <h2 className="text-lg font-bold">Extrato</h2>
                 <p className="text-sm text-texto-3 numeros">
                   {numero(aba === "lancamentos" ? linhasExtrato.length : repFiltrados.length)} itens · {moeda(somaFiltro)}
                   {aba === "lancamentos" && temMais && " · há lançamentos mais antigos"}
                 </p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              {/* quebra a linha quando não cabe (1024 px com o menu lateral): nunca rola para o lado */}
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center min-w-0">
                 <Abas
                   valor={aba}
                   onChange={setAba}
