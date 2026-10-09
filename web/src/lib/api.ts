@@ -119,6 +119,23 @@ export const api = {
     { pedidoId: string; status: "aguardando" | "pago" }
   >("criarPedidoIngresso"),
   verificarPedido: chamar<{ tid: string; pedidoId: string }, { status: string }>("verificarPedido"),
+  ingressosNoMeuNome: chamar<
+    { tid: string },
+    {
+      ingressos: {
+        id: string;
+        pedidoId: string;
+        eventoId: string;
+        eventoNome: string;
+        eventoData: number;
+        tipo: "socio" | "publico";
+        titularNome: string;
+        titularCpf: string;
+        status: "valido" | "usado" | "cancelado";
+        usadoEm: number | null;
+      }[];
+    }
+  >("ingressosNoMeuNome"),
   ingressosDoPedido: chamar<
     { tid: string; pedidoId: string; chave: string },
     {

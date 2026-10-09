@@ -8,6 +8,7 @@ import { useDocumento } from "@/hooks/dados";
 import { corSobre, corValida, TEMA_PADRAO } from "@/lib/tema";
 import { Aviso, Botao, BotaoLink, Cartao, classesBotao, cx, Girando, Icone } from "@/ui";
 import { QrCode } from "@/ui/qr";
+import { iniciaisTorcida } from "../publico/comum";
 import { buscarQrCarteirinha, usePagarMensalidade } from "./acoes";
 import { AvisoFalhaCartao, useFalhaCobranca } from "./CartaoCobranca";
 import {
@@ -78,7 +79,7 @@ function Logo({ torcida, className }: { torcida: Torcida; className?: string }) 
     <img src={torcida.tema.logoUrl} alt="" className={cx("object-contain", className)} />
   ) : (
     <span className={cx("grid place-items-center rounded-xl bg-sobre-primaria/15 font-display text-sobre-primaria", className)} aria-hidden="true">
-      {iniciais(torcida.nome)}
+      {iniciaisTorcida(torcida.nome)}
     </span>
   );
 }

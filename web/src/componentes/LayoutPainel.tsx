@@ -74,6 +74,7 @@ export function LayoutPainel({
     if (!aberto) return;
     const overflowAntes = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    document.body.dataset.menuAberto = ""; // o botão flutuante de ajuda some enquanto o menu está aberto
     requestAnimationFrame(() => gaveta.current?.focus());
     const tecla = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -99,6 +100,7 @@ export function LayoutPainel({
       window.removeEventListener("keydown", tecla);
       window.removeEventListener("resize", fecharNoComputador);
       document.body.style.overflow = overflowAntes;
+      delete document.body.dataset.menuAberto;
       document.querySelector<HTMLElement>(`[aria-controls="${idMenu}"]`)?.focus({ preventScroll: true });
     };
   }, [aberto, idMenu]);

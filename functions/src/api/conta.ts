@@ -146,8 +146,8 @@ async function contasDoCpf(tid: string, cpf: string, uidsLogin: string[]): Promi
 
 /**
  * "Esqueci minha senha" para quem entra com CPF: manda o link de redefinir para o e-mail da conta.
- * Resposta sempre igual ({ enviado: true }), com ou sem conta, para ninguém descobrir quem tem cadastro;
- * só acrescenta o e-mail mascarado quando há uma conta só. Conta no mesmo limite do login por CPF.
+ * Resposta sempre igual ({ enviado: true }), com ou sem conta, e sem mostrar o e-mail (nem mascarado), para
+ * ninguém descobrir quem tem cadastro digitando CPFs. Conta no mesmo limite do login por CPF.
  */
 export const redefinirSenhaPorCpf = onCall(ESCALA_PUBLICA, async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;

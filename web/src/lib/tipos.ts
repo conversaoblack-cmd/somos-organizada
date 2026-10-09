@@ -202,6 +202,8 @@ export interface Ingresso {
   titularUid?: string;
   codigo: string;
   qr: string;
+  /** Só no aparelho: ingresso que outra pessoa comprou no CPF do sócio. O QR e o código ficam com quem comprou. */
+  soTitular?: boolean;
   valorBase: number;
   status: "valido" | "usado" | "cancelado";
   usadoEm?: Timestamp;

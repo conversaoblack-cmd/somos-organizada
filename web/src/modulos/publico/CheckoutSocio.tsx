@@ -33,6 +33,8 @@ import { Aviso, Botao, BotaoLink, Campo, Carregando, Cartao, cx, Etapas, Icone, 
 import { CabecalhoTorcida, LinhaValor, rolarParaErro, usePlanosAtivos, useSedes, useTrocaDeEtapa } from "./comum";
 import { cartaoVazio, FormCartao, prepararCartao, validarCartao, type EstadoCartao } from "./FormCartao";
 
+const MSG_ACEITE = "Confirme que leu e aceita as regras da associação.";
+
 const ETAPAS = ["Plano", "Sua conta", "Seus dados", "Pagamento"];
 const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
 
@@ -237,7 +239,10 @@ export default function CheckoutSocio() {
   async function concluir() {
     if (!plano || !usuario) return;
     setErro(null);
-    if (!aceite) return setErro("Confirme que leu e aceita as regras da associação.");
+    if (!aceite) {
+      setErro(MSG_ACEITE);
+      return rolarParaErro();
+    }
     if (metodo === "cartao") {
       const e = validarCartao(cartao);
       setErros(e);
@@ -297,7 +302,7 @@ export default function CheckoutSocio() {
           <div className="mx-auto size-20 rounded-full bg-primaria/15 text-primaria-texto grid place-items-center">
             <Icone nome="escudo" className="size-10" />
           </div>
-          <h1 className="text-3xl font-bold">{concluido === "em_analise" ? "Pagamento aprovado!" : "Bem-vindo, sócio!"}</h1>
+          <h1 className="text-3xl font-bold">{concluido === "em_analise" ? "Pagamento aprovado!" : "Agora você é sócio!"}</h1>
           <p className="text-texto-2">
             {concluido === "em_analise"
               ? "Sua ficha está com a diretoria para aprovação. A cobrança automática já está ativa no seu cartão."
@@ -525,7 +530,10 @@ export default function CheckoutSocio() {
                 ]}
               />
               {metodo === "cartao" && <FormCartao valor={cartao} onChange={setCartao} erros={erros} />}
-              <label className="flex gap-3 items-start text-sm cursor-pointer">
+              <label
+                className={cx("flex gap-3 items-start text-sm cursor-pointer rounded-xl", erro === MSG_ACEITE && !aceite && "ring-2 ring-perigo p-3 -m-3")}
+                data-erro={erro === MSG_ACEITE && !aceite ? "" : undefined}
+              >
                 <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-1 size-4 accent-[var(--color-primaria)]" />
                 <span className="text-texto-2">
                   Li e aceito o estatuto e as regras de associação da torcida

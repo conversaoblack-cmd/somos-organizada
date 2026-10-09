@@ -4,7 +4,7 @@ import { copiarTexto } from "@/lib/servicos";
 import { cpfMascarado, dataExtensa, dataHora, hora, paraData } from "@/lib/formatos";
 import type { ComId, Evento, Ingresso, Torcida } from "@/lib/tipos";
 import { useDocumento, type Estado } from "@/hooks/dados";
-import { Aviso, Botao, BotaoIcone, BotaoLink, cx, Esqueleto, Icone, Modal, Selo, useToast, Vazio } from "@/ui";
+import { Aviso, Botao, BotaoLink, cx, Esqueleto, Icone, Modal, Selo, useToast, Vazio } from "@/ui";
 import { QrCode } from "@/ui/qr";
 import { useTelaAcesa } from "./comum";
 
@@ -40,7 +40,8 @@ function SeloStatus({ i }: { i: Ingresso }) {
  */
 function Bilhete({ i, abrir, apagado }: { i: ComId<Ingresso>; abrir: () => void; apagado?: boolean }) {
   const hoje = ehHoje(i);
-  const valido = i.status === "valido";
+  // Ingresso que outra pessoa comprou no CPF do sócio: sem QR aqui (fica com quem comprou)
+  const valido = i.status === "valido" && !i.soTitular;
   return (
     <div
       className={cx(
@@ -79,7 +80,11 @@ function Bilhete({ i, abrir, apagado }: { i: ComId<Ingresso>; abrir: () => void;
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Selo tom={i.tipo === "socio" ? "primaria" : "neutro"}>{i.tipo === "socio" ? "Sócio" : "Público"}</Selo>
           <SeloStatus i={i} />
-          <span className="ml-auto font-mono text-xs font-bold tracking-wider text-texto-2">{i.codigo}</span>
+          {i.soTitular ? (
+            <span className="ml-auto text-xs text-texto-3">Comprado por outra pessoa</span>
+          ) : (
+            <span className="ml-auto font-mono text-xs font-bold tracking-wider text-texto-2">{i.codigo}</span>
+          )}
         </div>
         <button
           type="button"
@@ -106,13 +111,13 @@ function Bilhete({ i, abrir, apagado }: { i: ComId<Ingresso>; abrir: () => void;
 }
 
 function ModalIngresso({ i, tid, fechar }: { i: ComId<Ingresso>; tid: string; fechar: () => void }) {
-  useTelaAcesa(i.status === "valido");
+  useTelaAcesa(i.status === "valido" && !i.soTitular);
   const avisar = useToast();
   const evento = useDocumento<Evento>(`torcidas/${tid}/eventos/${i.eventoId}`).dados;
   return (
-    <Modal aberto fechar={fechar} largura="max-w-md">
+    <Modal aberto fechar={fechar} largura="max-w-md" rotulo={`Ingresso: ${i.eventoNome}`}>
       <div className="-mt-1">
-        <div className="flex items-start justify-between gap-3">
+        <div className="pr-10">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider text-primaria-texto">{dataExtensa(i.eventoData)} · {hora(i.eventoData)}</p>
             <h2 className="text-xl font-bold leading-tight mt-0.5">{i.eventoNome}</h2>
@@ -122,29 +127,37 @@ function ModalIngresso({ i, tid, fechar }: { i: ComId<Ingresso>; tid: string; fe
               </p>
             )}
           </div>
-          <BotaoIcone icone="x" rotulo="Fechar" onClick={fechar} className="-mr-2 -mt-1" />
         </div>
 
-        <div className="relative mt-5 mx-auto w-full max-w-[300px]">
-          <QrCode valor={i.qr} className={cx("p-3 shadow-xl", i.status !== "valido" && "opacity-25 blur-[2px]")} />
-          {i.status !== "valido" && (
-            <div className="absolute inset-0 grid place-items-center">
-              <span className={cx("-rotate-12 rounded-xl border-[3px] px-4 py-1 font-display text-2xl uppercase bg-fundo/80", i.status === "usado" ? "border-texto-2 text-texto-2" : "border-perigo text-perigo")}>
-                {i.status === "usado" ? "Utilizado" : "Cancelado"}
-              </span>
-            </div>
-          )}
-        </div>
+        {i.soTitular ? (
+          <Aviso tom="info" titulo="O QR fica com quem comprou" className="mt-5">
+            Este ingresso foi comprado por outra pessoa no seu CPF. Peça a ela o link dos ingressos, que chegou no e-mail da compra.
+            Na portaria, também dá para entrar informando o seu CPF e mostrando um documento com foto.
+          </Aviso>
+        ) : (
+          <>
+          <div className="relative mt-5 mx-auto w-full max-w-[300px]">
+            <QrCode valor={i.qr} className={cx("p-3 shadow-xl", i.status !== "valido" && "opacity-25 blur-[2px]")} />
+            {i.status !== "valido" && (
+              <div className="absolute inset-0 grid place-items-center">
+                <span className={cx("-rotate-12 rounded-xl border-[3px] px-4 py-1 font-display text-2xl uppercase bg-fundo/80", i.status === "usado" ? "border-texto-2 text-texto-2" : "border-perigo text-perigo")}>
+                  {i.status === "usado" ? "Utilizado" : "Cancelado"}
+                </span>
+              </div>
+            )}
+          </div>
 
-        <button
-          type="button"
-          onClick={async () => (await copiarTexto(i.codigo)) && avisar("Código copiado", "sucesso")}
-          className="mt-4 mx-auto flex items-center gap-2 rounded-xl px-3 py-1.5 font-mono text-2xl font-bold tracking-[.18em] hover:bg-superficie-2"
-          aria-label="Copiar código"
-        >
-          {i.codigo}
-          <Icone nome="copiar" className="size-4 text-texto-3" />
-        </button>
+          <button
+            type="button"
+            onClick={async () => (await copiarTexto(i.codigo)) && avisar("Código copiado", "sucesso")}
+            className="mt-4 mx-auto flex items-center gap-2 rounded-xl px-3 py-1.5 font-mono text-2xl font-bold tracking-[.18em] hover:bg-superficie-2"
+            aria-label="Copiar código"
+          >
+            {i.codigo}
+            <Icone nome="copiar" className="size-4 text-texto-3" />
+          </button>
+          </>
+        )}
 
         <div className="mt-4 grid grid-cols-2 gap-px rounded-2xl overflow-hidden border border-linha bg-linha text-sm">
           {[
@@ -160,7 +173,7 @@ function ModalIngresso({ i, tid, fechar }: { i: ComId<Ingresso>; tid: string; fe
           ))}
         </div>
 
-        {i.status === "valido" && (
+        {i.status === "valido" && !i.soTitular && (
           <Aviso tom="info" className="mt-4">
             Ingresso nominal: leve um documento com foto. Deixe o brilho da tela no máximo na portaria.
           </Aviso>

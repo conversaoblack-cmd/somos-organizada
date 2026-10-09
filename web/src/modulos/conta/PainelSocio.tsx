@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation } from "react-router";
 import { signOut } from "firebase/auth";
-import { collection, orderBy, query, where } from "firebase/firestore";
+import { collection, orderBy, query, Timestamp, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { iniciais, moeda, taxa } from "@/lib/formatos";
+import { api, ehErroDeConexao } from "@/lib/api";
+import { moeda, taxa } from "@/lib/formatos";
 import type { ComId, Ingresso, Socio, Torcida } from "@/lib/tipos";
 import { useColecao, type Estado } from "@/hooks/dados";
 import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
@@ -11,6 +12,7 @@ import { Login } from "@/componentes/Login";
 import { Avatar, Botao, BotaoLink, Carregando, cx, Icone, Vazio, type NomeIcone } from "@/ui";
 import { usePagarMensalidade } from "./acoes";
 import { aceitaCartao, ModalCartao } from "./CartaoCobranca";
+import { iniciaisTorcida } from "../publico/comum";
 import { CSS_CONTA, ROTULO_SITUACAO, situacaoDoSocio, useFotoSocio } from "./comum";
 import AbaCarteirinha from "./Carteirinha";
 import AbaIngressos, { ehProximo } from "./Ingressos";
@@ -25,7 +27,7 @@ function MarcaTorcida({ torcida }: { torcida: Torcida }) {
         <img src={torcida.tema.logoUrl} alt="" className="size-9 object-contain shrink-0" />
       ) : (
         <span className="size-9 shrink-0 rounded-xl bg-primaria text-sobre-primaria grid place-items-center font-display text-sm" aria-hidden="true">
-          {iniciais(torcida.nome)}
+          {iniciaisTorcida(torcida.nome)}
         </span>
       )}
       <span className="min-w-0">
@@ -191,6 +193,43 @@ function Saudacao({ ficha }: { ficha: Socio }) {
   );
 }
 
+/**
+ * Ingressos que outra pessoa comprou no CPF do sócio. Vêm pela ação do servidor, sem QR nem código: o CPF do
+ * sócio não é verificado, então o QR fica só com quem comprou (que repassa o link dos ingressos ao titular).
+ */
+function useIngressosNoMeuNome(tid: string, uid: string | null): Estado<ComId<Ingresso>[]> {
+  const [estado, setEstado] = useState<Estado<ComId<Ingresso>[]>>({ dados: [], carregando: !!uid, erro: null });
+  useEffect(() => {
+    if (!uid) return setEstado({ dados: [], carregando: false, erro: null });
+    let vivo = true;
+    api
+      .ingressosNoMeuNome({ tid })
+      .then(({ ingressos }) => {
+        if (!vivo) return;
+        const dados = ingressos.map(
+          (i): ComId<Ingresso> => ({
+            ...i,
+            eventoData: Timestamp.fromMillis(i.eventoData),
+            usadoEm: i.usadoEm ? Timestamp.fromMillis(i.usadoEm) : undefined,
+            sedeId: "",
+            uid: "",
+            codigo: "",
+            qr: "",
+            valorBase: 0,
+            criadoEm: Timestamp.fromMillis(i.eventoData),
+            soTitular: true,
+          }),
+        );
+        setEstado({ dados, carregando: false, erro: null });
+      })
+      .catch((e: unknown) => vivo && setEstado({ dados: [], carregando: false, erro: e as Error, semConexao: ehErroDeConexao(e) }));
+    return () => {
+      vivo = false;
+    };
+  }, [tid, uid]);
+  return estado;
+}
+
 /** Ingressos comprados pela conta + ingressos que outra pessoa comprou no CPF do sócio. */
 function useMeusIngressos(tid: string, uid: string | null): Estado<ComId<Ingresso>[]> {
   const col = collection(db, `torcidas/${tid}/ingressos`);
@@ -198,12 +237,10 @@ function useMeusIngressos(tid: string, uid: string | null): Estado<ComId<Ingress
     useMemo(() => (uid ? query(col, where("uid", "==", uid), orderBy("eventoData", "desc")) : null), [tid, uid]), // eslint-disable-line react-hooks/exhaustive-deps
     `meus-ingressos-${tid}-${uid ?? "-"}`,
   );
-  const emMeuNome = useColecao<Ingresso>(
-    useMemo(() => (uid ? query(col, where("titularUid", "==", uid), orderBy("eventoData", "desc")) : null), [tid, uid]), // eslint-disable-line react-hooks/exhaustive-deps
-    `ingressos-titular-${tid}-${uid ?? "-"}`,
-  );
+  const emMeuNome = useIngressosNoMeuNome(tid, uid);
   return useMemo(() => {
-    const porId = new Map([...comprados.dados, ...emMeuNome.dados].map((i) => [i.id, i]));
+    // O que a própria conta comprou vem com o QR: se o mesmo ingresso aparecer nas duas listas, vale o comprado
+    const porId = new Map([...emMeuNome.dados, ...comprados.dados].map((i) => [i.id, i]));
     const dados = [...porId.values()].sort((a, b) => b.eventoData.toMillis() - a.eventoData.toMillis());
     // Se uma das consultas falhar, a outra continua aparecendo: AbaIngressos mostra o que carregou e avisa que pode faltar algum
     return {

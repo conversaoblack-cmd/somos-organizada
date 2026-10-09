@@ -4,14 +4,14 @@
  * No celular, uma barra fixa leva até o formulário enquanto ele não está na tela.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { collection, limit, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useTorcida } from "@/hooks/torcida";
 import { useColecao, useDocumento } from "@/hooks/dados";
 import type { ComId, Evento, Sede } from "@/lib/tipos";
 import { dataExtensa, hora, moeda, taxa } from "@/lib/formatos";
-import { linkEvento } from "@/lib/eventos";
+import { caminhoEvento, CODIGO_EVENTO, linkEvento } from "@/lib/eventos";
 import { Aviso, BotaoLink, cx, Esqueleto, Icone, Selo, Vazio } from "@/ui";
 import { CabecalhoTorcida, RodapeTorcida, SemConexao, useSedes } from "./comum";
 import { disponibilidade } from "./CartaoEvento";
@@ -44,6 +44,15 @@ export default function PaginaEvento() {
   useEffect(() => {
     if (evento) document.title = `${evento.nome} · ${torcida.nome}`;
   }, [evento, torcida.nome]);
+
+  // Link antigo (/evento/{id}): troca o endereço pelo curto, para quem copiar da barra divulgar sempre o mesmo formato
+  const navegar = useNavigate();
+  const { search, hash } = useLocation();
+  useEffect(() => {
+    if (!codigo && evento?.codigo && CODIGO_EVENTO.test(evento.codigo)) {
+      navegar(`${caminhoEvento(torcida.slug, evento)}${search}${hash}`, { replace: true, preventScrollReset: true });
+    }
+  }, [codigo, evento, torcida.slug, search, hash, navegar]);
 
   return (
     <div className="min-h-dvh flex flex-col">

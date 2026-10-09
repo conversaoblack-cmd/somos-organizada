@@ -105,7 +105,7 @@ function EntrarPorTorcida({ aoUsarEmail }: { aoUsarEmail: () => void }) {
             autoCorrect="off"
             autoComplete="off"
             spellCheck={false}
-            autoFocus
+            autoFocus={typeof window !== "undefined" && !!window.matchMedia?.("(pointer: fine)").matches}
             aria-invalid={!!erro}
             aria-describedby="entrar-torcida-ajuda"
           />

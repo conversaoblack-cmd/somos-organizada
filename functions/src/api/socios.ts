@@ -346,13 +346,14 @@ export const minhaCarteirinha = onCall({ secrets: [QR_HMAC], ...ESCALA_PUBLICA }
 });
 
 /** Diretoria (ou subsede, na própria sede) aprova, suspende ou reativa sócios. */
-export const alterarStatusSocio = onCall(async (req) => {
+export const alterarStatusSocio = onCall({ secrets: [MASTER_KEY] }, async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
   const socioUid = texto(d.socioUid, "sócio", { max: 128 });
   const acao = umDe(d.acao, "ação", ["aprovar", "suspender", "reativar", "cancelar"] as const);
   const membro = await exigirMembro(req, tid, ["diretoria", "subsede"]);
-  return db.runTransaction(async (tx) => {
+  let assinaturaAntiga: string | undefined;
+  const resultado = await db.runTransaction(async (tx) => {
     const sRef = refs.socio(tid, socioUid);
     const s = (await tx.get(sRef)).data() as Socio | undefined;
     if (!s) throw new HttpsError("not-found", "Sócio não encontrado.");
@@ -388,6 +389,18 @@ export const alterarStatusSocio = onCall(async (req) => {
       historico: FieldValue.arrayUnion({ acao, por: membro.uid, em: Timestamp.now(), de: s.status, para: novo }),
     });
     contarMudancaStatus(tx, tid, s.status, novo);
+    assinaturaAntiga = acao === "cancelar" && !s.assinaturaCancelada ? s.pagarme?.subscriptionId : undefined;
     return { status: novo };
   });
+  // Sócio do modelo antigo (assinatura criada na Pagar.me): cancelar aqui também para a cobrança no cartão
+  if (assinaturaAntiga) {
+    try {
+      await (await pagarmeDaTorcida(tid)).cancelarAssinatura(assinaturaAntiga);
+      await refs.socio(tid, socioUid).update({ assinaturaCancelada: true, atualizadoEm: FieldValue.serverTimestamp() });
+    } catch (e) {
+      logger.error("Sócio cancelado, mas a assinatura na Pagar.me não foi cancelada", { tid, socioUid, erro: String(e) });
+      return { ...resultado, avisoAssinatura: "Sócio cancelado, mas não conseguimos parar a cobrança no cartão. Cancele a assinatura na Pagar.me." };
+    }
+  }
+  return resultado;
 });

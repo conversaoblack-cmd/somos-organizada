@@ -328,6 +328,34 @@ export const ingressosDoPedido = onCall(ESCALA_PUBLICA, async (req) => {
 });
 
 /**
+ * Ingressos que outra pessoa comprou no CPF do sócio. O CPF do sócio não é verificado (qualquer um pode se
+ * associar com o CPF de outra pessoa), então quem é só titular vê que o ingresso existe, mas não recebe o QR
+ * nem o código de entrada: esses ficam com quem comprou, que repassa o link dos ingressos ao titular.
+ */
+export const ingressosNoMeuNome = onCall(ESCALA_PUBLICA, async (req) => {
+  const uid = exigirLogin(req);
+  const tid = texto((req.data as Record<string, unknown> | undefined)?.tid, "torcida", { max: 40 });
+  const snap = await refs.ingressos(tid).where("titularUid", "==", uid).orderBy("eventoData", "desc").limit(50).get();
+  return {
+    ingressos: snap.docs
+      .map((s) => ({ id: s.id, i: s.data() as Ingresso }))
+      .filter(({ i }) => i.uid !== uid)
+      .map(({ id, i }) => ({
+        id,
+        pedidoId: i.pedidoId,
+        eventoId: i.eventoId,
+        eventoNome: i.eventoNome,
+        eventoData: i.eventoData.toMillis(),
+        tipo: i.tipo,
+        titularNome: i.titularNome,
+        titularCpf: mascararCpf(i.titularCpf),
+        status: i.status,
+        usadoEm: i.usadoEm?.toMillis() ?? null,
+      })),
+  };
+});
+
+/**
  * Portaria: valida o QR (ou CPF) e dá baixa na entrada em transação, então o mesmo
  * ingresso não passa duas vezes nem com dois leitores ao mesmo tempo.
  */

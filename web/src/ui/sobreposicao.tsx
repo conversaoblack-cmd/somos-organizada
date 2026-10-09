@@ -64,10 +64,13 @@ export function Modal({
   children,
   rodape,
   largura = "max-w-lg",
+  rotulo,
 }: {
   aberto: boolean;
   fechar: () => void;
   titulo?: ReactNode;
+  /** Nome da janela para leitor de tela quando ela não tem `titulo` (o título vem dentro do conteúdo). */
+  rotulo?: string;
   descricao?: ReactNode;
   children: ReactNode;
   rodape?: ReactNode;
@@ -86,6 +89,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titulo ? idTitulo : undefined}
+        aria-label={titulo ? undefined : rotulo}
         className={cx(
           "relative w-full bg-fundo border border-linha shadow-2xl outline-none animate-deslizar",
           "rounded-t-[28px] sm:rounded-[28px] max-h-[92dvh] flex flex-col",

@@ -617,7 +617,7 @@ test("16. modo demonstração: torcida sem Pagar.me vende ingresso (Pix simulado
   await assert.rejects(ctx.torcedor.chamar("simularDemo", { tid: ctx.tid, acao: "pagar_pedido", pedidoId: "x" }), /demonstração/);
 });
 
-test("17. conta do torcedor: ingresso no CPF do sócio aparece no painel dele; login com CPF e senha", async () => {
+test("17. conta do torcedor: ingresso no CPF do sócio aparece no painel dele (sem QR); login com CPF e senha", async () => {
   const { tid, evento, socio } = ctx.demo;
   const amigo = navegador("demo-amigo");
   await createUserWithEmailAndPassword(amigo.auth, "amigo@x.test", SENHA);
@@ -631,8 +631,14 @@ test("17. conta do torcedor: ingresso no CPF do sócio aparece no painel dele; l
   // quem comprou vê os 2; o sócio vê só o que está no CPF dele
   const doAmigo = await getDocs(query(collection(amigo.db, `torcidas/${tid}/ingressos`), where("uid", "==", amigo.auth.currentUser.uid)));
   assert.equal(doAmigo.size, 2);
-  const doSocio = await getDocs(query(collection(socio.db, `torcidas/${tid}/ingressos`), where("titularUid", "==", socio.auth.currentUser.uid)));
-  assert.deepEqual(doSocio.docs.map((d) => d.get("titularCpf")), ["86288366757"]);
+  // o titular não lê o documento (QR e código ficam com quem comprou): vê pela ação, sem QR e com CPF mascarado
+  await negado(getDocs(query(collection(socio.db, `torcidas/${tid}/ingressos`), where("titularUid", "==", socio.auth.currentUser.uid))));
+  const noNome = await socio.chamar("ingressosNoMeuNome", { tid });
+  assert.equal(noNome.ingressos.length, 1);
+  assert.equal(noNome.ingressos[0].titularCpf, "***.883.667-**");
+  assert.equal(noNome.ingressos[0].qr, undefined);
+  assert.equal(noNome.ingressos[0].codigo, undefined);
+  const doSocio = { docs: [{ id: noNome.ingressos[0].id }] };
   // e-mails: comprador recebe a confirmação; o sócio titular recebe o aviso. Sem chave de e-mail no teste = "sem_provedor"
   const emailCompra = await aDb.doc(`torcidas/${tid}/emails/ingresso-${p.pedidoId}`).get();
   assert.equal(emailCompra.get("para"), "amigo@x.test");

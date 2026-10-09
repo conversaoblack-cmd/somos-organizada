@@ -143,13 +143,13 @@ service cloud.firestore {
       match /cpfs/{cpf} { allow read, write: if false; }
 
       match /pedidos/{pedidoId} {
-        allow read: if (logado() && (resource.data.uid == request.auth.uid || resource.data.get('titularUid', '') == request.auth.uid))
+        allow read: if (logado() && resource.data.uid == request.auth.uid)
           || diretoria(tid) || (gestor(tid) && resource.data.sedeId == sedeDoMembro(tid));
         allow write: if false;
       }
 
       match /ingressos/{ingressoId} {
-        allow read: if (logado() && (resource.data.uid == request.auth.uid || resource.data.get('titularUid', '') == request.auth.uid))
+        allow read: if (logado() && resource.data.uid == request.auth.uid)
           || diretoria(tid) || (membro(tid) && resource.data.sedeId == sedeDoMembro(tid));
         allow write: if false;
       }

@@ -28,6 +28,7 @@ export const ACOES: Record<string, Acao> = {
   cotarIngresso: ingressos.cotarIngresso,
   verificarPedido: ingressos.verificarPedido,
   ingressosDoPedido: ingressos.ingressosDoPedido,
+  ingressosNoMeuNome: ingressos.ingressosNoMeuNome,
   validarEntrada: ingressos.validarEntrada,
   aderirSocio: socios.aderirSocio,
   pagarMensalidade: socios.pagarMensalidade,

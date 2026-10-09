@@ -438,7 +438,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
         </div>
       )}
 
-      <Modal aberto={loginAberto} fechar={() => setLoginAberto(false)} largura="max-w-md">
+      <Modal aberto={loginAberto} fechar={() => setLoginAberto(false)} largura="max-w-md" rotulo="Entrar na sua conta">
         <EntrarSocio aoEntrar={() => setLoginAberto(false)} />
       </Modal>
     </div>

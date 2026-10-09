@@ -51,7 +51,7 @@ export function Marca({ tamanho = "md" }: { tamanho?: "md" | "lg" }) {
           {iniciaisTorcida(torcida.nome)}
         </span>
       )}
-      <span className={cx("font-display uppercase tracking-tight truncate", tamanho === "lg" ? "text-xl" : "text-[15px]")}>{torcida.nome}</span>
+      <span className={cx("font-display uppercase tracking-tight line-clamp-2 break-words leading-[1.1]", tamanho === "lg" ? "text-xl" : "text-[15px]")}>{torcida.nome}</span>
     </Link>
   );
 }
