@@ -1,12 +1,24 @@
 import type { Endereco } from "./tipos";
 import { soDigitos } from "./formatos";
+import { registrarErro } from "./erros";
+
+/**
+ * Prazo para um fetch. AbortSignal.timeout não existe no iOS 15 (iPhone 6s/7/SE presos nele), Chrome < 103 e
+ * Samsung Internet antigo: lá ele dá TypeError e o pagamento com cartão falhava sempre como "sem internet".
+ */
+export function prazo(ms: number): AbortSignal {
+  if (typeof AbortSignal !== "undefined" && "timeout" in AbortSignal) return AbortSignal.timeout(ms); // compatibilidade-ok: testado antes
+  const c = new AbortController();
+  setTimeout(() => c.abort(), ms);
+  return c.signal;
+}
 
 /** Busca de endereço pelo CEP (ViaCEP). */
 export async function buscarCep(cep: string): Promise<Partial<Endereco> | null> {
   const d = soDigitos(cep);
   if (d.length !== 8) return null;
   try {
-    const r = await fetch(`https://viacep.com.br/ws/${d}/json/`, { signal: AbortSignal.timeout(6000) });
+    const r = await fetch(`https://viacep.com.br/ws/${d}/json/`, { signal: prazo(6000) });
     const j = await r.json();
     if (j.erro) return null;
     return { cep: d, logradouro: j.logradouro ?? "", bairro: j.bairro ?? "", cidade: j.localidade ?? "", uf: j.uf ?? "" };
@@ -24,6 +36,7 @@ export interface CartaoDigitado {
 
 const MSG_SEM_INTERNET = "Sem internet. Confira a conexão e toque de novo.";
 const MSG_CARTAO_RECUSADO = "Confira número, validade e código (CVV) do cartão, ou pague no Pix.";
+const MSG_CARTAO_INDISPONIVEL = "O pagamento com cartão está indisponível nesta torcida agora. Pague no Pix.";
 const MSG_CARTAO_INSTAVEL = "Não conseguimos conferir o cartão agora. Toque de novo em instantes ou pague no Pix.";
 
 /** Erro com `code` para o `mensagemDeErro` e o `ehErroDeConexao` (lib/api) tratarem como os do Firebase. */
@@ -51,7 +64,7 @@ export async function tokenizarCartao(chavePublica: string, c: CartaoDigitado): 
     r = await fetch(`${URL_TOKENS}?appId=${encodeURIComponent(chavePublica)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(20_000),
+      signal: prazo(20_000),
       body: JSON.stringify({
         type: "card",
         card: {
@@ -71,6 +84,12 @@ export async function tokenizarCartao(chavePublica: string, c: CartaoDigitado): 
   if (!r.ok || !j.id) {
     // A Pagar.me responde em inglês: não repassamos o texto dela ao torcedor
     if (r.status >= 500 || r.status === 429) throw erroCartao(MSG_CARTAO_INSTAVEL, "unavailable");
+    if (r.status === 401 || r.status === 403) {
+      // Chave pública errada ou domínio do site não cadastrado na Pagar.me da torcida: não é culpa do cartão.
+      // Todas as vendas no cartão desta torcida falham até a diretoria corrigir: registra para a equipe ver.
+      registrarErro(new Error(`Tokenização do cartão recusada pela Pagar.me (${r.status}): chave pública ou domínio não cadastrado`), "cartao");
+      throw erroCartao(MSG_CARTAO_INDISPONIVEL, "failed-precondition");
+    }
     throw erroCartao(MSG_CARTAO_RECUSADO, "invalid-argument");
   }
   return j.id as string;

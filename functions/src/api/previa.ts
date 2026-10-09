@@ -62,14 +62,13 @@ export function metaDaTorcida(t: Pick<Torcida, "nome" | "tema" | "textos">, url:
   };
 }
 
-// O app.html muda a cada implantação; guardamos 1 minuto em memória para não buscar a cada visita
-let shell: { html: string; em: number } | null = null;
+// Sem cache em memória: o app.html muda a cada implantação e uma cópia velha aponta para scripts que não
+// existem mais (o link do WhatsApp abria em branco por alguns minutos depois de cada implantação).
+// A busca é ao próprio Hosting (rápida, servida pela CDN).
 async function appHtml(): Promise<string> {
-  if (shell && Date.now() - shell.em < 60_000) return shell.html;
-  const r = await fetch(`${URL_APP.value()}/app.html`, { signal: AbortSignal.timeout(5000) });
+  const r = await fetch(`${URL_APP.value()}/app.html`, { signal: AbortSignal.timeout(5000), headers: { "Cache-Control": "no-cache" } });
   if (!r.ok) throw new Error(`app.html respondeu ${r.status}`);
-  shell = { html: await r.text(), em: Date.now() };
-  return shell.html;
+  return r.text();
 }
 
 async function metaDoCaminho(caminho: string): Promise<Meta | null> {
@@ -110,6 +109,6 @@ export const previaLink = onRequest({ memory: "256MiB", timeoutSeconds: 20, ...E
   res
     .status(200)
     .set("Content-Type", "text/html; charset=utf-8")
-    .set("Cache-Control", "public, max-age=60, s-maxage=300")
+    .set("Cache-Control", "public, max-age=0, s-maxage=60") // CDN guarda 1 min; o navegador sempre confere
     .send(meta ? montarPrevia(html, meta) : html);
 });

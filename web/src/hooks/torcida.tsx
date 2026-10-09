@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, getDocFromCache, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { aplicarTema, TEMA_PADRAO } from "@/lib/tema";
 import { definirContextoErros, registrarErro } from "@/lib/erros";
@@ -31,32 +31,54 @@ type EstadoSlug =
   | { fase: "erro"; erro: Error }
   | { fase: "ok"; tid: string; torcida: ComId<Torcida> };
 
-/** Resolve slug → torcida (tempo real) e aplica as cores da torcida na página. */
+/**
+ * Resolve slug → torcida (tempo real) e aplica as cores da torcida na página.
+ * Começa pelo que está no aparelho (abre na hora com sinal ruim, sem esperar o servidor desistir) e confere
+ * com o servidor em seguida: se o endereço passou a ser de outra torcida ou deixou de existir, a tela acompanha.
+ */
 export function useTorcidaPorSlug(slug: string | undefined): EstadoSlug {
   const [estado, setEstado] = useState<EstadoSlug>({ fase: "carregando" });
   useEffect(() => {
     if (!slug) return;
     let cancelar: (() => void) | undefined;
     let ativo = true;
+    let tidAtual: string | undefined;
     setEstado({ fase: "carregando" });
-    getDoc(doc(db, "slugs", slug.toLowerCase()))
+    const assinar = (tid: string) => {
+      if (!ativo || tid === tidAtual) return;
+      tidAtual = tid;
+      cancelar?.();
+      cancelar = onSnapshot(
+        doc(db, "torcidas", tid),
+        (t) => {
+          if (!t.exists()) return setEstado({ fase: "nao_encontrada" });
+          const torcida = { id: t.id, ...(t.data() as Torcida) };
+          setEstado({ fase: "ok", tid, torcida });
+        },
+        (erro) => setEstado({ fase: "erro", erro }),
+      );
+    };
+    const ref = doc(db, "slugs", slug.toLowerCase());
+    getDocFromCache(ref)
+      .then((s) => {
+        const tid = s.get("torcidaId") as string | undefined;
+        if (tid) assinar(tid);
+      })
+      .catch(() => undefined); // nada no aparelho: espera o servidor
+    getDoc(ref)
       .then((s) => {
         if (!ativo) return;
         const tid = s.get("torcidaId") as string | undefined;
-        if (!tid) return setEstado({ fase: "nao_encontrada" });
-        cancelar = onSnapshot(
-          doc(db, "torcidas", tid),
-          (t) => {
-            if (!t.exists()) return setEstado({ fase: "nao_encontrada" });
-            const torcida = { id: t.id, ...(t.data() as Torcida) };
-            setEstado({ fase: "ok", tid, torcida });
-          },
-          (erro) => setEstado({ fase: "erro", erro }),
-        );
+        if (tid) return assinar(tid);
+        cancelar?.();
+        cancelar = undefined;
+        tidAtual = undefined;
+        setEstado({ fase: "nao_encontrada" });
       })
       .catch((erro) => {
+        if (!ativo || tidAtual) return; // já abriu com o que estava no aparelho
         registrarErro(erro, "slug");
-        if (ativo) setEstado({ fase: "erro", erro });
+        setEstado({ fase: "erro", erro });
       });
     return () => {
       ativo = false;
@@ -95,7 +117,10 @@ export function useMembro(tid: string | null) {
   const caminho = tid && u && !u.isAnonymous ? `torcidas/${tid}/membros/${u.uid}` : null;
   const r = useDocumento<Membro>(caminho);
   const carregando = u === undefined || r.carregando;
-  return { membro: r.dados?.ativo ? r.dados : null, carregando, usuario: u };
+  // Sem conseguir ler o acesso (internet ruim, celular novo na hora do jogo), "sem membro" não quer dizer
+  // "sem acesso": quem usa mostra "Sem conexão" em vez de mandar a pessoa sair da conta.
+  const incerto = !r.dados && (!!r.erro || !!r.semConexao);
+  return { membro: r.dados?.ativo ? r.dados : null, carregando, usuario: u, incerto };
 }
 
 /** Ficha de sócio do usuário logado nesta torcida. */

@@ -1,6 +1,6 @@
-import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router";
-import { collection, query, where, orderBy } from "firebase/firestore";
+import { collection, query, where, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useColecao } from "@/hooks/dados";
 import { socioEmDia, useMinhaFicha, useTorcida } from "@/hooks/torcida";
@@ -8,7 +8,14 @@ import type { Evento, Plano, Sede } from "@/lib/tipos";
 import { Botao, cx, Icone, Vazio } from "@/ui";
 
 export function useEventosPublicos(tid: string) {
-  const q = query(collection(db, `torcidas/${tid}/eventos`), where("status", "==", "publicado"), orderBy("data", "asc"));
+  // Só os eventos que ainda vão acontecer (até 6h depois do início): torcida antiga não baixa anos de eventos no 3G
+  const [desde] = useState(() => Date.now() - 6 * 3600_000);
+  const q = query(
+    collection(db, `torcidas/${tid}/eventos`),
+    where("status", "==", "publicado"),
+    where("data", ">=", Timestamp.fromMillis(desde)),
+    orderBy("data", "asc"),
+  );
   const r = useColecao<Evento>(q, `eventos-pub-${tid}`);
   const limite = Date.now() - 6 * 3600_000;
   return { ...r, dados: r.dados.filter((e) => e.data.toMillis() >= limite) };

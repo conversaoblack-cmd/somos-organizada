@@ -75,7 +75,11 @@ export function mascaraCpf(s: string) {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 export function mascaraTelefone(s: string) {
-  const d = soDigitos(s).slice(0, 11);
+  // O Android preenche "+55 71 9…" e há quem digite "071 9…": sem isso o 55 virava o DDD
+  let d = soDigitos(s);
+  if (d.length > 11 && d.startsWith("55")) d = d.slice(2);
+  if (d.length > 11 && d.startsWith("0")) d = d.slice(1);
+  d = d.slice(0, 11);
   if (d.length <= 10) return d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
   return d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
 }

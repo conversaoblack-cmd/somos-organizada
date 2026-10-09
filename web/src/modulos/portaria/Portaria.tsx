@@ -8,6 +8,7 @@ import { cpfValido, dataExtensa, hora, paraData, relativo } from "@/lib/formatos
 import type { ComId, Evento, Membro, Papel } from "@/lib/tipos";
 import { useColecao, useDocumento } from "@/hooks/dados";
 import { useMembro, useTorcida } from "@/hooks/torcida";
+import { SemConexao } from "../publico/comum";
 import { Login } from "@/componentes/Login";
 import { Aviso, Botao, BotaoIcone, Carregando, cx, Esqueleto, Girando, Icone, Modal, Vazio } from "@/ui";
 import { useTelaAcesa } from "../conta/comum";
@@ -44,7 +45,9 @@ type Resultado = (RespostaValidacao | { resultado: "erro_conexao"; mensagem: str
 };
 /** Se uma conferência cancelada chegou a liberar, o "Já utilizado" seguinte avisa por este tempo. */
 const JANELA_CANCELADA_MS = 2 * 60_000;
-type Entrada = { qr: string } | { cpf: string } | { codigo: string };
+/** leituraId: o mesmo na leitura e no "Tentar de novo", para o servidor reconhecer a baixa que já fez. */
+type Entrada = ({ qr: string } | { cpf: string } | { codigo: string }) & { leituraId?: string };
+const novaLeituraId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 
 const CSS_PORTARIA = `
 .scan-region-highlight-svg, .code-outline-highlight { stroke: var(--color-secundaria) !important; }
@@ -162,7 +165,9 @@ function Cabecalho({ titulo, subtitulo, voltar, membro }: { titulo: string; subt
 
 // ── Passo 1: escolher o evento ───────────────────────────────────────────
 function EscolherEvento({ tid, membro, escolher }: { tid: string; membro: Membro; escolher: (id: string) => void }) {
-  const subsede = membro.papel === "subsede" && !!membro.sedeId;
+  // Subsede e porteiro ligado a uma sede só conferem eventos da própria sede (o servidor recusa os outros):
+  // a lista mostra só esses, para ninguém escolher um evento em que todo ingresso daria "fora do escopo".
+  const subsede = (membro.papel === "subsede" || membro.papel === "portaria") && !!membro.sedeId;
   const consulta = useMemo(() => {
     const base = collection(db, `torcidas/${tid}/eventos`);
     const status = where("status", "in", ["publicado", "encerrado"]);
@@ -445,9 +450,10 @@ function Leitura({
   }, [modo]);
 
   const validar = useCallback(
-    async (entrada: Entrada) => {
+    async (lida: Entrada) => {
       if (ocupado.current) return;
       ocupado.current = true;
+      const entrada: Entrada = lida.leituraId ? lida : { ...lida, leituraId: novaLeituraId() };
       const minha = ++tentativaAtual.current;
       inicioTentativa.current = Date.now();
       setValidando(true);
@@ -476,6 +482,8 @@ function Leitura({
         }
         return;
       }
+      // Sem resposta, a baixa pode ter acontecido no servidor: um "já utilizado" logo depois pode ser esta leitura
+      if (r.resultado === "erro_conexao") cancelada.current = { inicio: inicioTentativa.current, em: Date.now() };
       const c = cancelada.current;
       if (r.resultado === "ja_usado" && c && Date.now() - c.em < JANELA_CANCELADA_MS && (r.usadoEm ?? 0) >= c.inicio - 60_000) {
         r = { ...r, talvezCancelada: true };
@@ -792,7 +800,7 @@ function Leitura({
 // ── Página ───────────────────────────────────────────────────────────────
 export default function Portaria() {
   const { tid, torcida } = useTorcida();
-  const { membro, carregando, usuario } = useMembro(tid);
+  const { membro, carregando, usuario, incerto } = useMembro(tid);
   const chaveEvento = `portaria:evento:${tid}`;
   const [eventoId, setEventoId] = useState<string | null>(() => ler(chaveEvento));
   // Evento lembrado da sessão (a página foi recarregada): sem um toque o navegador bloqueia som e vibração,
@@ -826,6 +834,17 @@ export default function Portaria() {
         <Cabecalho titulo="Portaria" subtitulo={torcida.nome} />
         <div className="min-h-[calc(100dvh-4rem)] grid place-items-center px-4 py-10">
           <Login titulo="Portaria" subtitulo={`Entre com a conta da equipe da ${torcida.nome} para ler os ingressos.`} />
+        </div>
+      </>
+    );
+  } else if (!autorizado && incerto) {
+    conteudo = (
+      <>
+        <Cabecalho titulo="Portaria" subtitulo={torcida.nome} />
+        <div className="mx-auto max-w-md px-4 py-16">
+          <SemConexao tentarDeNovo={() => location.reload()}>
+            Não conseguimos conferir o seu acesso agora (internet fraca). Confira a conexão e toque em “Tentar de novo”: você não precisa sair da conta.
+          </SemConexao>
         </div>
       </>
     );

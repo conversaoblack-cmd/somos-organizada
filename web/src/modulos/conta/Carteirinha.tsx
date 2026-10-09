@@ -1,9 +1,19 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as PE } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as PE, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import { mensagemDeErro } from "@/lib/api";
+import { Timestamp } from "firebase/firestore";
+import { ehErroDeConexao, mensagemDeErro } from "@/lib/api";
 import { dataCurta, dataExtensa, hora, iniciais, moeda, paraData, periodicidade, taxa } from "@/lib/formatos";
-import type { ComId, Ingresso, Plano, Socio, Torcida } from "@/lib/tipos";
+import {
+  carteirinhaSalva,
+  esquecerCarteirinha,
+  fotoParaGuardar,
+  quandoFoiSalvo,
+  salvarCarteirinha,
+  useOnline,
+  type CarteirinhaSalva,
+} from "@/lib/offline";
+import type { ComId, Ingresso, Plano, Socio, StatusSocio, Torcida } from "@/lib/tipos";
 import { useDocumento } from "@/hooks/dados";
 import { corSobre, corValida, TEMA_PADRAO } from "@/lib/tema";
 import { Aviso, Botao, BotaoLink, Cartao, classesBotao, cx, Girando, Icone } from "@/ui";
@@ -108,7 +118,10 @@ function Chip() {
     <span
       aria-hidden="true"
       className="relative block h-7 w-10 rounded-md ring-1 ring-black/20 overflow-hidden"
-      style={{ background: "linear-gradient(135deg, color-mix(in oklab, var(--color-secundaria), white 35%), color-mix(in oklab, var(--color-secundaria), black 25%))" }}
+      style={{
+        backgroundColor: "var(--color-secundaria)",
+        backgroundImage: "linear-gradient(135deg, color-mix(in oklab, var(--color-secundaria), white 35%), color-mix(in oklab, var(--color-secundaria), black 25%))",
+      }}
     >
       <span className="absolute inset-x-0 top-1/2 h-px bg-black/25" />
       <span className="absolute inset-y-0 left-1/3 w-px bg-black/25" />
@@ -117,6 +130,21 @@ function Chip() {
     </span>
   );
 }
+
+/** O que a carteirinha mostra da ficha (a ficha inteira ou a carteirinha salva no aparelho). */
+type FichaCartao = Pick<Socio, "nome" | "matricula" | "planoNome" | "status" | "validoAte" | "criadoEm">;
+
+interface EstadoQr {
+  valor: string | null;
+  carregando: boolean;
+  erro: string | null;
+  /** O QR mostrado veio do aparelho (hora em que foi salvo); null = veio do servidor agora. */
+  salvoEm?: number | null;
+  /** O servidor não respondeu (sem internet ou sinal ruim). */
+  semConexao?: boolean;
+}
+
+const SEM_QR_SALVO = "Sem internet e a carteirinha ainda não está salva neste celular. Abra a carteirinha uma vez com internet para ela ficar salva no celular.";
 
 /** Cartão 3D: frente com os dados, verso com o QR. */
 export function CartaoSocio({
@@ -127,12 +155,12 @@ export function CartaoSocio({
   onVirar,
   qr,
 }: {
-  ficha: ComId<Socio>;
+  ficha: FichaCartao;
   torcida: Torcida;
   fotoUrl: string | null;
   virado: boolean;
   onVirar: () => void;
-  qr: { valor: string | null; carregando: boolean; erro: string | null };
+  qr: EstadoQr;
 }) {
   const situacao = situacaoDoSocio(ficha);
   const emDia = situacao === "em_dia";
@@ -265,7 +293,13 @@ export function CartaoSocio({
                       <div>
                         <Icone nome="cadeado" className="size-9 mx-auto text-texto-3" />
                         <p className="mt-3 text-sm text-texto-2">
-                          {!emDia ? "O QR fica disponível com a mensalidade em dia." : qr.erro ? "Não foi possível carregar o QR. Use o botão “Carregar QR de novo” abaixo do cartão." : "QR indisponível no momento."}
+                          {!emDia
+                            ? "O QR fica disponível com a mensalidade em dia."
+                            : qr.semConexao
+                              ? "Sem internet. Abra a carteirinha uma vez com internet para o QR ficar salvo no celular."
+                              : qr.erro
+                                ? "Não foi possível carregar o QR. Use o botão “Carregar QR de novo” abaixo do cartão."
+                                : "QR indisponível no momento."}
                         </p>
                       </div>
                     )}
@@ -302,7 +336,7 @@ function TelaCheia({
   qr,
   fechar,
 }: {
-  ficha: ComId<Socio>;
+  ficha: FichaCartao;
   torcida: Torcida;
   fotoUrl: string | null;
   qr: string;
@@ -395,6 +429,96 @@ function BarraValidade({ ficha }: { ficha: Socio }) {
   );
 }
 
+/** Selo da carteirinha mostrada do aparelho, sem falar com o servidor. */
+function SeloSemInternet({ salvoEm, acao }: { salvoEm: number; acao?: ReactNode }) {
+  return (
+    <Aviso tom="info" className="mb-4" titulo={`Sem internet — mostrando a última carteirinha salva ${quandoFoiSalvo(salvoEm)}`} acao={acao}>
+      O QR continua valendo na portaria. A validade atualiza quando a internet voltar.
+    </Aviso>
+  );
+}
+
+/** Cartão com os botões "Ver QR" e "Tela cheia" (e a tela cheia). */
+function CartaoComAcoes({
+  ficha,
+  torcida,
+  fotoUrl,
+  qr,
+  motivoSemTelaCheia,
+  children,
+}: {
+  ficha: FichaCartao;
+  torcida: Torcida;
+  fotoUrl: string | null;
+  qr: EstadoQr;
+  motivoSemTelaCheia?: string | null;
+  children?: ReactNode;
+}) {
+  const emDia = situacaoDoSocio(ficha) === "em_dia";
+  const [virado, setVirado] = useState(false);
+  const [telaCheia, setTelaCheia] = useState(false);
+  return (
+    <div className="mx-auto w-full max-w-[380px]">
+      <CartaoSocio ficha={ficha} torcida={torcida} fotoUrl={fotoUrl} virado={virado} onVirar={() => setVirado((v) => !v)} qr={qr} />
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <Botao variante="suave" icone="atualizar" onClick={() => setVirado((v) => !v)}>
+          {virado ? "Ver frente" : "Ver QR"}
+        </Botao>
+        <Botao icone="olho" disabled={!emDia || !qr.valor} onClick={() => setTelaCheia(true)} aria-describedby={motivoSemTelaCheia ? "carteirinha-tela-cheia" : undefined}>
+          Tela cheia
+        </Botao>
+      </div>
+      {children ??
+        (motivoSemTelaCheia && (
+          <p id="carteirinha-tela-cheia" className="mt-2 text-xs text-texto-3 text-center" aria-live="polite">
+            {motivoSemTelaCheia}
+          </p>
+        ))}
+      {telaCheia && qr.valor && <TelaCheia ficha={ficha} torcida={torcida} fotoUrl={fotoUrl} qr={qr.valor} fechar={() => setTelaCheia(false)} />}
+    </div>
+  );
+}
+
+/** Carteirinha salva no aparelho no formato que o cartão usa. */
+function fichaDaSalva(c: CarteirinhaSalva): FichaCartao {
+  return {
+    nome: c.nome,
+    matricula: c.matricula ?? undefined,
+    planoNome: c.planoNome,
+    status: c.status as StatusSocio,
+    validoAte: c.validoAte != null ? Timestamp.fromMillis(c.validoAte) : null,
+    criadoEm: Timestamp.fromMillis(c.criadoEm ?? c.salvoEm),
+  };
+}
+
+/**
+ * Sem internet e sem a ficha no aparelho (cache do Firestore vazio ou apagado): mostra a última carteirinha
+ * salva, só para conferência na portaria. O QR só aparece se ela estava em dia.
+ */
+export function CarteirinhaSalvaSemInternet({ salva, torcida, tentarDeNovo }: { salva: CarteirinhaSalva; torcida: Torcida; tentarDeNovo: () => void }) {
+  const ficha = useMemo(() => fichaDaSalva(salva), [salva]);
+  const qr: EstadoQr = { valor: salva.qr, carregando: false, erro: null, salvoEm: salva.salvoEm, semConexao: true };
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-10 items-start">
+      <div className="mx-auto w-full max-w-[380px]">
+        <SeloSemInternet
+          salvoEm={salva.salvoEm}
+          acao={
+            <Botao tamanho="sm" variante="contorno" icone="atualizar" onClick={tentarDeNovo}>
+              Tentar de novo
+            </Botao>
+          }
+        />
+        <CartaoComAcoes ficha={ficha} torcida={torcida} fotoUrl={salva.foto} qr={qr} />
+      </div>
+      <p className="text-xs text-texto-3 flex items-start gap-2 px-1 lg:pt-2">
+        <Icone nome="info" className="size-4 shrink-0 mt-px" />
+        Na portaria, o que libera a entrada é o QR do ingresso de cada evento. A carteirinha comprova que você é sócio e confere com seu documento com foto.
+      </p>
+    </div>
+  );
+}
+
 export default function AbaCarteirinha({
   tid,
   torcida,
@@ -408,28 +532,86 @@ export default function AbaCarteirinha({
 }) {
   const situacao = situacaoDoSocio(ficha);
   const emDia = situacao === "em_dia";
-  const fotoUrl = useFotoSocio(ficha.fotoPath);
-  const [virado, setVirado] = useState(false);
-  const [telaCheia, setTelaCheia] = useState(false);
-  const [qr, setQr] = useState<{ valor: string | null; carregando: boolean; erro: string | null }>({ valor: null, carregando: false, erro: null });
+  const fotoServidor = useFotoSocio(ficha.fotoPath);
+  const online = useOnline();
+  // O QR salvo aparece na hora (na portaria, com sinal ruim, o servidor pode levar mais de um minuto)
+  const [qr, setQr] = useState<EstadoQr>(() => {
+    const salva = emDia && ficha.matricula ? carteirinhaSalva(tid, ficha.uid) : null;
+    return salva ? { valor: salva.qr, carregando: false, erro: null, salvoEm: salva.salvoEm } : { valor: null, carregando: false, erro: null };
+  });
   const { pagar, carregando: pagando } = usePagarMensalidade(tid, torcida.slug, ficha);
   const plano = useDocumento<Plano>(`torcidas/${tid}/planos/${ficha.planoId}`).dados;
   const falhaCartao = useFalhaCobranca(tid, ficha);
   const dias = diasParaVencer(ficha);
   const [tentativaQr, setTentativaQr] = useState(0);
   const contato = contatoDiretoria(torcida);
+  const validoAteMs = paraData(ficha.validoAte)?.getTime() ?? null;
+  const criadoEmMs = paraData(ficha.criadoEm)?.getTime() ?? null;
+  // Releitura do que está salvo quando muda a conexão ou o QR (foto e hora do selo "sem internet")
+  const salva = useMemo(() => carteirinhaSalva(tid, ficha.uid), [tid, ficha.uid, online, qr.valor, qr.salvoEm]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fotoUrl = fotoServidor ?? (salva && salva.fotoPath === (ficha.fotoPath ?? null) ? salva.foto : null);
 
   useEffect(() => {
     if (!ficha.matricula || !emDia) return;
     let ativo = true;
-    setQr((q) => ({ ...q, carregando: !q.valor }));
+    setQr((q) => (q.valor ? q : { ...q, carregando: true, erro: null }));
     buscarQrCarteirinha(tid, ficha.uid)
-      .then((valor) => ativo && setQr({ valor, carregando: false, erro: null }))
-      .catch((e) => ativo && setQr({ valor: null, carregando: false, erro: mensagemDeErro(e) }));
+      .then((valor) => ativo && setQr({ valor, carregando: false, erro: null, salvoEm: null }))
+      .catch((e) => {
+        if (!ativo) return;
+        if (ehErroDeConexao(e)) {
+          // Sem internet: a última carteirinha salva neste celular, ou a explicação de como salvar
+          const s = carteirinhaSalva(tid, ficha.uid);
+          setQr(
+            s
+              ? { valor: s.qr, carregando: false, erro: null, salvoEm: s.salvoEm, semConexao: true }
+              : { valor: null, carregando: false, erro: SEM_QR_SALVO, semConexao: true },
+          );
+          return;
+        }
+        esquecerCarteirinha(tid, ficha.uid); // o servidor recusou: o QR salvo não vale mais
+        setQr({ valor: null, carregando: false, erro: mensagemDeErro(e) });
+      });
     return () => {
       ativo = false;
     };
-  }, [tid, ficha.uid, ficha.matricula, emDia, tentativaQr]);
+  }, [tid, ficha.uid, ficha.matricula, emDia, tentativaQr, online]);
+
+  // QR confirmado pelo servidor: guarda no aparelho com os dados do cartão (e a foto, se der) para a portaria sem internet
+  useEffect(() => {
+    if (!online || !qr.valor || qr.salvoEm !== null || qr.semConexao || !emDia || !ficha.matricula) return;
+    const fotoPath = ficha.fotoPath ?? null;
+    const anterior = carteirinhaSalva(tid, ficha.uid);
+    const mesmaFoto = !!anterior && anterior.fotoPath === fotoPath;
+    const dados = {
+      tid,
+      uid: ficha.uid,
+      qr: qr.valor,
+      nome: ficha.nome,
+      matricula: ficha.matricula,
+      planoNome: ficha.planoNome,
+      status: ficha.status,
+      validoAte: validoAteMs,
+      criadoEm: criadoEmMs,
+      fotoPath,
+    };
+    salvarCarteirinha({ ...dados, foto: mesmaFoto ? anterior.foto : null });
+    if (!fotoPath || !fotoServidor || (mesmaFoto && anterior.foto)) return;
+    let ativo = true;
+    void fotoParaGuardar(fotoServidor, fotoPath).then((foto) => {
+      if (ativo && foto) salvarCarteirinha({ ...dados, foto });
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [online, qr.valor, qr.salvoEm, qr.semConexao, emDia, tid, ficha.uid, ficha.matricula, ficha.nome, ficha.planoNome, ficha.status, ficha.fotoPath, validoAteMs, criadoEmMs, fotoServidor]);
+
+  // Carteirinha que deixou de valer (vencida, suspensa, cancelada): o QR salvo sai do aparelho
+  useEffect(() => {
+    if (!emDia || !ficha.matricula) esquecerCarteirinha(tid, ficha.uid);
+  }, [emDia, ficha.matricula, tid, ficha.uid]);
+
+  const mostrarSemInternet = emDia && !!qr.valor && (!!qr.semConexao || !online);
 
   // Por que "Tela cheia" está desligado (botão cinza sem explicação confunde)
   const motivoSemTelaCheia = !emDia
@@ -447,35 +629,34 @@ export default function AbaCarteirinha({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-10 items-start">
       <div className="mx-auto w-full max-w-[380px]">
-        <CartaoSocio ficha={ficha} torcida={torcida} fotoUrl={fotoUrl} virado={virado} onVirar={() => setVirado((v) => !v)} qr={qr} />
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <Botao variante="suave" icone="atualizar" onClick={() => setVirado((v) => !v)}>
-            {virado ? "Ver frente" : "Ver QR"}
-          </Botao>
-          <Botao icone="olho" disabled={!emDia || !qr.valor} onClick={() => setTelaCheia(true)} aria-describedby={motivoSemTelaCheia ? "carteirinha-tela-cheia" : undefined}>
-            Tela cheia
-          </Botao>
-        </div>
-        {emDia && qr.erro ? (
-          <Aviso
-            tom="perigo"
-            className="mt-3"
-            titulo="O QR não carregou"
+        {mostrarSemInternet && (
+          <SeloSemInternet
+            salvoEm={qr.salvoEm ?? salva?.salvoEm ?? Date.now()}
             acao={
-              <Botao tamanho="sm" variante="contorno" icone="atualizar" onClick={() => setTentativaQr((n) => n + 1)}>
-                Carregar QR de novo
-              </Botao>
+              online && (
+                <Botao tamanho="sm" variante="contorno" icone="atualizar" onClick={() => setTentativaQr((n) => n + 1)}>
+                  Tentar de novo
+                </Botao>
+              )
             }
-          >
-            {qr.erro}
-          </Aviso>
-        ) : (
-          motivoSemTelaCheia && (
-            <p id="carteirinha-tela-cheia" className="mt-2 text-xs text-texto-3 text-center" aria-live="polite">
-              {motivoSemTelaCheia}
-            </p>
-          )
+          />
         )}
+        <CartaoComAcoes ficha={ficha} torcida={torcida} fotoUrl={fotoUrl} qr={qr} motivoSemTelaCheia={motivoSemTelaCheia}>
+          {emDia && qr.erro ? (
+            <Aviso
+              tom={qr.semConexao ? "alerta" : "perigo"}
+              className="mt-3"
+              titulo={qr.semConexao ? "Sem internet" : "O QR não carregou"}
+              acao={
+                <Botao tamanho="sm" variante="contorno" icone="atualizar" onClick={() => setTentativaQr((n) => n + 1)}>
+                  Carregar QR de novo
+                </Botao>
+              }
+            >
+              {qr.erro}
+            </Aviso>
+          ) : undefined}
+        </CartaoComAcoes>
       </div>
 
       <div className="space-y-4 min-w-0">
@@ -595,8 +776,6 @@ export default function AbaCarteirinha({
           Na portaria, o que libera a entrada é o QR do ingresso de cada evento. A carteirinha comprova que você é sócio e confere com seu documento com foto.
         </p>
       </div>
-
-      {telaCheia && qr.valor && <TelaCheia ficha={ficha} torcida={torcida} fotoUrl={fotoUrl} qr={qr.valor} fechar={() => setTelaCheia(false)} />}
     </div>
   );
 }

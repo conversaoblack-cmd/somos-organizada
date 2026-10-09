@@ -5,6 +5,7 @@ import { collection, orderBy, query, Timestamp, where } from "firebase/firestore
 import { auth, db } from "@/lib/firebase";
 import { api, ehErroDeConexao } from "@/lib/api";
 import { moeda, taxa } from "@/lib/formatos";
+import { carteirinhaSalva } from "@/lib/offline";
 import type { ComId, Ingresso, Socio, Torcida } from "@/lib/tipos";
 import { useColecao, type Estado } from "@/hooks/dados";
 import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
@@ -14,7 +15,7 @@ import { usePagarMensalidade } from "./acoes";
 import { aceitaCartao, ModalCartao } from "./CartaoCobranca";
 import { iniciaisTorcida } from "../publico/comum";
 import { CSS_CONTA, ROTULO_SITUACAO, situacaoDoSocio, useFotoSocio } from "./comum";
-import AbaCarteirinha from "./Carteirinha";
+import AbaCarteirinha, { CarteirinhaSalvaSemInternet } from "./Carteirinha";
 import AbaIngressos, { ehProximo } from "./Ingressos";
 import AbaAssinatura from "./Assinatura";
 import AbaDados from "./Dados";
@@ -245,7 +246,8 @@ function useMeusIngressos(tid: string, uid: string | null): Estado<ComId<Ingress
     // Se uma das consultas falhar, a outra continua aparecendo: AbaIngressos mostra o que carregou e avisa que pode faltar algum
     return {
       dados,
-      carregando: comprados.carregando || emMeuNome.carregando,
+      // Com sinal ruim a ação do servidor pode levar mais de um minuto: os comprados (com QR, já no aparelho) não esperam por ela
+      carregando: comprados.carregando || (emMeuNome.carregando && !comprados.dados.length),
       erro: comprados.erro ?? emMeuNome.erro,
       semConexao: !!(comprados.semConexao || emMeuNome.semConexao),
     };
@@ -317,21 +319,37 @@ function Painel({ tentarDeNovo }: { tentarDeNovo: () => void }) {
       </div>
     );
   } else if (fichaIncerta) {
-    conteudo = (
+    const semInternet = semConexao || !navigator.onLine || (!!erroFicha && ehErroDeConexao(erroFicha));
+    // Sem internet e sem a ficha no aparelho: a última carteirinha salva neste celular (portaria)
+    const salva = semInternet ? carteirinhaSalva(tid, usuario!.uid) : null;
+    const ingressosNoAparelho = ingressos.dados.length > 0 && (
+      <section className="mt-10">
+        <h2 className="text-lg font-bold mb-3">Meus ingressos</h2>
+        <AbaIngressos tid={tid} torcida={torcida} ingressos={ingressos} tentarDeNovo={tentarDeNovo} />
+      </section>
+    );
+    conteudo = salva ? (
+      <div className="pt-6 pb-16 animate-surgir">
+        <h1 className="text-[26px] sm:text-3xl font-bold tracking-tight mb-4">Olá, {salva.nome.split(/\s+/)[0]}</h1>
+        <CarteirinhaSalvaSemInternet salva={salva} torcida={torcida} tentarDeNovo={tentarDeNovo} />
+        {ingressosNoAparelho}
+      </div>
+    ) : (
       <div className="py-10">
         <Vazio
           icone="alerta"
-          titulo={semConexao || !navigator.onLine ? "Sem internet" : "Não foi possível abrir sua conta"}
+          titulo={semInternet ? "Sem internet" : "Não foi possível abrir sua conta"}
           acao={
             <Botao icone="atualizar" onClick={tentarDeNovo}>
               Tentar de novo
             </Botao>
           }
         >
-          {semConexao || !navigator.onLine
-            ? "Não conseguimos falar com o servidor. Confira a conexão e toque em Tentar de novo."
+          {semInternet
+            ? "Não conseguimos falar com o servidor e sua carteirinha ainda não está salva neste celular. Abra a carteirinha e os ingressos uma vez com internet para eles ficarem salvos no celular."
             : "Algo falhou ao buscar seus dados. Toque em Tentar de novo."}
         </Vazio>
+        {ingressosNoAparelho}
       </div>
     );
   } else if (!ficha) {

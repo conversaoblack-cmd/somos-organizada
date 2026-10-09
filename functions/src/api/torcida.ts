@@ -109,14 +109,16 @@ export async function concederAcesso(args: {
   // No convite da diretoria o link vai só por e-mail, direto para o convidado (ninguém mais vê a senha).
   const linkDefinirSenha =
     contaNova && args.devolverLink ? await auth.generatePasswordResetLink(email, { url: `${URL_APP.value()}/entrar` }) : null;
-  return { uid: usuario.uid, contaNova, linkDefinirSenha };
+  // Convidado antes e nunca entrou (não criou a senha): o "Reenviar" precisa mandar de novo o link de criar senha
+  const nuncaEntrou = contaNova || !usuario.metadata.lastSignInTime;
+  return { uid: usuario.uid, contaNova, nuncaEntrou, linkDefinirSenha };
 }
 
 export const convidarMembro = onCall(async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
   const quem = await exigirMembro(req, tid, ["diretoria"]);
-  const email = texto(d.email, "e-mail", { max: 64 }).toLowerCase();
+  const email = texto(d.email, "e-mail", { max: 120 }).toLowerCase();
   if (!emailValido(email)) throw new HttpsError("invalid-argument", "E-mail inválido.");
   const nome = texto(d.nome, "nome", { min: 2, max: 64 });
   const papel = umDe(d.papel, "papel", ["diretoria", "subsede", "portaria"] as const);

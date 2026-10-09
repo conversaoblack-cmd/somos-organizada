@@ -110,6 +110,21 @@ export async function aplicarRespostaPedido(tid: string, pedidoId: string, pg: P
   return "aguardando" as const;
 }
 
+/** Id de documento do Firestore gerado no aparelho para a compra (20 letras e números). */
+const ID_COMPRA = /^[A-Za-z0-9]{20}$/;
+
+/** A Pagar.me respondeu recusando (4xx, menos tempo esgotado e excesso de pedidos): a cobrança não foi criada. */
+const recusaDaPagarme = (status: number) => status >= 400 && status < 500 && status !== 408 && status !== 429;
+
+/** A mesma compra chegou de novo (resposta anterior perdida): devolve o pedido que já existe, sem cobrar outra vez. */
+async function respostaDaCompraRepetida(tid: string, pedidoId: string, p: Pedido, uid: string) {
+  if (p.uid !== uid || p.tipo !== "ingresso") throw new HttpsError("already-exists", "Esta compra já foi registrada. Atualize a página.");
+  if (p.status === "pago") return { pedidoId, status: "pago" as const };
+  if (p.status === "aguardando" || p.status === "criando") return { pedidoId, status: "aguardando" as const };
+  // tentativa anterior encerrada (recusada ou expirada): o aparelho gera outro id e tenta de novo
+  throw new HttpsError("failed-precondition", "A tentativa anterior não foi concluída. Toque em pagar de novo.");
+}
+
 /**
  * Checkout de ingressos. Login anônimo é aceito (compra sem cadastro);
  * se o usuário for sócio ativo, o ingresso dele sai pelo preço de sócio.
@@ -154,11 +169,19 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
     }
   }
 
-  const pedidoRef = refs.pedidos(tid).doc();
+  // Id da compra gerado no aparelho: se a resposta se perder (internet ruim) e a pessoa tocar em pagar de novo,
+  // a segunda chamada encontra o mesmo pedido em vez de reservar lugares e cobrar outra vez.
+  const idCompra = typeof d.idCompra === "string" && ID_COMPRA.test(d.idCompra) ? d.idCompra : null;
+  const pedidoRef = idCompra ? refs.pedido(tid, idCompra) : refs.pedidos(tid).doc();
+  if (idCompra) {
+    const ja = (await pedidoRef.get()).data() as Pedido | undefined;
+    if (ja) return await respostaDaCompraRepetida(tid, pedidoRef.id, ja, uid);
+  }
   const expiraEm = new Date(Date.now() + PADROES.pixExpiraSegundos * 1000);
 
   // Reserva de lugares + criação do pedido em transação (evita vender acima da capacidade)
   const calc = await db.runTransaction(async (tx) => {
+    if (idCompra && (await tx.get(pedidoRef)).exists) return null; // duas chamadas iguais ao mesmo tempo: só uma reserva
     const evRef = refs.evento(tid, eventoId);
     const ev = (await tx.get(evRef)).data() as Evento | undefined;
     if (!ev || ev.status !== "publicado") throw new HttpsError("failed-precondition", "Evento indisponível para venda.");
@@ -175,7 +198,9 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
       throw new HttpsError("failed-precondition", "As vendas deste evento ainda não foram liberadas: a conta de recebimento da subsede não está ativa.");
     }
     const c = calcularPedidoIngresso({ evento: ev, titulares, socio, socioJaUsouPreco, pct });
-    if (c.total <= 0) throw new HttpsError("failed-precondition", "Evento sem valor configurado.");
+    if (c.total < 0 || (c.total === 0 && c.itens.some((i) => i.tipo !== "socio"))) {
+      throw new HttpsError("failed-precondition", "Evento sem valor configurado.");
+    }
     const divisao = dividir(torcida, sede, c.valorBase, c.taxa);
     tx.update(evRef, { reservados: FieldValue.increment(titulares.length) });
     const pedido: Pedido = {
@@ -198,17 +223,29 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
     tx.set(pedidoRef, pedido);
     return { ...c, eventoNome: ev.nome, split: divisao.split };
   });
+  if (!calc) return await respostaDaCompraRepetida(tid, pedidoRef.id, (await pedidoRef.get()).data() as Pedido, uid);
+
+  // Ingresso de sócio grátis (evento com valor de sócio R$ 0): nada a cobrar, emite direto
+  if (calc.total === 0) {
+    await confirmarPedidoPago(tid, pedidoRef.id, { id: `gratis_${pedidoRef.id}`, status: "paid", charges: [] } as unknown as PgPedido, QR_HMAC.value());
+    return { pedidoId: pedidoRef.id, status: "pago" as const };
+  }
 
   let respostaPg: PgPedido | null = null;
+  /** Chegou a pedir à Pagar.me: daqui em diante, um erro sem resposta não prova que a cobrança não aconteceu. */
+  let pediuPg = false;
   try {
     const pg = await pagarmeDaTorcida(tid);
-    const items = calc.itens.map((it, i) => ({
-      amount: it.valorBase,
-      description: `${calc.eventoNome} · ${it.tipo === "socio" ? "Sócio" : "Público"}`.slice(0, 256),
-      quantity: 1,
-      code: `ing${i + 1}`,
-    }));
+    const items = calc.itens
+      .map((it, i) => ({
+        amount: it.valorBase,
+        description: `${calc.eventoNome} · ${it.tipo === "socio" ? "Sócio" : "Público"}`.slice(0, 256),
+        quantity: 1,
+        code: `ing${i + 1}`,
+      }))
+      .filter((it) => it.amount > 0); // ingresso de sócio grátis junto com pagos: a Pagar.me não aceita item de R$ 0
     if (calc.taxa > 0) items.push({ amount: calc.taxa, description: "Taxa de serviço", quantity: 1, code: "taxa" });
+    pediuPg = true;
     const resposta = await pg.criarPedido({
       code: pedidoRef.id,
       items,
@@ -227,6 +264,13 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
       // Guarda ao menos o id da Pagar.me para o webhook, o "Já paguei" e a rotina de 15 min conciliarem.
       logger.error("Pedido criado na Pagar.me, mas a confirmação local falhou", { tid, pedidoId: pedidoRef.id, erro: String(e) });
       await refs.pedido(tid, pedidoRef.id).update({ "pagarme.orderId": respostaPg.id }).catch(() => undefined);
+      return { pedidoId: pedidoRef.id, status: "aguardando" as const };
+    }
+    if (pediuPg && !(e instanceof PagarmeErro && recusaDaPagarme(e.status))) {
+      // Sem resposta (tempo esgotado, queda de rede, 5xx): a Pagar.me pode ter criado e até cobrado o pedido.
+      // Não libera os lugares nem marca como falhou: fica "criando" e a conferência (verificarPedido, rotina de
+      // 15 min) pergunta à Pagar.me pelo código do pedido e aplica o que ela disser.
+      logger.error("Pagar.me sem resposta ao criar o pedido: fica para conferência", { tid, pedidoId: pedidoRef.id, erro: String(e) });
       return { pedidoId: pedidoRef.id, status: "aguardando" as const };
     }
     await encerrarPedidoNaoPago(tid, pedidoRef.id, "falhou", e instanceof Error ? e.message : "erro").catch(() => undefined);
@@ -283,6 +327,21 @@ export const verificarPedido = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, 
   const pedidoId = texto(d.pedidoId, "pedido", { max: 40 });
   const p = (await refs.pedido(tid, pedidoId).get()).data() as Pedido | undefined;
   if (!p || p.uid !== uid) throw new HttpsError("not-found", "Pedido não encontrado.");
+  if (p.status === "criando") {
+    // A criação na Pagar.me ficou sem resposta: pergunta pelo código do pedido
+    const pg = await pagarmeDaTorcida(tid);
+    const achado = await pg.buscarPedidoPorCodigo(pedidoId).catch(() => undefined);
+    if (achado) {
+      const r = await aplicarRespostaPedido(tid, pedidoId, achado, p.expiraEm?.toDate() ?? new Date(Date.now() + PADROES.pixExpiraSegundos * 1000));
+      return { status: typeof r === "object" ? "falhou" : r };
+    }
+    // Não existe na Pagar.me (e já passou tempo suficiente para ter aparecido): libera os lugares
+    if (achado === null && Date.now() - p.criadoEm.toMillis() > 2 * 60_000) {
+      await encerrarPedidoNaoPago(tid, pedidoId, "falhou", "O pagamento não chegou a ser criado. Tente de novo.");
+      return { status: "falhou" };
+    }
+    return { status: "aguardando" };
+  }
   if (p.status !== "aguardando" || !p.pagarme?.orderId) return { status: p.status };
   const pg = await pagarmeDaTorcida(tid);
   const pedidoPg = await pg.obterPedido(p.pagarme.orderId);
@@ -365,6 +424,10 @@ export const validarEntrada = onCall({ secrets: [QR_HMAC], ...ESCALA_PUBLICA }, 
   const eventoId = texto(d.eventoId, "evento", { max: 40 });
   const membro = await exigirMembro(req, tid, ["diretoria", "subsede", "portaria"]);
   const confirmar = d.confirmar !== false;
+  // Id desta leitura, gerado no aparelho da portaria e repetido no "Tentar de novo": se a baixa foi feita mas a
+  // resposta se perdeu (internet ruim), a nova tentativa reconhece a própria baixa e responde "liberado",
+  // em vez de "já utilizado" para o mesmo torcedor.
+  const leituraId = typeof d.leituraId === "string" && /^[A-Za-z0-9_-]{8,40}$/.test(d.leituraId) ? d.leituraId : null;
   const ev = (await refs.evento(tid, eventoId).get()).data() as Evento | undefined;
   if (!ev) throw new HttpsError("not-found", "Evento não encontrado.");
   // Subsede (e portaria ligada a uma sede) só confere a entrada dos eventos da própria sede
@@ -406,6 +469,9 @@ export const validarEntrada = onCall({ secrets: [QR_HMAC], ...ESCALA_PUBLICA }, 
     };
     if (i.eventoId !== eventoId) return { resultado: "outro_evento", mensagem: `Ingresso de outro evento: ${i.eventoNome}.`, ...info };
     if (i.status === "cancelado") return { resultado: "cancelado", mensagem: "Ingresso cancelado.", ...info };
+    if (i.status === "usado" && leituraId && i.usadoLeitura === leituraId) {
+      return { resultado: "liberado", mensagem: "Entrada liberada.", ...info };
+    }
     if (i.status === "usado") {
       return {
         resultado: "ja_usado",
@@ -415,7 +481,7 @@ export const validarEntrada = onCall({ secrets: [QR_HMAC], ...ESCALA_PUBLICA }, 
       };
     }
     if (confirmar) {
-      tx.update(ingressoRef, { status: "usado", usadoEm: FieldValue.serverTimestamp(), usadoPor: membro.uid });
+      tx.update(ingressoRef, { status: "usado", usadoEm: FieldValue.serverTimestamp(), usadoPor: membro.uid, ...(leituraId ? { usadoLeitura: leituraId } : {}) });
       tx.set(refs.evento(tid, eventoId), { entradas: FieldValue.increment(1) }, { merge: true });
     }
     return { resultado: "liberado", mensagem: "Entrada liberada.", ...info };

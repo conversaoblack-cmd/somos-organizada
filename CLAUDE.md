@@ -71,8 +71,32 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
 
 ## Antes de enviar mudança de código
 
-- `npm --prefix functions test` (regras de negócio) e `cd web && npx tsc -b --noEmit` (tipos do front).
+- `npm --prefix functions test` (regras de negócio) e `cd web && npm run typecheck` (tipos do front + `scripts/checar-efeitos.mjs`).
 - Mudou back-end ou regras: `env -u JAVA_TOOL_OPTIONS bash testes-e2e/rodar.sh` (fluxo completo, ~3 min).
+- Mudou tela: `EXIGIR_SEM_INTERNET=1 bash testes-e2e/navegador.sh` (fluxos críticos pela tela, ~7 min: cadastro, aprovação,
+  evento, compra, sócio, carteirinha, portaria e sem internet; modo normal e "Chrome novo", 360 e 1280 px). Reprova com
+  qualquer erro no console. "Não reproduzi" não é resposta para erro relatado em produção: baixe o bundle publicado e o
+  `.map` (`https://somosorganizada.com.br/assets/<arquivo>.js.map`) e ache a linha original.
+
+## Regras que já derrubaram produção (não repita)
+
+- Efeito do React sempre com chaves: `useEffect(() => { algo(); }, [...])`. Sem chaves, o valor de `algo()` vai para o React
+  como "limpeza" e a tela cai na troca ("q is not a function"): no Chrome novo `scrollIntoView` devolve uma Promise.
+  O `checar-efeitos` (no typecheck e no build) recusa.
+- Nada de API que não existe no iPhone com iOS 15 ou em Android antigo (`AbortSignal.timeout`, `structuredClone`,
+  `requestIdleCallback`, `.at()`, `findLast`, `Object.hasOwn`, `crypto.randomUUID`...): use `prazo()` de `lib/servicos.ts`
+  etc. O `checar-efeitos` recusa; o build gera código para Safari 15 / Chrome 87.
+- Cor com transparência ou mistura (`bg-x/10`, `color-mix`): o build acrescenta a reserva para navegadores sem color-mix
+  (`web/plugins/coresCompat.ts`, variáveis de `lib/tema.ts`). Degradê em `style`: use `backgroundColor` (cor sólida) +
+  `backgroundImage`, nunca só `background`.
+- Dinheiro e portaria são idempotentes: compra leva `idCompra` (mesmo id nas tentativas; resposta perdida não cobra duas
+  vezes); erro sem resposta da Pagar.me não encerra o pedido (fica "criando" para conferência); a portaria manda `leituraId`
+  e o "Tentar de novo" repete o mesmo.
+- O service worker (`sw.js`, gerado no build a partir de `web/scripts/sw-modelo.js`) só vale para o app (nunca para "/").
+  O QR (carteirinha e ingressos) fica no aparelho para a portaria sem internet e é apagado ao sair da conta.
+  E-mail nunca leva QR (decisão do dono): leva para a conta.
+- Mexeu em tela: `bash testes-e2e/navegador.sh` (fluxos críticos pelo navegador, modo normal e "Chrome novo",
+  360 e 1280 px, ~5 min; guia em `testes-e2e/navegador/README.md`).
 - Commit com mensagem em português explicando o porquê, e `git push` na mesma branch.
 
 ## Windows

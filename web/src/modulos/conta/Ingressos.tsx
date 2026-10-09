@@ -6,6 +6,7 @@ import type { ComId, Evento, Ingresso, Torcida } from "@/lib/tipos";
 import { useDocumento, type Estado } from "@/hooks/dados";
 import { Aviso, Botao, BotaoLink, cx, Esqueleto, Icone, Modal, Selo, useToast, Vazio } from "@/ui";
 import { QrCode } from "@/ui/qr";
+import { BotaoSalvarIngresso } from "../publico/Bilhete";
 import { useTelaAcesa } from "./comum";
 
 const fmtSP = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", ...o });
@@ -54,7 +55,9 @@ function Bilhete({ i, abrir, apagado }: { i: ComId<Ingresso>; abrir: () => void;
       <div
         className="relative w-[88px] sm:w-[104px] shrink-0 rounded-l-[22px] text-sobre-primaria flex flex-col items-center justify-center py-4 overflow-hidden"
         style={{
-          background:
+          // cor sólida separada do degradê: sem color-mix (iOS 15) o degradê cai e o canhoto continua na cor da torcida
+          backgroundColor: "var(--color-primaria)",
+          backgroundImage:
             "repeating-linear-gradient(135deg, rgb(255 255 255 / .06) 0 1.5px, transparent 1.5px 7px), linear-gradient(160deg, var(--color-primaria), color-mix(in oklab, var(--color-primaria), black 35%))",
         }}
       >
@@ -110,7 +113,7 @@ function Bilhete({ i, abrir, apagado }: { i: ComId<Ingresso>; abrir: () => void;
   );
 }
 
-function ModalIngresso({ i, tid, fechar }: { i: ComId<Ingresso>; tid: string; fechar: () => void }) {
+function ModalIngresso({ i, tid, torcidaNome, fechar }: { i: ComId<Ingresso>; tid: string; torcidaNome: string; fechar: () => void }) {
   useTelaAcesa(i.status === "valido" && !i.soTitular);
   const avisar = useToast();
   const evento = useDocumento<Evento>(`torcidas/${tid}/eventos/${i.eventoId}`).dados;
@@ -156,6 +159,21 @@ function ModalIngresso({ i, tid, fechar }: { i: ComId<Ingresso>; tid: string; fe
             {i.codigo}
             <Icone nome="copiar" className="size-4 text-texto-3" />
           </button>
+          {i.status === "valido" && (
+            <BotaoSalvarIngresso
+              className="mt-3"
+              dados={{
+                torcidaNome,
+                eventoNome: i.eventoNome,
+                eventoData: paraData(i.eventoData) ?? new Date(),
+                titularNome: i.titularNome,
+                titularCpf: cpfMascarado(i.titularCpf),
+                tipo: i.tipo,
+                codigo: i.codigo,
+                qr: i.qr,
+              }}
+            />
+          )}
           </>
         )}
 
@@ -240,7 +258,9 @@ export default function AbaIngressos({
   if (falhou && !ingressos.dados.length) {
     return (
       <Aviso tom="perigo" titulo={semInternet ? "Sem internet" : "Não foi possível carregar seus ingressos"} acao={botaoTentar} className="max-w-2xl">
-        {semInternet ? "Não conseguimos buscar seus ingressos agora. Confira a conexão e tente de novo." : "Algo falhou ao buscar seus ingressos. Tente de novo."}
+        {semInternet
+          ? "Nenhum ingresso salvo neste celular. Abra o ingresso uma vez com internet para ele ficar salvo no celular."
+          : "Algo falhou ao buscar seus ingressos. Tente de novo."}
       </Aviso>
     );
   }
@@ -290,7 +310,7 @@ export default function AbaIngressos({
         </section>
       )}
 
-      {aberto && <ModalIngresso i={aberto} tid={tid} fechar={() => abrir(null)} />}
+      {aberto && <ModalIngresso i={aberto} tid={tid} torcidaNome={torcida.nome} fechar={() => abrir(null)} />}
     </div>
   );
 }

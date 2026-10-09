@@ -82,8 +82,18 @@ export const entrarComCpf = onCall(ESCALA_PUBLICA, async (req) => {
 
   const emails = [...new Set((await Promise.all(uids.map((u) => auth.getUser(u).catch(() => null)))).map((u) => u?.email).filter((e): e is string => !!e))];
   for (const email of emails) {
-    // O contador não zera no acerto: ele é do CPF (compartilhado pelas contas ligadas a ele) e só expira com o tempo.
-    if (await senhaConfere(email, senha)) return { email };
+    if (await senhaConfere(email, senha)) {
+      // Acertou: devolve só a tentativa que acabou de usar (o contador não zera, porque é do CPF e outras contas
+      // podem estar ligadas a ele). Assim o sócio que entra em dois celulares não fica bloqueado por isso;
+      // quem tenta adivinhar nunca acerta, então não ganha tentativas.
+      await db
+        .runTransaction(async (tx) => {
+          const t = ((await tx.get(ref)).get("tentativas") as number | undefined) ?? 0;
+          if (t > 0) tx.update(ref, { tentativas: t - 1 });
+        })
+        .catch(() => undefined);
+      return { email };
+    }
   }
   throw new HttpsError("permission-denied", INCORRETO);
 });

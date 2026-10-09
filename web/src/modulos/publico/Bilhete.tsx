@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { cpfMascarado, dataExtensa, hora } from "@/lib/formatos";
-import { cx, Selo } from "@/ui";
+import { salvarImagemIngresso, type DadosImagemIngresso } from "@/lib/imagemIngresso";
+import { Botao, cx, Selo, useToast } from "@/ui";
 import { QrCode } from "@/ui/qr";
 
 const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -14,6 +16,27 @@ export interface DadosBilhete {
   codigo: string;
   qr: string;
   status: "valido" | "usado" | "cancelado";
+}
+
+/** Reserva para a portaria sem internet: imagem com o QR na galeria/arquivos do celular. */
+export function BotaoSalvarIngresso({ dados, className }: { dados: DadosImagemIngresso; className?: string }) {
+  const avisar = useToast();
+  const [gerando, setGerando] = useState(false);
+  async function salvar() {
+    setGerando(true);
+    try {
+      if (await salvarImagemIngresso(dados)) avisar("Imagem do ingresso salva no celular. Ela abre mesmo sem internet.", "sucesso");
+    } catch {
+      avisar("Não foi possível gerar a imagem. Tire um print da tela do ingresso.", "erro");
+    } finally {
+      setGerando(false);
+    }
+  }
+  return (
+    <Botao variante="contorno" icone="download" largo carregando={gerando} onClick={salvar} className={className}>
+      Salvar ingresso (imagem)
+    </Botao>
+  );
 }
 
 /** Ingresso digital com canhoto picotado e QR. */
@@ -59,6 +82,22 @@ export function Bilhete({ b, torcidaNome }: { b: DadosBilhete; torcidaNome: stri
         </div>
         <QrCode valor={b.qr} className="w-32 sm:w-36" />
       </div>
+      {b.status === "valido" && (
+        <div className="px-5 sm:px-6 pb-5 sm:pb-6">
+          <BotaoSalvarIngresso
+            dados={{
+              torcidaNome,
+              eventoNome: b.eventoNome,
+              eventoData: b.eventoData,
+              titularNome: b.titularNome,
+              titularCpf: cpfMascarado(b.titularCpf),
+              tipo: b.tipo,
+              codigo: b.codigo,
+              qr: b.qr,
+            }}
+          />
+        </div>
+      )}
     </article>
   );
 }

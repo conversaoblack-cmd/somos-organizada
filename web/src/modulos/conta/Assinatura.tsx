@@ -150,7 +150,8 @@ export default function AbaAssinatura({ tid, torcida, ficha }: { tid: string; to
           <div
             className="p-5 sm:p-6 text-sobre-primaria"
             style={{
-              background:
+              backgroundColor: "var(--color-primaria)", // reserva sem color-mix (iOS 15): o degradê abaixo cai, a cor fica
+              backgroundImage:
                 "radial-gradient(90% 120% at 100% 0%, color-mix(in oklab, var(--color-secundaria) 40%, transparent), transparent 60%), linear-gradient(150deg, var(--color-primaria), color-mix(in oklab, var(--color-primaria), black 40%))",
             }}
           >

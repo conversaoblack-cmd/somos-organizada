@@ -35,6 +35,28 @@
   --cor-alerta: #f59e0b;
   --cor-perigo: #ef4444;
   --cor-info: #3b82f6;
+  /* sem color-mix (iOS 15, Android antigo): cores derivadas e canais do tema padrão; lib/tema.ts recalcula por torcida */
+  --cor-superficie: #0f131b;
+  --cor-superficie-2: #171a23;
+  --cor-superficie-3: #20242d;
+  --cor-texto-2: #a1a5ac;
+  --cor-texto-3: #6b6f77;
+  --cor-fundo-rgb: 7 10 18;
+  --cor-texto-rgb: 241 244 250;
+  --cor-primaria-rgb: 46 107 255;
+  --cor-secundaria-rgb: 255 204 0;
+  --cor-sobre-primaria-rgb: 255 255 255;
+  --cor-sobre-secundaria-rgb: 17 17 17;
+  --cor-primaria-texto-rgb: 56 114 255;
+  --cor-sucesso-rgb: 34 197 94;
+  --cor-alerta-rgb: 245 158 11;
+  --cor-perigo-rgb: 239 68 68;
+  --cor-info-rgb: 59 130 246;
+  --cor-superficie-rgb: 15 19 27;
+  --cor-superficie-2-rgb: 23 26 35;
+  --cor-superficie-3-rgb: 32 36 45;
+  --cor-texto-2-rgb: 161 165 172;
+  --cor-texto-3-rgb: 107 111 119;
   color-scheme: dark;
 }
 

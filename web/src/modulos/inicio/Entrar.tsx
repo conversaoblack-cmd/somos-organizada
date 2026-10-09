@@ -171,6 +171,8 @@ function EntrarEquipe({ aoInformarTorcida }: { aoInformarTorcida: () => void }) 
       .catch(() => undefined);
     getDocs(collection(db, `usuarios/${usuario.uid}/acessos`))
       .then(async (s) => {
+        // Sem internet o Firestore responde com o cache do aparelho, vazio num celular novo: isso não é "nenhum painel"
+        if (s.empty && s.metadata.fromCache) throw Object.assign(new Error("sem conexão"), { code: "unavailable" });
         const lista = await Promise.all(
           s.docs
             .filter((d) => d.get("ativo") !== false)

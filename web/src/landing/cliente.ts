@@ -56,7 +56,7 @@ if (projeto && import.meta.env.VITE_USAR_EMULADORES !== "true") {
       .catch(() => {
         /* sem rede: ficam os valores padrão já impressos na página */
       });
-  if ("requestIdleCallback" in window) requestIdleCallback(() => void carregar());
+  if ("requestIdleCallback" in window) requestIdleCallback(() => void carregar()); // compatibilidade-ok: testado antes
   else setTimeout(() => void carregar(), 1500);
 }
 

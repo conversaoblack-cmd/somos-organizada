@@ -1,6 +1,12 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator } from "firebase/firestore";
+import {
+  clearIndexedDbPersistence,
+  connectFirestoreEmulator,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 export const app = initializeApp({
@@ -22,6 +28,23 @@ if (USANDO_EMULADORES) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
   connectFunctionsEmulator(fns, "127.0.0.1", 5001);
+}
+
+/**
+ * Alguém saiu da conta neste aparelho (lib/offline.ts marca): na abertura seguinte do site, apaga o cache do
+ * Firestore, que guarda os ingressos com QR, antes de qualquer leitura (só funciona com o Firestore ainda parado).
+ * Se outra aba do site estiver aberta, o Firestore dela é encerrado pelo SDK para a limpeza acontecer (aquela aba
+ * precisa ser recarregada); se a limpeza falhar, a marca fica e tenta de novo na próxima abertura.
+ */
+export const LIMPAR_CACHE_FIRESTORE = "so-offline-limpar-cache";
+try {
+  if (localStorage.getItem(LIMPAR_CACHE_FIRESTORE)) {
+    clearIndexedDbPersistence(db)
+      .then(() => localStorage.removeItem(LIMPAR_CACHE_FIRESTORE))
+      .catch(() => undefined);
+  }
+} catch {
+  /* sem armazenamento: nada guardado */
 }
 
 export const VERSAO_APP = import.meta.env.VITE_VERSAO ?? "dev";

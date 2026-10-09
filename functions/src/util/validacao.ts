@@ -20,7 +20,7 @@ export function mascararCpf(cpf: string): string {
 }
 
 export function emailValido(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.length <= 64;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.length <= 120; // conta do Firebase aceita e-mail longo: não barrar a compra
 }
 
 /** Aceita (71) 99999-9999, 71999999999, +55 71 99999-9999. */
@@ -98,7 +98,7 @@ export interface Pessoa {
 export function pessoa(v: unknown): Pessoa {
   const p = (v ?? {}) as Record<string, unknown>;
   const nome = texto(p.nome, "nome", { min: 3, max: 64 });
-  const email = texto(p.email, "e-mail", { max: 64 }).toLowerCase();
+  const email = texto(p.email, "e-mail", { max: 120 }).toLowerCase();
   if (!emailValido(email)) throw new HttpsError("invalid-argument", "E-mail inválido.");
   const cpf = soDigitos(p.cpf);
   if (!cpfValido(cpf)) throw new HttpsError("invalid-argument", "CPF inválido.");

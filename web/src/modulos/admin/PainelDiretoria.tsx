@@ -29,7 +29,7 @@ import Publicar from "./Publicar";
 import PlanoSomos from "./PlanoSomos";
 import Dominio from "./Dominio";
 import { recebedorAtivo } from "./recebedor";
-import { iniciaisTorcida } from "../publico/comum";
+import { iniciaisTorcida, SemConexao } from "../publico/comum";
 
 function Centro({ children }: { children: ReactNode }) {
   return <div className="min-h-dvh grid place-items-center px-4 py-10">{children}</div>;
@@ -37,7 +37,7 @@ function Centro({ children }: { children: ReactNode }) {
 
 export default function PainelDiretoria() {
   const { tid, torcida } = useTorcida();
-  const { membro, carregando, usuario } = useMembro(tid);
+  const { membro, carregando, usuario, incerto } = useMembro(tid);
 
   // Painel com as cores da torcida sobre fundo escuro legível. Reaplica quando a torcida muda
   // (o provedor restaura o padrão ao trocar).
@@ -62,6 +62,15 @@ export default function PainelDiretoria() {
             </>
           }
         />
+      </Centro>
+    );
+  }
+  if (!membro && incerto) {
+    return (
+      <Centro>
+        <SemConexao tentarDeNovo={() => location.reload()}>
+          Não conseguimos conferir o seu acesso ao painel agora. Confira a internet e toque em “Tentar de novo”: você não precisa sair da conta.
+        </SemConexao>
       </Centro>
     );
   }

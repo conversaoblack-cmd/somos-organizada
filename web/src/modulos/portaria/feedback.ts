@@ -8,7 +8,8 @@ export function prepararAudio() {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) return;
     ctx ??= new AC();
-    if (ctx.state === "suspended") void ctx.resume();
+    // iPhone: depois de uma ligação o áudio fica "interrupted" (não só "suspended")
+    if (ctx.state !== "running") void ctx.resume().catch(() => undefined);
   } catch {
     ctx = null;
   }

@@ -194,5 +194,7 @@ export interface Ingresso {
   status: "valido" | "usado" | "cancelado";
   usadoEm?: Timestamp;
   usadoPor?: string;
+  /** Id da leitura da portaria que deu a baixa (repetir a mesma leitura responde "liberado"). */
+  usadoLeitura?: string;
   criadoEm: Timestamp;
 }

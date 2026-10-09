@@ -175,6 +175,9 @@ function confirmarNaTransacao(tid: string, pedidoId: string, pg: PgPedido, segre
       // pagamento confirmado: some o aviso de "cobrança recusada"
       ultimaFalhaCobranca: FieldValue.delete(),
       motivoFalhaCobranca: FieldValue.delete(),
+      // Cancelou a renovação e depois pagou a mensalidade: quer continuar. Volta a receber as próximas cobranças
+      // (a tela diz "se quiser continuar, é só pagar"). Assinatura antiga da Pagar.me cancelada não volta sozinha.
+      ...(s.assinaturaCancelada && !s.pagarme?.subscriptionId && !s.bloqueadoPelaDiretoria ? { assinaturaCancelada: false } : {}),
       atualizadoEm: FieldValue.serverTimestamp(),
     };
     if (primeiraAdesao) {

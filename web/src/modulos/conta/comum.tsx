@@ -45,7 +45,7 @@ export type Situacao = "em_dia" | "vencida" | "pendente" | "analise" | "suspenso
 const DIA = 86_400_000;
 
 /** Situação prática da carteirinha (considera a validade, não só o status gravado). */
-export function situacaoDoSocio(s: Socio): Situacao {
+export function situacaoDoSocio(s: Pick<Socio, "status" | "validoAte">): Situacao {
   const validade = paraData(s.validoAte)?.getTime() ?? 0;
   switch (s.status) {
     case "pendente_pagamento":

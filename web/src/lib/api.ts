@@ -149,6 +149,8 @@ export const api = {
     {
       tid: string;
       eventoId: string;
+      /** Mesmo id nas tentativas da mesma compra: resposta perdida não vira cobrança dupla. */
+      idCompra?: string;
       metodo: "pix" | "cartao";
       comprador: DadosPessoa;
       titulares: { nome: string; cpf: string }[];
@@ -230,14 +232,14 @@ export const api = {
   obterWebhookUrl: chamar<{ tid: string }, { webhookUrl: string | null }>("obterWebhookUrl"),
   convidarMembro: chamar<
     { tid: string; email: string; nome: string; papel: Papel; sedeId?: string },
-    { uid: string; contaNova: boolean }
+    { uid: string; contaNova: boolean; nuncaEntrou?: boolean }
   >("convidarMembro"),
   atualizarMembro: chamar<
     { tid: string; uid: string; papel?: Papel; sedeId?: string | null; ativo?: boolean },
     { ok: boolean }
   >("atualizarMembro"),
   validarEntrada: chamar<
-    { tid: string; eventoId: string; qr?: string; cpf?: string; codigo?: string; confirmar?: boolean },
+    { tid: string; eventoId: string; qr?: string; cpf?: string; codigo?: string; confirmar?: boolean; leituraId?: string },
     {
       resultado: "liberado" | "ja_usado" | "invalido" | "cancelado" | "outro_evento" | "nao_encontrado";
       mensagem: string;

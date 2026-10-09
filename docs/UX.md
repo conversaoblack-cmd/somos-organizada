@@ -47,17 +47,23 @@ com tecnologia, celular simples e internet pré-paga.
    reduzir fotos antes de subir).
 10. **Contraste AA** (4,5:1 em texto) com qualquer cor que a torcida escolher: o tema corrige cor ilegível.
 11. **Verde só para "deu certo"** (pago, em dia, entrada liberada); a marca é azul e amarelo; dentro da torcida, as cores dela.
+12. **Portaria sem internet**: carteirinha e ingressos abertos uma vez aparecem sem internet, com o aviso
+    "Sem internet — mostrando ... salvos às HH:MM". O sistema abre do aparelho (service worker gerado no build a partir de
+    `web/scripts/sw-modelo.js`; a página inicial fica de fora) e o QR fica guardado só no aparelho (`web/src/lib/offline.ts`),
+    apagado ao sair da conta. Tela nova que mostra QR: entra em `TELAS_SEM_INTERNET` (`web/vite.config.ts`) e guarda o que
+    mostra. Sem nada salvo, a mensagem ensina: "Abra o ingresso uma vez com internet para ele ficar salvo no celular".
 
 ## Próximas melhorias (uma por vez, nesta ordem)
 
-1. **Ingresso salvo no celular**: botão "Salvar ingresso" (imagem com QR, nome e evento) para mostrar na portaria
-   sem internet.
-2. **Entrar sem senha**: código de acesso por WhatsApp ou e-mail para quem esqueceu a senha (exige avaliar custo
+Feito: **ingresso salvo no celular** (botão "Salvar ingresso (imagem)" com QR, nome, evento, data e código, e o
+sistema abrindo sem internet; ver regra 12).
+
+1. **Entrar sem senha**: código de acesso por WhatsApp ou e-mail para quem esqueceu a senha (exige avaliar custo
    da API do WhatsApp).
-3. **Site ainda mais único**: escolha de fonte do título (3 opções), galeria de fotos, história da torcida, redes sociais
+2. **Site ainda mais único**: escolha de fonte do título (3 opções), galeria de fotos, história da torcida, redes sociais
    e contagem regressiva para o próximo evento.
-4. **Modelos de evento** no painel (caravana, festa, jogo) com campos já preenchidos.
-5. **Painel em 1 toque no celular**: atalhos para "Novo evento", "Divulgar link" e "Vendas de hoje".
+3. **Modelos de evento** no painel (caravana, festa, jogo) com campos já preenchidos.
+4. **Painel em 1 toque no celular**: atalhos para "Novo evento", "Divulgar link" e "Vendas de hoje".
 
 ## Skills de UX/UI (instaladas no projeto)
 

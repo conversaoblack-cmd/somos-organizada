@@ -38,7 +38,8 @@ function ConteudoPedido({ tentarDeNovo }: { tentarDeNovo: () => void }) {
   if (usuario && (p.semConexao || (p.erro && ehErroDeConexao(p.erro)))) {
     return (
       <SemConexao tentarDeNovo={tentarDeNovo}>
-        Não conseguimos abrir seu pedido agora. Confira a internet e toque em “Tentar de novo”. Se você já pagou, o pagamento não se perde.
+        Não conseguimos abrir seu pedido agora e ele ainda não está salvo neste celular. Confira a internet e toque em “Tentar de novo”: depois de
+        aberto uma vez com internet, o pedido e os ingressos ficam salvos no celular. Se você já pagou, o pagamento não se perde.
       </SemConexao>
     );
   }
@@ -65,7 +66,7 @@ function ConteudoPedido({ tentarDeNovo }: { tentarDeNovo: () => void }) {
 
   const ped = p.dados;
   if (ped.status === "aguardando" && ped.pix) return <TelaPix pedido={ped} />;
-  if (ped.status === "aguardando" || ped.status === "criando") return <Carregando texto="Confirmando pagamento…" />;
+  if (ped.status === "aguardando" || ped.status === "criando") return <Conferindo pedido={ped} />;
   if (ped.status === "pago") return ped.tipo === "ingresso" ? <IngressosEmitidos pedido={ped} /> : <SocioConfirmado />;
   if (ped.status === "estornado") return <PedidoEstornado pedido={ped} />;
   return (
@@ -74,12 +75,62 @@ function ConteudoPedido({ tentarDeNovo }: { tentarDeNovo: () => void }) {
         <Icone nome="xCirculo" className="size-9" />
       </div>
       <div>
-        <h1 className="text-2xl font-bold">{ped.status === "expirado" ? "O prazo do Pix acabou" : "Pagamento não aprovado"}</h1>
+        <h1 className="text-2xl font-bold">
+          {ped.status === "expirado" ? (ped.metodo === "cartao" ? "O pagamento não foi concluído" : "O prazo do Pix acabou") : "Pagamento não aprovado"}
+        </h1>
         <p className="text-texto-2 mt-2">{ped.motivo || "Nenhum valor foi cobrado."}</p>
       </div>
       <BotaoLink to={ped.tipo === "ingresso" && ped.eventoId ? `/${torcida.slug}/evento/${ped.eventoId}` : `/${torcida.slug}/associar`} tamanho="lg">
         Tentar novamente
       </BotaoLink>
+    </div>
+  );
+}
+
+/**
+ * Pagamento sendo conferido: cartão em análise pelo banco, ou a criação na Pagar.me ficou sem resposta (internet).
+ * Nunca fica só girando: explica, confere sozinho de tempos em tempos e tem o botão para conferir agora.
+ */
+function Conferindo({ pedido }: { pedido: Pedido & { id: string } }) {
+  const { tid } = useTorcida();
+  const avisar = useToast();
+  const [verificando, setVerificando] = useState(false);
+  async function verificar(manual: boolean) {
+    if (manual) setVerificando(true);
+    try {
+      const r = await api.verificarPedido({ tid, pedidoId: pedido.id });
+      if (manual && r.status === "aguardando") avisar("Ainda em análise. Assim que o banco responder, esta tela muda sozinha.", "info");
+    } catch (e) {
+      if (manual) avisar(mensagemDeErro(e), "erro");
+    } finally {
+      if (manual) setVerificando(false);
+    }
+  }
+  // Confere sozinho (o aviso automático da Pagar.me pode atrasar): aos 15 s e depois a cada 45 s, por 10 minutos
+  useEffect(() => {
+    let n = 0;
+    const primeiro = setTimeout(() => void verificar(false), 15_000);
+    const t = setInterval(() => {
+      if (++n > 13) return clearInterval(t);
+      void verificar(false);
+    }, 45_000);
+    return () => {
+      clearTimeout(primeiro);
+      clearInterval(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedido.id]);
+  return (
+    <div className="text-center py-10 space-y-5 animate-surgir">
+      <Carregando texto="Confirmando pagamento…" />
+      <p className="text-texto-2 max-w-sm mx-auto">
+        {pedido.metodo === "cartao"
+          ? "O banco está conferindo o cartão. Pode levar alguns minutos. Não pague de novo: esta tela muda sozinha quando ele responder."
+          : "Estamos confirmando o pagamento com o banco. Não pague de novo: esta tela muda sozinha."}
+      </p>
+      <Botao variante="contorno" icone="atualizar" carregando={verificando} onClick={() => void verificar(true)}>
+        Verificar pagamento
+      </Botao>
     </div>
   );
 }
@@ -132,8 +183,14 @@ function TelaPix({ pedido }: { pedido: Pedido & { id: string } }) {
   const demo = torcida.pagamentos?.ambiente === "demo";
   const { restante, texto } = useContagem(pedido.pix!.expiraEm.toMillis());
 
+  const [verCodigo, setVerCodigo] = useState(false);
   async function copiar() {
     if (await copiarTexto(pedido.pix!.qrCode)) avisar("Código Pix copiado. Cole no app do seu banco.", "sucesso");
+    else {
+      // Navegador de dentro de outro app (Instagram, WhatsApp) às vezes bloqueia copiar: mostra o código para copiar à mão
+      setVerCodigo(true);
+      avisar("Não deu para copiar sozinho. Toque e segure o código abaixo para copiar.", "info");
+    }
   }
   async function jaPaguei() {
     setVerificando(true);
@@ -199,6 +256,21 @@ function TelaPix({ pedido }: { pedido: Pedido & { id: string } }) {
           Copiar código Pix
         </Botao>
         <p className="hidden pointer-coarse:block pointer-coarse:order-4 text-xs text-texto-3 -mt-2">Ou escaneie o QR Code de outro aparelho.</p>
+        <div className="w-full pointer-coarse:order-5">
+          {verCodigo ? (
+            <textarea
+              readOnly
+              value={pedido.pix!.qrCode}
+              onFocus={(e) => e.currentTarget.select()}
+              aria-label="Código Pix copia e cola"
+              className="w-full h-24 rounded-xl bg-superficie-2 border border-linha p-3 font-mono text-xs break-all"
+            />
+          ) : (
+            <button type="button" className="w-full min-h-11 text-sm text-texto-2 underline" onClick={() => setVerCodigo(true)}>
+              Ver o código Pix
+            </button>
+          )}
+        </div>
       </Cartao>
 
       <ol className="space-y-3">
@@ -297,7 +369,7 @@ function IngressosEmitidos({ pedido }: { pedido: Pedido & { id: string } }) {
           }
         >
           {erroLeitura === "conexao"
-            ? "Seus ingressos estão garantidos. Confira a internet e toque em “Tentar de novo”."
+            ? "Seus ingressos estão garantidos. Abra os ingressos uma vez com internet para eles ficarem salvos no celular: confira a conexão e toque em “Tentar de novo”."
             : "Seus ingressos estão garantidos. Abra o link dos ingressos (botões acima) ou entre na sua conta."}
         </Aviso>
       ) : !bilhetes ? (

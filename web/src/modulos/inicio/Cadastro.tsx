@@ -262,7 +262,7 @@ function traduzirErroConta(e: unknown): string {
  * "Confirme seu e-mail" (antes de este envio terminar): ela espera este em vez de pedir outro e bater no
  * limite de reenvio ("Muitos envios seguidos").
  */
-let envioDaCriacao: { email: string; promessa: Promise<void> } | null = null;
+let envioDaCriacao: { email: string; promessa: Promise<boolean> } | null = null;
 
 function PassoConta() {
   const [modo, setModo] = useState<"criar" | "entrar">("criar");
@@ -294,14 +294,20 @@ function PassoConta() {
         await updateProfile(cred.user, { displayName: nome.trim() }).catch(() => undefined);
         try {
           await enviarConfirmacaoEmail(cred.user, `${location.origin}/cadastro`);
-          sessionStorage.setItem(`somos-verificacao:${cred.user.uid}`, String(Date.now()));
+          try {
+            sessionStorage.setItem(`somos-verificacao:${cred.user.uid}`, String(Date.now()));
+          } catch {
+            /* sem armazenamento */
+          }
+          return true;
         } catch {
-          /* o passo seguinte permite reenviar */
+          return false; // o passo seguinte avisa e deixa reenviar na hora
         }
       })();
-      envioDaCriacao = { email: email.trim().toLowerCase(), promessa: criacao.catch(() => undefined) };
+      envioDaCriacao = { email: email.trim().toLowerCase(), promessa: criacao.catch(() => false) };
       await criacao;
     } catch (err) {
+      envioDaCriacao = null; // a conta não foi criada aqui: nada foi enviado
       if (String((err as { code?: string }).code ?? "").includes("email-already-in-use")) {
         setJaExiste(email.trim());
         setModo("entrar");
@@ -416,9 +422,11 @@ function PassoVerificar({ usuario, aoVerificar }: { usuario: User; aoVerificar: 
       // conta acabou de ser criada: o envio já está em andamento (ou terminou)
       const emAndamento = envioDaCriacao.promessa;
       setAviso({ tom: "info", texto: `Enviando o link para ${usuario.email}…` });
-      void emAndamento.then(() => {
-        setEspera(60);
-        setAviso({ tom: "sucesso", texto: `Enviamos o link para ${usuario.email}. Confira também o spam e as promoções.` });
+      void emAndamento.then((enviou) => {
+        if (enviou) {
+          setEspera(60);
+          setAviso({ tom: "sucesso", texto: `Enviamos o link para ${usuario.email}. Confira também o spam e as promoções.` });
+        } else setAviso({ tom: "alerta", texto: "Não conseguimos enviar o e-mail agora. Toque em “Reenviar e-mail”." });
       });
     } else if (!enviado) void enviar();
     else setAviso({ tom: "info", texto: `Enviamos um link para ${usuario.email}.` });
@@ -646,11 +654,14 @@ function FormularioTorcida({ usuario, inicial }: { usuario: User; inicial: Rascu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esperandoSlug, slug.fase]);
 
+  const cepPedido = useRef("");
   async function aoMudarCep(v: string) {
     mudar("cep", v);
-    if (so(v).length !== 8) return;
+    cepPedido.current = so(v);
+    if (so(v).length !== 8) return setBuscandoCep(false);
     setBuscandoCep(true);
     const r = await buscarCep(v);
+    if (cepPedido.current !== so(v)) return; // a pessoa já trocou o CEP: esta resposta é velha
     setBuscandoCep(false);
     if (r)
       setD((x) => ({

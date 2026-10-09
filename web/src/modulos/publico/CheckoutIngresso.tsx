@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { esquecer, useLembrado } from "@/hooks/lembrado";
 import { useNavigate } from "react-router";
-import { createUserWithEmailAndPassword, EmailAuthProvider, linkWithCredential, signInAnonymously, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, EmailAuthProvider, linkWithCredential, signInAnonymously, signOut, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { api, ehErroDeConexao, mensagemDeErro } from "@/lib/api";
 import type { ComId, Evento, Sede } from "@/lib/tipos";
@@ -23,6 +23,14 @@ interface Titular {
 const ETAPAS = ["Ingressos", "Titulares", "Pagamento"];
 
 /** Checkout faseado de ingressos. Mostrado dentro da página do evento. */
+/** Id de documento do Firestore (20 letras e números) para a compra, gerado no aparelho. */
+function novoIdCompra(): string {
+  const letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = new Uint8Array(20);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => letras[b % letras.length]).join("");
+}
+
 export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }) {
   const { tid, torcida } = useTorcida();
   const navegar = useNavigate();
@@ -39,8 +47,15 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
     titulares: [{ nome: "", cpf: "" }] as Titular[],
     comprador: { nome: "", email: "", cpf: "", telefone: "" },
     metodo: (torcida.pagamentos.pix ? "pix" : "cartao") as "pix" | "cartao",
+    idCompra: novoIdCompra(),
   });
   const { qtd, titulares, comprador, metodo } = lembrado;
+  // Mesmo id em todas as tentativas desta compra: se a resposta se perder (internet ruim) e a pessoa tocar
+  // em pagar de novo, o servidor devolve o mesmo pedido em vez de cobrar duas vezes.
+  const idCompra = lembrado.idCompra ?? "";
+  useEffect(() => {
+    if (!lembrado.idCompra) setLembrado((l) => ({ ...l, idCompra: l.idCompra || novoIdCompra() })); // compra guardada antes desta versão
+  }, [lembrado.idCompra, setLembrado]);
   // o passo de pagamento exige conta: ao recarregar, só volta para ele depois de confirmar o login
   const [etapa, setEtapaEstado] = useState(Math.min(lembrado.etapa, 1));
   const setEtapa = (n: number) => {
@@ -83,7 +98,9 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
     };
   }, [tid, evento.id, uidLogado, tentativaCot]);
 
-  const socioPreco = cot?.socio && !cot.socio.jaUsou ? cot.socio : null;
+  /** Sócio comprando só para outras pessoas: o 1º ingresso deixa de ser o dele (sem preço de sócio). */
+  const [naoEParaMim, setNaoEParaMim] = useState(false);
+  const socioPreco = cot?.socio && !cot.socio.jaUsou && !naoEParaMim ? cot.socio : null;
 
   // Conta logada sem ficha de sócio: pelo menos o e-mail já vem preenchido
   useEffect(() => {
@@ -120,6 +137,8 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
   const totalBase = itens.reduce((s, i) => s + i.base, 0);
   const totalTaxa = itens.reduce((s, i) => s + i.taxa, 0);
   const total = totalBase + totalTaxa;
+  /** Só o ingresso do sócio, num evento em que sócio não paga: nada a cobrar. */
+  const gratis = total === 0 && qtd > 0;
 
   const disp = disponibilidade(evento);
   const maxQtd = Math.max(1, Math.min(cot?.limitePorPedido ?? 6, cot?.disponiveis ?? 99));
@@ -185,7 +204,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
 
   async function pagar() {
     setErroEnvio(null);
-    if (metodo === "cartao") {
+    if (metodo === "cartao" && !gratis) {
       const e = validarCartao(cartao);
       setErros(e);
       if (Object.keys(e).length) return rolarParaErro();
@@ -193,11 +212,12 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
     setEnviando(true);
     try {
       if (!auth.currentUser) await signInAnonymously(auth);
-      const dadosCartao = metodo === "cartao" ? await prepararCartao(torcida.pagamentos.chavePublica!, cartao) : undefined;
+      const dadosCartao = metodo === "cartao" && !gratis ? await prepararCartao(torcida.pagamentos.chavePublica!, cartao) : undefined;
       const r = await api.criarPedidoIngresso({
         tid,
         eventoId: evento.id,
-        metodo,
+        idCompra: idCompra || undefined,
+        metodo: gratis ? "pix" : metodo,
         comprador: { nome: comprador.nome.trim(), email: comprador.email.trim(), cpf: soDigitos(comprador.cpf), telefone: soDigitos(comprador.telefone) },
         titulares: titulares.map((t) => ({ nome: t.nome.trim(), cpf: soDigitos(t.cpf) })),
         cartao: dadosCartao,
@@ -206,6 +226,9 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
       navegar(`/${torcida.slug}/pedido/${r.pedidoId}`);
     } catch (e) {
       setErroEnvio(mensagemDeErro(e));
+      // Recusa de verdade (cartão negado, dado inválido): a próxima tentativa é outra compra.
+      // Falha de conexão: mantém o id, porque o pedido pode ter sido criado.
+      if (!ehErroDeConexao(e)) setLembrado((l) => ({ ...l, idCompra: novoIdCompra() }));
     } finally {
       setEnviando(false);
     }
@@ -261,6 +284,21 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
             <Aviso tom="alerta" titulo="Sua associação não está em dia">
               Regularize a mensalidade na sua conta para pagar {moeda(cot.valorSocio)}.
             </Aviso>
+          ) : uidLogado && !ficha && !naoEParaMim ? (
+            // Já entrou, mas com uma conta que não é de sócio: abrir o "Entrar" não faria nada (fecha na hora)
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-dashed border-linha-forte p-4 text-sm">
+              <Icone nome="escudo" className="size-6 text-primaria-texto shrink-0" />
+              <span className="flex-1 min-w-0 text-texto-2">
+                Você entrou como <strong className="text-texto break-all">{usuario?.email}</strong>, que não é conta de sócio.
+              </span>
+              <button
+                type="button"
+                className="min-h-11 font-semibold text-primaria-texto"
+                onClick={() => void signOut(auth).then(() => setLoginAberto(true))}
+              >
+                Trocar de conta
+              </button>
+            </div>
           ) : (
             <button
               type="button"
@@ -311,6 +349,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
                 </legend>
                 <Campo
                   rotulo="Nome completo do titular"
+                  maxLength={64}
                   value={t.nome}
                   disabled={travado}
                   onChange={(v) => setTitulares((l) => l.map((x, j) => (j === i ? { ...x, nome: v } : x)))}
@@ -326,6 +365,20 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
                   erro={erros[`t${i}cpf`]}
                   dica={travado ? "Preço de sócio vale para o ingresso no seu nome." : undefined}
                 />
+                {i === 0 && cot.socio && !cot.socio.jaUsou && (
+                  <button
+                    type="button"
+                    className="min-h-11 text-sm font-semibold text-primaria-texto"
+                    onClick={() => {
+                      const passa = !naoEParaMim;
+                      setNaoEParaMim(passa);
+                      // deixa o 1º ingresso livre para outra pessoa, ou volta a ser o do sócio (o efeito acima preenche)
+                      if (passa) setTitulares((l) => l.map((x, j) => (j === 0 ? { nome: "", cpf: "" } : x)));
+                    }}
+                  >
+                    {naoEParaMim ? "Usar este ingresso para mim (preço de sócio)" : "Este ingresso não é para mim"}
+                  </button>
+                )}
               </fieldset>
             );
           })}
@@ -346,7 +399,7 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
                 Já tem conta? <span className="font-semibold text-primaria-texto">Entrar</span>
               </button>
             )}
-            <Campo rotulo="Nome" value={comprador.nome} onChange={(v) => setComprador({ ...comprador, nome: v })} erro={erros.cnome} autoComplete="name" />
+            <Campo rotulo="Nome" value={comprador.nome} onChange={(v) => setComprador({ ...comprador, nome: v })} erro={erros.cnome} autoComplete="name" maxLength={64} />
             <Campo
               rotulo="E-mail"
               type="email"
@@ -354,12 +407,13 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
               onChange={(v) => setComprador({ ...comprador, email: v })}
               erro={erros.cemail}
               autoComplete="email"
+              maxLength={120}
               disabled={!!uidLogado && !!usuario?.email && comprador.email === usuario.email}
               dica={uidLogado ? "Os ingressos ficam na sua conta." : "Será o login da sua conta."}
             />
             <div className="grid sm:grid-cols-2 gap-3 [&>*]:min-w-0">
               <Campo rotulo="CPF" mascara="cpf" value={comprador.cpf} onChange={(v) => setComprador({ ...comprador, cpf: v })} erro={erros.ccpf} />
-              <Campo rotulo="Celular (WhatsApp)" mascara="telefone" value={comprador.telefone} onChange={(v) => setComprador({ ...comprador, telefone: v })} erro={erros.ctel} autoComplete="tel" />
+              <Campo rotulo="Celular (WhatsApp)" mascara="telefone" value={comprador.telefone} onChange={(v) => setComprador({ ...comprador, telefone: v })} erro={erros.ctel} autoComplete="tel-national" />
             </div>
             {!uidLogado && (
               <Campo
@@ -388,6 +442,11 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
 
       {etapa === 2 && (
         <div className="space-y-5 animate-surgir">
+          {gratis ? (
+            <Aviso tom="info" titulo="Sócio em dia não paga este evento">
+              Confirme abaixo e o ingresso aparece na hora na sua conta, com o QR Code para a portaria.
+            </Aviso>
+          ) : (
           <OpcoesCartao
             nome="Forma de pagamento"
             valor={metodo}
@@ -399,7 +458,8 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
               ...(torcida.pagamentos.cartao ? [{ valor: "cartao" as const, titulo: "Cartão de crédito", descricao: "À vista", icone: "cartao" as const }] : []),
             ]}
           />
-          {metodo === "cartao" && <FormCartao valor={cartao} onChange={setCartao} erros={erros} />}
+          )}
+          {metodo === "cartao" && !gratis && <FormCartao valor={cartao} onChange={setCartao} erros={erros} />}
 
           <div className="rounded-2xl bg-superficie-2 p-4 space-y-2">
             <p className="font-semibold">{evento.nome}</p>
@@ -425,11 +485,11 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
               tamanho="lg"
               className="min-w-0 px-4 sm:px-7 whitespace-normal leading-tight text-center"
               carregando={enviando}
-              disabled={metodo === "cartao" && !!cartao.buscandoCep}
-              icone={metodo === "pix" ? "pix" : "cadeado"}
+              disabled={metodo === "cartao" && !gratis && !!cartao.buscandoCep}
+              icone={gratis ? "ingresso" : metodo === "pix" ? "pix" : "cadeado"}
               onClick={pagar}
             >
-              {metodo === "pix" ? "Gerar Pix" : "Pagar"} {moeda(total)}
+              {gratis ? "Confirmar meu ingresso" : `${metodo === "pix" ? "Gerar Pix" : "Pagar"} ${moeda(total)}`}
             </Botao>
           </div>
           {torcida.pagamentos.ambiente === "teste" && (

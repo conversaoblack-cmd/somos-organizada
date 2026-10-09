@@ -28,10 +28,10 @@ async function enviarConvite(args: { tid: string; slug: string; nome: string; em
   const { tid, slug, nome, email, papel, sedeId } = args;
   const r = await api.convidarMembro({ tid, nome, email, papel, ...(papel !== "diretoria" && sedeId ? { sedeId } : {}) });
   const painel = `${location.origin}/${slug}/admin`;
-  const emailEnviado = r.contaNova
-    ? await enviarRedefinicaoSenha(email, painel).then(() => true).catch(() => false)
-    : false;
-  return { nome, email, painel, contaNova: r.contaNova, emailEnviado };
+  // Conta nova, ou convidado antes que nunca criou a senha: manda o link de criar senha (de novo)
+  const precisaSenha = r.contaNova || !!r.nuncaEntrou;
+  const emailEnviado = precisaSenha ? await enviarRedefinicaoSenha(email, painel).then(() => true).catch(() => false) : false;
+  return { nome, email, painel, contaNova: precisaSenha, emailEnviado };
 }
 
 const DESCRICAO_PAPEL: Record<Papel, string> = {
@@ -253,7 +253,7 @@ function ModalConvite({ aberto, fechar, sucesso }: { aberto: boolean; fechar: ()
             rotulo={papel === "subsede" ? "Subsede" : "Sede (opcional)"}
             value={sedeId}
             onChange={(e) => setSedeId(e.target.value)}
-            dica={papel === "portaria" ? "A portaria valida ingressos de todos os eventos." : undefined}
+            dica={papel === "portaria" ? (sedeId ? "Esta portaria só confere os eventos desta sede." : "Em “Todas”, a portaria confere os eventos de todas as sedes.") : undefined}
           >
             <option value="">{papel === "subsede" ? "Escolha…" : "Todas"}</option>
             {(papel === "subsede" ? subsedes : sedes).map((s) => (

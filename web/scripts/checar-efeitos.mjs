@@ -24,8 +24,26 @@ for (const f of arquivos) {
     if (/\buse(Layout|Insertion)?Effect\(\s*async\b/.test(linha)) ruins.push(`${f.replace(raiz, "src")}:${i + 1}  efeito async  ${linha.trim()}`);
   });
 }
+// APIs que não existem no iPhone com iOS 15, no Chrome/Samsung Internet antigos (Android barato) ou que mudam
+// de comportamento: quebram só no aparelho da pessoa. Use a alternativa indicada.
+const PROIBIDAS = [
+  [/AbortSignal\.timeout\(/, "AbortSignal.timeout (iOS 15): use prazo() de lib/servicos"],
+  [/\bstructuredClone\(/, "structuredClone (iOS 15.3-): copie com spread/JSON"],
+  [/\brequestIdleCallback\(/, "requestIdleCallback (não existe no Safari): use setTimeout"],
+  [/\.(findLast|findLastIndex|toSorted|toReversed|toSpliced)\(/, "array.findLast/toSorted (iOS 15): use slice().sort()/reverse()"],
+  [/\bObject\.hasOwn\(/, "Object.hasOwn (iOS 15.3-): use Object.prototype.hasOwnProperty.call"],
+  [/\bcrypto\.randomUUID\(/, "crypto.randomUUID (iOS 15.3-): use crypto.getRandomValues"],
+  [/\.at\(-?\d/, "array.at() (iOS 15.3-): use [i] / [arr.length - 1]"],
+];
+for (const f of arquivos) {
+  readFileSync(f, "utf8").split("\n").forEach((linha, i) => {
+    if (/^\s*(\/\/|\*)/.test(linha)) return;
+    for (const [re, motivo] of PROIBIDAS) if (re.test(linha) && !linha.includes("compatibilidade-ok")) ruins.push(`${f.replace(raiz, "src")}:${i + 1}  ${motivo}`);
+  });
+}
+
 if (ruins.length) {
-  console.error("Efeitos que devolvem valor ao React (use chaves { }):\n" + ruins.join("\n"));
+  console.error("Código que quebra só no aparelho da pessoa:\n" + ruins.join("\n"));
   process.exit(1);
 }
-console.log(`checar-efeitos: ok (${arquivos.length} arquivos)`);
+console.log(`checar-efeitos: ok (${arquivos.length} arquivos: efeitos e compatibilidade com iOS 15 / Android antigo)`);

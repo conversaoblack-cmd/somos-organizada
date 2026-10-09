@@ -735,8 +735,10 @@ test("17. conta do torcedor: ingresso no CPF do sócio aparece no painel dele (s
   assert.deepEqual(await visitante.chamar("entrarComCpf", { cpf: "111.444.777-35", senha: SENHA }), { email: "amigo@x.test" });
   assert.deepEqual(await visitante.chamar("entrarComCpf", { cpf: "86288366757", senha: SENHA }), { email: "socio@furia.test" });
   await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "12345678909", senha: SENHA }), /incorretos/); // CPF sem conta: mesma resposta
-  // 5 tentativas por CPF a cada 15 min, contando também os acertos (o contador não zera no acerto)
-  for (let i = 0; i < 4; i++) await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: "errada-123" }), /incorretos/);
+  // 5 tentativas erradas por CPF a cada 15 min. O acerto não gasta tentativa (quem entra em dois celulares não
+  // fica bloqueado), mas também não zera o contador (ele é do CPF, não de uma conta)
+  for (let i = 0; i < 3; i++) assert.deepEqual(await visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: SENHA }), { email: "amigo@x.test" });
+  for (let i = 0; i < 5; i++) await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: "errada-123" }), /incorretos/);
   await assert.rejects(visitante.chamar("entrarComCpf", { cpf: "11144477735", senha: SENHA }), /Muitas tentativas/);
 
   // "Esqueci minha senha" com CPF: manda o link ao e-mail da conta e mostra só o e-mail mascarado
@@ -839,4 +841,69 @@ test("13. Storage: sócio envia a própria foto; estranhos são barrados", async
   // cruzado Storage→Firestore do emulador, que não funciona em todo ambiente (ex.: sem IPv6).
   // Rode com STORAGE_CRUZADO=1 onde funcionar; em produção é validado no primeiro upload.
   if (process.env.STORAGE_CRUZADO === "1") await ctx.dir.enviar(`torcidas/${ctx.tid}/publico/marca/banner.png`);
+});
+
+test("19. compra repetida não cobra duas vezes; sócio grátis sai sem cobrança; a mesma leitura da portaria não vira 'já utilizado'", async () => {
+  const { tid, dir } = ctx.demo;
+  const t = (await aDb.doc(`torcidas/${tid}`).get()).data();
+  const ev = await addDoc(collection(dir.db, `torcidas/${tid}/eventos`), {
+    nome: "Festa sócio grátis", sedeId: t.sedePrincipalId, data: Timestamp.fromMillis(Date.now() + 9 * 86400_000),
+    valorSocio: 0, valorPublico: 2500, vendidos: 0, reservados: 0, status: "rascunho",
+  });
+  await dir.chamar("publicarEvento", { tid, eventoId: ev.id });
+  const reservados = async () => (await aDb.doc(`torcidas/${tid}/eventos/${ev.id}`).get()).get("reservados") ?? 0;
+
+  // 1) a mesma compra enviada duas vezes (resposta perdida e "pagar" de novo): um pedido só, uma reserva só
+  const tor = navegador("repete-compra");
+  await signInAnonymously(tor.auth);
+  const idCompra = "AbCdEfGhIjKlMnOpQr12";
+  const compra = {
+    tid, eventoId: ev.id, metodo: "pix", idCompra,
+    comprador: { nome: "Torcedor Repetido", email: "rep@x.test", cpf: "11144477735", telefone: "71999990011" },
+    titulares: [{ nome: "Torcedor Repetido", cpf: "11144477735" }],
+  };
+  const a = await tor.chamar("criarPedidoIngresso", compra);
+  const b = await tor.chamar("criarPedidoIngresso", compra);
+  assert.equal(a.pedidoId, idCompra);
+  assert.equal(b.pedidoId, a.pedidoId);
+  assert.equal(b.status, "aguardando");
+  assert.equal(await reservados(), 1);
+  // outra pessoa não "pega" o pedido de alguém pelo id
+  const intruso = navegador("intruso-compra");
+  await signInAnonymously(intruso.auth);
+  await assert.rejects(intruso.chamar("criarPedidoIngresso", compra), /já foi registrada/);
+  // tentativa encerrada (recusada/expirada): o aparelho precisa gerar outro id
+  await aDb.doc(`torcidas/${tid}/pedidos/${idCompra}`).update({ status: "falhou" });
+  await assert.rejects(tor.chamar("criarPedidoIngresso", compra), /tentativa anterior/);
+
+  // 2) sócio em dia num evento em que sócio não paga: o ingresso dele sai na hora, sem Pagar.me
+  const s = navegador("socio-gratis");
+  await createUserWithEmailAndPassword(s.auth, "gratis@furia.test", SENHA);
+  await s.chamar("aderirSocio", { tid, planoId: "mensal", sedeId: t.sedePrincipalId, metodo: "cartao", cartao: { token: "tok_demo_aprovado_0010" },
+    dados: { nome: "Sócio Grátis", cpf: "39053344705", telefone: "71977770011", nascimento: "1995-05-05",
+      endereco: { cep: "40000000", logradouro: "Rua G", numero: "2", bairro: "Centro", cidade: "Salvador", uf: "BA" } } });
+  assert.equal((await aDb.doc(`torcidas/${tid}/socios/${s.auth.currentUser.uid}`).get()).get("status"), "ativo");
+  const gratis = await s.chamar("criarPedidoIngresso", {
+    tid, eventoId: ev.id, metodo: "pix",
+    comprador: { nome: "Sócio Grátis", email: "gratis@furia.test", cpf: "39053344705", telefone: "71977770011" },
+    titulares: [{ nome: "Sócio Grátis", cpf: "39053344705" }],
+  });
+  assert.equal(gratis.status, "pago");
+  const pg = (await aDb.doc(`torcidas/${tid}/pedidos/${gratis.pedidoId}`).get()).data();
+  assert.equal(pg.total, 0);
+  assert.equal(pg.pagarme ?? null, null); // nada foi à Pagar.me
+  const [ingresso] = (await aDb.collection(`torcidas/${tid}/ingressos`).where("pedidoId", "==", gratis.pedidoId).get()).docs;
+  assert.equal(ingresso.get("tipo"), "socio");
+  assert.equal(ingresso.get("status"), "valido");
+
+  // 3) portaria: a resposta da baixa se perdeu e o porteiro tocou em "Tentar de novo" (mesma leitura) → "liberado"
+  const leituraId = "leitura-teste-123";
+  const r1 = await dir.chamar("validarEntrada", { tid, eventoId: ev.id, codigo: ingresso.get("codigo"), leituraId });
+  assert.equal(r1.resultado, "liberado");
+  const r2 = await dir.chamar("validarEntrada", { tid, eventoId: ev.id, codigo: ingresso.get("codigo"), leituraId });
+  assert.equal(r2.resultado, "liberado");
+  // outra leitura (outra pessoa tentando entrar com o mesmo ingresso) continua barrada
+  const r3 = await dir.chamar("validarEntrada", { tid, eventoId: ev.id, codigo: ingresso.get("codigo"), leituraId: "outra-leitura-456" });
+  assert.equal(r3.resultado, "ja_usado");
+  assert.equal((await aDb.doc(`torcidas/${tid}/eventos/${ev.id}`).get()).get("entradas"), 1);
 });

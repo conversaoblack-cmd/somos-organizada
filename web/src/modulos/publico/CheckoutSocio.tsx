@@ -29,8 +29,8 @@ import {
 import { useUsuario } from "@/hooks/dados";
 import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import { Login } from "@/componentes/Login";
-import { Aviso, Botao, BotaoLink, Campo, Carregando, Cartao, cx, Etapas, Icone, OpcoesCartao, Selecao, Selo, Vazio } from "@/ui";
-import { CabecalhoTorcida, LinhaValor, rolarParaErro, usePlanosAtivos, useSedes, useTrocaDeEtapa } from "./comum";
+import { Aviso, Botao, BotaoLink, Campo, Carregando, Cartao, cx, Etapas, Icone, OpcoesCartao, Selecao, Selo, Vazio, useToast } from "@/ui";
+import { CabecalhoTorcida, LinhaValor, rolarParaErro, SemConexao, usePlanosAtivos, useSedes, useTrocaDeEtapa } from "./comum";
 import { cartaoVazio, FormCartao, prepararCartao, validarCartao, type EstadoCartao } from "./FormCartao";
 
 const MSG_ACEITE = "Confirme que leu e aceita as regras da associação.";
@@ -113,6 +113,7 @@ export default function CheckoutSocio() {
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [concluido, setConcluido] = useState<string | null>(null);
+  const avisar = useToast();
   const inputFoto = useRef<HTMLInputElement>(null);
   const [buscandoCep, setBuscandoCep] = useState(false);
   const cepAtual = useRef("");
@@ -254,8 +255,14 @@ export default function CheckoutSocio() {
     try {
       let fotoPath: string | undefined;
       if (foto) {
-        fotoPath = `torcidas/${tid}/socios/${usuario.uid}/foto.jpg`;
-        await uploadBytes(ref(storage, fotoPath), foto.blob, { contentType: "image/jpeg" });
+        // Internet ruim não pode travar a adesão: a foto tem prazo e, se não subir, segue sem ela (dá para pôr depois)
+        const caminho = `torcidas/${tid}/socios/${usuario.uid}/foto.jpg`;
+        const subiu = await Promise.race([
+          uploadBytes(ref(storage, caminho), foto.blob, { contentType: "image/jpeg" }).then(() => true, () => false),
+          new Promise<false>((ok) => setTimeout(() => ok(false), 30_000)),
+        ]);
+        if (subiu) fotoPath = caminho;
+        else avisar("A foto não subiu (internet fraca). Seguimos sem ela: dá para colocar depois em Meus dados.", "info");
       }
       const dadosCartao = metodo === "cartao" ? await prepararCartao(torcida.pagamentos.chavePublica!, cartao) : undefined;
       const r = await api.aderirSocio({
@@ -288,6 +295,13 @@ export default function CheckoutSocio() {
 
   // ── Estados especiais ─────────────────────────────────
   if (planos.carregando || carregandoFicha) return <Moldura><Carregando /></Moldura>;
+  if (!planos.dados.length && (planos.semConexao || planos.erro)) {
+    return (
+      <Moldura>
+        <SemConexao tentarDeNovo={() => location.reload()}>Não conseguimos abrir os planos agora. Confira a internet e toque em “Tentar de novo”.</SemConexao>
+      </Moldura>
+    );
+  }
   if (!planos.dados.length || !moduloAtivo(torcida, "socios")) {
     return (
       <Moldura>
@@ -304,11 +318,15 @@ export default function CheckoutSocio() {
           <div className="mx-auto size-20 rounded-full bg-primaria/15 text-primaria-texto grid place-items-center">
             <Icone nome="escudo" className="size-10" />
           </div>
-          <h1 className="text-3xl font-bold">{concluido === "em_analise" ? "Pagamento aprovado!" : "Agora você é sócio!"}</h1>
+          <h1 className="text-3xl font-bold">
+            {concluido === "pendente_pagamento" ? "Pagamento em análise" : concluido === "em_analise" ? "Pagamento aprovado!" : "Agora você é sócio!"}
+          </h1>
           <p className="text-texto-2">
-            {concluido === "em_analise"
-              ? "Sua ficha está com a diretoria para aprovação. A cobrança automática já está ativa no seu cartão."
-              : "Sua carteirinha digital já está disponível. A mensalidade será cobrada automaticamente no cartão."}
+            {concluido === "pendente_pagamento"
+              ? "O banco ainda está conferindo o cartão. Assim que aprovar, a carteirinha aparece na sua conta (você também recebe um e-mail). Não precisa pagar de novo."
+              : concluido === "em_analise"
+                ? "Sua ficha está com a diretoria para aprovação. A cobrança automática já está ativa no seu cartão."
+                : "Sua carteirinha digital já está disponível. A mensalidade será cobrada automaticamente no cartão."}
           </p>
           <BotaoLink to={`/${torcida.slug}/socio`} tamanho="lg" iconeDireita="setaDireita">
             Ver minha carteirinha
@@ -404,8 +422,8 @@ export default function CheckoutSocio() {
                     <h2 className="text-xl font-bold">Crie seu acesso</h2>
                     <p className="text-sm text-texto-2">É com ele que você abre sua carteirinha e gerencia a assinatura.</p>
                   </div>
-                  <Campo rotulo="Nome completo" value={conta.nome} onChange={(v) => setConta({ ...conta, nome: v })} erro={erros.nome} autoComplete="name" />
-                  <Campo rotulo="E-mail" type="email" value={conta.email} onChange={(v) => setConta({ ...conta, email: v })} erro={erros.email} autoComplete="email" />
+                  <Campo rotulo="Nome completo" value={conta.nome} onChange={(v) => setConta({ ...conta, nome: v })} erro={erros.nome} autoComplete="name" maxLength={64} />
+                  <Campo rotulo="E-mail" type="email" value={conta.email} onChange={(v) => setConta({ ...conta, email: v })} erro={erros.email} autoComplete="email" maxLength={120} />
                   <Campo rotulo="Senha" type="password" value={conta.senha} onChange={(v) => setConta({ ...conta, senha: v })} erro={erros.senha} autoComplete="new-password" dica="Mínimo de 8 caracteres." />
                   {erro && <Aviso tom="perigo">{erro}</Aviso>}
                   <Botao largo tamanho="lg" carregando={ocupado} onClick={criarConta} iconeDireita="setaDireita">
@@ -452,12 +470,12 @@ export default function CheckoutSocio() {
                   </div>
                   <input ref={inputFoto} type="file" accept="image/*" className="hidden" onChange={(e) => escolherFoto(e.target.files?.[0])} />
                 </div>
-                <Campo rotulo="Nome completo" value={dados.nome} onChange={(v) => setDados({ ...dados, nome: v })} erro={erros.nome} autoComplete="name" />
+                <Campo rotulo="Nome completo" value={dados.nome} onChange={(v) => setDados({ ...dados, nome: v })} erro={erros.nome} autoComplete="name" maxLength={64} />
                 <div className="grid sm:grid-cols-2 gap-3 [&>*]:min-w-0">
                   <Campo rotulo="CPF" mascara="cpf" value={dados.cpf} onChange={(v) => setDados({ ...dados, cpf: v })} erro={erros.cpf} />
                   <Campo rotulo="Data de nascimento" type="date" autoComplete="bday" value={dados.nascimento} onChange={(v) => setDados({ ...dados, nascimento: v })} erro={erros.nascimento} />
                 </div>
-                <Campo rotulo="Celular (WhatsApp)" mascara="telefone" value={dados.telefone} onChange={(v) => setDados({ ...dados, telefone: v })} erro={erros.telefone} autoComplete="tel" />
+                <Campo rotulo="Celular (WhatsApp)" mascara="telefone" value={dados.telefone} onChange={(v) => setDados({ ...dados, telefone: v })} erro={erros.telefone} autoComplete="tel-national" />
               </section>
 
               <section className="space-y-4">
