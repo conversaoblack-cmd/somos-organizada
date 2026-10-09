@@ -15,7 +15,7 @@ import { caminhoEvento, CODIGO_EVENTO, linkEvento } from "@/lib/eventos";
 import { Aviso, BotaoLink, cx, Esqueleto, Icone, Selo, Vazio } from "@/ui";
 import { CabecalhoTorcida, RodapeTorcida, SemConexao, useSedes } from "./comum";
 import { disponibilidade } from "./CartaoEvento";
-import { CheckoutIngresso } from "./CheckoutIngresso";
+import { CheckoutIngresso, type TipoIngresso } from "./CheckoutIngresso";
 import { moduloAtivo } from "./Portao";
 
 /** Evento público pelo código curto ou, nos links antigos, pelo id. */
@@ -105,6 +105,9 @@ function ConteudoEvento({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }
 
   // Barra fixa de compra no celular, escondida quando o formulário já está visível
   const compra = useRef<HTMLElement>(null);
+  // Cartões Sócio/Público: tocar escolhe a opção no "Comprar ingresso" (e leva até ele no celular)
+  const [tipo, setTipo] = useState<TipoIngresso>("publico");
+  const [pedidoTipo, setPedidoTipo] = useState<{ tipo: TipoIngresso; n: number } | undefined>();
   const [compraVisivel, setCompraVisivel] = useState(false);
   useEffect(() => {
     const el = compra.current;
@@ -172,18 +175,52 @@ function ConteudoEvento({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }
           {/* A data já está no topo (título do evento); aqui só o local */}
           <InfoLinha icone="local" titulo={evento.local || "Local a confirmar"} sub={sede?.bairro} />
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-primaria/40 bg-primaria/10 p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-texto-2">Sócio</p>
-              <p className="text-2xl font-bold numeros mt-1">{evento.valorSocio ? moeda(evento.valorSocio) : "Grátis"}</p>
-              {evento.valorSocio > 0 && <p className="text-xs text-texto-3">+ {moeda(taxa(evento.valorSocio, pct))} de taxa</p>}
-            </div>
-            <div className="rounded-2xl border border-linha bg-superficie-2 p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-texto-2">Público</p>
-              <p className="text-2xl font-bold numeros mt-1">{moeda(evento.valorPublico)}</p>
-              <p className="text-xs text-texto-3">+ {moeda(taxa(evento.valorPublico, pct))} de taxa</p>
-            </div>
-          </div>
+          {(() => {
+            const escolhivel = !jaFoi && !d.esgotado && !vendaEncerrada && moduloAtivo(torcida, "socios") && evento.valorSocio < evento.valorPublico;
+            const cartao = (t: TipoIngresso) => {
+              const valor = t === "socio" ? evento.valorSocio : evento.valorPublico;
+              const conteudo = (
+                <>
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-texto-2">{t === "socio" ? "Sócio" : "Público"}</span>
+                    {escolhivel && (
+                      <span
+                        className={cx("size-4 shrink-0 rounded-full border-2", tipo === t ? "border-primaria bg-primaria shadow-[inset_0_0_0_3px_var(--color-fundo)]" : "border-linha-forte")}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </span>
+                  <span className="block text-2xl font-bold numeros mt-1">{valor ? moeda(valor) : "Grátis"}</span>
+                  {valor > 0 && <span className="block text-xs text-texto-3">+ {moeda(taxa(valor, pct))} de taxa</span>}
+                </>
+              );
+              if (!escolhivel) return <div key={t} className="rounded-2xl border border-linha bg-superficie-2 p-4">{conteudo}</div>;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  role="radio"
+                  aria-checked={tipo === t}
+                  onClick={() => {
+                    setPedidoTipo((p) => ({ tipo: t, n: (p?.n ?? 0) + 1 }));
+                    if (window.innerWidth < 1024) compra.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className={cx(
+                    "rounded-2xl border-2 p-4 text-left transition-colors",
+                    tipo === t ? "border-primaria bg-primaria/10" : "border-linha bg-superficie-2 hover:border-linha-forte",
+                  )}
+                >
+                  {conteudo}
+                </button>
+              );
+            };
+            return (
+              <div className="grid grid-cols-2 gap-3" {...(escolhivel ? { role: "radiogroup", "aria-label": "Tipo de ingresso" } : {})}>
+                {cartao("socio")}
+                {cartao("publico")}
+              </div>
+            );
+          })()}
           {moduloAtivo(torcida, "socios") && evento.valorSocio < evento.valorPublico && !jaFoi && (
             <p className="text-sm text-texto-2">
               Sócio paga menos.{" "}
@@ -222,7 +259,7 @@ function ConteudoEvento({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }
               .
             </Aviso>
           ) : (
-            <CheckoutIngresso evento={evento} sede={sede} />
+            <CheckoutIngresso evento={evento} sede={sede} pedidoTipo={pedidoTipo} aoMudarTipo={setTipo} />
           )}
         </section>
       </div>

@@ -124,9 +124,9 @@ export default function Publicar() {
   const obrigatorios = [
     { ok: !!torcida.pagamentos?.configurado, titulo: "Pagamentos configurados", detalhe: "Pagar.me conectada ou modo demonstração.", para: "pagamentos?tour=admin-pagamentos" },
     { ok: m.eventos || m.socios, titulo: "Pelo menos um módulo ligado", detalhe: "Eventos, Sócios ou os dois.", para: "personalizacao?tour=admin-personalizacao" },
+    { ok: !!torcida.tema?.logoUrl, titulo: "Escudo da torcida", detalhe: "Em Personalizar página. O banner é opcional, o escudo não.", para: "personalizacao?tour=admin-personalizacao" },
   ];
   const recomendados = [
-    { ok: !!torcida.tema?.logoUrl, titulo: "Escudo da torcida", detalhe: "Deixa a página com a cara de vocês.", para: "personalizacao?tour=admin-personalizacao" },
     ...(m.socios ? [{ ok: feito("planos"), titulo: "Plano de sócio criado", detalhe: "Para receber associações.", para: "planos?tour=admin-planos" }] : []),
     ...(m.eventos ? [{ ok: feito("evento"), titulo: "Evento criado", detalhe: "Para vender ingressos.", para: "eventos?novo=1&tour=admin-eventos-criar" }] : []),
   ];

@@ -4,7 +4,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUsuario } from "@/hooks/dados";
 import { cx } from "@/ui";
-import { passosVisiveis, Tour, type PassoTour } from "./Tour";
+import { medirEscondido, passosVisiveis, Tour, type PassoTour } from "./Tour";
 
 interface Registro {
   id: string;
@@ -19,6 +19,26 @@ interface ContextoTutorial {
 }
 
 const Ctx = createContext<ContextoTutorial | null>(null);
+
+/**
+ * Espera a tela desenhar o 1º item destacado (ex.: o modal "Novo evento" abrindo) antes de abrir o tour.
+ * Abrir antes deixava a tela escura sem nada destacado. Sem alvo em até 8 s, desiste (não abre tour vazio).
+ */
+function quandoPronto(passos: PassoTour[], abrir: () => void, cancelado: () => boolean, desistir?: () => void) {
+  const primeiro = passos.find((p) => p.alvo && !p.opcional)?.alvo;
+  const inicio = Date.now();
+  const tentar = () => {
+    if (cancelado()) return;
+    if (!primeiro || medirEscondido(primeiro)) {
+      // mais um instante para a animação de entrada (gaveta/modal) terminar e a medida ficar certa
+      setTimeout(() => !cancelado() && abrir(), 350);
+      return;
+    }
+    if (Date.now() - inicio < 8000) setTimeout(tentar, 150);
+    else desistir?.();
+  };
+  setTimeout(tentar, 300);
+}
 const CHAVE_LOCAL = "tutoriaisVistos";
 
 function lerLocal(): Set<string> {
@@ -54,6 +74,8 @@ export function ProvedorTutorial({ children }: { children: ReactNode }) {
   registrosRef.current = registros;
   const abertoRef = useRef(aberto);
   abertoRef.current = aberto;
+  // Pedido por ?tour= aguardando a tela: o tour automático da página não entra na frente dele
+  const pedidoPendente = useRef<string | null>(null);
 
   // Preferências do usuário no Firestore (uma leitura por sessão)
   useEffect(() => {
@@ -96,11 +118,16 @@ export function ProvedorTutorial({ children }: { children: ReactNode }) {
           return;
         }
         // espera a página desenhar os dados antes de destacar os elementos
-        setTimeout(() => {
-          if (abertoRef.current || vistos.current.has(id)) return;
-          const r = registrosRef.current.find((x) => x.id === id);
-          if (r) setAberto({ ...r, passos: passosVisiveis(r.passos) });
-        }, 900);
+        const r0 = registrosRef.current.find((x) => x.id === id);
+        if (!r0) return;
+        quandoPronto(
+          r0.passos,
+          () => {
+            const r = registrosRef.current.find((x) => x.id === id);
+            if (r) setAberto({ ...r, passos: passosVisiveis(r.passos) });
+          },
+          () => !!abertoRef.current || vistos.current.has(id) || (!!pedidoPendente.current && pedidoPendente.current !== id) || !registrosRef.current.some((x) => x.id === id),
+        );
       });
     },
     [uid, lerRemotos],
@@ -112,11 +139,25 @@ export function ProvedorTutorial({ children }: { children: ReactNode }) {
     if (!pedido) return;
     const r = registros.find((x) => x.id === pedido);
     if (!r) return;
-    // espera a tela desenhar; não cancela quando o parâmetro some da URL
-    setTimeout(() => {
-      const atual = registrosRef.current.find((x) => x.id === r.id) ?? r;
-      setAberto({ ...atual, passos: passosVisiveis(atual.passos) });
-    }, 700);
+    // espera a tela desenhar o 1º item; não cancela quando o parâmetro some da URL
+    pedidoPendente.current = r.id;
+    quandoPronto(
+      r.passos,
+      () => {
+        pedidoPendente.current = null;
+        const atual = registrosRef.current.find((x) => x.id === r.id) ?? r;
+        setAberto({ ...atual, passos: passosVisiveis(atual.passos) });
+      },
+      () => {
+        // a pessoa saiu da página (ou fechou o modal) antes: não abre nada
+        const saiu = !registrosRef.current.some((x) => x.id === r.id);
+        if (saiu) pedidoPendente.current = null;
+        return saiu;
+      },
+      () => {
+        pedidoPendente.current = null;
+      },
+    );
     const novos = new URLSearchParams(params);
     novos.delete("tour");
     setParams(novos, { replace: true });

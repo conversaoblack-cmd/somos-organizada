@@ -64,6 +64,9 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   fica em `convites/`, vale 7 dias, uso único). Lá a pessoa vê o e-mail preenchido, cria a senha (e-mail fica confirmado) e
   entra. Nunca use o "redefinir senha" do Firebase para convite (só como reserva quando o provedor falha). Atalho
   "Convidar responsável" na página Sedes. Subsede não vê Sócios, planos, página, domínio nem usuários.
+- Publicar exige escudo (`tema.logoUrl`), no servidor e na lista de Publicar. A página Portaria do painel
+  (`admin/PortariaEquipe.tsx`) explica o leitor, dá o link `/{torcida}/portaria` e convida porteiros.
+- Tour aberto por `?tour=` espera o 1º item destacado existir (ex.: o modal "Novo evento") antes de escurecer a tela.
 - Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável
   pelas regras). Padrão de UX e próximas melhorias: `docs/UX.md` (leia antes de mexer em tela).
 - Skills de UX/UI instaladas em `.claude/skills/` (carregam sozinhas em qualquer sessão). Para mexer em tela,

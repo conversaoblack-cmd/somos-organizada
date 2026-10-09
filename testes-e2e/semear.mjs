@@ -198,6 +198,7 @@ await addDoc(collection(d.db, `torcidas/${tid}/eventos`), {
 
 // Site publicado no plano "Torcida Plus" (gera a 1ª fatura da mensalidade Somos Organizada)
 await aDb.doc("plataforma/publico").set({ pix: { chave: "financeiro@somosorganizada.com.br", nome: "Somos Organizada", cidade: "Salvador" } });
+await aDb.doc(`torcidas/${tid}`).set({ tema: { logoUrl: "/icone-192.png" } }, { merge: true }); // escudo é obrigatório para publicar
 await d.chamar("publicarSite", { tid, plano: "plus" });
 
 // Pedido de cadastro de outra torcida aguardando a aprovação da equipe

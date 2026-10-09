@@ -90,8 +90,8 @@ export function ModalConvite({
   aberto: boolean;
   fechar: () => void;
   sucesso: (r: Convite) => void;
-  /** Atalho da subsede: já vem com o papel e a sede escolhidos (e travados). */
-  inicial?: { papel: Papel; sedeId: string };
+  /** Atalhos (Sedes, Portaria): o papel já vem escolhido e travado; a sede também, quando informada. */
+  inicial?: { papel: Papel; sedeId?: string };
 }) {
   const { tid, sedes, torcida, nomeSede } = usePainel();
   const avisar = useToast();
@@ -135,11 +135,15 @@ export function ModalConvite({
     <Modal
       aberto={aberto}
       fechar={() => !enviando && fechar()}
-      titulo={travado && inicial?.papel === "subsede" ? `Convidar responsável · ${nomeSede(inicial.sedeId)}` : "Convidar usuário"}
+      titulo={
+        inicial?.papel === "subsede" && inicial.sedeId ? `Convidar responsável · ${nomeSede(inicial.sedeId)}` : inicial?.papel === "portaria" ? "Convidar porteiro" : "Convidar usuário"
+      }
       descricao={
-        travado && inicial?.papel === "subsede"
+        inicial?.papel === "subsede"
           ? "A pessoa recebe um e-mail com o botão para criar a senha, entra no painel da subsede e cadastra a conta de recebimento."
-          : "A pessoa recebe um e-mail com o botão para criar a senha."
+          : inicial?.papel === "portaria"
+            ? "A pessoa recebe um e-mail com o botão para criar a senha. No dia do evento, ela entra no leitor da portaria com esse e-mail e senha."
+            : "A pessoa recebe um e-mail com o botão para criar a senha."
       }
       rodape={
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
@@ -172,7 +176,7 @@ export function ModalConvite({
             />
           </div>
         )}
-        {!travado && papel !== "diretoria" && (
+        {(!travado || (papel === "portaria" && !inicial?.sedeId)) && papel !== "diretoria" && (
           <Selecao
             rotulo={papel === "subsede" ? "Subsede" : "Sede (opcional)"}
             value={sedeId}
@@ -187,9 +191,14 @@ export function ModalConvite({
             ))}
           </Selecao>
         )}
-        {travado && inicial?.papel === "subsede" && (
+        {travado && inicial?.papel === "subsede" && inicial.sedeId && (
           <Aviso tom="info">
             Papel: <strong className="text-texto">responsável pela subsede {nomeSede(inicial.sedeId)}</strong>. {DESCRICAO_PAPEL.subsede}
+          </Aviso>
+        )}
+        {travado && inicial?.papel === "portaria" && (
+          <Aviso tom="info">
+            Papel: <strong className="text-texto">portaria</strong>. {DESCRICAO_PAPEL.portaria} Não vê dinheiro, sócios nem configurações.
           </Aviso>
         )}
         {!travado && papel === "subsede" && subsedes.length === 0 && <Aviso tom="alerta">Cadastre uma subsede em “Sedes” antes de convidar.</Aviso>}

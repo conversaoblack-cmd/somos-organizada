@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { collection, doc, limit, orderBy, query, Timestamp, updateDoc, where } from "firebase/firestore";
+import { useNavigate } from "react-router";
 import { db } from "@/lib/firebase";
 import { diaDoMes, emailValido, hora, mascaraTelefone, mesAbrev, moeda, periodicidadeCurta, soDigitos, taxa } from "@/lib/formatos";
 import { aplicarTema, avisosDeContraste, corValida, PALETAS, TEMA_PADRAO, temaDoPainel } from "@/lib/tema";
@@ -46,8 +47,11 @@ const CORES: { chave: keyof Pick<Tema, "corPrimaria" | "corSecundaria" | "corFun
 
 
 export default function Personalizacao() {
-  const { tid, torcida } = usePainel();
+  const { tid, torcida, base } = usePainel();
+  const navegar = useNavigate();
   useTourPagina("personalizacao");
+  // Site ainda não publicado: depois de salvar, o próximo passo é publicar (vai sozinho para lá)
+  const [irPublicar, setIrPublicar] = useState(false);
   const [confirmandoModulos, setConfirmandoModulos] = useState(false);
   const avisar = useToast();
   const [f, setF] = useState<Form>(() => formDe(torcida));
@@ -56,6 +60,13 @@ export default function Personalizacao() {
   const alterado = JSON.stringify(f) !== original;
   // Trocar de página pelo menu ou fechar a aba com alteração não salva pede confirmação.
   useAlteracoesPendentes(alterado);
+  // Navega só depois que a tela já vê o salvo (sem "alterações não salvas" no caminho)
+  useEffect(() => {
+    if (irPublicar && !alterado) {
+      setIrPublicar(false);
+      navegar(`${base}/publicar`);
+    }
+  }, [irPublicar, alterado, navegar, base]);
 
   // A barra fixa de salvar cobre o fim da tela: o botão de ajuda e os avisos sobem a altura dela.
   const barra = useRef<HTMLDivElement>(null);
@@ -126,7 +137,11 @@ export default function Personalizacao() {
         modulos: f.modulos,
         destinoMensalidade: f.destinoMensalidade,
       }));
-      avisar("Página atualizada! As mudanças já estão no ar.", "sucesso");
+      if (torcida.publicada) avisar("Página atualizada! As mudanças já estão no ar.", "sucesso");
+      else if (tema.logoUrl) {
+        avisar("Página salva! Agora é só publicar o site.", "sucesso");
+        setIrPublicar(true);
+      } else avisar("Página salva. Para publicar, falta enviar o escudo da torcida.", "info");
     } catch (e) {
       avisar(mensagemGravacao(e), "erro");
     } finally {

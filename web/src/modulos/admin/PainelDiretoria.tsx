@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, Navigate, Route, Routes } from "react-router";
 import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
@@ -27,6 +27,7 @@ import Recebimentos from "./Recebimentos";
 import PrimeirosPassos, { usePrimeirosPassos } from "./PrimeirosPassos";
 import Publicar from "./Publicar";
 import PlanoSomos from "./PlanoSomos";
+import PortariaEquipe from "./PortariaEquipe";
 import Dominio from "./Dominio";
 import { recebedorAtivo } from "./recebedor";
 import { iniciaisTorcida, SemConexao } from "../publico/comum";
@@ -180,6 +181,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
       { para: `${base}/personalizacao`, rotulo: "Personalizar página", icone: "pincel", so: true, grupo: PAGINA },
       { para: `${base}/publicar`, rotulo: "Publicar site", icone: "raio", so: true, contador: torcida.publicada ? undefined : 1, grupo: PAGINA },
       { para: `${base}/sedes`, rotulo: "Sedes", icone: "casa", so: true, grupo: PAGINA },
+      { para: `${base}/portaria`, rotulo: "Portaria", icone: "qr", so: true, grupo: PAGINA },
       { para: `${base}/usuarios`, rotulo: "Usuários do painel", icone: "chave", so: true, grupo: PAGINA },
       ...(pagamentosOk ? [{ para: `${base}/pagamentos`, rotulo: "Pagamentos", icone: "cartao" as const, so: true, grupo: CONFIG }] : []),
       { para: `${base}/plano`, rotulo: "Plano Somos Organizada", icone: "bandeira", so: true, grupo: CONFIG },
@@ -217,6 +219,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
         usuario={{ nome: membro.nome || membro.email, detalhe: detalheUsuario }}
         acoesTopo={
           <div className="flex items-center gap-2">
+            <ContadorFatura />
             <BotaoPassoAPasso />
             <a
               href={`/${torcida.slug}`}
@@ -249,6 +252,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
             <Route path="planos" element={soDiretoria(<Planos />)} />
             <Route path="sedes" element={soDiretoria(<Sedes />)} />
             <Route path="usuarios" element={soDiretoria(<Usuarios />)} />
+            <Route path="portaria" element={soDiretoria(<PortariaEquipe />)} />
             <Route path="personalizacao" element={soDiretoria(<Personalizacao />)} />
             <Route path="pagamentos" element={soDiretoria(<Pagamentos />)} />
             <Route path="publicar" element={soDiretoria(<Publicar />)} />
@@ -259,6 +263,45 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
         )}
       </LayoutPainel>
     </CtxPainel.Provider>
+  );
+}
+
+/**
+ * Contagem regressiva discreta no cabeçalho enquanto a fatura da Somos Organizada está em aberto (ex.: os 7 dias
+ * depois de publicar). Leva para "Plano Somos Organizada", onde está o Pix da fatura. Atrasada vira faixa vermelha.
+ */
+function ContadorFatura() {
+  const { tid, ehDiretoria, base, assinatura } = usePainel();
+  const fatura = useDocumento<FaturaSaas>(ehDiretoria && assinatura?.faturaAbertaId ? `torcidas/${tid}/faturasSaas/${assinatura.faturaAbertaId}` : null);
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setAgora(Date.now()), 60_000);
+    return () => {
+      clearInterval(t);
+    };
+  }, []);
+  const venc = fatura.dados?.status === "aberta" ? fatura.dados.vencimento?.toMillis() : undefined;
+  if (!ehDiretoria || !venc || assinatura?.situacao === "atrasada" || assinatura?.situacao === "bloqueada") return null;
+  const falta = venc - agora;
+  if (falta <= 0) return null;
+  const horas = Math.ceil(falta / 3600_000);
+  const dias = Math.ceil(falta / 86400_000);
+  const curto = horas < 24 ? `${horas} h` : `${dias} ${dias === 1 ? "dia" : "dias"}`;
+  const urgente = dias <= 2;
+  return (
+    <Link
+      to={`${base}/plano`}
+      className={cx(
+        "inline-flex items-center gap-1.5 h-9 px-2.5 rounded-xl text-sm font-semibold border whitespace-nowrap",
+        urgente ? "border-alerta/40 bg-alerta/10 text-alerta" : "border-linha bg-superficie-2 text-texto-2 hover:text-texto",
+      )}
+      aria-label={`Fatura da Somos Organizada vence em ${curto}. Abrir o plano para pagar.`}
+      title="Ver a fatura e pagar no Pix"
+    >
+      <Icone nome="relogio" className="size-4" />
+      <span className="numeros">{curto}</span>
+      <span className="hidden md:inline font-normal">para a fatura</span>
+    </Link>
   );
 }
 

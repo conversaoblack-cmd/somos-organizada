@@ -1,5 +1,5 @@
 /** Utilitários locais do painel da diretoria. */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type DragEvent as EventoArrastar, type ReactNode } from "react";
 import { collection, count, getAggregateFromServer, query, sum, Timestamp, where, type QueryConstraint } from "firebase/firestore";
 import { getDownloadURL, ref as refStorage, uploadBytes } from "firebase/storage";
 import { storage } from "@/lib/armazenamento";
@@ -571,8 +571,11 @@ export function SeletorImagem({
 }) {
   const avisar = useToast();
   const [enviando, setEnviando] = useState(false);
+  const [arrastando, setArrastando] = useState(false);
+  const entrada = useRef<HTMLInputElement>(null);
   async function escolher(arquivo: File | undefined) {
     if (!arquivo) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(arquivo.type)) return avisar("Use uma imagem JPG, PNG ou WebP.", "erro");
     setEnviando(true);
     try {
       onChange(await enviarImagem(pasta, arquivo, prefixo, ladoMaximo));
@@ -582,10 +585,52 @@ export function SeletorImagem({
       setEnviando(false);
     }
   }
+  // Arquivo solto fora do quadro não pode abrir a imagem na aba (perderia o que não foi salvo)
+  useEffect(() => {
+    const segurar = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+    };
+    window.addEventListener("dragover", segurar);
+    window.addEventListener("drop", segurar);
+    return () => {
+      window.removeEventListener("dragover", segurar);
+      window.removeEventListener("drop", segurar);
+    };
+  }, []);
+  const temArquivo = (e: EventoArrastar) => Array.from(e.dataTransfer.types ?? []).includes("Files");
   return (
     <div className={className}>
       <p className="block text-sm font-medium text-texto-2 mb-1.5">{rotulo}</p>
-      <div className={cx("relative rounded-2xl border border-dashed border-linha-forte bg-superficie-2 overflow-hidden", proporcao)}>
+      {/* Computador: arraste o arquivo até o quadro ou clique nele. Celular: o botão abre a galeria. */}
+      <div
+        className={cx(
+          "relative rounded-2xl border border-dashed bg-superficie-2 overflow-hidden transition-colors",
+          arrastando ? "border-primaria border-2 bg-primaria/10" : "border-linha-forte",
+          !enviando && "cursor-pointer",
+          proporcao,
+        )}
+        onClick={() => !enviando && entrada.current?.click()}
+        onDragEnter={(e) => {
+          if (!temArquivo(e)) return;
+          e.preventDefault();
+          setArrastando(true);
+        }}
+        onDragOver={(e) => {
+          if (!temArquivo(e)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+          if (!arrastando) setArrastando(true);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setArrastando(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setArrastando(false);
+          if (!enviando) void escolher(e.dataTransfer.files?.[0]);
+        }}
+        data-arrastar-imagem=""
+      >
         {url ? (
           <img src={url} alt="" loading="lazy" decoding="async" className="absolute inset-0 size-full object-cover" />
         ) : (
@@ -595,7 +640,13 @@ export function SeletorImagem({
                 <Icone nome="imagem" className="size-5" />
               </span>
               Nenhuma imagem
+              <span className="hidden [@media(hover:hover)]:block text-xs mt-1">Arraste o arquivo para cá ou clique</span>
             </span>
+          </div>
+        )}
+        {arrastando && (
+          <div className="absolute inset-0 grid place-items-center bg-fundo/70 text-sm font-semibold text-primaria-texto pointer-events-none">
+            Solte a imagem aqui
           </div>
         )}
         {enviando && (
@@ -614,6 +665,7 @@ export function SeletorImagem({
           <Icone nome="upload" className="size-4" />
           {enviando ? "Enviando…" : url ? "Trocar imagem" : "Enviar imagem"}
           <input
+            ref={entrada}
             type="file"
             accept="image/jpeg,image/png,image/webp"
             className="sr-only"

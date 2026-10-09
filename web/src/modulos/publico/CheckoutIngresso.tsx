@@ -12,6 +12,7 @@ import { Login } from "@/componentes/Login";
 import { Aviso, Botao, Campo, Carregando, Contador, Etapas, Icone, Modal, OpcoesCartao, Selo, cx } from "@/ui";
 import { LinhaValor, rolarParaErro, useTrocaDeEtapa } from "./comum";
 import { disponibilidade } from "./CartaoEvento";
+import { moduloAtivo } from "./Portao";
 import { cartaoVazio, FormCartao, prepararCartao, validarCartao, type EstadoCartao } from "./FormCartao";
 
 type Cotacao = Awaited<ReturnType<typeof api.cotarIngresso>>;
@@ -31,7 +32,21 @@ function novoIdCompra(): string {
   return Array.from(bytes, (b) => letras[b % letras.length]).join("");
 }
 
-export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }) {
+export type TipoIngresso = "socio" | "publico";
+
+export function CheckoutIngresso({
+  evento,
+  sede,
+  pedidoTipo,
+  aoMudarTipo,
+}: {
+  evento: ComId<Evento>;
+  sede?: Sede;
+  /** Toque nos cartões "Sócio"/"Público" da página do evento (n muda a cada toque). */
+  pedidoTipo?: { tipo: TipoIngresso; n: number };
+  /** Avisa a página qual opção está escolhida (para destacar o cartão certo). */
+  aoMudarTipo?: (t: TipoIngresso) => void;
+}) {
   const { tid, torcida } = useTorcida();
   const navegar = useNavigate();
   const usuario = useUsuario();
@@ -101,6 +116,33 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
   /** Sócio comprando só para outras pessoas: o 1º ingresso deixa de ser o dele (sem preço de sócio). */
   const [naoEParaMim, setNaoEParaMim] = useState(false);
   const socioPreco = cot?.socio && !cot.socio.jaUsou && !naoEParaMim ? cot.socio : null;
+  // Escolha "Sócio" x "Público": público é o padrão; sócio logado e em dia já vem como sócio
+  const [querSocio, setQuerSocio] = useState(false);
+  const temEscolha = !!cot && moduloAtivo(torcida, "socios") && cot.valorSocio < cot.valorPublico;
+  const tipo: TipoIngresso = socioPreco || querSocio ? "socio" : "publico";
+  function escolher(t: TipoIngresso) {
+    if (t === "publico") {
+      setQuerSocio(false);
+      if (socioPreco) {
+        // sócio comprando pelo valor público (ex.: o ingresso é para outra pessoa)
+        setNaoEParaMim(true);
+        setTitulares((l) => l.map((x, j) => (j === 0 ? { nome: "", cpf: "" } : x)));
+      }
+      return;
+    }
+    setQuerSocio(true);
+    setNaoEParaMim(false);
+    if (!uidLogado) setLoginAberto(true);
+  }
+  useEffect(() => {
+    if (!pedidoTipo) return;
+    if (etapa !== 0) setEtapa(0);
+    escolher(pedidoTipo.tipo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedidoTipo?.n]);
+  useEffect(() => {
+    aoMudarTipo?.(tipo);
+  }, [tipo, aoMudarTipo]);
 
   // Conta logada sem ficha de sócio: pelo menos o e-mail já vem preenchido
   useEffect(() => {
@@ -269,50 +311,78 @@ export function CheckoutIngresso({ evento, sede }: { evento: ComId<Evento>; sede
 
       {etapa === 0 && (
         <div className="space-y-5 animate-surgir">
-          {/* Sócio x público */}
-          {socioPreco ? (
-            <div className="flex items-center gap-3 rounded-2xl border border-primaria/40 bg-primaria/10 p-4">
-              <Icone nome="escudo" className="size-6 text-primaria-texto shrink-0" />
-              <div className="text-sm">
-                <p className="font-semibold">Preço de sócio liberado</p>
-                <p className="text-texto-2">Seu ingresso sai por {moeda(cot.valorSocio)}. Acompanhantes pagam o valor público.</p>
-              </div>
+          {/* Sócio x público: escolha explícita (antes o cartão de sócio parecia escolhido e não dava para trocar) */}
+          {temEscolha && (
+            <div role="radiogroup" aria-label="Tipo de ingresso" className="grid grid-cols-2 gap-2">
+              {(["socio", "publico"] as const).map((t) => {
+                const ativo = tipo === t;
+                const base = t === "socio" ? cot.valorSocio : cot.valorPublico;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    role="radio"
+                    aria-checked={ativo}
+                    onClick={() => escolher(t)}
+                    className={cx(
+                      "min-w-0 rounded-2xl border-2 p-3 text-left transition-colors",
+                      ativo ? "border-primaria bg-primaria/10" : "border-linha bg-superficie-2 hover:border-linha-forte",
+                    )}
+                  >
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-texto-2">{t === "socio" ? "Sou sócio" : "Público"}</span>
+                      <span className={cx("size-4 shrink-0 rounded-full border-2", ativo ? "border-primaria bg-primaria shadow-[inset_0_0_0_3px_var(--color-fundo)]" : "border-linha-forte")} aria-hidden="true" />
+                    </span>
+                    <span className="block text-lg font-bold numeros mt-1">{base ? moeda(base) : "Grátis"}</span>
+                  </button>
+                );
+              })}
             </div>
-          ) : cot.socio?.jaUsou ? (
-            <Aviso tom="info">Você já usou o preço de sócio neste evento. Novos ingressos saem pelo valor público.</Aviso>
-          ) : uidLogado && ficha ? (
-            <Aviso tom="alerta" titulo="Sua associação não está em dia">
-              Regularize a mensalidade na sua conta para pagar {moeda(cot.valorSocio)}.
-            </Aviso>
-          ) : uidLogado && !ficha && !naoEParaMim ? (
-            // Já entrou, mas com uma conta que não é de sócio: abrir o "Entrar" não faria nada (fecha na hora)
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-dashed border-linha-forte p-4 text-sm">
-              <Icone nome="escudo" className="size-6 text-primaria-texto shrink-0" />
-              <span className="flex-1 min-w-0 text-texto-2">
-                Você entrou como <strong className="text-texto break-all">{usuario?.email}</strong>, que não é conta de sócio.
-              </span>
+          )}
+          {tipo === "socio" &&
+            (socioPreco ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-primaria/40 bg-primaria/10 p-4">
+                <Icone nome="escudo" className="size-6 text-primaria-texto shrink-0" />
+                <div className="text-sm">
+                  <p className="font-semibold">Preço de sócio liberado</p>
+                  <p className="text-texto-2">Seu ingresso sai por {moeda(cot.valorSocio)}. Acompanhantes pagam o valor público.</p>
+                </div>
+              </div>
+            ) : cot.socio?.jaUsou ? (
+              <Aviso tom="info">Você já usou o preço de sócio neste evento. Novos ingressos saem pelo valor público.</Aviso>
+            ) : uidLogado && ficha ? (
+              <Aviso tom="alerta" titulo="Sua associação não está em dia">
+                Regularize a mensalidade na sua conta para pagar {moeda(cot.valorSocio)}.
+              </Aviso>
+            ) : uidLogado && !ficha ? (
+              // Já entrou, mas com uma conta que não é de sócio: abrir o "Entrar" não faria nada (fecha na hora)
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-dashed border-linha-forte p-4 text-sm">
+                <Icone nome="escudo" className="size-6 text-primaria-texto shrink-0" />
+                <span className="flex-1 min-w-0 text-texto-2">
+                  Você entrou como <strong className="text-texto break-all">{usuario?.email}</strong>, que não é conta de sócio.
+                </span>
+                <button
+                  type="button"
+                  className="min-h-11 font-semibold text-primaria-texto"
+                  onClick={() => void signOut(auth).then(() => setLoginAberto(true))}
+                >
+                  Trocar de conta
+                </button>
+              </div>
+            ) : (
               <button
                 type="button"
-                className="min-h-11 font-semibold text-primaria-texto"
-                onClick={() => void signOut(auth).then(() => setLoginAberto(true))}
+                onClick={() => setLoginAberto(true)}
+                className="w-full flex items-center gap-3 rounded-2xl border border-dashed border-linha-forte p-4 text-left hover:border-primaria transition-colors"
               >
-                Trocar de conta
+                <Icone nome="escudo" className="size-6 text-primaria-texto shrink-0" />
+                <span className="text-sm flex-1">
+                  <span className="font-semibold block">Entre na sua conta de sócio</span>
+                  <span className="text-texto-2">Com CPF ou e-mail e a senha, para pagar {moeda(cot.valorSocio)}.</span>
+                </span>
+                <Icone nome="chevronDireita" className="size-5 text-texto-3" />
               </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setLoginAberto(true)}
-              className="w-full flex items-center gap-3 rounded-2xl border border-dashed border-linha-forte p-4 text-left hover:border-primaria transition-colors"
-            >
-              <Icone nome="escudo" className="size-6 text-primaria-texto shrink-0" />
-              <span className="text-sm flex-1">
-                <span className="font-semibold block">É sócio? Pague {moeda(cot.valorSocio)}</span>
-                <span className="text-texto-2">Entre na sua conta para liberar o preço de sócio.</span>
-              </span>
-              <Icone nome="chevronDireita" className="size-5 text-texto-3" />
-            </button>
-          )}
+            ))}
 
           <div className="flex items-center justify-between gap-4 rounded-2xl bg-superficie-2 p-4">
             <div>

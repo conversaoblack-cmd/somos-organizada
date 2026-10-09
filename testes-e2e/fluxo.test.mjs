@@ -258,6 +258,9 @@ test("3c. site só vende depois de publicado; publicar escolhe o plano e gera a 
   // módulos: a diretoria pode ligar/desligar eventos e sócios
   await updateDoc(doc(ctx.dir.db, `torcidas/${ctx.tid}`), { modulos: { eventos: true, socios: true } });
   await assert.rejects(ctx.sub.chamar("publicarSite", { tid: ctx.tid, plano: "pro" }), /permissão/);
+  // sem escudo não publica (a página precisa da cara da torcida)
+  await assert.rejects(ctx.dir.chamar("publicarSite", { tid: ctx.tid, plano: "pro" }), /escudo/);
+  await aDb.doc(`torcidas/${ctx.tid}`).set({ tema: { logoUrl: "https://x.test/escudo.png" } }, { merge: true });
   await assert.rejects(ctx.dir.chamar("publicarSite", { tid: ctx.tid, plano: "pequena" }), /Escolha um plano/);
   const r = await ctx.dir.chamar("publicarSite", { tid: ctx.tid, plano: "pro" });
   assert.equal(r.publicada, true);
@@ -680,6 +683,7 @@ test("16. modo demonstração: torcida sem Pagar.me vende ingresso (Pix simulado
   await updateDoc(ev, { status: "publicado" }).catch(() => undefined); // subsede não publica
   await dir.chamar("publicarEvento", { tid, eventoId: ev.id });
   await setDoc(doc(dir.db, `torcidas/${tid}/planos/mensal`), { nome: "Mensal", valor: 1500, intervalo: "mes", intervaloQtd: 1, pix: true, cartao: true, ativo: true });
+  await aDb.doc(`torcidas/${tid}`).set({ tema: { logoUrl: "https://x.test/escudo.png" } }, { merge: true });
   await dir.chamar("publicarSite", { tid, plano: "plus" });
   assert.equal(t0.pagamentos.ambiente, "demo");
 

@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { TEMA_PADRAO } from "@/lib/tema";
 import { Link } from "react-router";
 import { collection, limit, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -40,6 +39,10 @@ export function usePrimeirosPassos(args: { tid: string; torcida: ComId<Torcida>;
     diretoria ? query(collection(db, `torcidas/${tid}/membros`), where("papel", "==", "subsede"), limit(1)) : null,
     `pp-membros-${tid}-${diretoria}`,
   );
+  const porteiros = useColecao<Membro>(
+    diretoria ? query(collection(db, `torcidas/${tid}/membros`), where("papel", "==", "portaria"), limit(1)) : null,
+    `pp-porteiros-${tid}-${diretoria}`,
+  );
 
   return useMemo(() => {
     if (diretoria) {
@@ -50,9 +53,9 @@ export function usePrimeirosPassos(args: { tid: string; torcida: ComId<Torcida>;
         {
           chave: "personalizar",
           titulo: "Personalizar a página",
-          descricao: "Cores, escudo, banner e textos da torcida.",
-          // escudo/banner enviados ou cores trocadas (as padrão são as do Brasil)
-          feito: !!(torcida.tema?.logoUrl || torcida.tema?.bannerUrl || (torcida.tema?.corPrimaria && torcida.tema.corPrimaria.toUpperCase() !== TEMA_PADRAO.corPrimaria)),
+          descricao: "Escudo da torcida (obrigatório para publicar), cores, banner e textos.",
+          // o escudo é o que conta: sem ele o site não é publicado
+          feito: !!torcida.tema?.logoUrl,
           para: "personalizacao?tour=admin-personalizacao",
           acao: "Personalizar",
         },
@@ -110,6 +113,19 @@ export function usePrimeirosPassos(args: { tid: string; torcida: ComId<Torcida>;
           para: "sedes?tour=admin-sedes",
           acao: subsedes.length ? "Convidar" : "Cadastrar",
         },
+        ...(m.eventos
+          ? [
+              {
+                chave: "portaria",
+                titulo: "Preparar a portaria",
+                descricao: "Convide quem confere os ingressos na entrada e mande o link do leitor de QR Code.",
+                feito: porteiros.dados.length > 0,
+                opcional: true,
+                para: "portaria?tour=admin-portaria",
+                acao: "Convidar",
+              },
+            ]
+          : []),
         {
           chave: "publicar",
           titulo: "Publicar o site",
@@ -153,7 +169,7 @@ export function usePrimeirosPassos(args: { tid: string; torcida: ComId<Torcida>;
       ];
     }
     return [];
-  }, [diretoria, papel, torcida, sedes, sedeEscopo, planos.dados.length, eventos.dados, membrosSubsede.dados.length]);
+  }, [diretoria, papel, torcida, sedes, sedeEscopo, planos.dados.length, eventos.dados, membrosSubsede.dados.length, porteiros.dados.length]);
 }
 
 function ListaPassos({ itens, compacta }: { itens: ItemPrimeiroPasso[]; compacta?: boolean }) {

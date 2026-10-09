@@ -250,6 +250,7 @@ export const publicarSite = onCall(async (req) => {
   if (!torcida.pagamentos?.configurado) throw new HttpsError("failed-precondition", "Configure os pagamentos antes de publicar.");
   const m = torcida.modulos ?? { eventos: true, socios: true };
   if (!m.eventos && !m.socios) throw new HttpsError("failed-precondition", "Ative pelo menos um módulo: Eventos ou Sócios.");
+  if (!torcida.tema?.logoUrl) throw new HttpsError("failed-precondition", "Envie o escudo da torcida em Personalizar página antes de publicar.");
 
   const assRef = refsSaas.assinatura(tid);
   if (!(await assRef.get()).exists) {

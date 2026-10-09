@@ -40,7 +40,7 @@ function medir(alvo?: string): Retangulo | null {
 }
 
 /** Alvo existe e tem tamanho, mesmo fora da área visível (antes de rolar). */
-function medirEscondido(alvo?: string): boolean {
+export function medirEscondido(alvo?: string): boolean {
   if (!alvo) return false;
   const el = document.querySelector<HTMLElement>(`[data-tour="${alvo}"]`);
   if (!el) return false;
@@ -86,6 +86,8 @@ export function Tour({
   const [verVideo, setVerVideo] = useState(true);
   const [alturaBalao, setAlturaBalao] = useState(0);
   const balao = useRef<HTMLDivElement>(null);
+  // Parte que rola (título, texto e vídeo); os botões ficam sempre à vista embaixo
+  const corpo = useRef<HTMLDivElement>(null);
   const video = useVideoTutorial(id);
   const celular = tela.w < 640;
   const passo = passos[Math.min(i, passos.length - 1)];
@@ -100,11 +102,14 @@ export function Tour({
   // Altura real do balão (cresce com o vídeo): a posição usa a medida, nunca um valor presumido
   useLayoutEffect(() => {
     const el = balao.current;
-    if (!aberto || !el) return;
-    const medirBalao = () => setAlturaBalao(el.scrollHeight);
+    const c = corpo.current;
+    if (!aberto || !el || !c) return;
+    // altura natural (sem cortar o corpo): o que está fora do corpo + tudo o que o corpo tem
+    const medirBalao = () => setAlturaBalao(el.offsetHeight - c.clientHeight + c.scrollHeight);
     medirBalao();
     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(medirBalao) : null;
     ro?.observe(el);
+    ro?.observe(c);
     return () => {
       ro?.disconnect();
     };
@@ -115,12 +120,12 @@ export function Tour({
   useEffect(() => {
     if (!aberto) return;
     const noBalao = (e: Event) => !!balao.current && e.target instanceof Node && balao.current.contains(e.target);
-    const balaoRola = () => !!balao.current && balao.current.scrollHeight > balao.current.clientHeight + 1;
+    const balaoRola = () => !!corpo.current && corpo.current.scrollHeight > corpo.current.clientHeight + 1;
     const travar = (e: Event) => {
       // Rodinha: a página nunca rola; sobre o balão, rola só o balão (se ele tiver o que rolar)
       if (e.type === "wheel") {
         e.preventDefault();
-        if (noBalao(e) && balaoRola()) balao.current!.scrollTop += (e as WheelEvent).deltaY;
+        if (noBalao(e) && balaoRola()) corpo.current!.scrollTop += (e as WheelEvent).deltaY;
         return;
       }
       // Dedo: arrastar dentro do balão que rola é permitido (overscroll-behavior: contain segura a página)
@@ -207,7 +212,7 @@ export function Tour({
 
   // Posição do balão: sempre inteiro dentro da tela (se não couber, rola por dentro)
   const alturaMax = tela.h - 2 * MARGEM;
-  let estiloBalao: CSSProperties = { maxHeight: alturaMax, overflowY: "auto", overscrollBehavior: "contain" };
+  let estiloBalao: CSSProperties = { maxHeight: alturaMax };
   let classeBalao = "";
   if (celular) {
     // Folha embaixo ou em cima, do lado oposto ao destaque, sem cobrir o item destacado quando houver espaço
@@ -277,39 +282,41 @@ export function Tour({
         role="dialog"
         aria-modal="true"
         aria-labelledby="tour-titulo"
-        className={cx("bg-fundo border border-linha-forte shadow-2xl outline-none p-5 animate-[surgir_.2s_ease_both]", classeBalao)}
+        className={cx("bg-fundo border border-linha-forte shadow-2xl outline-none flex flex-col overflow-hidden animate-[surgir_.2s_ease_both]", classeBalao)}
         style={estiloBalao}
       >
-        <div className="flex items-start gap-3">
-          <span className="size-9 shrink-0 rounded-xl bg-primaria/15 text-primaria-texto grid place-items-center">
-            <Icone nome={i === 0 ? "info" : "setaDireita"} className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-texto-3">
-              Passo {i + 1} de {passos.length}
-            </p>
-            <h2 id="tour-titulo" className="text-lg font-bold leading-snug mt-0.5">
-              {passo.titulo}
-            </h2>
+        <div ref={corpo} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5">
+          <div className="flex items-start gap-3">
+            <span className="size-9 shrink-0 rounded-xl bg-primaria/15 text-primaria-texto grid place-items-center">
+              <Icone nome={i === 0 ? "info" : "setaDireita"} className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-texto-3">
+                Passo {i + 1} de {passos.length}
+              </p>
+              <h2 id="tour-titulo" className="text-lg font-bold leading-snug mt-0.5">
+                {passo.titulo}
+              </h2>
+            </div>
+            <BotaoIcone icone="x" rotulo="Fechar passo a passo" onClick={fechar} className="-mr-2 -mt-2" />
           </div>
-          <BotaoIcone icone="x" rotulo="Fechar passo a passo" onClick={fechar} className="-mr-2 -mt-2" />
+          <p className="text-[15px] text-texto-2 leading-relaxed mt-2 whitespace-pre-line">{passo.texto}</p>
+
+          {video && verVideo && (
+            <video
+              key={video}
+              src={video}
+              className={cx("mt-3 w-full rounded-xl border border-linha bg-black object-contain", celular ? "max-h-[30dvh]" : "max-h-[36vh]")}
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+            />
+          )}
         </div>
-        <p className="text-[15px] text-texto-2 leading-relaxed mt-2 whitespace-pre-line">{passo.texto}</p>
 
-        {video && verVideo && (
-          <video
-            key={video}
-            src={video}
-            className={cx("mt-3 w-full rounded-xl border border-linha bg-black object-contain", celular ? "max-h-[30dvh]" : "max-h-[36vh]")}
-            autoPlay
-            muted
-            loop
-            playsInline
-            controls
-          />
-        )}
-
-        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+        <div className="shrink-0 px-5 pt-3 pb-5 flex flex-wrap items-center justify-end gap-2">
           <div className="flex gap-1 mr-auto basis-full sm:basis-auto mb-1 sm:mb-0" aria-hidden="true">
             {passos.map((_, n) => (
               <span key={n} className={cx("h-1.5 rounded-full transition-all", n === i ? "w-5 bg-primaria" : "w-1.5 bg-superficie-3")} />

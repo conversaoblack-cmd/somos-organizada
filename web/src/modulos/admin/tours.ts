@@ -116,6 +116,13 @@ export const TOURS: Record<string, PassoTour[]> = {
     { alvo: "fatura-aberta", titulo: "Pagar a fatura", texto: "Leia o QR Code no app do banco ou copie o “Pix copia e cola”. Depois toque em “Já paguei”." },
     { alvo: "faturas", titulo: "Histórico", texto: "Todas as faturas, pagas e em aberto." },
   ],
+  "admin-portaria": [
+    { titulo: "Portaria", texto: "Aqui você organiza quem confere os ingressos na entrada dos eventos, pelo celular." },
+    { alvo: "portaria-como", titulo: "Como funciona", texto: "Convide os porteiros, mande o link do leitor e, no dia, eles leem o QR Code de cada ingresso." },
+    { alvo: "convidar-porteiro", titulo: "Convidar porteiro", texto: "A pessoa recebe um e-mail para criar a senha. Ela só vê o leitor: nada de dinheiro nem configurações." },
+    { alvo: "portaria-link", titulo: "Link do leitor", texto: "Copie ou mande no WhatsApp para a equipe. A diretoria também pode abrir o leitor por aqui." },
+    { alvo: "lista-porteiros", titulo: "Equipe", texto: "Quem já foi convidado. Se alguém não achou o e-mail, toque em reenviar." },
+  ],
   "admin-dominio": [{ alvo: "dominio", titulo: "Endereço do site", texto: "Este é o endereço da sua página. Domínio próprio chega em breve." }],
 
   // ── Subsede ──────────────────────────────────────────
