@@ -94,8 +94,8 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
 
 - `npm --prefix functions test` (regras de negócio) e `cd web && npm run typecheck` (tipos do front + `scripts/checar-efeitos.mjs`).
 - Mudou back-end ou regras: `env -u JAVA_TOOL_OPTIONS bash testes-e2e/rodar.sh` (fluxo completo, ~3 min).
-- Mudou tela: `EXIGIR_SEM_INTERNET=1 bash testes-e2e/navegador.sh` (fluxos críticos pela tela, ~7 min: cadastro, aprovação,
-  evento, compra, sócio, carteirinha, portaria e sem internet; modo normal e "Chrome novo", 360 e 1280 px). Reprova com
+- Mudou tela: `EXIGIR_SEM_INTERNET=1 bash testes-e2e/navegador.sh` (fluxos críticos pela tela, ~25 min: cadastro, aprovação,
+  evento, compra, sócio, carteirinha, portaria, sem internet e todas as telas com o tour; modo normal e "Chrome novo", 360 e 1280 px). Reprova com
   qualquer erro no console. "Não reproduzi" não é resposta para erro relatado em produção: baixe o bundle publicado e o
   `.map` (`https://somosorganizada.com.br/assets/<arquivo>.js.map`) e ache a linha original.
 
@@ -107,6 +107,10 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
 - Nada de API que não existe no iPhone com iOS 15 ou em Android antigo (`AbortSignal.timeout`, `structuredClone`,
   `requestIdleCallback`, `.at()`, `findLast`, `Object.hasOwn`, `crypto.randomUUID`...): use `prazo()` de `lib/servicos.ts`
   etc. O `checar-efeitos` recusa; o build gera código para Safari 15 / Chrome 87.
+- Celular sem rolar para o lado e sem zoom: o app (`app.html`) trava o zoom; campo com fonte < 16 px faz o iPhone dar zoom
+  (o `index.css` força 16 px no celular); grade sem `grid-cols-*` vira uma coluna do tamanho da tela; botão quebra a linha
+  no celular em vez de estourar. O fluxo 9 da suíte de navegador passa por todas as telas dos painéis com o tour e reprova
+  rolagem lateral, campo < 16 px e balão do tour fora da tela.
 - Cor com transparência ou mistura (`bg-x/10`, `color-mix`): o build acrescenta a reserva para navegadores sem color-mix
   (`web/plugins/coresCompat.ts`, variáveis de `lib/tema.ts`). Degradê em `style`: use `backgroundColor` (cor sólida) +
   `backgroundImage`, nunca só `background`.

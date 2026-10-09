@@ -52,7 +52,7 @@ export async function abrirNavegador() {
  * Um "aparelho" = um contexto limpo do navegador (sem login, sem armazenamento), como outro celular/computador.
  * Toda página aberta nele é vigiada: erro de página, console.error, tela "Algo deu errado".
  */
-export async function novoAparelho(estado, rotulo, { largura = estado.combo.largura } = {}) {
+export async function novoAparelho(estado, rotulo, { largura = estado.combo.largura, fecharTour = true } = {}) {
   const celular = largura <= 480;
   const ctx = await estado.navegador.newContext({
     viewport: { width: largura, height: celular ? 740 : 800 },
@@ -68,7 +68,7 @@ export async function novoAparelho(estado, rotulo, { largura = estado.combo.larg
     const corpo = VIACEP[cep] ?? { erro: true };
     return rota.fulfill({ status: 200, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(corpo) });
   });
-  const ap = { rotulo, ctx, largura, estado, erros: [], esperados: [], permissoes: [], paginas: [], diario: [], fluxos: new Set([estado.fluxoAtual]) };
+  const ap = { rotulo, ctx, largura, estado, fecharTour, erros: [], esperados: [], permissoes: [], paginas: [], diario: [], fluxos: new Set([estado.fluxoAtual]) };
   ctx.setDefaultTimeout(30_000);
   ctx.on("page", (p) => vigiar(ap, p));
   estado.aparelhos.push(ap);
@@ -128,8 +128,8 @@ function vigiar(ap, page) {
     if (permitido(ap, texto)) ap.esperados.push({ quando: quando(), tipo: "console.error", texto, url: page.url() });
     else ap.erros.push({ quando: quando(), tipo: "console.error", texto, url: page.url() });
   });
-  // Tour de primeira visita do painel: a pessoa toca em "Pular" (Esc) e segue
-  page
+  // Tour de primeira visita do painel: a pessoa toca em "Pular" (Esc) e segue (menos no fluxo que testa o tour)
+  if (ap.fecharTour) page
     .addLocatorHandler(page.locator('[aria-labelledby="tour-titulo"]'), async () => {
       await page.keyboard.press("Escape");
     })
@@ -213,6 +213,14 @@ export async function conferir(ap, page, passo, { torcedor = false } = {}) {
       return { sw, culpados };
     }, ap.largura);
     if (r) throw new Error(`[${ap.rotulo}] ${passo}: rolagem horizontal em ${ap.largura}px (largura do conteúdo ${r.sw}px) em ${page.url()}\n  ${r.culpados.join("\n  ")}`);
+    // Campo com fonte abaixo de 16 px: o iPhone dá zoom ao tocar e a tela fica ampliada
+    const pequenos = await page.evaluate(() =>
+      [...document.querySelectorAll("input, select, textarea")]
+        .filter((el) => !["checkbox", "radio", "file", "range", "hidden", "color"].includes(el.type) && el.getBoundingClientRect().width > 0)
+        .filter((el) => parseFloat(getComputedStyle(el).fontSize) < 16)
+        .map((el) => `${el.tagName.toLowerCase()} "${el.getAttribute("aria-label") || el.name || el.placeholder || el.id}" (${getComputedStyle(el).fontSize})`),
+    );
+    if (pequenos.length) throw new Error(`[${ap.rotulo}] ${passo}: campo com fonte < 16px (zoom no iPhone) em ${page.url()}\n  ${pequenos.slice(0, 5).join("\n  ")}`);
   }
 }
 

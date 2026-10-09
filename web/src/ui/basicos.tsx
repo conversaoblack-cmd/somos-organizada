@@ -17,14 +17,15 @@ const VARIANTES: Record<Variante, string> = {
 };
 const TAMANHOS: Record<Tamanho, string> = {
   // 44 px no celular (dedo), 36 px no computador
-  sm: "h-11 sm:h-9 px-3.5 text-sm gap-1.5 rounded-xl",
-  md: "h-11 px-5 text-[15px] gap-2 rounded-2xl",
-  lg: "h-14 px-7 text-base gap-2.5 rounded-2xl",
+  sm: "min-h-11 sm:min-h-9 py-1.5 px-3.5 text-sm gap-1.5 rounded-xl",
+  md: "min-h-11 py-2 px-5 text-[15px] gap-2 rounded-2xl",
+  lg: "min-h-14 py-2 px-7 text-base gap-2.5 rounded-2xl",
 };
 
 export function classesBotao(variante: Variante = "primaria", tamanho: Tamanho = "md", largo = false) {
   return cx(
-    "inline-flex items-center justify-center font-semibold whitespace-nowrap select-none transition-[transform,filter,background-color,color,box-shadow] duration-150",
+    // No celular o texto pode quebrar (o botão cresce na altura): texto longo nunca empurra a tela para o lado
+    "inline-flex items-center justify-center font-semibold max-w-full text-center leading-tight whitespace-normal sm:whitespace-nowrap select-none transition-[transform,filter,background-color,color,box-shadow] duration-150",
     "active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none",
     VARIANTES[variante],
     TAMANHOS[tamanho],
@@ -48,9 +49,9 @@ export const Botao = forwardRef<HTMLButtonElement, PropsBotao>(function Botao(
   const tamIcone = tamanho === "sm" ? "size-4" : "size-5";
   return (
     <button ref={ref} type={type} disabled={disabled || carregando} className={cx(classesBotao(variante, tamanho, largo), className)} {...props}>
-      {carregando ? <Girando className={tamIcone} /> : icone && <Icone nome={icone} className={tamIcone} />}
+      {carregando ? <Girando className={cx(tamIcone, "shrink-0")} /> : icone && <Icone nome={icone} className={cx(tamIcone, "shrink-0")} />}
       {children}
-      {iconeDireita && !carregando && <Icone nome={iconeDireita} className={tamIcone} />}
+      {iconeDireita && !carregando && <Icone nome={iconeDireita} className={cx(tamIcone, "shrink-0")} />}
     </button>
   );
 });
@@ -68,9 +69,9 @@ export function BotaoLink({
   const tamIcone = tamanho === "sm" ? "size-4" : "size-5";
   return (
     <Link className={cx(classesBotao(variante, tamanho, largo), className)} {...props}>
-      {icone && <Icone nome={icone} className={tamIcone} />}
+      {icone && <Icone nome={icone} className={cx(tamIcone, "shrink-0")} />}
       {children}
-      {iconeDireita && <Icone nome={iconeDireita} className={tamIcone} />}
+      {iconeDireita && <Icone nome={iconeDireita} className={cx(tamIcone, "shrink-0")} />}
     </Link>
   );
 }

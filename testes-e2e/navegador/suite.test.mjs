@@ -13,6 +13,7 @@ import { aprovacao, conviteSubsede, diretoria } from "./fluxos/diretoria.mjs";
 import { compra, semInternetConta } from "./fluxos/compra.mjs";
 import { socio, semInternetSocio } from "./fluxos/socio.mjs";
 import { portaria } from "./fluxos/portaria.mjs";
+import { telas } from "./fluxos/telas.mjs";
 
 const EXIGIR_SEM_INTERNET = process.env.EXIGIR_SEM_INTERNET === "1";
 const FILTRO = process.env.NAVEGADOR_FLUXOS ? process.env.NAVEGADOR_FLUXOS.split(",").map((s) => s.trim()) : null;
@@ -114,6 +115,7 @@ for (const combo of combinacoes()) {
     fluxo(estado, "6", "portaria valida o ingresso (código e QR), já utilizado, inválido e sem conexão", ["4"], portaria);
     fluxo(estado, "8", "diretoria cria subsede e convida o responsável; convidado cria a senha pelo /convite e vê o painel da subsede", [], conviteSubsede);
     fluxo(estado, "7b", "sem internet: /socio e /conta recarregadas mostram carteirinha e ingresso com QR", ["5"], semInternetSocio, { pendente: MOTIVO_SEM_INTERNET });
+    fluxo(estado, "9", "todas as telas dos painéis e da plataforma com o passo a passo (no celular: sem rolar para o lado, sem zoom, tour dentro da tela)", [], telas);
   });
 }
 

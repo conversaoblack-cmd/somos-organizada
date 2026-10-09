@@ -10,8 +10,10 @@
     "admin-personalizacao",
     "admin-plano-somos",
     "admin-planos",
+    "admin-portaria",
     "admin-primeiros-passos",
     "admin-publicado",
+    "admin-publicar",
     "admin-sedes",
     "admin-socios",
     "admin-usuarios",
@@ -24,7 +26,6 @@
     "subsede-pedidos",
     "subsede-primeiros-passos",
     "subsede-recebimentos",
-    "subsede-socios",
     "subsede-visao-geral"
   ]
 }

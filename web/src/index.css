@@ -119,6 +119,13 @@
      no fim para ele não tapar preço, etiqueta ou botão do último item */
   body:not([data-camadas="0"])[data-camadas] [data-botao-ajuda], body[data-menu-aberto] [data-botao-ajuda] { display: none; }
   @media (max-width: 1023px) { body:has([data-botao-ajuda]) { padding-bottom: 5rem; } }
+  /* Grade sem número de colunas: uma coluna do tamanho da tela (sem isto a coluna cresce com o conteúdo e empurra
+     a página para o lado no celular). Qualquer grid-cols-* da tela vence esta regra. */
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  /* Celular: campo com fonte abaixo de 16 px faz o iPhone dar zoom ao tocar (e a tela fica ampliada) */
+  @media (max-width: 639px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea { font-size: 16px !important; }
+  }
   /* select nativo legível no modo escuro do Windows/Android */
   select, option { background-color: var(--color-superficie-2); color: var(--color-texto); }
   @media (prefers-reduced-motion: reduce) {
