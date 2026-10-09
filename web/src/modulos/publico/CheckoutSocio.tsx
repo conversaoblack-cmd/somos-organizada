@@ -98,7 +98,9 @@ export default function CheckoutSocio() {
         nome: "", cpf: "", nascimento: "", telefone: "", cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "", sedeId: "",
       },
   );
-  useEffect(() => setLembrado((l) => ({ ...l, dados })), [dados, setLembrado]);
+  useEffect(() => {
+    setLembrado((l) => ({ ...l, dados }));
+  }, [dados, setLembrado]);
   const [foto, setFoto] = useState<{ blob: Blob; url: string } | null>(null);
   const [metodo, setMetodoEstado] = useState<"pix" | "cartao">(lembrado.metodo);
   const setMetodo = (m: "pix" | "cartao") => {

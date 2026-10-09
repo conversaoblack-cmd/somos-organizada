@@ -57,7 +57,9 @@ export default function Socios() {
   const [baixando, setBaixando] = useState(false);
   // Torcida grande tem milhares de sócios: lê 100 por vez (do cadastro mais recente para o mais antigo).
   const [qtd, setQtd] = useState(LOTE);
-  useEffect(() => setQtd(LOTE), [status, sede]);
+  useEffect(() => {
+    setQtd(LOTE);
+  }, [status, sede]);
   useTourPagina("socios");
 
   const caminho = `torcidas/${tid}/socios`;

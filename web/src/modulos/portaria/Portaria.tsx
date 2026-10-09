@@ -440,7 +440,9 @@ function Leitura({
   const cancelada = useRef<{ inicio: number; em: number } | null>(null);
   const campo = useRef<HTMLInputElement>(null);
 
-  useEffect(() => gravar("portaria:modo", modo), [modo]);
+  useEffect(() => {
+    gravar("portaria:modo", modo);
+  }, [modo]);
 
   const validar = useCallback(
     async (entrada: Entrada) => {

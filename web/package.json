@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "vite",
     "dev:local": "vite --mode emulador",
-    "build": "tsc -b && vite build",
-    "typecheck": "tsc -b --noEmit",
+    "build": "node scripts/checar-efeitos.mjs && tsc -b && vite build",
+    "typecheck": "node scripts/checar-efeitos.mjs && tsc -b --noEmit",
     "preview": "vite preview"
   },
   "dependencies": {

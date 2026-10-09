@@ -569,7 +569,11 @@ function FormularioTorcida({ usuario, inicial }: { usuario: User; inicial: Rascu
     }, 700);
     return () => clearTimeout(t);
   }, [usuario.uid, d, passo]);
-  useEffect(() => topo.current?.scrollIntoView({ behavior: "smooth", block: "start" }), [passo]);
+  // Chaves obrigatórias: no Chrome novo scrollIntoView devolve uma Promise, e efeito que devolve algo que não é
+  // função derruba a tela na troca de passo ("destroy is not a function"). Ver scripts/checar-efeitos.mjs.
+  useEffect(() => {
+    topo.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [passo]);
 
   const slugFinal = d.slugEditado ? d.slug : slugDoNome(d.nomeTorcida);
 

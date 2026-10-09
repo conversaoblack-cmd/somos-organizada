@@ -41,7 +41,9 @@ export default function Financeiro() {
   const [baixando, setBaixando] = useState(false);
   // O extrato cresce todo mês: lê 100 lançamentos por vez, do mais recente para o mais antigo.
   const [qtd, setQtd] = useState(LOTE);
-  useEffect(() => setQtd(LOTE), [mes, sedeFiltro]);
+  useEffect(() => {
+    setQtd(LOTE);
+  }, [mes, sedeFiltro]);
   useTourPagina("financeiro");
 
   const caminhoLanc = `torcidas/${tid}/lancamentos`;

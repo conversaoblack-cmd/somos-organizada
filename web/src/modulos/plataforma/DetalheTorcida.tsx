@@ -219,7 +219,9 @@ function CartaoTaxa({ tid, atual, aoSalvar }: { tid: string; atual: number; aoSa
   const [pct, setPct] = useState(String(atual ?? ""));
   const [salvando, setSalvando] = useState(false);
   const avisar = useToast();
-  useEffect(() => setPct(String(atual ?? "")), [atual]);
+  useEffect(() => {
+    setPct(String(atual ?? ""));
+  }, [atual]);
   const n = Number(pct.replace(",", "."));
   const erro = pct.trim() === "" || !Number.isFinite(n) || n < 0 || n > 30 ? "Informe um percentual entre 0 e 30." : null;
 
@@ -269,7 +271,9 @@ function CartaoPlanoSomos({ tid, linha, aoSalvar }: { tid: string; linha: LinhaT
   const [obs, setObs] = useState(contrato?.observacoes ?? "");
   const [salvando, setSalvando] = useState(false);
   const avisar = useToast();
-  useEffect(() => setObs(contrato?.observacoes ?? ""), [contrato?.observacoes]);
+  useEffect(() => {
+    setObs(contrato?.observacoes ?? "");
+  }, [contrato?.observacoes]);
   const valor = linha ? valorPlanoDaTorcida(linha, cfg.planos) : null;
   const uso = linha ? usoDoPlanoDaTorcida(linha) : null;
 

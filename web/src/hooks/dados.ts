@@ -8,7 +8,7 @@ import type { ComId } from "@/lib/tipos";
 /** Usuário logado (undefined = ainda carregando; null = deslogado). */
 export function useUsuario(): User | null | undefined {
   const [u, setU] = useState<User | null | undefined>(auth.currentUser ?? undefined);
-  useEffect(() => onAuthStateChanged(auth, setU), []);
+  useEffect(() => onAuthStateChanged(auth, setU), []); // efeito-devolve-cancelamento
   return u;
 }
 

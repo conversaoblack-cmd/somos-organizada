@@ -1,8 +1,9 @@
-import { lazy, Suspense, Component, Fragment, useEffect, type ReactNode } from "react";
+import { lazy, Suspense, Component, Fragment, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { Navigate, Route, Routes, useParams, useLocation } from "react-router";
 import { noHostPlataforma, plataformaSeparada, urlPlataforma } from "./lib/hosts";
 import { ProvedorTorcida, useTorcidaPorSlug } from "./hooks/torcida";
 import { registrarErro } from "./lib/erros";
+import { VERSAO_APP } from "./lib/firebase";
 import { BotaoLink, TelaCarregando, Vazio } from "./ui";
 import { PortaoTorcida } from "./modulos/publico/Portao";
 
@@ -20,13 +21,19 @@ const PainelDiretoria = lazy(() => import("./modulos/admin/PainelDiretoria"));
 const Portaria = lazy(() => import("./modulos/portaria/Portaria"));
 const SuporteFlutuante = lazy(() => import("./componentes/SuporteFlutuante"));
 
-class LimiteDeErro extends Component<{ children: ReactNode }, { erro: Error | null; tentativa: number }> {
-  state = { erro: null as Error | null, tentativa: 0 };
+class LimiteDeErro extends Component<{ children: ReactNode }, { erro: Error | null; tentativa: number; detalhes: string }> {
+  state = { erro: null as Error | null, tentativa: 0, detalhes: "" };
   static getDerivedStateFromError(erro: Error) {
     return { erro };
   }
-  componentDidCatch(erro: Error) {
-    registrarErro(erro, "render");
+  componentDidCatch(erro: Error, info: ErrorInfo) {
+    // Em qual tela/componente quebrou: vai junto para a equipe (Depuração), aparece em "Detalhes técnicos"
+    // e sai legível no console (a mensagem minificada sozinha, tipo "q is not a function", não diz onde foi).
+    const componentes = (info.componentStack ?? "").trim().split("\n").slice(0, 8).map((l) => l.trim()).join("\n");
+    const detalhes = `${erro.name}: ${erro.message}\nEndereço: ${location.pathname}\nVersão: ${VERSAO_APP}\nNavegador: ${navigator.userAgent}\nTela:\n${componentes}`;
+    this.setState({ detalhes });
+    console.error(`[Somos Organizada] A tela quebrou: ${erro.message}\n${componentes}`, erro);
+    registrarErro(Object.assign(new Error(erro.message), { stack: `${erro.stack ?? ""}\n--- tela ---\n${componentes}` }), "render");
   }
   render() {
     if (this.state.erro) {
@@ -51,6 +58,21 @@ class LimiteDeErro extends Component<{ children: ReactNode }, { erro: Error | nu
             }
           >
             Você não perde o que já preencheu. O erro foi registrado para a nossa equipe; se continuar, use o botão de ajuda.
+            {this.state.detalhes && (
+              <details className="mt-5 text-left">
+                <summary className="min-h-11 inline-flex items-center cursor-pointer text-sm text-texto-3">Detalhes técnicos (para a equipe)</summary>
+                <pre className="mt-2 max-h-48 overflow-auto rounded-xl bg-superficie-2 p-3 text-[11px] leading-snug whitespace-pre-wrap break-all text-texto-2">
+                  {this.state.detalhes}
+                </pre>
+                <button
+                  type="button"
+                  className="mt-2 min-h-11 px-3 text-sm text-texto-2 underline"
+                  onClick={() => void navigator.clipboard?.writeText(this.state.detalhes).catch(() => undefined)}
+                >
+                  Copiar detalhes
+                </button>
+              </details>
+            )}
           </Vazio>
         </div>
       );
