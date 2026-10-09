@@ -645,6 +645,7 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
     endereco: { cep: "40000000", logradouro: "Rua A", numero: "1", bairro: "Centro", cidade: "Salvador", uf: "BA" },
     // cores escolhidas no cadastro (a de fundo inválida volta para o padrão azul e amarelo)
     tema: { corPrimaria: "#ffffff", corSecundaria: "#9CA3AF", corFundo: "preto", corTexto: "#F5F5F5", logoUrl: "https://x.test/a.png" },
+    termos: "9 de outubro de 2026",
   };
   await assert.rejects(b.chamar("solicitarTorcida", { ...dados, entidade: { ...dados.entidade, cnpj: "11222333000100" } }), /CNPJ/);
   const sol = await b.chamar("solicitarTorcida", dados);
@@ -699,6 +700,9 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
   assert.equal(t.get("status"), "implantacao");
   assert.equal(t.get("publicada"), false);
   assert.deepEqual(t.get("tema"), { corPrimaria: "#FFFFFF", corSecundaria: "#9CA3AF", corFundo: "#070A12", corTexto: "#F5F5F5" });
+  // Termos e Política: aceite gravado no cadastro; identificação pública (só razão social, CNPJ e cidade) na torcida
+  assert.equal((await aDb.doc(`solicitacoes/${sol.solicitacaoId}`).get()).get("aceiteTermos.versao"), "9 de outubro de 2026");
+  assert.deepEqual(t.get("identificacao"), { cnpj: "11222333000181", razaoSocial: "Associação Fúria Azul", cidade: "Salvador", uf: "BA" });
   const membro = await aDb.doc(`torcidas/${ap.torcidaId}/membros/${u.uid}`).get();
   assert.equal(membro.get("papel"), "diretoria");
   ctx.demo = { tid: ap.torcidaId, dir: b };
@@ -745,7 +749,24 @@ test("16. modo demonstração: torcida sem Pagar.me vende ingresso (Pix simulado
   await dir.chamar("publicarEvento", { tid, eventoId: ev.id });
   await setDoc(doc(dir.db, `torcidas/${tid}/planos/mensal`), { nome: "Mensal", valor: 1500, intervalo: "mes", intervaloQtd: 1, pix: true, cartao: true, ativo: true });
   await aDb.doc(`torcidas/${tid}`).set({ tema: { logoUrl: "https://x.test/escudo.png" } }, { merge: true });
+  // Pix da mensalidade: fatura criada sem chave cadastrada ganha o Pix quando a chave chega (antes ficava sem QR)
+  const cfgRef = aDb.doc("plataforma/publico");
+  const pixOriginal = (await cfgRef.get()).get("pix");
+  await cfgRef.set({ pix: { ...pixOriginal, chave: "" } }, { merge: true });
   await dir.chamar("publicarSite", { tid, plano: "plus" });
+  const faturaDemo = aDb.doc(`torcidas/${tid}/faturasSaas/${(await aDb.doc(`torcidas/${tid}/saas/assinatura`).get()).get("faturaAbertaId")}`);
+  assert.equal((await faturaDemo.get()).get("pixCopiaECola"), null);
+  await cfgRef.set({ pix: pixOriginal }, { merge: true });
+  await assert.rejects(dir.chamar("atualizarPixFaturas", {}), /equipe Somos Organizada/);
+  assert.equal((await dir.chamar("conferirPixFatura", { tid })).atualizadas, 1);
+  assert.match((await faturaDemo.get()).get("pixCopiaECola"), /^000201.*financeiro@somosorganizada\.test/);
+  assert.equal((await dir.chamar("conferirPixFatura", { tid })).atualizadas, 0, "sem mudança, não regrava");
+  // troca de chave na plataforma: as faturas em aberto passam para a chave nova
+  await cfgRef.set({ pix: { ...pixOriginal, chave: "nova@somosorganizada.test" } }, { merge: true });
+  assert.ok((await ctx.plat.chamar("atualizarPixFaturas", {})).atualizadas >= 1);
+  assert.match((await faturaDemo.get()).get("pixCopiaECola"), /nova@somosorganizada\.test/);
+  await cfgRef.set({ pix: pixOriginal }, { merge: true });
+  await ctx.plat.chamar("atualizarPixFaturas", {});
   assert.equal(t0.pagamentos.ambiente, "demo");
 
   // torcedor compra no Pix e "paga" pelo simulador

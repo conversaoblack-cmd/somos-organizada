@@ -59,6 +59,14 @@
         "destination": "/app.html"
       },
       {
+        "source": "/termos",
+        "destination": "/app.html"
+      },
+      {
+        "source": "/privacidade",
+        "destination": "/app.html"
+      },
+      {
         "source": "/plataforma",
         "destination": "/app.html"
       },

@@ -24,6 +24,7 @@ import { dias } from "../util/datas";
 import { texto } from "../util/validacao";
 import { pixCopiaECola } from "../util/pix";
 import { avancarCiclo } from "../dominio/precos";
+import { identificacaoPublica } from "../dominio/identificacao";
 import { exigirMembro, exigirPlataforma } from "../dominio/permissoes";
 import type { Torcida } from "../dominio/tipos";
 
@@ -201,6 +202,31 @@ async function exigirQueCaiba(tid: string, plano: PlanoSaas) {
   if (msg) throw new HttpsError("failed-precondition", msg, { limitePlano: "troca" });
 }
 
+/** Pix copia e cola da fatura com a chave ATUAL da plataforma (null sem chave cadastrada). */
+function pixDaFatura(cfg: ConfigSaas, slug: string, f: Pick<FaturaSaas, "valor" | "txid">): string | null {
+  return cfg.pix.chave
+    ? pixCopiaECola({ chave: cfg.pix.chave, valorCentavos: f.valor, nome: cfg.pix.nome, cidade: cfg.pix.cidade, txid: f.txid, descricao: `Somos Organizada ${slug}` })
+    : null;
+}
+
+/**
+ * Refaz o Pix das faturas em aberto da torcida com a chave atual. Sem isto, fatura criada antes da chave ser
+ * cadastrada (ou antes de uma troca de chave) ficava sem QR ou apontando para a chave antiga.
+ */
+export async function atualizarPixAbertas(tid: string, cfg: ConfigSaas): Promise<number> {
+  const [abertas, t] = await Promise.all([refsSaas.faturas(tid).where("status", "==", "aberta").get(), refs.torcida(tid).get()]);
+  const slug = String(t.get("slug") ?? tid);
+  let n = 0;
+  for (const f of abertas.docs) {
+    const pix = pixDaFatura(cfg, slug, f.data() as FaturaSaas);
+    if (pix && pix !== f.get("pixCopiaECola")) {
+      await f.ref.update({ pixCopiaECola: pix });
+      n++;
+    }
+  }
+  return n;
+}
+
 /** Cria (se ainda não existir) a fatura com o vencimento dado. Idempotente pelo id = data do vencimento. */
 export async function gerarFatura(tid: string, vencimento: Date, cfg: ConfigSaas): Promise<string> {
   const id = idFatura(vencimento);
@@ -221,9 +247,7 @@ export async function gerarFatura(tid: string, vencimento: Date, cfg: ConfigSaas
       sociosAtivos: qtd,
       vencimento: Timestamp.fromDate(vencimento),
       status: "aberta",
-      pixCopiaECola: cfg.pix.chave
-        ? pixCopiaECola({ chave: cfg.pix.chave, valorCentavos: valor, nome: cfg.pix.nome, cidade: cfg.pix.cidade, txid, descricao: `Somos Organizada ${torcida.slug}` })
-        : null,
+      pixCopiaECola: pixDaFatura(cfg, torcida.slug, { valor, txid }),
       txid,
       criadaEm: Timestamp.now(),
     };
@@ -274,7 +298,11 @@ export const publicarSite = onCall(async (req) => {
     await gerarFatura(tid, venc, cfg);
     await assRef.update({ proximoVencimento: Timestamp.fromDate(proximoMes(venc, ass.diaVencimento)) });
   }
+  // Torcidas aprovadas antes dos Termos: a identificação pública (razão social, CNPJ, cidade) vem do cadastro
+  const cadastro = torcida.identificacao ? undefined : (await refsSaas.cadastro(tid).get()).data();
+  const identificacao = cadastro ? { identificacao: identificacaoPublica(cadastro) } : {};
   await refs.torcida(tid).update({
+    ...identificacao,
     publicada: true,
     publicadaEm: FieldValue.serverTimestamp(),
     ...(torcida.status === "implantacao" ? { status: "ativa" } : {}),
@@ -365,6 +393,7 @@ export async function processarSaas(agora = Date.now()) {
         await assRef.update({ proximoVencimento: Timestamp.fromDate(proximoMes(prox, ass.diaVencimento)) });
         resultado.faturasGeradas++;
       }
+      await atualizarPixAbertas(tid, cfg);
       // atraso
       const abertas = await refsSaas.faturas(tid).where("status", "==", "aberta").get();
       const vencidas = abertas.docs.filter((f) => (f.get("vencimento") as Timestamp).toMillis() < agora);
@@ -402,6 +431,24 @@ export async function processarSaas(agora = Date.now()) {
 export const rotinaSaas = onSchedule({ schedule: "20 7 * * *", timeZone: FUSO, timeoutSeconds: 300, secrets: [EMAIL_API_KEY] }, async () => {
   const r = await processarSaas();
   logger.info("Rotina SaaS", r);
+});
+
+/** Equipe: depois de salvar a chave Pix, refaz o Pix das faturas em aberto de todas as torcidas. */
+export const atualizarPixFaturas = onCall(async (req) => {
+  exigirPlataforma(req);
+  const cfg = await configSaas();
+  if (!cfg.pix.chave) throw new HttpsError("failed-precondition", "Cadastre a chave Pix antes.");
+  const torcidas = await db.collection("torcidas").select().get();
+  let atualizadas = 0;
+  for (const t of torcidas.docs) atualizadas += await atualizarPixAbertas(t.id, cfg).catch(() => 0);
+  return { atualizadas };
+});
+
+/** Diretoria: ao abrir Plano Somos Organizada, garante que a fatura em aberto tem o Pix da chave atual. */
+export const conferirPixFatura = onCall(async (req) => {
+  const tid = texto((req.data as Record<string, unknown> | undefined)?.tid, "torcida", { max: 40 });
+  await exigirMembro(req, tid, ["diretoria"]);
+  return { atualizadas: await atualizarPixAbertas(tid, await configSaas()) };
 });
 
 /** A equipe pode rodar a rotina na hora (e os testes usam isto). */

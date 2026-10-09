@@ -9,6 +9,7 @@ import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { cpfValido, emailValido, endereco, inteiro, slugValido, soDigitos, telefoneBR, temaInformado, texto, umDe } from "../util/validacao";
 import { exigirLogin, exigirPlataforma } from "../dominio/permissoes";
 import { criarTorcidaInterno } from "./plataforma";
+import { identificacaoPublica } from "../dominio/identificacao";
 import { refsSaas } from "./saas";
 import { MARCA_PLATAFORMA } from "./verificacao";
 import { enviarAgora } from "../email/enviar";
@@ -72,6 +73,7 @@ export const solicitarTorcida = onCall(async (req) => {
   entidade.emailFinanceiro = emailFinanceiro;
   const end = endereco(d.endereco);
   const tema = temaInformado(d.tema);
+  const termos = texto(d.termos, "versão dos termos", { max: 40, obrigatorio: false });
 
   const pendentes = await db.collection("solicitacoes").where("uid", "==", uid).where("status", "==", "pendente").limit(1).get();
   if (!pendentes.empty) throw new HttpsError("already-exists", "Você já tem um cadastro em análise.");
@@ -84,6 +86,8 @@ export const solicitarTorcida = onCall(async (req) => {
     tx.set(ref, {
       uid, email, status: "pendente", nomeTorcida, slug, clube, estimativaSocios, quantidadeSubsedes: subsedes,
       responsavel, entidade, endereco: end, tema, criadoEm: FieldValue.serverTimestamp(),
+      // Prova do aceite: versão (data) dos Termos e da Política marcada na declaração
+      ...(termos ? { aceiteTermos: { versao: termos, em: FieldValue.serverTimestamp() } } : {}),
     });
     // O rascunho (com CPF) não é mais necessário: o pedido enviado é a fonte agora
     tx.delete(db.doc(`usuarios/${uid}/rascunhos/cadastroTorcida`));
@@ -139,6 +143,8 @@ export const avaliarSolicitacao = onCall(async (req) => {
     clube: sol.clube ?? "", estimativaSocios: sol.estimativaSocios ?? 0, quantidadeSubsedes: sol.quantidadeSubsedes ?? 0,
     responsavel: sol.responsavel, entidade: sol.entidade, endereco: sol.endereco, solicitacaoId: id, criadoEm: Timestamp.now(),
   });
+  // Termos e Política da torcida dizem quem responde pelos dados (só razão social, CNPJ e cidade)
+  await refs.torcida(r.torcidaId).update({ identificacao: identificacaoPublica(sol) });
   await ref.update({ status: "aprovada", torcidaId: r.torcidaId, avaliadoPor: quem, avaliadoEm: FieldValue.serverTimestamp() });
   await avisarResultado(sol, "aprovada", { slug: r.slug });
   return { status: "aprovada", torcidaId: r.torcidaId, slug: r.slug };

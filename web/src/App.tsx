@@ -24,6 +24,8 @@ const PainelSocio = lazy(() => import("./modulos/conta/PainelSocio"));
 const PainelDiretoria = lazy(() => import("./modulos/admin/PainelDiretoria"));
 const Portaria = lazy(() => import("./modulos/portaria/Portaria"));
 const SuporteFlutuante = lazy(() => import("./componentes/SuporteFlutuante"));
+const PaginaLegal = lazy(() => import("./modulos/legal/PaginaLegal"));
+const PaginaLegalTorcida = lazy(() => import("./modulos/legal/PaginaLegalTorcida"));
 
 class LimiteDeErro extends Component<{ children: ReactNode }, { erro: Error | null; tentativa: number; detalhes: string }> {
   state = { erro: null as Error | null, tentativa: 0, detalhes: "" };
@@ -148,6 +150,8 @@ function RotasTorcida() {
         <Route path="socio/*" element={<PainelSocio />} />
         <Route path="admin/*" element={<PainelDiretoria />} />
         <Route path="portaria" element={<Portaria />} />
+        <Route path="termos" element={<PaginaLegalTorcida tipo="termos" />} />
+        <Route path="privacidade" element={<PaginaLegalTorcida tipo="privacidade" />} />
         <Route path="*" element={<PaginaTorcida />} />
       </Routes>
   );
@@ -194,6 +198,8 @@ function Rotas() {
       <Route path="/verificar" element={<Verificar />} />
       <Route path="/convite" element={<Convite />} />
       <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+      <Route path="/termos" element={<PaginaLegal tipo="termos" />} />
+      <Route path="/privacidade" element={<PaginaLegal tipo="privacidade" />} />
       <Route
         path="/plataforma/*"
         element={plataformaSeparada ? <IrPara url={urlPlataforma(pathname.replace(/^\/plataforma/, "") + search)} /> : <PainelPlataforma />}

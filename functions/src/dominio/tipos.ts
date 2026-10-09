@@ -1,3 +1,4 @@
+import type { IdentificacaoTorcida } from "./identificacao";
 import type { Timestamp } from "firebase-admin/firestore";
 import type { Endereco } from "../util/validacao";
 import type { Intervalo } from "./precos";
@@ -26,6 +27,8 @@ export interface Torcida {
   proximaMatricula: number;
   tema: Tema;
   textos?: { titulo?: string; subtitulo?: string; sobre?: string };
+  /** Razão social, CNPJ e cidade (públicos; gravados pelo servidor na aprovação ou ao publicar). */
+  identificacao?: IdentificacaoTorcida;
   contato?: { whatsapp?: string; email?: string; instagram?: string };
   pagamentos: {
     configurado: boolean;

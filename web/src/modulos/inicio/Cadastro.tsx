@@ -20,6 +20,7 @@ import { Abas, Aviso, Botao, BotaoLink, Campo, Cartao, Carregando, cx, Etapas, G
 import { SLUG_VALIDO, slugDoNome } from "./planos";
 import { CoresCadastro, type Cores } from "./CoresCadastro";
 import { CartaoVideo, PassoVideo } from "./VerificacaoVideo";
+import { ATUALIZADO_EM } from "../legal/versao";
 
 const DOMINIO = "somosorganizada.com.br/";
 const MSG_SLUG_SEM_CONEXAO = "Não deu para conferir agora. Verifique sua conexão.";
@@ -704,6 +705,7 @@ function FormularioTorcida({ usuario, inicial }: { usuario: User; inicial: Rascu
           cidade: d.cidade.trim(),
           uf: d.uf.trim().toUpperCase(),
         },
+        termos: ATUALIZADO_EM,
       });
       enviado.current = true; // o servidor já apagou o rascunho da conta junto com o envio
       gravarLocal(usuario.uid, null);
@@ -981,7 +983,17 @@ function FormularioTorcida({ usuario, inicial }: { usuario: User; inicial: Rascu
               </ul>
               <label className="flex gap-3 items-start pt-2 min-h-11 cursor-pointer">
                 <input type="checkbox" checked={declaro} onChange={(e) => setDeclaro(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--color-primaria)]" />
-                <span>Declaro que represento esta torcida e que os dados acima são verdadeiros.</span>
+                <span>
+                  Declaro que represento esta torcida e que os dados acima são verdadeiros, e aceito os{" "}
+                  <a href="/termos" target="_blank" rel="noopener" className="font-semibold text-primaria-texto underline underline-offset-2">
+                    Termos de uso
+                  </a>{" "}
+                  e a{" "}
+                  <a href="/privacidade" target="_blank" rel="noopener" className="font-semibold text-primaria-texto underline underline-offset-2">
+                    Política de privacidade
+                  </a>
+                  .
+                </span>
               </label>
             </Cartao>
             {erroEnvio && <Aviso tom="perigo">{erroEnvio}</Aviso>}

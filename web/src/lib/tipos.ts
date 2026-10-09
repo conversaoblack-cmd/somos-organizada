@@ -32,6 +32,8 @@ export interface Torcida {
   tema: Tema;
   textos?: { titulo?: string; subtitulo?: string; sobre?: string };
   contato?: { whatsapp?: string; email?: string; instagram?: string };
+  /** Quem responde pelos dados na página da torcida (Termos e Política). Gravado pelo servidor; só dados públicos. */
+  identificacao?: { razaoSocial?: string; cnpj?: string; cidade: string; uf: string };
   pagamentos: {
     configurado: boolean;
     ambiente?: "teste" | "producao" | "demo";

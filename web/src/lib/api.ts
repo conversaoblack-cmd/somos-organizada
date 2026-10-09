@@ -290,6 +290,8 @@ export const api = {
   informarPagamentoSaas: chamar<{ tid: string; faturaId: string }, { ok: boolean }>("informarPagamentoSaas"),
   confirmarFaturaSaas: chamar<{ tid: string; faturaId: string }, { ok: boolean }>("confirmarFaturaSaas"),
   executarRotinaSaas: chamar<{ agora?: number }, { faturasGeradas: number; bloqueadas: number }>("executarRotinaSaas"),
+  atualizarPixFaturas: chamar<Record<string, never>, { atualizadas: number }>("atualizarPixFaturas"),
+  conferirPixFatura: chamar<{ tid: string }, { atualizadas: number }>("conferirPixFatura"),
 
   // ── Cadastro de torcida (página principal) ───────────
   entrarComCpf: chamar<{ cpf: string; senha: string }, { email: string }>("entrarComCpf"),
@@ -308,6 +310,8 @@ export const api = {
       responsavel: { nome: string; cpf: string; telefone: string; cargo: string };
       entidade: { tipo: "cnpj" | "sem_cnpj"; cnpj?: string; razaoSocial?: string; emailFinanceiro?: string };
       endereco: Endereco;
+      /** Versão (data) dos Termos e da Política aceitos na declaração. */
+      termos?: string;
     },
     { solicitacaoId: string; status: string }
   >("solicitarTorcida"),

@@ -684,10 +684,14 @@ function Rodape() {
           <ul className="mt-3 space-y-2 text-texto-2">
             <li><a className="hover:text-texto" href="/entrar">Painel da diretoria</a></li>
             <li><a className="hover:text-texto" href={LINK_WHATSAPP} target="_blank" rel="noopener">WhatsApp da equipe</a></li>
+            <li><a className="hover:text-texto" href="/termos">Termos de uso</a></li>
+            <li><a className="hover:text-texto" href="/privacidade">Política de privacidade</a></li>
           </ul>
         </nav>
       </div>
-      <p className="border-t border-linha py-5 text-center text-xs text-texto-2">Somos Organizada · Uma solução Conversão Black</p>
+      <p className="border-t border-linha py-5 px-4 text-center text-xs text-texto-2">
+        Somos Organizada · Uma solução Conversão Black · CNPJ 52.000.426/0001-49 · contato@somosorganizada.com.br
+      </p>
     </footer>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { deleteField, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { mensagemDeErro } from "@/lib/api";
+import { api, mensagemDeErro } from "@/lib/api";
 import { centavosDeTexto, moeda } from "@/lib/formatos";
 import type { PlanoSaas } from "@/lib/tipos";
 import { ORDEM_PLANOS, usePlanosSaas } from "@/modulos/inicio/planos";
@@ -67,7 +67,9 @@ export default function Configuracoes() {
         },
         { merge: true },
       );
-      avisar("Configurações salvas.", "sucesso");
+      // Faturas já abertas passam a usar a chave salva (antes ficavam sem QR ou com a chave antiga)
+      const r = chave.trim() ? await api.atualizarPixFaturas({}).catch(() => null) : null;
+      avisar(r?.atualizadas ? `Configurações salvas. Pix atualizado em ${r.atualizadas} fatura(s) em aberto.` : "Configurações salvas.", "sucesso");
     } catch (err) {
       avisar(mensagemDeErro(err), "erro");
     } finally {

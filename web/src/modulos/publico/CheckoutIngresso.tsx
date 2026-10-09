@@ -10,7 +10,7 @@ import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import { useUsuario } from "@/hooks/dados";
 import { Login } from "@/componentes/Login";
 import { Aviso, Botao, Campo, Carregando, Contador, Etapas, Icone, Modal, OpcoesCartao, Selo, cx } from "@/ui";
-import { LinhaValor, rolarParaErro, useTrocaDeEtapa } from "./comum";
+import { AvisoTermos, LinhaValor, rolarParaErro, useTrocaDeEtapa } from "./comum";
 import { disponibilidade } from "./CartaoEvento";
 import { moduloAtivo } from "./Portao";
 import { cartaoVazio, FormCartao, prepararCartao, validarCartao, type EstadoCartao } from "./FormCartao";
@@ -562,6 +562,7 @@ export function CheckoutIngresso({
               {gratis ? "Confirmar meu ingresso" : `${metodo === "pix" ? "Gerar Pix" : "Pagar"} ${moeda(total)}`}
             </Botao>
           </div>
+          <AvisoTermos acao={gratis ? "Ao confirmar" : "Ao pagar"} />
           {torcida.pagamentos.ambiente === "teste" && (
             <p className={cx("text-xs text-center text-alerta")}>Ambiente de teste: nenhuma cobrança real será feita.</p>
           )}

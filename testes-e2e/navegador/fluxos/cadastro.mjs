@@ -194,6 +194,7 @@ export async function cadastro(estado) {
   assert.equal(sol.entidade?.tipo, enviaComCnpj ? "cnpj" : "sem_cnpj");
   assert.equal(sol.tema?.corPrimaria, "#C81E3C");
   assert.equal(sol.verificacao?.status, "enviado", "vídeo de verificação enviado");
+  assert.ok(sol.aceiteTermos?.versao, "aceite dos Termos e da Política gravado com a versão");
   assert.match(sol.verificacao?.videoPath ?? "", /^verificacoes\//);
   estado.dados.cadastro.solicitacaoId = sol._id;
   estado.dados.cadastro.aparelho = A;

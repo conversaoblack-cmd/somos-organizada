@@ -120,11 +120,40 @@ export function RodapeTorcida() {
         </div>
       </div>
       <div className="border-t border-linha">
-        <p className="mx-auto max-w-6xl px-4 sm:px-6 py-5 text-xs text-texto-3">
-          Tecnologia <a href="/" className="font-semibold text-texto-2 hover:text-texto">Somos Organizada</a> · gestão profissional para torcidas organizadas
-        </p>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-1 text-xs text-texto-3">
+          <nav aria-label="Documentos" className="flex flex-wrap gap-x-4 sm:order-2 sm:ml-auto">
+            <Link to={`/${torcida.slug}/termos`} className="inline-flex items-center min-h-11 hover:text-texto underline-offset-2 hover:underline">
+              Termos de uso
+            </Link>
+            <Link to={`/${torcida.slug}/privacidade`} className="inline-flex items-center min-h-11 hover:text-texto underline-offset-2 hover:underline">
+              Política de privacidade
+            </Link>
+          </nav>
+          <p className="py-2 sm:py-0">
+            Tecnologia <a href="/" className="font-semibold text-texto-2 hover:text-texto">Somos Organizada</a> · gestão profissional para torcidas organizadas
+          </p>
+        </div>
       </div>
     </footer>
+  );
+}
+
+/** Aceite dos Termos e da Política da torcida, logo abaixo do botão de pagar (abre em outra aba: a compra fica). */
+export function AvisoTermos({ acao }: { acao: string }) {
+  const { torcida } = useTorcida();
+  const link = "font-semibold text-texto-2 underline underline-offset-2 hover:text-texto";
+  return (
+    <p className="text-xs text-center text-texto-3 leading-relaxed" data-aviso-termos>
+      {acao}, você concorda com os{" "}
+      <a href={`/${torcida.slug}/termos`} target="_blank" rel="noopener" className={link}>
+        Termos de uso
+      </a>{" "}
+      e a{" "}
+      <a href={`/${torcida.slug}/privacidade`} target="_blank" rel="noopener" className={link}>
+        Política de privacidade
+      </a>{" "}
+      da {torcida.nome}.
+    </p>
   );
 }
 

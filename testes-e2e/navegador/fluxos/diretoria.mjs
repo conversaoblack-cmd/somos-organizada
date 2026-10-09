@@ -46,6 +46,10 @@ export async function aprovacao(estado) {
     return t?.torcidaId ? t : null;
   }, { mensagem: "slug da torcida aprovada" });
   assert.ok(membro.torcidaId);
+  // Termos e Política da torcida mostram quem responde pelos dados (cidade e, com CNPJ, razão social)
+  const torcida = await fsLer(`torcidas/${membro.torcidaId}`);
+  assert.equal(torcida.identificacao?.cidade, "Salvador", "identificação pública gravada na aprovação");
+  assert.equal(torcida.identificacao?.uf, "BA");
 }
 
 export async function diretoria(estado) {

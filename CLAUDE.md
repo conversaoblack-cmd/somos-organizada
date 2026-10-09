@@ -73,6 +73,11 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   `registrarVideoVerificacao` marca `verificacao.status = "enviado"`. A equipe assiste em Solicitações, pode `pedirNovoVideo`
   (com motivo) e só aprova com o vídeo enviado e a conferência (documento, sede, 2+ testemunhas), registrada em
   `verificacoesVideo/`. Motivo: dados de torcida são públicos (fraude de cadastro).
+- Termos de uso e Política de privacidade: da plataforma em `/termos` e `/privacidade` (diretoria, subsedes, portaria) e de
+  cada torcida em `/{torcida}/termos` e `/{torcida}/privacidade` (torcedor: a torcida vende e é a controladora; a Somos
+  Organizada é a operadora). Textos em `web/src/modulos/legal/conteudo.tsx`; data e CNPJ em `legal/versao.ts`. Mudou regra
+  citada nos textos (taxa, carência, mensalidade, ingresso): mude o texto e a data. O cadastro grava o aceite
+  (`aceiteTermos.versao`); a aprovação grava `identificacao` (razão social, CNPJ, cidade) pública na torcida.
 - "Esqueci minha senha" (todas as contas) sai pelo nosso e-mail com link para `/redefinir-senha` (`api/senha.ts`);
   o e-mail do Firebase é só reserva. Login da equipe sugere a torcida certa quando o endereço vem errado (`sugerirTorcidas`).
 - Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável

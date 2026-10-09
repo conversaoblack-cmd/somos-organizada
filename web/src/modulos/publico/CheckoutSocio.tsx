@@ -30,7 +30,7 @@ import { useUsuario } from "@/hooks/dados";
 import { useMinhaFicha, useTorcida } from "@/hooks/torcida";
 import { Login } from "@/componentes/Login";
 import { Aviso, Botao, BotaoLink, Campo, Carregando, Cartao, cx, Etapas, Icone, OpcoesCartao, Selecao, Selo, Vazio, useToast } from "@/ui";
-import { CabecalhoTorcida, LinhaValor, rolarParaErro, SemConexao, usePlanosAtivos, useSedes, useTrocaDeEtapa } from "./comum";
+import { AvisoTermos, CabecalhoTorcida, LinhaValor, rolarParaErro, SemConexao, usePlanosAtivos, useSedes, useTrocaDeEtapa } from "./comum";
 import { cartaoVazio, FormCartao, prepararCartao, validarCartao, type EstadoCartao } from "./FormCartao";
 
 const MSG_ACEITE = "Confirme que leu e aceita as regras da associação.";
@@ -577,6 +577,7 @@ export default function CheckoutSocio() {
                   {metodo === "pix" ? "Gerar Pix" : "Assinar"} · {moeda(valores.base + valores.taxa)}
                 </Botao>
               </div>
+              <AvisoTermos acao={metodo === "pix" ? "Ao gerar o Pix" : "Ao assinar"} />
             </div>
           )}
         </div>

@@ -53,6 +53,9 @@ export async function compra(estado) {
   await caixa.getByRole("radio", { name: /Pix/ }).waitFor({ timeout: 30_000 });
   assert.equal(await caixa.getByRole("radio", { name: /Pix/ }).getAttribute("aria-checked"), "true", "Pix vem marcado");
   await conferir(T, t, "passo Pagamento", { torcedor: true });
+  const aviso = caixa.locator("[data-aviso-termos]");
+  await aviso.getByRole("link", { name: "Termos de uso" }).waitFor();
+  assert.equal(await aviso.getByRole("link", { name: "Política de privacidade" }).getAttribute("href"), "/brasil/privacidade");
   await caixa.getByRole("button", { name: /^Gerar Pix/ }).click();
   await t.waitForURL(/\/brasil\/pedido\/[^/?#]+/, { timeout: 30_000 });
   const pedidoId = new URL(t.url()).pathname.split("/").pop();
@@ -119,6 +122,25 @@ export async function compra(estado) {
     mensagem: "ingressos na conta aberta pelo link do e-mail",
   });
   await conferir(E, e, "entrou com CPF e senha e viu os ingressos", { torcedor: true });
+
+  // ── Termos e Política: da torcida (rodapé) e da plataforma ──
+  await e.goto(`${BASE}/brasil`);
+  await e.getByRole("contentinfo").getByRole("link", { name: "Termos de uso" }).click();
+  await e.waitForURL(/\/brasil\/termos$/);
+  await e.getByRole("heading", { level: 1, name: "Termos de uso" }).waitFor({ timeout: 30_000 });
+  await e.getByRole("heading", { name: /Ingressos$/ }).waitFor();
+  await e.getByText(/Nominal e intransferível/).waitFor();
+  await conferir(E, e, "Termos de uso da torcida", { torcedor: true });
+  await e.locator("[data-documento-legal]").getByRole("link", { name: "Política de privacidade" }).last().click();
+  await e.getByRole("heading", { level: 1, name: "Política de privacidade" }).waitFor({ timeout: 30_000 });
+  await e.getByText(/Controladora:/).waitFor();
+  await conferir(E, e, "Política de privacidade da torcida", { torcedor: true });
+  for (const [caminho, titulo] of [["/termos", "Termos de uso"], ["/privacidade", "Política de privacidade"]]) {
+    await e.goto(`${BASE}${caminho}`);
+    await e.getByRole("heading", { level: 1, name: titulo }).waitFor({ timeout: 30_000 });
+    await e.getByRole("contentinfo").getByText(/52\.000\.426\/0001-49/).waitFor();
+    await conferir(E, e, `${titulo} da Somos Organizada`, { torcedor: true });
+  }
   await fecharAparelho(E);
 
   estado.dados.compra = { aparelho: T, pagina: t, nome, email, cpf, celular, pedidoId, doComprador, doAcompanhante };

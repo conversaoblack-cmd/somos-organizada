@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { collection, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -39,6 +39,11 @@ export default function PlanoSomos() {
 
   const abertas = faturas.dados.filter((f) => f.status === "aberta").sort((a, b) => a.vencimento.toMillis() - b.vencimento.toMillis());
   const destaque = abertas[0];
+  // Fatura criada antes da chave Pix da plataforma (ou com a chave antiga): o servidor refaz o Pix com a chave atual
+  const semPix = !!destaque && !destaque.pixCopiaECola;
+  useEffect(() => {
+    if (semPix) void api.conferirPixFatura({ tid }).catch(() => undefined);
+  }, [semPix, tid]);
 
   async function jaPaguei(id: string) {
     setInformando(id);
