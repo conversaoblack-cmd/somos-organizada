@@ -468,7 +468,6 @@ function Calculadora() {
     { id: "preco", rotulo: "Preço médio do ingresso", prefixo: "R$", max: 10000 },
   ];
   const taxa = calcularTaxa(CALCULO_INICIAL);
-  const plano = PLANOS_SAAS_PADRAO.pro.valor;
   return (
     <Secao
       id="conta"
@@ -505,23 +504,11 @@ function Calculadora() {
           <p className="font-display text-5xl mt-1 numeros" data-calc="taxa" aria-live="polite">
             {reais(taxa)}
           </p>
-          <dl className="mt-6 space-y-2 text-[15px] border-t border-linha pt-4">
-            <div className="flex justify-between gap-4">
-              <dt className="text-texto-2">Plano {PLANOS_SAAS_PADRAO.pro.nome}</dt>
-              <dd className="font-semibold numeros" data-calc="plano">
-                {reais(plano)}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-texto-2">Diferença no mês</dt>
-              <dd className="font-bold numeros text-secundaria" data-calc="saldo">
-                {reais(taxa - plano)}
-              </dd>
-            </div>
-          </dl>
+          <p className="mt-6 border-t border-linha pt-4 text-[15px] text-texto-2 leading-relaxed">
+            É dinheiro que entra no caixa da torcida todo mês, além do valor dos ingressos e das mensalidades.
+          </p>
           <p className="mt-auto pt-6 text-xs text-texto-2 leading-relaxed">
-            Conta de exemplo, antes das tarifas da Pagar.me, que dependem do contrato de cada torcida. O plano ideal depende do tamanho da torcida (veja
-            abaixo).
+            Conta de exemplo, antes das tarifas da Pagar.me, que dependem do contrato de cada torcida.
           </p>
         </div>
       </form>
@@ -573,7 +560,7 @@ function Planos() {
         {ordem.map((k) => {
           const destaque = k === "plus";
           const p = PLANOS_SAAS_PADRAO[k];
-          const itens = [`Até ${numero(p.socios)} sócios`, `Até ${numero(p.eventos)} eventos à venda ao mesmo tempo`];
+          const itens = [`Até ${numero(p.eventos)} eventos à venda ao mesmo tempo`];
           return (
             <article
               key={k}
@@ -583,11 +570,10 @@ function Planos() {
                 <h3 className="font-bold text-lg">{p.nome}</h3>
                 {destaque && <span className="text-[11px] font-bold uppercase rounded-full bg-primaria text-sobre-primaria px-2 py-0.5">Recomendado</span>}
               </div>
+              {/* Valores fora do site por enquanto (decisão do dono): o tamanho do plano é o destaque */}
               <p className="mt-3">
-                <span className="text-4xl font-bold numeros" data-plano={k}>
-                  {reais(p.valor)}
-                </span>
-                <span className="text-texto-2"> /mês</span>
+                <span className="text-4xl font-bold numeros">até {numero(p.socios)}</span>
+                <span className="text-texto-2"> sócios</span>
               </p>
               <p className="text-sm text-texto-2 mt-1">{p.descricao}</p>
               <ul className="mt-5 space-y-2 text-[15px] flex-1">

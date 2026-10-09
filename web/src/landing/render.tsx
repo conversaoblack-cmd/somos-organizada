@@ -1,6 +1,5 @@
 /** Gera o HTML estático da página inicial no build (e no servidor de desenvolvimento). */
 import { renderToStaticMarkup } from "react-dom/server";
-import { PLANOS_SAAS_PADRAO } from "@/lib/tipos";
 import { Landing, LINK_WHATSAPP, PERGUNTAS, type OpcoesLanding } from "./Landing";
 
 export const URL_SITE = "https://somosorganizada.com.br";
@@ -15,7 +14,6 @@ function dadosEstruturados(): string {
     logo: `${URL_SITE}/icone-512.png`,
     contactPoint: { "@type": "ContactPoint", contactType: "customer support", url: LINK_WHATSAPP, availableLanguage: "pt-BR", areaServed: "BR" },
   };
-  const valores = Object.values(PLANOS_SAAS_PADRAO).map((p) => p.valor / 100);
   const grafo = [
     organizacao,
     { "@type": "WebSite", "@id": `${URL_SITE}/#site`, url: `${URL_SITE}/`, name: "Somos Organizada", inLanguage: "pt-BR", publisher: { "@id": organizacao["@id"] } },
@@ -27,13 +25,6 @@ function dadosEstruturados(): string {
       areaServed: { "@type": "Country", name: "Brasil" },
       description:
         "Programa de sócios com cobrança automática, venda de ingressos com QR Code e portaria antifraude. Os pagamentos caem direto na conta da torcida.",
-      offers: {
-        "@type": "AggregateOffer",
-        priceCurrency: "BRL",
-        lowPrice: Math.min(...valores),
-        highPrice: Math.max(...valores),
-        offerCount: valores.length,
-      },
     },
     {
       "@type": "FAQPage",
