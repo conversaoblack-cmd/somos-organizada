@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { collection, deleteDoc, deleteField, doc, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, type DocumentReference } from "firebase/firestore";
+import { collection, deleteDoc, deleteField, doc, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, type DocumentReference } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { mensagemDeErro } from "@/lib/api";
 import { centavosDeTexto, cpfMascarado, dataExtensa, dataHora, diaDoMes, hora, mesAbrev, moeda, taxa } from "@/lib/formatos";
@@ -42,10 +42,13 @@ import {
   DICA_FUSO,
   EstadoLista,
   mensagemGravacao,
-  MostrarMais,
+  CarregarMais,
+  contarNoServidor,
+  LOTE,
   normalizar,
   numero,
-  POR_PAGINA,
+  somarNoServidor,
+  useAgregado,
   paraInputDataHora,
   Pilulas,
   SeletorImagem,
@@ -709,8 +712,8 @@ export function DetalheEvento() {
   const [motivo, setMotivo] = useState("");
   const [devolvendo, setDevolvendo] = useState(false);
   const [busca, setBusca] = useState("");
-  // Evento grande tem centenas de ingressos: desenha aos poucos (a busca continua valendo para todos).
-  const [mostrar, setMostrar] = useState(POR_PAGINA);
+  // Evento grande tem milhares de ingressos: lê 100 por vez, do mais recente para o mais antigo.
+  const [qtd, setQtd] = useState(LOTE);
   const e = ev.dados;
   const podeEditarFn = usePodeEditar();
   useTourPagina("evento-detalhe");
@@ -726,22 +729,39 @@ export function DetalheEvento() {
     }
   }, [e, podeEditar, tid, eventoId]);
 
+  // Subsede só lê ingressos da própria sede (as regras exigem o filtro por sedeId).
+  const filtrosIngressos = !e ? null : ehDiretoria ? [] : sedeEscopo && e.sedeId === sedeEscopo ? [where("sedeId", "==", sedeEscopo)] : null;
+  const caminhoIngressos = `torcidas/${tid}/ingressos`;
   const ingressos = useColecao<Ingresso>(
-    !e
-      ? null
-      : ehDiretoria
-        ? query(collection(db, `torcidas/${tid}/ingressos`), where("eventoId", "==", eventoId), orderBy("criadoEm", "desc"))
-        : sedeEscopo && e.sedeId === sedeEscopo
-          ? query(collection(db, `torcidas/${tid}/ingressos`), where("eventoId", "==", eventoId), where("sedeId", "==", sedeEscopo))
-          : null,
-    `ingressos-${tid}-${eventoId}-${sedeEscopo}-${!!e}`,
+    filtrosIngressos
+      ? query(collection(db, caminhoIngressos), where("eventoId", "==", eventoId), ...filtrosIngressos, orderBy("criadoEm", "desc"), limit(qtd))
+      : null,
+    `ingressos-${tid}-${eventoId}-${sedeEscopo}-${!!e}-${qtd}`,
+  );
+  // Veio a página cheia: pode haver ingressos mais antigos ainda não carregados.
+  const temMais = ingressos.dados.length >= qtd;
+  const carregandoMais = ingressos.carregando && ingressos.dados.length > 0;
+  // Números do evento somados no servidor (sem baixar todos os ingressos). Refaz quando muda a venda.
+  const numeros = useAgregado(
+    filtrosIngressos
+      ? async () => {
+          const doEvento = [where("eventoId", "==", eventoId), ...filtrosIngressos];
+          const naoCancelado = where("status", "in", ["valido", "usado"]);
+          const [total, validos, receita, socio] = await Promise.all([
+            contarNoServidor(caminhoIngressos, ...doEvento),
+            contarNoServidor(caminhoIngressos, ...doEvento, naoCancelado),
+            somarNoServidor(caminhoIngressos, "valorBase", ...doEvento, naoCancelado),
+            contarNoServidor(caminhoIngressos, ...doEvento, naoCancelado, where("tipo", "==", "socio")),
+          ]);
+          return { total, validos, receita, socio };
+        }
+      : null,
+    `numeros-ingressos-${tid}-${eventoId}-${sedeEscopo}-${!!filtrosIngressos}-${e?.vendidos ?? 0}-${ingressos.dados[0]?.id ?? ""}`,
   );
   const lista = useMemo(() => {
     const b = normalizar(busca.trim());
     const dig = busca.replace(/\D/g, "");
-    return [...ingressos.dados]
-      .sort((a, b2) => (b2.criadoEm?.toMillis() ?? 0) - (a.criadoEm?.toMillis() ?? 0))
-      .filter((i) => !b || normalizar(`${i.titularNome} ${i.codigo}`).includes(b) || (dig.length >= 3 && i.titularCpf?.includes(dig)));
+    return ingressos.dados.filter((i) => !b || normalizar(`${i.titularNome} ${i.codigo}`).includes(b) || (dig.length >= 3 && i.titularCpf?.includes(dig)));
   }, [ingressos.dados, busca]);
 
   if (ev.carregando) return <Carregando />;
@@ -754,9 +774,7 @@ export function DetalheEvento() {
     );
 
   const linkPublico = linkEvento(torcida.slug, e);
-  const validos = ingressos.dados.filter((i) => i.status !== "cancelado");
-  const receitaBase = validos.reduce((s, i) => s + (i.valorBase ?? 0), 0);
-  const qtdSocio = validos.filter((i) => i.tipo === "socio").length;
+  const n = numeros.dados;
   const podeExcluir = e.vendidos === 0 && e.reservados === 0;
   const refEvento = doc(db, `torcidas/${tid}/eventos/${e.id}`);
   const contaAtiva = podePublicarNaSede(e.sedeId);
@@ -950,8 +968,8 @@ export function DetalheEvento() {
           rotulo="Receita dos ingressos"
           icone="dinheiro"
           tom="sucesso"
-          valor={moeda(receitaBase)}
-          detalhe={`Sem a taxa de serviço · ${numero(qtdSocio)} de sócio, ${numero(validos.length - qtdSocio)} de público`}
+          valor={n ? moeda(n.receita) : numeros.erro ? "—" : "…"}
+          detalhe={n ? `Sem a taxa de serviço · ${numero(n.socio)} de sócio, ${numero(n.validos - n.socio)} de público` : "Sem a taxa de serviço"}
         />
       </div>
       {e.capacidade ? <BarraOcupacao vendidos={e.vendidos} reservados={e.reservados} capacidade={e.capacidade} className="mb-6" /> : null}
@@ -959,14 +977,11 @@ export function DetalheEvento() {
       <Cartao className="p-4 sm:p-5" data-tour="evento-ingressos">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between mb-4">
           <h2 className="font-bold">
-            Ingressos <span className="text-texto-3 font-normal numeros">({numero(ingressos.dados.length)})</span>
+            Ingressos <span className="text-texto-3 font-normal numeros">({numero(n?.total ?? ingressos.dados.length)})</span>
           </h2>
           <Campo
             value={busca}
-            onChange={(v) => {
-              setBusca(v);
-              setMostrar(POR_PAGINA);
-            }}
+            onChange={setBusca}
             placeholder="Nome, código ou CPF"
             icone="busca"
             className="sm:w-72"
@@ -975,20 +990,28 @@ export function DetalheEvento() {
         </div>
         {!ehDiretoria && e.sedeId !== sedeEscopo ? (
           <Aviso tom="info">Este evento é de outra sede. Você só vê os ingressos dos eventos da sua sede.</Aviso>
-        ) : ingressos.carregando || ingressos.erro || lista.length === 0 ? (
+        ) : (ingressos.carregando && !ingressos.dados.length) || ingressos.erro || lista.length === 0 ? (
+          <>
           <EstadoLista
-            carregando={ingressos.carregando}
+            carregando={ingressos.carregando && !ingressos.dados.length}
             erro={ingressos.erro}
             semConexao={ingressos.semConexao}
             vazio
             icone="ingresso"
             tituloVazio={busca ? "Nenhum ingresso encontrado" : "Nenhum ingresso vendido ainda"}
-            textoVazio={busca ? undefined : "Divulgue o link do evento para começar a vender."}
+            textoVazio={busca ? (temMais ? "A busca olha só os ingressos já carregados. Toque em “Carregar mais” para procurar nos mais antigos." : undefined) : "Divulgue o link do evento para começar a vender."}
           />
+          {temMais && !ingressos.erro && <CarregarMais rotulo="Carregar mais ingressos" carregando={carregandoMais} mais={() => setQtd((q) => q + LOTE)} />}
+          </>
         ) : (
           <>
+            {busca.trim() && temMais && (
+              <Aviso tom="info" className="mb-3">
+                A busca olha só os {numero(ingressos.dados.length)} ingressos mais recentes. Para procurar nos mais antigos, toque em “Carregar mais” no fim da lista.
+              </Aviso>
+            )}
             <ul className="divide-y divide-linha">
-              {lista.slice(0, mostrar).map((i) => (
+              {lista.map((i) => (
                 <li key={i.id} className="flex items-center gap-3 py-3">
                   <span className={cx("size-9 shrink-0 rounded-xl grid place-items-center", i.tipo === "socio" ? "bg-secundaria/15 text-secundaria" : "bg-superficie-2 text-texto-2")}>
                     <Icone nome={i.tipo === "socio" ? "estrela" : "ingresso"} className="size-4" />
@@ -1004,7 +1027,7 @@ export function DetalheEvento() {
                 </li>
               ))}
             </ul>
-            <MostrarMais total={lista.length} mostrando={mostrar} mais={() => setMostrar((n) => n + POR_PAGINA)} />
+            {temMais && <CarregarMais rotulo="Carregar mais ingressos" carregando={carregandoMais} mais={() => setQtd((q) => q + LOTE)} />}
           </>
         )}
       </Cartao>

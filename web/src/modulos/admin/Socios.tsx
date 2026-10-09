@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
-import { collection, orderBy, query, where } from "firebase/firestore";
+import { collection, getDocs, limit, orderBy, query, where, type QueryConstraint } from "firebase/firestore";
 import { getDownloadURL, ref as refStorage } from "firebase/storage";
 import { db } from "@/lib/firebase";
 import { storage } from "@/lib/armazenamento";
@@ -19,87 +19,162 @@ import {
 } from "@/lib/formatos";
 import type { ComId, Membro, Socio, StatusSocio } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
-import { Avatar, Botao, CabecalhoPagina, Campo, Cartao, Gaveta, Icone, Selecao, Selo, useToast } from "@/ui";
+import { Avatar, Aviso, Botao, CabecalhoPagina, Campo, Cartao, Gaveta, Icone, Selecao, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
-import { baixarCsv, Confirmar, decimalBR, EstadoLista, Linha, MostrarMais, normalizar, numero, numeroWhatsapp, Pilulas, POR_PAGINA } from "./util";
+import { baixarCsv, CarregarMais, Confirmar, contarNoServidor, decimalBR, EstadoLista, Linha, LOTE, normalizar, numero, numeroWhatsapp, Pilulas, useAgregado } from "./util";
 
 const STATUS: StatusSocio[] = ["ativo", "em_analise", "inadimplente", "pendente_pagamento", "suspenso", "cancelado"];
 type Acao = "aprovar" | "suspender" | "reativar" | "cancelar";
 
+/** Busca que vai ao servidor: só números (CPF ou matrícula), a partir de 3 dígitos. */
+function digitosDaBusca(busca: string): string | null {
+  const t = busca.trim();
+  const dig = soDigitos(t);
+  return dig.length >= 3 && /^[\d.\-\s/]+$/.test(t) ? dig : null;
+}
+
+/** Espera a pessoa parar de digitar antes de consultar o servidor. */
+function useAtrasado<T>(valor: T, ms = 400): T {
+  const [v, setV] = useState(valor);
+  useEffect(() => {
+    const t = setTimeout(() => setV(valor), ms);
+    return () => clearTimeout(t);
+  }, [valor, ms]);
+  return v;
+}
+
 export default function Socios() {
   const { tid, ehDiretoria, sedeEscopo, sedes, nomeSede } = usePainel();
+  const avisar = useToast();
   const [params] = useSearchParams();
   const inicial = params.get("status") as StatusSocio | null;
   const [status, setStatus] = useState<"todos" | StatusSocio>(inicial && STATUS.includes(inicial) ? inicial : "todos");
   const [sede, setSede] = useState("");
   const [busca, setBusca] = useState("");
   const [abertoId, setAbertoId] = useState<string | null>(null);
-  // Torcida grande tem milhares de sócios: desenha 60 por vez (busca e planilha continuam com todos).
-  const [mostrar, setMostrar] = useState(POR_PAGINA);
-  useEffect(() => setMostrar(POR_PAGINA), [status, sede, busca]);
+  const [baixando, setBaixando] = useState(false);
+  // Torcida grande tem milhares de sócios: lê 100 por vez (do cadastro mais recente para o mais antigo).
+  const [qtd, setQtd] = useState(LOTE);
+  useEffect(() => setQtd(LOTE), [status, sede]);
   useTourPagina("socios");
 
+  const caminho = `torcidas/${tid}/socios`;
+  // Subsede só enxerga a própria sede (as regras exigem o filtro); a diretoria pode filtrar por uma sede.
+  const sedeFiltro = ehDiretoria ? sede : sedeEscopo;
+  const podeLer = ehDiretoria || !!sedeEscopo;
+  const filtrosServidor = (): QueryConstraint[] => [
+    ...(sedeFiltro ? [where("sedeId", "==", sedeFiltro)] : []),
+    ...(status !== "todos" ? [where("status", "==", status)] : []),
+  ];
+
   const socios = useColecao<Socio>(
-    ehDiretoria
-      ? query(collection(db, `torcidas/${tid}/socios`), orderBy("criadoEm", "desc"))
-      : sedeEscopo
-        ? query(collection(db, `torcidas/${tid}/socios`), where("sedeId", "==", sedeEscopo), orderBy("criadoEm", "desc"))
-        : null,
-    `socios-${tid}-${sedeEscopo ?? "todas"}`,
+    podeLer ? query(collection(db, caminho), ...filtrosServidor(), orderBy("criadoEm", "desc"), limit(qtd)) : null,
+    `socios-${tid}-${sedeFiltro || "todas"}-${status}-${qtd}`,
+  );
+  // Veio a página cheia: pode haver sócios mais antigos ainda não carregados.
+  const temMais = socios.dados.length >= qtd;
+  const carregandoMais = socios.carregando && socios.dados.length > 0;
+
+  // CPF ou matrícula: procura no servidor entre todos os sócios (não só nos carregados).
+  const digitos = useAtrasado(digitosDaBusca(busca));
+  const daSede = !ehDiretoria && sedeEscopo ? [where("sedeId", "==", sedeEscopo)] : [];
+  const porCpf = useColecao<Socio>(
+    podeLer && digitos ? query(collection(db, caminho), ...daSede, where("cpf", ">=", digitos), where("cpf", "<=", `${digitos}\uf8ff`), orderBy("cpf"), limit(30)) : null,
+    `socios-cpf-${tid}-${sedeEscopo ?? "todas"}-${digitos}`,
+  );
+  const porMatricula = useColecao<Socio>(
+    podeLer && digitos && digitos.length <= 6 ? query(collection(db, caminho), ...daSede, where("matricula", "==", digitos.padStart(6, "0")), limit(5)) : null,
+    `socios-mat-${tid}-${sedeEscopo ?? "todas"}-${digitos}`,
+  );
+  const buscaNoServidor = !!digitos && digitos === digitosDaBusca(busca);
+
+  // Contadores das pílulas: contados no servidor (custa 1 leitura a cada 1.000 sócios), não na lista carregada.
+  const contagem = useAgregado<Record<string, number>>(
+    podeLer
+      ? async () => {
+          const daSedeFiltro = sedeFiltro ? [where("sedeId", "==", sedeFiltro)] : [];
+          const valores = await Promise.all([
+            contarNoServidor(caminho, ...daSedeFiltro),
+            ...STATUS.map((st) => contarNoServidor(caminho, ...daSedeFiltro, where("status", "==", st))),
+          ]);
+          return Object.fromEntries([["todos", valores[0]!], ...STATUS.map((st, i) => [st, valores[i + 1]!])]);
+        }
+      : null,
+    // refaz quando chega sócio novo ou muda a situação de alguém da lista
+    `contagem-socios-${tid}-${sedeFiltro || "todas"}-${socios.dados[0]?.id ?? ""}-${socios.dados.slice(0, LOTE).map((s) => s.status).join(",")}`,
   );
 
-  const porSede = useMemo(() => socios.dados.filter((s) => !sede || s.sedeId === sede), [socios.dados, sede]);
-  const contagem = useMemo(() => {
-    const c: Record<string, number> = { todos: porSede.length };
-    for (const s of porSede) c[s.status] = (c[s.status] ?? 0) + 1;
-    return c;
-  }, [porSede]);
-
-  const filtrados = useMemo(() => {
+  const filtrar = useMemo(() => {
     const b = normalizar(busca.trim());
     const dig = soDigitos(busca);
-    return porSede.filter((s) => {
-      if (status !== "todos" && s.status !== status) return false;
-      if (!b) return true;
-      return normalizar(`${s.nome} ${s.email} ${s.matricula ?? ""}`).includes(b) || (dig.length >= 3 && (s.cpf.includes(dig) || (s.matricula ?? "").includes(dig)));
-    });
-  }, [porSede, status, busca]);
+    return (lista: ComId<Socio>[]) =>
+      lista.filter((s) => {
+        if (status !== "todos" && s.status !== status) return false;
+        if (sedeFiltro && s.sedeId !== sedeFiltro) return false;
+        if (!b) return true;
+        return normalizar(`${s.nome} ${s.email} ${s.matricula ?? ""}`).includes(b) || (dig.length >= 3 && (s.cpf.includes(dig) || (s.matricula ?? "").includes(dig)));
+      });
+  }, [busca, status, sedeFiltro]);
 
-  const visiveis = filtrados.slice(0, mostrar);
-  const aberto = abertoId ? (socios.dados.find((s) => s.id === abertoId) ?? null) : null;
+  const filtrados = useMemo(() => {
+    if (!buscaNoServidor) return filtrar(socios.dados);
+    const vistos = new Set<string>();
+    return filtrar([...porMatricula.dados, ...porCpf.dados]).filter((s) => !vistos.has(s.id) && !!vistos.add(s.id));
+  }, [buscaNoServidor, filtrar, socios.dados, porCpf.dados, porMatricula.dados]);
 
-  function exportar() {
-    baixarCsv(
-      `socios-${new Date().toISOString().slice(0, 10)}`,
-      ["Matrícula", "Nome", "CPF", "E-mail", "Telefone", "Nascimento", "Plano", "Valor", "Forma de pagamento", "Situação", "Válido até", "Sede", "Cidade", "UF", "Cadastro"],
-      filtrados.map((s) => [
-        s.matricula ?? "",
-        s.nome,
-        mascaraCpf(s.cpf),
-        s.email,
-        mascaraTelefone(s.telefone ?? ""),
-        s.nascimento ? s.nascimento.split("-").reverse().join("/") : "",
-        s.planoNome,
-        decimalBR(s.valorPlano),
-        s.metodo === "pix" ? "Pix" : "Cartão",
-        ROTULO_STATUS_SOCIO[s.status],
-        s.validoAte ? dataCurta(s.validoAte) : "",
-        nomeSede(s.sedeId),
-        s.endereco?.cidade ?? "",
-        s.endereco?.uf ?? "",
-        dataCurta(s.criadoEm),
-      ]),
-    );
+  const lista = buscaNoServidor ? { carregando: porCpf.carregando || porMatricula.carregando, erro: porCpf.erro || porMatricula.erro, semConexao: porCpf.semConexao } : socios;
+  const aberto = abertoId ? (filtrados.find((s) => s.id === abertoId) ?? socios.dados.find((s) => s.id === abertoId) ?? null) : null;
+  const buscaLocal = !!busca.trim() && !buscaNoServidor;
+
+  // Planilha: lê todos os sócios com os filtros só na hora de baixar (não a cada vez que a tela abre).
+  async function exportar() {
+    if (!podeLer) return;
+    setBaixando(true);
+    try {
+      const snap = await getDocs(query(collection(db, caminho), ...filtrosServidor()));
+      const todos = filtrar(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Socio) }))).sort((a, b) => (b.criadoEm?.toMillis() ?? 0) - (a.criadoEm?.toMillis() ?? 0));
+      if (!todos.length) {
+        avisar("Nenhum sócio com esses filtros.", "info");
+        return;
+      }
+      baixarCsv(
+        `socios-${new Date().toISOString().slice(0, 10)}`,
+        ["Matrícula", "Nome", "CPF", "E-mail", "Telefone", "Nascimento", "Plano", "Valor", "Forma de pagamento", "Situação", "Válido até", "Sede", "Cidade", "UF", "Cadastro"],
+        todos.map((s) => [
+          s.matricula ?? "",
+          s.nome,
+          mascaraCpf(s.cpf),
+          s.email,
+          mascaraTelefone(s.telefone ?? ""),
+          s.nascimento ? s.nascimento.split("-").reverse().join("/") : "",
+          s.planoNome,
+          decimalBR(s.valorPlano),
+          s.metodo === "pix" ? "Pix" : "Cartão",
+          ROTULO_STATUS_SOCIO[s.status],
+          s.validoAte ? dataCurta(s.validoAte) : "",
+          nomeSede(s.sedeId),
+          s.endereco?.cidade ?? "",
+          s.endereco?.uf ?? "",
+          dataCurta(s.criadoEm),
+        ]),
+      );
+    } catch (e) {
+      avisar(mensagemDeErro(e), "erro");
+    } finally {
+      setBaixando(false);
+    }
   }
+
+  const contador = (k: string) => contagem.dados?.[k];
 
   return (
     <div>
       <CabecalhoPagina
         titulo="Sócios"
-        descricao={ehDiretoria ? "Todos os sócios da torcida." : `Sócios da ${nomeSede(sedeEscopo)}.`}
+        descricao={ehDiretoria ? "Todos os sócios da torcida, do cadastro mais recente para o mais antigo." : `Sócios da ${nomeSede(sedeEscopo)}.`}
         acoes={
-          <Botao variante="contorno" tamanho="sm" icone="download" onClick={exportar} disabled={!filtrados.length} data-tour="socios-exportar">
+          <Botao variante="contorno" tamanho="sm" icone="download" onClick={exportar} carregando={baixando} disabled={!podeLer || (!socios.dados.length && !socios.carregando)} data-tour="socios-exportar">
             Baixar planilha
           </Botao>
         }
@@ -111,8 +186,8 @@ export default function Socios() {
           valor={status}
           onChange={setStatus}
           opcoes={[
-            { valor: "todos" as const, rotulo: "Todos", contador: contagem.todos ?? 0 },
-            ...STATUS.map((s) => ({ valor: s, rotulo: ROTULO_STATUS_SOCIO[s], contador: contagem[s] ?? 0 })),
+            { valor: "todos" as const, rotulo: "Todos", contador: contador("todos") },
+            ...STATUS.map((s) => ({ valor: s, rotulo: ROTULO_STATUS_SOCIO[s], contador: contador(s) })),
           ]}
         />
         </div>
@@ -131,18 +206,39 @@ export default function Socios() {
         </div>
       </div>
 
-      {socios.carregando || socios.erro || filtrados.length === 0 ? (
-        <EstadoLista
-          carregando={socios.carregando}
-          erro={socios.erro}
-          semConexao={socios.semConexao}
-          vazio
-          icone="usuarios"
-          tituloVazio={socios.dados.length ? "Nenhum sócio com esses filtros" : "Nenhum sócio ainda"}
-          textoVazio={socios.dados.length ? "Mude os filtros ou a busca." : "Divulgue a página da torcida (aba Sócios) para receber as primeiras adesões."}
-        />
+      {buscaLocal && temMais && !socios.erro && (
+        <Aviso tom="info" className="mb-4">
+          A busca por nome ou e-mail olha só os {numero(socios.dados.length)} sócios já carregados. Para achar qualquer sócio, busque pelo CPF ou pela
+          matrícula (só números).
+        </Aviso>
+      )}
+
+      {(lista.carregando && !filtrados.length) || lista.erro || filtrados.length === 0 ? (
+        <>
+          <EstadoLista
+            carregando={lista.carregando && !filtrados.length}
+            erro={lista.erro}
+            semConexao={lista.semConexao}
+            vazio
+            icone="usuarios"
+            tituloVazio={socios.dados.length || busca.trim() || status !== "todos" || sede ? "Nenhum sócio com esses filtros" : "Nenhum sócio ainda"}
+            textoVazio={
+              socios.dados.length || busca.trim() || status !== "todos" || sede
+                ? buscaNoServidor
+                  ? "Confira os números do CPF ou da matrícula."
+                  : "Mude os filtros ou a busca."
+                : "Divulgue a página da torcida (aba Sócios) para receber as primeiras adesões."
+            }
+          />
+          {!buscaNoServidor && temMais && !socios.erro && <CarregarMais rotulo="Carregar mais sócios" carregando={carregandoMais} mais={() => setQtd((n) => n + LOTE)} />}
+        </>
       ) : (
         <div data-tour="socios-lista">
+          <p className="text-sm text-texto-3 mb-3 numeros">
+            {buscaNoServidor
+              ? `${numero(filtrados.length)} ${filtrados.length === 1 ? "sócio encontrado" : "sócios encontrados"}`
+              : `${numero(filtrados.length)} ${filtrados.length === 1 ? "sócio" : "sócios"}${temMais ? " · há cadastros mais antigos" : ""}`}
+          </p>
           <Cartao className="hidden md:block overflow-hidden">
             <table className="w-full text-sm">
               <thead className="text-left text-texto-3 text-xs uppercase tracking-wide">
@@ -156,7 +252,7 @@ export default function Socios() {
                 </tr>
               </thead>
               <tbody>
-                {visiveis.map((s) => (
+                {filtrados.map((s) => (
                   <tr key={s.id} onClick={() => setAbertoId(s.id)} className="border-b border-linha last:border-0 hover:bg-superficie-2 cursor-pointer">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -195,7 +291,7 @@ export default function Socios() {
             </table>
           </Cartao>
           <div className="md:hidden grid grid-cols-1 gap-2">
-            {visiveis.map((s) => (
+            {filtrados.map((s) => (
               <button key={s.id} type="button" onClick={() => setAbertoId(s.id)} className="text-left min-w-0 w-full">
                 <Cartao className="p-4 flex items-center gap-3 active:bg-superficie-2">
                   <Avatar nome={s.nome} />
@@ -211,7 +307,7 @@ export default function Socios() {
               </button>
             ))}
           </div>
-          <MostrarMais total={filtrados.length} mostrando={mostrar} mais={() => setMostrar((n) => n + POR_PAGINA)} />
+          {!buscaNoServidor && temMais && <CarregarMais rotulo="Carregar mais sócios" carregando={carregandoMais} mais={() => setQtd((n) => n + LOTE)} />}
         </div>
       )}
 
@@ -411,14 +507,18 @@ function DetalheSocio({ s, fechar }: { s: ComId<Socio> | null; fechar: () => voi
           perigo={TEXTO_ACAO[acao].perigo}
           acao={async () => {
             const r = await api.alterarStatusSocio({ tid, socioUid: s.uid, acao });
-            avisar(`Pronto! Situação: ${ROTULO_STATUS_SOCIO[r.status as StatusSocio] ?? r.status}.`, "sucesso");
+            if (r.avisoAssinatura) avisar(r.avisoAssinatura, "erro");
+            else avisar(`Pronto! Situação: ${ROTULO_STATUS_SOCIO[r.status as StatusSocio] ?? r.status}.`, "sucesso");
           }}
         >
           <strong className="block text-texto mb-1">{s.nome}</strong>
           {TEXTO_ACAO[acao].texto}
           {/* assinatura antiga no cartão é cobrada pela própria Pagar.me, fora da rotina do sistema */}
-          {(acao === "cancelar" || acao === "suspender") && s.pagarme?.subscriptionId && (
-            <span className="block mt-2">Este sócio tem uma assinatura antiga no cartão: confira também se ela foi encerrada na Pagar.me.</span>
+          {acao === "cancelar" && s.pagarme?.subscriptionId && !s.assinaturaCancelada && (
+            <span className="block mt-2">Este sócio tem uma assinatura antiga no cartão: ela também será cancelada na Pagar.me.</span>
+          )}
+          {acao === "suspender" && s.pagarme?.subscriptionId && !s.assinaturaCancelada && (
+            <span className="block mt-2">Este sócio tem uma assinatura antiga no cartão, que continua cobrando enquanto ele estiver suspenso. Para parar a cobrança, cancele o sócio.</span>
           )}
         </Confirmar>
       )}

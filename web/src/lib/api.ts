@@ -221,7 +221,7 @@ export const api = {
   // ── Diretoria ────────────────────────────────────────
   alterarStatusSocio: chamar<
     { tid: string; socioUid: string; acao: "aprovar" | "suspender" | "reativar" | "cancelar" },
-    { status: string }
+    { status: string; avisoAssinatura?: string }
   >("alterarStatusSocio"),
   salvarCredenciaisPagarme: chamar<
     { tid: string; chaveSecreta: string; chavePublica: string; pix: boolean; cartao: boolean; descritorFatura?: string },

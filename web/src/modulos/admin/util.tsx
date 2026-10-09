@@ -1,8 +1,10 @@
 /** Utilitários locais do painel da diretoria. */
-import { useState, type ReactNode } from "react";
-import { Timestamp } from "firebase/firestore";
+import { useEffect, useState, type ReactNode } from "react";
+import { collection, count, getAggregateFromServer, query, sum, Timestamp, where, type QueryConstraint } from "firebase/firestore";
 import { getDownloadURL, ref as refStorage, uploadBytes } from "firebase/storage";
 import { storage } from "@/lib/armazenamento";
+import { db } from "@/lib/firebase";
+import { registrarErro } from "@/lib/erros";
 import { ehErroDeConexao, mensagemDeErro } from "@/lib/api";
 import { copiarTexto } from "@/lib/servicos";
 import { Aviso, Botao, Carregando, cx, Icone, Modal, useToast, Vazio, type NomeIcone, type Tom } from "@/ui";
@@ -300,6 +302,99 @@ export function MostrarMais({ total, mostrando, mais }: { total: number; mostran
       </Botao>
     </div>
   );
+}
+
+/** Quantos documentos buscar por vez nas listas longas (o Firestore cobra cada documento lido). */
+export const LOTE = 100;
+
+/** Botão no fim de uma lista lida aos poucos (do mais recente para o mais antigo). */
+export function CarregarMais({ carregando, mais, rotulo, lote = LOTE }: { carregando: boolean; mais: () => void; rotulo: string; lote?: number }) {
+  return (
+    <div className="flex flex-col items-center gap-2 pt-4">
+      <Botao variante="contorno" icone="chevronBaixo" carregando={carregando} onClick={mais}>
+        {rotulo}
+      </Botao>
+      <p className="text-xs text-texto-3 numeros">Busca mais {numero(lote)}, dos mais antigos.</p>
+    </div>
+  );
+}
+
+export interface EstadoAgregado<T> {
+  dados: T | null;
+  carregando: boolean;
+  erro: Error | null;
+}
+
+/**
+ * Soma ou contagem feita no servidor (getAggregateFromServer): não baixa os documentos e custa 1 leitura a cada
+ * 1.000 itens. Não é em tempo real: refaz quando `chave` muda (inclua nela algo que mude quando os dados mudarem).
+ * Enquanto refaz, continua mostrando o último resultado.
+ */
+export function useAgregado<T>(buscar: (() => Promise<T>) | null, chave: string): EstadoAgregado<T> {
+  // Guarda de qual chave é o resultado: logo depois de a chave mudar, o render já aparece como "carregando".
+  const [estado, setEstado] = useState<EstadoAgregado<T> & { de: string | null }>({ dados: null, carregando: !!buscar, erro: null, de: null });
+  const ativa = buscar ? chave : null;
+  useEffect(() => {
+    if (!buscar) {
+      setEstado({ dados: null, carregando: false, erro: null, de: null });
+      return;
+    }
+    let ativo = true;
+    setEstado((e) => ({ ...e, carregando: true, de: chave }));
+    buscar().then(
+      (dados) => ativo && setEstado({ dados, carregando: false, erro: null, de: chave }),
+      (erro: Error) => {
+        if (!ativo) return;
+        registrarErro(erro, `agregado ${chave}`);
+        setEstado((e) => ({ dados: e.dados, carregando: false, erro, de: chave }));
+      },
+    );
+    return () => {
+      ativo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ativa]);
+  if (estado.de !== ativa) return { dados: ativa ? estado.dados : null, carregando: !!ativa, erro: null };
+  return { dados: estado.dados, carregando: estado.carregando, erro: estado.erro };
+}
+
+/** Contagem no servidor de uma coleção com filtros. */
+export async function contarNoServidor(caminho: string, ...filtros: QueryConstraint[]): Promise<number> {
+  const r = await getAggregateFromServer(query(collection(db, caminho), ...filtros), { n: count() });
+  return r.data().n;
+}
+
+/** Soma no servidor de um campo numérico de uma coleção com filtros. */
+export async function somarNoServidor(caminho: string, campo: string, ...filtros: QueryConstraint[]): Promise<number> {
+  const r = await getAggregateFromServer(query(collection(db, caminho), ...filtros), { v: sum(campo) });
+  return r.data().v ?? 0;
+}
+
+/**
+ * Totais de todos os lançamentos de uma sede, somados no servidor (sem ler o extrato inteiro).
+ * baseIngressos/baseSocios = valor dos ingressos/mensalidades (sem a taxa), em qualquer conta;
+ * split* = parte disso que caiu direto na conta da subsede (a taxa nunca vai por divisão).
+ */
+export interface TotaisSede {
+  sedeId: string;
+  taxa: number;
+  baseIngressos: number;
+  baseSocios: number;
+  splitIngressos: number;
+  splitSocios: number;
+}
+
+export async function totaisDaSede(tid: string, sedeId: string): Promise<TotaisSede> {
+  const caminho = `torcidas/${tid}/lancamentos`;
+  const daSede = where("sedeId", "==", sedeId);
+  const [taxa, baseIngressos, baseSocios, splitIngressos, splitSocios] = await Promise.all([
+    somarNoServidor(caminho, "valor", daSede, where("natureza", "==", "taxa")),
+    somarNoServidor(caminho, "valor", daSede, where("natureza", "==", "base"), where("origem", "==", "ingresso")),
+    somarNoServidor(caminho, "valor", daSede, where("natureza", "==", "base"), where("origem", "==", "socio")),
+    somarNoServidor(caminho, "valor", daSede, where("liquidacao", "==", "split"), where("origem", "==", "ingresso")),
+    somarNoServidor(caminho, "valor", daSede, where("liquidacao", "==", "split"), where("origem", "==", "socio")),
+  ]);
+  return { sedeId, taxa, baseIngressos, baseSocios, splitIngressos, splitSocios };
 }
 
 /** Modal de confirmação para ações sensíveis. */

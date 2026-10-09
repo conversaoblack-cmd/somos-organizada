@@ -353,6 +353,176 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "socios",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "socios",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "cpf",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "lancamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "competencia",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "lancamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "natureza",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "valor",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "lancamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "natureza",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "origem",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "valor",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "lancamentos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "liquidacao",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "origem",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "valor",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "ingressos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "ingressos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "valorBase",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "ingressos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sedeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "valorBase",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

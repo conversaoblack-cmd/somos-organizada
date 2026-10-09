@@ -10,7 +10,7 @@ import { usePainel } from "./contexto";
 import { GraficoReceita, type PontoReceita } from "./Grafico";
 import { CartaoPrimeirosPassos } from "./PrimeirosPassos";
 import { useTourPagina } from "./tours";
-import { BarraOcupacao, EstadoLista, mesAtualSP, numero, rotuloMes, ultimosMeses, ValorKpi } from "./util";
+import { BarraOcupacao, contarNoServidor, EstadoLista, instanteSP, mesAtualSP, numero, rotuloMes, totaisDaSede, ultimosMeses, useAgregado, ValorKpi } from "./util";
 
 const ORDEM_STATUS: StatusSocio[] = ["ativo", "em_analise", "inadimplente", "pendente_pagamento", "suspenso", "cancelado"];
 const COR_STATUS: Record<StatusSocio, string> = {
@@ -54,49 +54,81 @@ function useResumoDiretoria(ativo: boolean): Resumo {
   };
 }
 
-/** Números da subsede: calculados a partir dos lançamentos e sócios da própria sede. */
-function useResumoSubsede(sedeId: string | null): Resumo & { socios: (Socio & { id: string })[]; saldo: number } {
+/**
+ * Números da subsede. Não há estatística agregada por sede no servidor (stats/ é da torcida inteira), então:
+ * - receita do mês e gráfico: só os lançamentos dos 6 meses mostrados (não o histórico inteiro);
+ * - totais e saldo a receber: somados no servidor (getAggregateFromServer), sem baixar os lançamentos;
+ * - sócios por situação: contados no servidor; "novos no mês" lê só os cadastros deste mês.
+ */
+function useResumoSubsede(sedeId: string | null): Resumo & { saldo: number } {
   const { tid } = usePainel();
   const meses = useMemo(() => ultimosMeses(6), []);
   const mes = meses[meses.length - 1]!;
+  const [inicioPeriodo, inicioMes] = useMemo(() => {
+    const ts = (c: string) => {
+      const [a, m] = c.split("-").map(Number) as [number, number];
+      // um dia antes: competência e data de criação podem divergir por minutos na virada do mês
+      return Timestamp.fromMillis(instanteSP(a, m, 1).getTime() - 86400_000);
+    };
+    return [ts(meses[0]!), ts(mes)];
+  }, [meses, mes]);
   const lanc = useColecao<Lancamento>(
-    sedeId ? query(collection(db, `torcidas/${tid}/lancamentos`), where("sedeId", "==", sedeId)) : null,
-    `lanc-sede-${tid}-${sedeId}`,
+    sedeId
+      ? query(collection(db, `torcidas/${tid}/lancamentos`), where("sedeId", "==", sedeId), where("criadoEm", ">=", inicioPeriodo), orderBy("criadoEm", "desc"))
+      : null,
+    `lanc-sede-${tid}-${sedeId}-${meses[0]}`,
   );
-  const socios = useColecao<Socio>(
-    sedeId ? query(collection(db, `torcidas/${tid}/socios`), where("sedeId", "==", sedeId)) : null,
-    `socios-sede-${tid}-${sedeId}`,
+  const novosQ = useColecao<Socio>(
+    sedeId
+      ? query(collection(db, `torcidas/${tid}/socios`), where("sedeId", "==", sedeId), where("criadoEm", ">=", inicioMes), orderBy("criadoEm", "desc"))
+      : null,
+    `socios-novos-sede-${tid}-${sedeId}-${mes}`,
   );
   const repasses = useColecao<Repasse>(
     sedeId ? query(collection(db, `torcidas/${tid}/repasses`), where("sedeId", "==", sedeId)) : null,
     `repasses-sede-${tid}-${sedeId}`,
   );
+  // Refaz as somas e contagens quando entra lançamento ou sócio novo na sede.
+  const versao = `${lanc.dados[0]?.id ?? ""}-${novosQ.dados.map((s) => s.status).join(",")}`;
+  const totais = useAgregado(sedeId ? () => totaisDaSede(tid, sedeId) : null, `totais-sede-${tid}-${sedeId}-${versao}`);
+  const contagem = useAgregado<Partial<Record<StatusSocio, number>>>(
+    sedeId
+      ? async () => {
+          const caminho = `torcidas/${tid}/socios`;
+          const valores = await Promise.all(ORDEM_STATUS.map((st) => contarNoServidor(caminho, where("sedeId", "==", sedeId), where("status", "==", st))));
+          return Object.fromEntries(ORDEM_STATUS.map((st, i) => [st, valores[i]]));
+        }
+      : null,
+    `contagem-sede-${tid}-${sedeId}-${versao}`,
+  );
   return useMemo(() => {
-    const soma = (filtro: (l: Lancamento) => boolean) => lanc.dados.filter(filtro).reduce((s, l) => s + l.valor, 0);
+    const doMes = (m: string) => lanc.dados.filter((l) => l.competencia === m);
+    const soma = (lista: Lancamento[], filtro: (l: Lancamento) => boolean) => lista.filter(filtro).reduce((s, l) => s + l.valor, 0);
     const base = (l: Lancamento) => l.natureza === "base";
-    const porMes = (m: string | null): Stats => ({
-      receitaIngressos: soma((l) => base(l) && l.origem === "ingresso" && (!m || l.competencia === m)),
-      receitaSocios: soma((l) => base(l) && l.origem === "socio" && (!m || l.competencia === m)),
-      taxaServico: soma((l) => l.natureza === "taxa" && (!m || l.competencia === m)),
-    });
-    const contagem: Partial<Record<StatusSocio, number>> = {};
-    for (const s of socios.dados) contagem[s.status] = (contagem[s.status] ?? 0) + 1;
-    const novos = socios.dados.filter((s) => s.criadoEm && mesAtualSP(s.criadoEm.toDate()) === mes && s.status !== "pendente_pagamento").length;
+    const porMes = (m: string): Stats => {
+      const l = doMes(m);
+      return {
+        receitaIngressos: soma(l, (x) => base(x) && x.origem === "ingresso"),
+        receitaSocios: soma(l, (x) => base(x) && x.origem === "socio"),
+        taxaServico: soma(l, (x) => x.natureza === "taxa"),
+      };
+    };
+    const t = totais.dados;
+    const novos = novosQ.dados.filter((s) => s.criadoEm && mesAtualSP(s.criadoEm.toDate()) === mes && s.status !== "pendente_pagamento").length;
     return {
       mes: { ...porMes(mes), novosSocios: novos },
-      geral: { ...porMes(null), socios: contagem },
+      geral: { receitaIngressos: t?.baseIngressos ?? 0, receitaSocios: t?.baseSocios ?? 0, taxaServico: t?.taxa ?? 0, socios: contagem.dados ?? {} },
       historico: meses.map((m) => {
         const s = porMes(m);
         return { rotulo: rotuloMes(m), ingressos: s.receitaIngressos ?? 0, socios: s.receitaSocios ?? 0 };
       }),
-      carregando: lanc.carregando || socios.carregando,
-      erro: lanc.erro || socios.erro,
-      semConexao: lanc.semConexao && socios.semConexao,
-      socios: socios.dados,
+      carregando: lanc.carregando || novosQ.carregando || (!t && totais.carregando) || (!contagem.dados && contagem.carregando),
+      erro: lanc.erro || novosQ.erro || totais.erro || contagem.erro,
+      semConexao: lanc.semConexao && novosQ.semConexao,
       // O que caiu direto na conta da subsede (split) não entra no repasse.
-      saldo: soma((l) => base(l) && l.liquidacao !== "split") - repasses.dados.reduce((s, r) => s + r.valor, 0),
+      saldo: t ? t.baseIngressos + t.baseSocios - t.splitIngressos - t.splitSocios - repasses.dados.reduce((s, r) => s + r.valor, 0) : 0,
     };
-  }, [lanc, socios, repasses, mes, meses]);
+  }, [lanc, novosQ, repasses, totais, contagem, mes, meses]);
 }
 
 export default function VisaoGeral() {
@@ -304,12 +336,13 @@ export default function VisaoGeral() {
               ))}
             </div>
           )}
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          {/* 1 coluna no celular estreito: "Aguardando pagamento" não cabe em meia largura de 360 px */}
+          <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-4 gap-y-2 text-sm">
             {ORDEM_STATUS.map((k) => (
               <li key={k} className="flex items-center justify-between gap-2">
                 <Link to={`${base}/socios?status=${k}`} className="flex items-center gap-2 text-texto-2 hover:text-texto min-w-0 min-h-11 sm:min-h-0">
                   <span className={`size-2 rounded-full shrink-0 ${COR_STATUS[k]}`} />
-                  <span className="truncate">{ROTULO_STATUS_SOCIO[k]}</span>
+                  <span className="leading-snug break-words">{ROTULO_STATUS_SOCIO[k]}</span>
                 </Link>
                 <span className="font-semibold numeros">{numero(Math.max(0, socios[k] ?? 0))}</span>
               </li>

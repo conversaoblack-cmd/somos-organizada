@@ -148,10 +148,13 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
 
   const menu: ItemMenu[] = useMemo(() => {
     if (papel === "portaria") return [{ para: base, rotulo: "Portaria", icone: "qr", fim: true }];
-    // Agrupado em três blocos (14 itens soltos confundem no celular); os destinos são os mesmos.
+    // Agrupado em blocos (14 itens soltos confundem no celular); os destinos são os mesmos.
+    // O que se configura uma vez e quase não se mexe fica no fim, em "Configurações".
     const DIA = "Dia a dia";
     const DINHEIRO = "Dinheiro";
+    const PAGINA = "Página e equipe";
     const CONFIG = "Configurações";
+    const pagamentosOk = !!torcida.pagamentos?.configurado;
     const itens: (ItemMenu & { so?: boolean })[] = [
       { para: base, rotulo: "Visão geral", icone: "painel", fim: true, grupo: DIA },
       { para: `${base}/primeiros-passos`, rotulo: "Primeiros passos", icone: "lista", contador: passosPendentes || undefined, grupo: DIA },
@@ -162,13 +165,15 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
       ...(papel === "subsede"
         ? [{ para: `${base}/recebimentos`, rotulo: "Recebimentos", icone: "cartao" as const, contador: contaPendente ? 1 : undefined, grupo: DINHEIRO }]
         : []),
-      { para: `${base}/pagamentos`, rotulo: "Pagamentos", icone: "cartao", so: true, contador: torcida.pagamentos?.configurado ? undefined : 1, grupo: DINHEIRO },
-      { para: `${base}/plano`, rotulo: "Plano Somos Organizada", icone: "bandeira", so: true, grupo: DINHEIRO },
-      { para: `${base}/planos`, rotulo: "Planos de sócio", icone: "estrela", so: true, grupo: CONFIG },
-      { para: `${base}/personalizacao`, rotulo: "Personalizar página", icone: "pincel", so: true, grupo: CONFIG },
-      { para: `${base}/publicar`, rotulo: "Publicar site", icone: "raio", so: true, contador: torcida.publicada ? undefined : 1, grupo: CONFIG },
-      { para: `${base}/sedes`, rotulo: "Sedes", icone: "casa", so: true, grupo: CONFIG },
-      { para: `${base}/usuarios`, rotulo: "Usuários do painel", icone: "chave", so: true, grupo: CONFIG },
+      // Enquanto não estiver configurado, Pagamentos fica à vista em "Dinheiro" (sem ele ninguém compra).
+      ...(pagamentosOk ? [] : [{ para: `${base}/pagamentos`, rotulo: "Pagamentos", icone: "cartao" as const, so: true, contador: 1, grupo: DINHEIRO }]),
+      { para: `${base}/planos`, rotulo: "Planos de sócio", icone: "estrela", so: true, grupo: PAGINA },
+      { para: `${base}/personalizacao`, rotulo: "Personalizar página", icone: "pincel", so: true, grupo: PAGINA },
+      { para: `${base}/publicar`, rotulo: "Publicar site", icone: "raio", so: true, contador: torcida.publicada ? undefined : 1, grupo: PAGINA },
+      { para: `${base}/sedes`, rotulo: "Sedes", icone: "casa", so: true, grupo: PAGINA },
+      { para: `${base}/usuarios`, rotulo: "Usuários do painel", icone: "chave", so: true, grupo: PAGINA },
+      ...(pagamentosOk ? [{ para: `${base}/pagamentos`, rotulo: "Pagamentos", icone: "cartao" as const, so: true, grupo: CONFIG }] : []),
+      { para: `${base}/plano`, rotulo: "Plano Somos Organizada", icone: "bandeira", so: true, grupo: CONFIG },
       { para: `${base}/dominio`, rotulo: "Domínio", icone: "cadeado", so: true, grupo: CONFIG },
     ];
     return itens.filter((i) => !i.so || ehDiretoria);

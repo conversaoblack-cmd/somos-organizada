@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { collection, doc, updateDoc } from "firebase/firestore";
+import { collection, doc, limit, orderBy, query, Timestamp, updateDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { emailValido, mascaraTelefone, moeda, periodicidadeCurta, soDigitos, taxa } from "@/lib/formatos";
+import { diaDoMes, emailValido, hora, mascaraTelefone, mesAbrev, moeda, periodicidadeCurta, soDigitos, taxa } from "@/lib/formatos";
 import { aplicarTema, avisosDeContraste, corValida, PALETAS, TEMA_PADRAO, temaDoPainel } from "@/lib/tema";
-import type { Plano, Tema, Torcida } from "@/lib/tipos";
+import type { Evento, Plano, Tema, Torcida } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { AreaTexto, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, Interruptor, OpcoesCartao, useToast } from "@/ui";
 import { useAlteracoesPendentes } from "@/componentes/LayoutPainel";
@@ -444,6 +444,16 @@ function Previa({ f }: { f: Form }) {
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", temaDoPainel(torcida.tema).corFundo);
   }, [f.tema, torcida.tema]);
 
+  // Prévia com os próximos eventos publicados de verdade (2 leituras); sem nenhum, mostra um exemplo marcado.
+  const agora = useMemo(() => Timestamp.now(), []);
+  const eventos = useColecao<Evento>(
+    query(collection(db, `torcidas/${tid}/eventos`), where("status", "==", "publicado"), where("data", ">=", agora), orderBy("data"), limit(2)),
+    `previa-eventos-${tid}`,
+  );
+  const [ev1, ev2] = eventos.dados;
+  const exemplo = !ev1 && !eventos.carregando;
+  const quaseLotado = !!ev1?.capacidade && (ev1.vendidos + (ev1.reservados ?? 0)) / ev1.capacidade >= 0.8;
+
   const t = f.textos;
   const valorPlano = plano?.valor ?? 1000;
   const sobre = t.sobre || "Conte aqui a história da torcida.";
@@ -500,40 +510,49 @@ function Previa({ f }: { f: Form }) {
         <div className="px-5 py-5 space-y-3">
           {aba === "eventos" ? (
             <>
+              {exemplo && <p className="text-xs text-texto-3">Exemplo: assim vai aparecer quando você publicar um evento.</p>}
               <div className="rounded-cartao border border-linha bg-superficie overflow-hidden">
-                <div className="h-24 relative" style={{ background: BRILHO }}>
+                <div className="h-24 relative overflow-hidden" style={{ background: BRILHO }}>
+                  {ev1?.imagemUrl && <img src={ev1.imagemUrl} alt="" width={340} height={96} loading="lazy" decoding="async" className="absolute inset-0 size-full object-cover" />}
                   <span className="absolute top-3 left-3 rounded-xl bg-fundo/80 backdrop-blur px-2.5 py-1.5 text-center leading-none">
-                    <span className="block text-base font-bold">18</span>
-                    <span className="block text-[10px] font-semibold text-texto-2 mt-0.5">OUT</span>
+                    <span className="block text-base font-bold">{ev1 ? diaDoMes(ev1.data) : "18"}</span>
+                    <span className="block text-[10px] font-semibold text-texto-2 mt-0.5">{ev1 ? mesAbrev(ev1.data) : "OUT"}</span>
                   </span>
-                  <span className="absolute top-3 right-3 rounded-full bg-secundaria text-sobre-secundaria text-[11px] font-bold px-2 py-0.5">Últimas vagas</span>
+                  {exemplo ? (
+                    <span className="absolute top-3 right-3 rounded-full bg-fundo/80 text-texto text-[11px] font-bold px-2 py-0.5">Exemplo</span>
+                  ) : (
+                    quaseLotado && <span className="absolute top-3 right-3 rounded-full bg-secundaria text-sobre-secundaria text-[11px] font-bold px-2 py-0.5">Últimas vagas</span>
+                  )}
                 </div>
                 <div className="p-4">
-                  <p className="font-semibold">Caravana para a Final</p>
-                  <p className="text-xs text-texto-3 mt-0.5 flex items-center gap-1">
-                    <Icone nome="local" className="size-3.5" /> Saída da Sede Central · 13h
+                  <p className="font-semibold line-clamp-2 break-words">{ev1 ? ev1.nome : eventos.carregando ? "…" : "Caravana para a Final"}</p>
+                  <p className="text-xs text-texto-3 mt-0.5 flex items-center gap-1 min-w-0">
+                    <Icone nome="local" className="size-3.5 shrink-0" />
+                    <span className="truncate">{ev1 ? [ev1.local, hora(ev1.data)].filter(Boolean).join(" · ") : "Saída da Sede Central · 13h"}</span>
                   </p>
                   <div className="flex items-end justify-between mt-3">
                     <div>
                       <p className="text-[11px] text-texto-3">Sócio a partir de</p>
-                      <p className="font-bold text-primaria-texto">{moeda(12000 + taxa(12000, pct))}</p>
+                      <p className="font-bold text-primaria-texto">{moeda((ev1?.valorSocio ?? 12000) + taxa(ev1?.valorSocio ?? 12000, pct))}</p>
                     </div>
                     <span className="h-8 px-3 rounded-lg bg-primaria text-sobre-primaria text-xs font-semibold inline-flex items-center">Comprar</span>
                   </div>
                 </div>
               </div>
-              <div className="rounded-cartao border border-linha bg-superficie p-4 flex gap-3 items-center opacity-80">
-                <span className="size-11 rounded-xl bg-superficie-2 grid place-items-center text-center leading-none">
-                  <span>
-                    <span className="block text-sm font-bold">25</span>
-                    <span className="block text-[9px] text-texto-3 font-semibold">OUT</span>
+              {(exemplo || ev2) && (
+                <div className="rounded-cartao border border-linha bg-superficie p-4 flex gap-3 items-center opacity-80">
+                  <span className="size-11 shrink-0 rounded-xl bg-superficie-2 grid place-items-center text-center leading-none">
+                    <span>
+                      <span className="block text-sm font-bold">{ev2 ? diaDoMes(ev2.data) : "25"}</span>
+                      <span className="block text-[9px] text-texto-3 font-semibold">{ev2 ? mesAbrev(ev2.data) : "OUT"}</span>
+                    </span>
                   </span>
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">Churrasco do Distrito</p>
-                  <p className="text-xs text-texto-3">Quadra do bairro · 12h</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{ev2 ? ev2.nome : "Churrasco do Distrito"}</p>
+                    <p className="text-xs text-texto-3 truncate">{ev2 ? [ev2.local, hora(ev2.data)].filter(Boolean).join(" · ") : "Quadra do bairro · 12h"}</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           ) : (
             <>

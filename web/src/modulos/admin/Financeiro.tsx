@@ -1,13 +1,14 @@
-import { useMemo, useState } from "react";
-import { collection, doc, query, serverTimestamp, setDoc, where } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, where, type QueryConstraint } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { mensagemDeErro } from "@/lib/api";
 import { centavosDeTexto, dataCurta, dataHora, moeda } from "@/lib/formatos";
 import type { ComId, Lancamento, Repasse } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { Abas, AreaTexto, Aviso, Botao, CabecalhoPagina, Campo, Cartao, cx, Icone, Indicador, Modal, Selecao, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
-import { baixarCsv, Confirmar, decimalBR, EstadoLista, mesAtualSP, numero, rotuloMes, textoMoeda, ValorKpi } from "./util";
+import { baixarCsv, CarregarMais, Confirmar, decimalBR, EstadoLista, LOTE, mesAtualSP, numero, rotuloMes, textoMoeda, totaisDaSede, ultimosMeses, useAgregado, ValorKpi } from "./util";
 
 /** Uma venda no extrato: o valor do ingresso/mensalidade e a taxa de serviço juntos numa linha só. */
 interface LinhaExtrato {
@@ -32,14 +33,46 @@ interface ResumoSede {
 
 export default function Financeiro() {
   const { tid, ehDiretoria, sedeEscopo, sedes, nomeSede, torcida } = usePainel();
+  const avisar = useToast();
+  const [aba, setAba] = useState<"lancamentos" | "repasses">("lancamentos");
+  const [mes, setMes] = useState("");
+  const [sedeFiltro, setSedeFiltro] = useState("");
+  const [novoRepasse, setNovoRepasse] = useState<string | null>(null);
+  const [baixando, setBaixando] = useState(false);
+  // O extrato cresce todo mês: lê 100 lançamentos por vez, do mais recente para o mais antigo.
+  const [qtd, setQtd] = useState(LOTE);
+  useEffect(() => setQtd(LOTE), [mes, sedeFiltro]);
+  useTourPagina("financeiro");
+
+  const caminhoLanc = `torcidas/${tid}/lancamentos`;
+  const podeLer = ehDiretoria || !!sedeEscopo;
+  // Subsede só enxerga a própria sede (as regras exigem o filtro); a diretoria pode filtrar por uma sede.
+  const sedeDoExtrato = ehDiretoria ? sedeFiltro : sedeEscopo;
+  const filtrosExtrato = (): QueryConstraint[] => [
+    ...(sedeDoExtrato ? [where("sedeId", "==", sedeDoExtrato)] : []),
+    ...(mes ? [where("competencia", "==", mes)] : []),
+  ];
   const lanc = useColecao<Lancamento>(
-    ehDiretoria
-      ? collection(db, `torcidas/${tid}/lancamentos`)
-      : sedeEscopo
-        ? query(collection(db, `torcidas/${tid}/lancamentos`), where("sedeId", "==", sedeEscopo))
-        : null,
-    `fin-lanc-${tid}-${sedeEscopo ?? "todas"}`,
+    podeLer ? query(collection(db, caminhoLanc), ...filtrosExtrato(), orderBy("criadoEm", "desc"), limit(qtd)) : null,
+    `fin-lanc-${tid}-${sedeDoExtrato || "todas"}-${mes || "tudo"}-${qtd}`,
   );
+  // Veio a página cheia: pode haver lançamentos mais antigos ainda não carregados.
+  const temMais = lanc.dados.length >= qtd;
+  const carregandoMais = lanc.carregando && lanc.dados.length > 0;
+  // Último lançamento do escopo (1 leitura, em tempo real): quando muda, os totais são somados de novo.
+  const ultimo = useColecao<Lancamento>(
+    podeLer
+      ? query(collection(db, caminhoLanc), ...(ehDiretoria ? [] : [where("sedeId", "==", sedeEscopo)]), orderBy("criadoEm", "desc"), limit(1))
+      : null,
+    `fin-ultimo-${tid}-${sedeEscopo ?? "todas"}`,
+  );
+  // Saldos de cada sede somados no servidor: não depende de quantos lançamentos foram carregados no extrato.
+  const sedesDoResumo = useMemo(() => sedes.filter((s) => ehDiretoria || s.id === sedeEscopo).map((s) => s.id), [sedes, ehDiretoria, sedeEscopo]);
+  const totais = useAgregado(
+    podeLer && !ultimo.carregando ? () => Promise.all(sedesDoResumo.map((id) => totaisDaSede(tid, id))) : null,
+    `fin-totais-${tid}-${sedesDoResumo.join(",")}-${ultimo.dados[0]?.id ?? ""}-${ultimo.carregando}`,
+  );
+  // Repasses são registrados à mão (poucos por mês): continuam lidos inteiros.
   const repasses = useColecao<Repasse>(
     ehDiretoria
       ? collection(db, `torcidas/${tid}/repasses`)
@@ -49,13 +82,6 @@ export default function Financeiro() {
     `fin-rep-${tid}-${sedeEscopo ?? "todas"}`,
   );
 
-  const [aba, setAba] = useState<"lancamentos" | "repasses">("lancamentos");
-  const [mes, setMes] = useState("");
-  const [sedeFiltro, setSedeFiltro] = useState("");
-  const [novoRepasse, setNovoRepasse] = useState<string | null>(null);
-  const [limite, setLimite] = useState(50);
-  useTourPagina("financeiro");
-
   const principalId = torcida.sedePrincipalId;
   const resumo = useMemo(() => {
     const m = new Map<string, ResumoSede>();
@@ -63,17 +89,17 @@ export default function Financeiro() {
       if (!m.has(id)) m.set(id, { sedeId: id, ingressos: 0, socios: 0, split: 0, taxa: 0, repassado: 0 });
       return m.get(id)!;
     };
-    for (const s of sedes) if (ehDiretoria || s.id === sedeEscopo) pegar(s.id);
-    for (const l of lanc.dados) {
-      const r = pegar(l.sedeId);
-      if (l.natureza === "taxa") r.taxa += l.valor;
-      else if (l.liquidacao === "split") r.split += l.valor;
-      else if (l.origem === "ingresso") r.ingressos += l.valor;
-      else r.socios += l.valor;
+    for (const id of sedesDoResumo) pegar(id);
+    for (const t of totais.dados ?? []) {
+      const r = pegar(t.sedeId);
+      r.taxa = t.taxa;
+      r.split = t.splitIngressos + t.splitSocios;
+      r.ingressos = t.baseIngressos - t.splitIngressos;
+      r.socios = t.baseSocios - t.splitSocios;
     }
-    for (const rp of repasses.dados) pegar(rp.sedeId).repassado += rp.valor;
+    for (const rp of repasses.dados) if (ehDiretoria || rp.sedeId === sedeEscopo) pegar(rp.sedeId).repassado += rp.valor;
     return [...m.values()];
-  }, [lanc.dados, repasses.dados, sedes, ehDiretoria, sedeEscopo]);
+  }, [totais.dados, repasses.dados, sedesDoResumo, ehDiretoria, sedeEscopo]);
 
   const subsedes = resumo.filter((r) => r.sedeId !== principalId);
   const principal = resumo.find((r) => r.sedeId === principalId);
@@ -83,20 +109,16 @@ export default function Financeiro() {
   const totalRepassado = resumo.reduce((s, r) => s + r.repassado, 0);
   const aRepassar = subsedes.reduce((s, r) => s + Math.max(0, r.ingressos + r.socios - r.repassado), 0);
 
+  // Meses do filtro: os últimos 2 anos e qualquer mês mais antigo que já apareceu no extrato ou nos repasses.
   const competencias = useMemo(() => {
-    const c = new Set<string>([mesAtualSP()]);
+    const c = new Set<string>(ultimosMeses(24));
     for (const l of lanc.dados) if (l.competencia) c.add(l.competencia);
     for (const r of repasses.dados) c.add(r.competencia || (r.criadoEm ? mesAtualSP(r.criadoEm.toDate()) : mesAtualSP()));
     return [...c].sort().reverse();
   }, [lanc.dados, repasses.dados]);
 
-  const lancFiltrados = useMemo(
-    () =>
-      lanc.dados
-        .filter((l) => (!mes || l.competencia === mes) && (!sedeFiltro || l.sedeId === sedeFiltro))
-        .sort((a, b) => (b.criadoEm?.toMillis() ?? 0) - (a.criadoEm?.toMillis() ?? 0)),
-    [lanc.dados, mes, sedeFiltro],
-  );
+  // Mês e sede já vêm filtrados do servidor.
+  const lancFiltrados = lanc.dados;
   // Junta base + taxa da mesma venda (mesma referência e mesmo sinal: estorno fica em linha própria).
   const linhasExtrato = useMemo(() => {
     const m = new Map<string, LinhaExtrato>();
@@ -123,13 +145,26 @@ export default function Financeiro() {
   );
   const somaFiltro = aba === "lancamentos" ? lancFiltrados.reduce((s, l) => s + l.valor, 0) : repFiltrados.reduce((s, r) => s + r.valor, 0);
 
-  function exportar() {
+  async function exportar() {
     const sufixo = `${mes || "tudo"}${sedeFiltro ? "-" + nomeSede(sedeFiltro).replace(/\W+/g, "-").toLowerCase() : ""}`;
     if (aba === "lancamentos") {
+      // Planilha: lê todos os lançamentos do mês/sede escolhidos só na hora de baixar.
+      if (!podeLer) return;
+      setBaixando(true);
+      let todos: ComId<Lancamento>[];
+      try {
+        const snap = await getDocs(query(collection(db, caminhoLanc), ...filtrosExtrato()));
+        todos = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Lancamento) })).sort((a, b) => (b.criadoEm?.toMillis() ?? 0) - (a.criadoEm?.toMillis() ?? 0));
+      } catch (e) {
+        avisar(mensagemDeErro(e), "erro");
+        return;
+      } finally {
+        setBaixando(false);
+      }
       baixarCsv(
         `extrato-${sufixo}`,
         ["Data", "Mês", "Sede", "Origem", "Tipo de valor", "Onde caiu o dinheiro", "Descrição", "Valor", "Referência"],
-        lancFiltrados.map((l) => [
+        todos.map((l) => [
           dataHora(l.criadoEm),
           l.competencia,
           nomeSede(l.sedeId),
@@ -150,8 +185,9 @@ export default function Financeiro() {
     }
   }
 
-  const carregando = lanc.carregando || repasses.carregando;
-  const erro = lanc.erro || repasses.erro;
+  // Só a primeira carga segura a tela; "Carregar mais" e a soma refeita mantêm o que já está na tela.
+  const carregando = (lanc.carregando && !lanc.dados.length) || repasses.carregando || (!totais.dados && (totais.carregando || ultimo.carregando));
+  const erro = lanc.erro || repasses.erro || totais.erro;
   const minha = !ehDiretoria ? resumo.find((r) => r.sedeId === sedeEscopo) : null;
 
   return (
@@ -284,6 +320,7 @@ export default function Financeiro() {
                 <h2 className="text-lg font-bold">Extrato</h2>
                 <p className="text-sm text-texto-3 numeros">
                   {numero(aba === "lancamentos" ? linhasExtrato.length : repFiltrados.length)} itens · {moeda(somaFiltro)}
+                  {aba === "lancamentos" && temMais && " · há lançamentos mais antigos"}
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
@@ -313,19 +350,25 @@ export default function Financeiro() {
                     ))}
                   </Selecao>
                 )}
-                <Botao variante="contorno" icone="download" onClick={exportar} disabled={aba === "lancamentos" ? !lancFiltrados.length : !repFiltrados.length}>
+                <Botao variante="contorno" icone="download" onClick={exportar} carregando={baixando} disabled={aba === "lancamentos" ? !lancFiltrados.length : !repFiltrados.length}>
                   Baixar planilha
                 </Botao>
               </div>
             </div>
 
+            {aba === "lancamentos" && temMais && (
+              <Aviso tom="info" className="mb-4">
+                A lista e o total acima mostram só os {numero(lanc.dados.length)} lançamentos mais recentes{mes ? ` de ${rotuloMes(mes, true)}` : ""}. Os saldos
+                lá em cima e a planilha contam todos.
+              </Aviso>
+            )}
             {aba === "lancamentos" ? (
               lancFiltrados.length === 0 ? (
                 <EstadoLista carregando={false} erro={null} vazio icone="dinheiro" tituloVazio="Nenhum lançamento" textoVazio="Os lançamentos aparecem quando um pagamento é confirmado." />
               ) : (
                 <Cartao className="overflow-hidden">
                   <ul className="divide-y divide-linha">
-                    {linhasExtrato.slice(0, limite).map((linha) => {
+                    {linhasExtrato.map((linha) => {
                       const l = (linha.base ?? linha.taxa)!;
                       const soTaxa = !linha.base;
                       return (
@@ -351,14 +394,9 @@ export default function Financeiro() {
                       );
                     })}
                   </ul>
-                  {linhasExtrato.length > limite && (
-                    <div className="px-4 py-3 border-t border-linha flex items-center justify-between gap-3">
-                      <p className="text-xs text-texto-3 numeros">
-                        Mostrando {numero(limite)} de {numero(linhasExtrato.length)}
-                      </p>
-                      <Botao tamanho="sm" variante="suave" onClick={() => setLimite((n) => n + 100)}>
-                        Mostrar mais
-                      </Botao>
+                  {temMais && (
+                    <div className="px-4 pb-4 border-t border-linha">
+                      <CarregarMais rotulo="Carregar mais lançamentos" carregando={carregandoMais} mais={() => setQtd((n) => n + LOTE)} />
                     </div>
                   )}
                 </Cartao>
