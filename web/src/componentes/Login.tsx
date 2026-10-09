@@ -124,11 +124,11 @@ export function Login({
     if (!emailValido(email)) return setErro(usaCpf ? "Digite seu CPF ou e-mail acima para receber o link." : "Digite seu e-mail acima para receber o link.");
     setEnviandoLink(true);
     try {
-      await enviarRedefinicaoSenha(email.trim(), `${location.origin}${location.pathname}`);
+      await enviarRedefinicaoSenha(email.trim(), `${location.origin}${location.pathname}`, tid);
       setAviso("Enviamos um link para redefinir sua senha. Confira também o spam.");
     } catch (e) {
       // Falha de rede ou excesso de tentativas é erro de verdade; e-mail sem conta segue com a mesma resposta (não revelamos quem tem conta)
-      if (ehErroDeConexao(e) || /too-many-requests|quota/.test(String((e as { code?: string })?.code))) setErro(mensagemDeErro(e));
+      if (ehErroDeConexao(e) || /too-many-requests|quota|resource-exhausted|invalid-argument/.test(String((e as { code?: string })?.code))) setErro(mensagemDeErro(e));
       else setAviso("Se este e-mail estiver cadastrado, você receberá o link em instantes.");
     } finally {
       setEnviandoLink(false);

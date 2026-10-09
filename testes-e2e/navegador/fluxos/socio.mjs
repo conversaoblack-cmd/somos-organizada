@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import {
   BASE, novaPagina, conferir, comErrosEsperados, entrar, aguardar, fsLer, pagarPixNaPagarme, mascaraCpf,
-  codigosOob, novoCodigoOob, redefinirSenhaComCodigo, ERROS_SEM_INTERNET, esperarServiceWorker, evidencia,
+  fsConsultar, ERROS_SEM_INTERNET, esperarServiceWorker, evidencia,
 } from "../lib.mjs";
 import { qrVisivel } from "./compra.mjs";
 
@@ -110,16 +110,29 @@ export async function socio(estado) {
   await conferir(T, t, "aba Ingressos do sócio com QR", { torcedor: true });
   await t.keyboard.press("Escape");
 
-  // ── Esqueci minha senha pelo CPF → link do e-mail → senha nova ──
+  // ── Esqueci minha senha pelo CPF → link do nosso e-mail (/redefinir-senha) → senha nova pela tela ──
   await sair(T, t);
-  const antes = (await codigosOob(email, "PASSWORD_RESET")).length;
+  const [antigo] = await fsConsultar("", "_emulador", [["email", "==", email]]);
   await t.getByLabel("CPF ou e-mail").fill(mascaraCpf(cpf));
   await t.getByRole("button", { name: "Esqueci minha senha" }).click();
   await t.getByText("Se este CPF tiver conta, enviamos o link para o e-mail cadastrado.", { exact: false }).waitFor({ timeout: 30_000 });
   await conferir(T, t, "esqueci minha senha pelo CPF", { torcedor: true });
-  const link = await novoCodigoOob(email, "PASSWORD_RESET", antes);
-  if (link.continueUrl) assert.match(link.continueUrl, /\/brasil\/conta$/, "link do e-mail volta para a conta na torcida");
-  await redefinirSenhaComCodigo(link.oobCode, NOVA_SENHA);
+  const link = await aguardar(async () => {
+    const [d] = await fsConsultar("", "_emulador", [["email", "==", email]]);
+    return d && d.codigo !== antigo?.codigo ? d : null;
+  }, { mensagem: "link de nova senha gravado pelo servidor" });
+  assert.equal(link.continuar, "/brasil/conta", "link do e-mail volta para a conta na torcida");
+  const destino = new URL(link.url);
+  await t.goto(`${BASE}${destino.pathname}${destino.search}`);
+  await t.getByRole("heading", { name: "Crie uma nova senha" }).waitFor({ timeout: 30_000 });
+  assert.equal(await t.getByLabel("E-mail").inputValue(), email, "a página mostra o e-mail da conta");
+  await conferir(T, t, "página de nova senha", { torcedor: true });
+  await t.getByLabel("Nova senha").fill(NOVA_SENHA);
+  await t.getByRole("button", { name: "Salvar e entrar" }).click();
+  await t.waitForURL(/\/brasil\/(conta|socio)/, { timeout: 30_000 });
+  await t.getByRole("button", { name: "Menu da conta" }).waitFor({ timeout: 30_000 });
+  await conferir(T, t, "salvou a senha nova e entrou", { torcedor: true });
+  await sair(T, t);
   // senha antiga não entra mais (testada pelo e-mail, para não gastar as 5 tentativas por CPF a cada 15 min)
   await comErrosEsperados(T, [{ re: /status of 400.*accounts:signInWithPassword/, motivo: "senha antiga depois da troca: o Auth responde 400 (credencial inválida)" }], async () => {
     await entrar(t, email);

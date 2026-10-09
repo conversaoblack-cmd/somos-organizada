@@ -642,6 +642,32 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
   // diretor vê o próprio pedido; diretor não aprova a si mesmo
   assert.equal((await getDoc(doc(b.db, `solicitacoes/${sol.solicitacaoId}`))).get("status"), "pendente");
   await assert.rejects(b.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true }), /equipe Somos Organizada/);
+  // verificação em vídeo: sem a chamada feita, a equipe não aprova
+  await assert.rejects(ctx.plat.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true }), /verificação em vídeo/);
+  const { horarios } = await b.chamar("horariosVerificacao", {});
+  assert.ok(horarios.length > 10, "agenda com horários livres");
+  await assert.rejects(b.chamar("agendarVerificacao", { horario: "2020-01-01T10:00" }), /não está disponível/);
+  const ag = await b.chamar("agendarVerificacao", { horario: horarios[0] });
+  assert.equal(ag.status, "agendada");
+  // o horário some para os outros; remarcar troca e libera o anterior
+  assert.ok(!(await ctx.plat.chamar("horariosVerificacao", {})).horarios.includes(horarios[0]));
+  await b.chamar("agendarVerificacao", { horario: horarios[1] });
+  assert.equal((await aDb.doc(`agendaVerificacao/${horarios[0]}`).get()).exists, false);
+  assert.equal((await aDb.doc(`agendaVerificacao/${horarios[1]}`).get()).get("solicitacaoId"), sol.solicitacaoId);
+  const v = (await getDoc(doc(b.db, `solicitacoes/${sol.solicitacaoId}`))).get("verificacao");
+  assert.equal(v.status, "agendada");
+  assert.equal(v.horarioId, horarios[1]);
+  // equipe: só a plataforma registra; exige 2 testemunhas, documento e sede conferidos
+  await assert.rejects(b.chamar("atualizarVerificacao", { id: sol.solicitacaoId, acao: "realizada" }), /equipe Somos Organizada/);
+  await assert.rejects(ctx.plat.chamar("atualizarVerificacao", { id: sol.solicitacaoId, acao: "link", link: "meet.google.com/x" }), /https/);
+  await ctx.plat.chamar("atualizarVerificacao", { id: sol.solicitacaoId, acao: "link", link: "https://meet.google.com/abc-defg-hij" });
+  await assert.rejects(
+    ctx.plat.chamar("atualizarVerificacao", { id: sol.solicitacaoId, acao: "realizada", gravacao: "Drive/x.mp4", testemunhas: 1, documentoConferido: true, sedeConferida: true }),
+    /2 testemunhas/,
+  );
+  await ctx.plat.chamar("atualizarVerificacao", { id: sol.solicitacaoId, acao: "realizada", gravacao: "Drive/x.mp4", testemunhas: 2, documentoConferido: true, sedeConferida: true });
+  // o registro (onde ficou a gravação) não é lido pelo diretor
+  await negado(getDoc(doc(b.db, `verificacoesVideo/${sol.solicitacaoId}`)));
   const ap = await ctx.plat.chamar("avaliarSolicitacao", { id: sol.solicitacaoId, aprovar: true });
   assert.equal(ap.slug, "furia-azul");
   const t = await aDb.doc(`torcidas/${ap.torcidaId}`).get();
@@ -651,6 +677,16 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
   const membro = await aDb.doc(`torcidas/${ap.torcidaId}/membros/${u.uid}`).get();
   assert.equal(membro.get("papel"), "diretoria");
   ctx.demo = { tid: ap.torcidaId, dir: b };
+
+  // login da equipe: endereço digitado junto/sem hífen sugere a torcida certa
+  const visitante = navegador("sugestao");
+  assert.deepEqual((await visitante.chamar("sugerirTorcidas", { texto: "furiaazul" })).sugestoes.map((x) => x.slug), ["furia-azul"]);
+  // esqueci a senha (e-mail): nosso link para /redefinir-senha, voltando para o painel; mesma resposta sem conta
+  assert.deepEqual(await visitante.chamar("redefinirSenhaPorEmail", { email: "novo.diretor@x.test", continuar: "/furia-azul/admin" }), { enviado: true });
+  const link = (await aDb.doc(`_emulador/senha-${u.uid}`).get()).data();
+  assert.match(link.url, /\/redefinir-senha\?oobCode=.+&continuar=%2Ffuria-azul%2Fadmin$/);
+  assert.deepEqual(await visitante.chamar("redefinirSenhaPorEmail", { email: "ninguem@x.test", continuar: "/entrar" }), { enviado: true });
+  await assert.rejects(visitante.chamar("redefinirSenhaPorEmail", { email: "novo.diretor@x.test", continuar: "/entrar" }), /Espere um minuto/);
 });
 
 test("16. modo demonstração: torcida sem Pagar.me vende ingresso (Pix simulado) e sócio no cartão de teste, com split", async () => {

@@ -9,7 +9,7 @@ import { useColecao, useDocumento, useUsuario } from "@/hooks/dados";
 import { dataHora } from "@/lib/formatos";
 import type { SolicitacaoTorcida } from "@/lib/tipos";
 import { Login } from "@/componentes/Login";
-import { ehErroDeConexao, mensagemDeErro } from "@/lib/api";
+import { api, ehErroDeConexao, mensagemDeErro } from "@/lib/api";
 import { Botao, Carregando, Cartao, Icone, Selo, Vazio } from "@/ui";
 import { slugDoNome } from "./planos";
 
@@ -61,12 +61,14 @@ function EntrarPorTorcida({ aoUsarEmail }: { aoUsarEmail: () => void }) {
   const [erro, setErro] = useState<string | null>(null);
   const [emAnalise, setEmAnalise] = useState(false);
   const [buscando, setBuscando] = useState(false);
+  const [sugestoes, setSugestoes] = useState<{ slug: string; nome: string; logoUrl: string | null }[]>([]);
   // Aceita o endereço inteiro colado (somosorganizada.com.br/bamor/admin) ou só o nome da torcida
   const slug = slugDoNome(texto.trim().replace(/^https?:\/\//i, "").replace(/^[^/]*somosorganizada\.com\.br\//i, "").split(/[/?#]/)[0] ?? "");
 
   async function continuar(e: FormEvent) {
     e.preventDefault();
     setEmAnalise(false);
+    setSugestoes([]);
     if (!slug) return setErro("Digite o endereço da torcida.");
     setErro(null);
     setBuscando(true);
@@ -77,7 +79,14 @@ function EntrarPorTorcida({ aoUsarEmail }: { aoUsarEmail: () => void }) {
         setEmAnalise(true);
         return setErro("O cadastro desta torcida ainda está em análise pela equipe.");
       }
-      setErro("Não encontramos essa torcida. Confira o endereço (é o que vem depois de somosorganizada.com.br/).");
+      // Errou uma letra, juntou tudo, esqueceu o hífen: mostra as parecidas para tocar e seguir
+      const r = await api.sugerirTorcidas({ texto: texto.trim() }).catch(() => ({ sugestoes: [] }));
+      setSugestoes(r.sugestoes);
+      setErro(
+        r.sugestoes.length
+          ? "Não achamos esse endereço exato."
+          : "Não encontramos essa torcida. Confira o endereço (é o que vem depois de somosorganizada.com.br/).",
+      );
     } catch {
       setErro("Não foi possível conferir agora. Verifique a internet e tente de novo.");
     } finally {
@@ -98,7 +107,10 @@ function EntrarPorTorcida({ aoUsarEmail }: { aoUsarEmail: () => void }) {
           <input
             id="entrar-torcida"
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            onChange={(e) => {
+              setTexto(e.target.value);
+              if (sugestoes.length) setSugestoes([]);
+            }}
             placeholder="nome-da-torcida"
             className="flex-1 min-w-0 bg-transparent outline-none font-semibold"
             autoCapitalize="none"
@@ -121,6 +133,37 @@ function EntrarPorTorcida({ aoUsarEmail }: { aoUsarEmail: () => void }) {
             </>
           )}
         </p>
+        {sugestoes.length > 0 && (
+          <div className="mt-4" role="group" aria-labelledby="titulo-sugestoes">
+            <p id="titulo-sugestoes" className="text-sm font-semibold">
+              {sugestoes.length === 1 ? "Seria esta torcida?" : "Seria uma destas torcidas?"}
+            </p>
+            <ul className="mt-2 space-y-2">
+              {sugestoes.map((t) => (
+                <li key={t.slug}>
+                  <button
+                    type="button"
+                    onClick={() => navegar(`/${t.slug}/admin`)}
+                    className="w-full flex items-center gap-3 rounded-2xl border border-linha bg-superficie-2 p-3 text-left hover:border-primaria transition-colors"
+                  >
+                    {t.logoUrl ? (
+                      <img src={t.logoUrl} alt="" width={40} height={40} className="size-10 shrink-0 rounded-xl object-contain bg-superficie-3" />
+                    ) : (
+                      <span className="size-10 shrink-0 rounded-xl bg-primaria/15 text-primaria-texto grid place-items-center">
+                        <Icone nome="escudo" className="size-5" />
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold truncate">{t.nome}</span>
+                      <span className="block text-xs text-texto-3 truncate">somosorganizada.com.br/{t.slug}</span>
+                    </span>
+                    <Icone nome="chevronDireita" className="size-5 text-texto-3 shrink-0" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <Botao type="submit" largo tamanho="lg" className="mt-5" carregando={buscando} iconeDireita="setaDireita">
           Continuar
         </Botao>

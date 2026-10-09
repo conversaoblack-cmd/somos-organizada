@@ -67,6 +67,12 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
 - Publicar exige escudo (`tema.logoUrl`), no servidor e na lista de Publicar. A página Portaria do painel
   (`admin/PortariaEquipe.tsx`) explica o leitor, dá o link `/{torcida}/portaria` e convida porteiros.
 - Tour aberto por `?tour=` espera o 1º item destacado existir (ex.: o modal "Novo evento") antes de escurecer a tela.
+- Cadastro de torcida termina com a **verificação em vídeo** (`functions/src/api/verificacaoVideo.ts`): o responsável marca
+  um horário (agenda padrão seg–sáb 10h–21h, 20 min; a equipe pode mudar em `plataforma/agendaVerificacao`), recebe o
+  e-mail e o link; a equipe registra a chamada feita (onde ficou a gravação, 2+ testemunhas) em `verificacoesVideo/`.
+  `avaliarSolicitacao` só aprova com a chamada feita. Motivo: dados de torcida são públicos (fraude de cadastro).
+- "Esqueci minha senha" (todas as contas) sai pelo nosso e-mail com link para `/redefinir-senha` (`api/senha.ts`);
+  o e-mail do Firebase é só reserva. Login da equipe sugere a torcida certa quando o endereço vem errado (`sugerirTorcidas`).
 - Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável
   pelas regras). Padrão de UX e próximas melhorias: `docs/UX.md` (leia antes de mexer em tela).
 - Skills de UX/UI instaladas em `.claude/skills/` (carregam sozinhas em qualquer sessão). Para mexer em tela,

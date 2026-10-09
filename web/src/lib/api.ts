@@ -249,6 +249,27 @@ export const api = {
   >("verConvite"),
   /** Cria a senha do convidado e confirma o e-mail; depois o site entra com e-mail e senha. */
   aceitarConvite: chamar<{ c: string; senha: string }, { email: string; slug: string | null }>("aceitarConvite"),
+  /** Esqueci minha senha (e-mail): nosso e-mail com link para /redefinir-senha. Mesma resposta com ou sem conta. */
+  /** Login da equipe: endereço digitado errado → até 3 torcidas parecidas. */
+  sugerirTorcidas: chamar<{ texto: string }, { sugestoes: { slug: string; nome: string; logoUrl: string | null }[] }>("sugerirTorcidas"),
+  /** Cadastro: horários livres para a chamada de verificação ("AAAA-MM-DDTHH:MM", horário de Brasília). */
+  horariosVerificacao: chamar<Record<string, never>, { horarios: string[]; duracaoMin: number }>("horariosVerificacao"),
+  agendarVerificacao: chamar<{ horario: string }, { status: string; horario: string; inicio: string }>("agendarVerificacao"),
+  /** Equipe: link da chamada, chamada feita (com o que foi conferido) ou não compareceu. */
+  atualizarVerificacao: chamar<
+    {
+      id: string;
+      acao: "link" | "realizada" | "nao_compareceu";
+      link?: string;
+      gravacao?: string;
+      testemunhas?: number;
+      documentoConferido?: boolean;
+      sedeConferida?: boolean;
+      observacoes?: string;
+    },
+    { ok: boolean; emailEnviado?: boolean }
+  >("atualizarVerificacao"),
+  redefinirSenhaPorEmail: chamar<{ email: string; continuar: string; tid?: string }, { enviado: boolean }>("redefinirSenhaPorEmail"),
   atualizarMembro: chamar<
     { tid: string; uid: string; papel?: Papel; sedeId?: string | null; ativo?: boolean },
     { ok: boolean }

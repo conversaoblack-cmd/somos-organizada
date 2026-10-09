@@ -21,6 +21,8 @@ import * as saas from "./saas";
 import * as cadastro from "./cadastro";
 import * as conta from "./conta";
 import * as convite from "./convite";
+import * as senha from "./senha";
+import * as verificacaoVideo from "./verificacaoVideo";
 
 type Acao = { run: (req: CallableRequest<unknown>) => unknown };
 
@@ -59,6 +61,7 @@ export const ACOES: Record<string, Acao> = {
   confirmarFaturaSaas: saas.confirmarFaturaSaas,
   executarRotinaSaas: saas.executarRotinaSaas,
   slugDisponivel: cadastro.slugDisponivel,
+  sugerirTorcidas: cadastro.sugerirTorcidas,
   solicitarTorcida: cadastro.solicitarTorcida,
   avaliarSolicitacao: cadastro.avaliarSolicitacao,
   entrarComCpf: conta.entrarComCpf,
@@ -66,6 +69,10 @@ export const ACOES: Record<string, Acao> = {
   enviarConfirmacaoEmail: verificacao.enviarConfirmacaoEmail,
   verConvite: convite.verConvite,
   aceitarConvite: convite.aceitarConvite,
+  redefinirSenhaPorEmail: senha.redefinirSenhaPorEmail,
+  horariosVerificacao: verificacaoVideo.horariosVerificacao,
+  agendarVerificacao: verificacaoVideo.agendarVerificacao,
+  atualizarVerificacao: verificacaoVideo.atualizarVerificacao,
 } as unknown as Record<string, Acao>;
 
 export const api = onCall(

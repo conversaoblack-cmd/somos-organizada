@@ -9,6 +9,7 @@ import { logger } from "firebase-functions/v2";
 import { URL_APP, WEB_API_KEY, ESCALA_PUBLICA } from "../config";
 import { auth, db, refs, Timestamp } from "../util/firebase";
 import { cpfValido, soDigitos } from "../util/validacao";
+import { enviarLinkRedefinicao } from "./senha";
 
 const MAX_TENTATIVAS = 5;
 const BLOQUEIO_MS = 15 * 60_000;
@@ -110,35 +111,6 @@ export function mascararEmail(email: string): string {
   return `${inicio}***@${nome.slice(0, 1)}***${resto.length ? `.${resto.join(".")}` : ""}`;
 }
 
-type ResultadoEnvio = "enviado" | "sem_conta" | "limite";
-
-/** Pede ao Firebase Auth o e-mail padrão de "redefinir senha" (o mesmo que o site manda quando a pessoa digita o e-mail). */
-async function enviarLinkRedefinicao(email: string, continueUrl: string | null): Promise<ResultadoEnvio> {
-  const emulador = process.env.FIREBASE_AUTH_EMULATOR_HOST;
-  const chave = emulador ? "chave-emulador" : WEB_API_KEY.value();
-  if (!chave) throw new HttpsError("failed-precondition", "Para receber o link, digite o seu e-mail no lugar do CPF.");
-  const base = emulador ? `http://${emulador}/identitytoolkit.googleapis.com` : "https://identitytoolkit.googleapis.com";
-  const pedir = (comVolta: boolean) =>
-    fetch(`${base}/v1/accounts:sendOobCode?key=${encodeURIComponent(chave)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Referer: URL_APP.value(), "X-Firebase-Locale": "pt-BR" },
-      body: JSON.stringify({ requestType: "PASSWORD_RESET", email, ...(comVolta && continueUrl ? { continueUrl } : {}) }),
-    });
-  let r = await pedir(true);
-  let msg = r.ok ? "" : (((await r.json().catch(() => ({}))) as { error?: { message?: string } }).error?.message ?? "");
-  // Domínio do link de volta não autorizado no Auth: o e-mail sai mesmo assim, só sem o botão de voltar ao site
-  if (!r.ok && continueUrl && /UNAUTHORIZED_DOMAIN|INVALID_CONTINUE_URI|UNAUTHORIZED_CONTINUE_URI/.test(msg)) {
-    logger.warn("Link de volta não autorizado no e-mail de redefinição por CPF", { msg });
-    r = await pedir(false);
-    msg = r.ok ? "" : (((await r.json().catch(() => ({}))) as { error?: { message?: string } }).error?.message ?? "");
-  }
-  if (r.ok) return "enviado";
-  if (/EMAIL_NOT_FOUND|USER_DISABLED/.test(msg)) return "sem_conta";
-  if (/TOO_MANY_ATTEMPTS|RESET_PASSWORD_EXCEED_LIMIT|QUOTA_EXCEEDED/.test(msg)) return "limite";
-  logger.error("Falha ao pedir e-mail de redefinição por CPF", { status: r.status, msg });
-  throw new HttpsError("unavailable", "Não foi possível enviar o link agora. Tente de novo em instantes.");
-}
-
 /** Contas desta torcida ligadas ao CPF: o sócio (ficha) e quem comprou com esse CPF e tem pedido aqui. */
 async function contasDoCpf(tid: string, cpf: string, uidsLogin: string[]): Promise<string[]> {
   const doSocio = tid ? ((await refs.cpf(tid, cpf).get().catch(() => null))?.get("uid") as string | undefined) : undefined;
@@ -184,8 +156,8 @@ export const redefinirSenhaPorCpf = onCall(ESCALA_PUBLICA, async (req) => {
   if (!emails.length) return { enviado: true };
 
   const slug = tid ? ((await refs.torcida(tid).get().catch(() => null))?.get("slug") as string | undefined) : undefined;
-  const continueUrl = slug ? `${URL_APP.value().replace(/\/+$/, "")}/${slug}/conta` : null;
-  const resultados = await Promise.all(emails.map((e) => enviarLinkRedefinicao(e, continueUrl)));
+  const continuar = slug ? `/${slug}/conta` : "/entrar";
+  const resultados = await Promise.all(emails.map((e) => enviarLinkRedefinicao(e, { continuar, tid })));
   if (resultados.every((r) => r === "limite")) {
     throw new HttpsError("resource-exhausted", "Muitos pedidos de link seguidos. Aguarde alguns minutos e confira o seu e-mail.");
   }

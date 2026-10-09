@@ -13,6 +13,7 @@ const Entrar = lazy(() => import("./modulos/inicio/Entrar"));
 const Cadastro = lazy(() => import("./modulos/inicio/Cadastro"));
 const Verificar = lazy(() => import("./modulos/inicio/Verificar"));
 const Convite = lazy(() => import("./modulos/inicio/Convite"));
+const RedefinirSenha = lazy(() => import("./modulos/inicio/RedefinirSenha"));
 const PainelPlataforma = lazy(() => import("./modulos/plataforma/PainelPlataforma"));
 const PaginaTorcida = lazy(() => import("./modulos/publico/PaginaTorcida"));
 const PaginaEvento = lazy(() => import("./modulos/publico/PaginaEvento"));
@@ -192,6 +193,7 @@ function Rotas() {
       <Route path="/cadastro" element={<Cadastro />} />
       <Route path="/verificar" element={<Verificar />} />
       <Route path="/convite" element={<Convite />} />
+      <Route path="/redefinir-senha" element={<RedefinirSenha />} />
       <Route
         path="/plataforma/*"
         element={plataformaSeparada ? <IrPara url={urlPlataforma(pathname.replace(/^\/plataforma/, "") + search)} /> : <PainelPlataforma />}

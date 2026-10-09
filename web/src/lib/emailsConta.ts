@@ -52,5 +52,20 @@ export function avisarEmailConfirmado() {
   }
 }
 
-export const enviarRedefinicaoSenha = (email: string, url: string) =>
-  comVolta((comLink) => (comLink ? sendPasswordResetEmail(auth, email, { url }) : sendPasswordResetEmail(auth, email)));
+/**
+ * Esqueci minha senha: o servidor manda o nosso e-mail (cores da torcida, botão para /redefinir-senha) e, sem
+ * provedor, ele mesmo cai no e-mail do Firebase. Se a chamada falhar por motivo interno (ex.: versão antiga do
+ * servidor), o site pede o e-mail padrão do Firebase. Sem internet e excesso de pedidos viram mensagem.
+ */
+export async function enviarRedefinicaoSenha(email: string, url: string, tid?: string | null) {
+  const destino = new URL(url, location.origin);
+  try {
+    await api.redefinirSenhaPorEmail({ email, continuar: destino.pathname, ...(tid ? { tid } : {}) });
+    return;
+  } catch (e) {
+    const codigo = String((e as { code?: string })?.code ?? "");
+    if (/resource-exhausted|invalid-argument/.test(codigo) || ehErroDeConexao(e)) throw e;
+    registrarErro(e, "redefinicao-senha-propria");
+  }
+  await comVolta((comLink) => (comLink ? sendPasswordResetEmail(auth, email, { url: destino.href }) : sendPasswordResetEmail(auth, email)));
+}

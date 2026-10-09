@@ -39,7 +39,7 @@ export default function AbaDados({ tid, torcida, ficha }: { tid: string; torcida
   async function alterarSenha() {
     setEnviando(true);
     try {
-      await enviarRedefinicaoSenha(email, `${location.origin}/${torcida.slug}/socio`);
+      await enviarRedefinicaoSenha(email, `${location.origin}/${torcida.slug}/socio`, tid);
       setEnviado(true);
       avisar("Enviamos o link para o seu e-mail.", "sucesso");
     } catch (erro) {

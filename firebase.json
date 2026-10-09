@@ -55,6 +55,10 @@
         "destination": "/app.html"
       },
       {
+        "source": "/redefinir-senha",
+        "destination": "/app.html"
+      },
+      {
         "source": "/plataforma",
         "destination": "/app.html"
       },

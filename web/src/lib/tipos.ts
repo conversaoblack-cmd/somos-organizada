@@ -352,6 +352,14 @@ export interface SolicitacaoTorcida {
   motivo?: string;
   torcidaId?: string;
   criadoEm: Timestamp;
+  /** Chamada de verificação em vídeo (último passo antes da análise). */
+  verificacao?: {
+    status: "agendada" | "remarcar" | "realizada";
+    horarioId?: string | null;
+    inicio?: Timestamp;
+    link?: string | null;
+    remarcacoes?: number;
+  };
 }
 
 /**

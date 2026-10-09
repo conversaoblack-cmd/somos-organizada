@@ -258,6 +258,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Verificação em vídeo do cadastro: o que a equipe conferiu e onde guardou a gravação (só a plataforma lê)
+    match /verificacoesVideo/{id} {
+      allow read: if plataforma();
+      allow write: if false;
+    }
+
     match /plataforma/{doc=**} {
       allow read: if plataforma();
       allow write: if false;

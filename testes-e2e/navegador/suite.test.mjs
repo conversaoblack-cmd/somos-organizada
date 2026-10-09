@@ -105,7 +105,7 @@ for (const combo of combinacoes()) {
       await estado.navegador?.close();
     });
 
-    fluxo(estado, "1", "cadastro de diretoria (conta → e-mail → torcida → pessoa → entidade → revisão → em análise)", [], cadastro);
+    fluxo(estado, "1", "cadastro de diretoria (conta → e-mail → torcida → pessoa → entidade → revisão → chamada de vídeo → em análise)", [], cadastro);
     fluxo(estado, "2", "equipe aprova a solicitação e a diretoria entra no painel", ["1"], aprovacao);
     fluxo(estado, "3", "diretoria cria plano com benefícios, cria e publica evento, link e QR", [], diretoria);
     fluxo(estado, "4", "torcedor não sócio compra no Pix pelo link do evento, ingresso com QR, conta e e-mail", ["3"], compra);

@@ -34,7 +34,7 @@ export function telefoneBR(valor: string): { country_code: string; area_code: st
 const SLUGS_RESERVADOS = new Set([
   "admin", "api", "app", "assets", "conta", "login", "plataforma", "suporte", "painel", "portaria",
   "static", "www", "somos", "organizada", "termos", "privacidade", "ajuda", "sobre", "contato", "cadastro", "entrar",
-  "verificar", "convite",
+  "verificar", "convite", "redefinir-senha",
 ]);
 
 export function slugValido(slug: string): boolean {

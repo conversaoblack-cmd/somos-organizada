@@ -4,11 +4,16 @@
  * endereço (/nome-da-torcida). O endereço fica reservado e o pedido aguarda a aprovação da equipe.
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { ESCALA_PUBLICA, URL_APP } from "../config";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { cpfValido, emailValido, endereco, inteiro, slugValido, soDigitos, telefoneBR, temaInformado, texto, umDe } from "../util/validacao";
 import { exigirLogin, exigirPlataforma } from "../dominio/permissoes";
 import { criarTorcidaInterno } from "./plataforma";
 import { refsSaas } from "./saas";
+import { MARCA_PLATAFORMA } from "./verificacao";
+import { enviarAgora } from "../email/enviar";
+import { esc, montar } from "../email/modelos";
+import type { Torcida } from "../dominio/tipos";
 
 const refSolicitacao = (id: string) => db.doc(`solicitacoes/${id}`);
 
@@ -101,9 +106,16 @@ export const avaliarSolicitacao = onCall(async (req) => {
     await db.runTransaction(async (tx) => {
       const s = await tx.get(refs.slug(sol.slug));
       if (s.get("solicitacaoId") === id) tx.delete(refs.slug(sol.slug));
+      // libera o horário da chamada de verificação, se havia um marcado
+      if (sol.verificacao?.horarioId) tx.delete(db.doc(`agendaVerificacao/${sol.verificacao.horarioId}`));
       tx.update(ref, { status: "recusada", motivo, avaliadoPor: quem, avaliadoEm: FieldValue.serverTimestamp() });
     });
+    await avisarResultado(sol, "recusada", { motivo });
     return { status: "recusada" };
+  }
+  // Os dados de torcida são públicos: só aprova depois da chamada de vídeo feita e gravada (verificacaoVideo.ts)
+  if (sol.verificacao?.status !== "realizada") {
+    throw new HttpsError("failed-precondition", "Faça a chamada de verificação em vídeo e marque como feita antes de aprovar.");
   }
 
   const r = await criarTorcidaInterno({
@@ -119,5 +131,95 @@ export const avaliarSolicitacao = onCall(async (req) => {
     responsavel: sol.responsavel, entidade: sol.entidade, endereco: sol.endereco, solicitacaoId: id, criadoEm: Timestamp.now(),
   });
   await ref.update({ status: "aprovada", torcidaId: r.torcidaId, avaliadoPor: quem, avaliadoEm: FieldValue.serverTimestamp() });
+  await avisarResultado(sol, "aprovada", { slug: r.slug });
   return { status: "aprovada", torcidaId: r.torcidaId, slug: r.slug };
 });
+
+/** E-mail ao responsável com o resultado da análise (nas cores escolhidas no cadastro). */
+async function avisarResultado(sol: FirebaseFirestore.DocumentData, resultado: "aprovada" | "recusada", extra: { slug?: string; motivo?: string }) {
+  const marca = { ...MARCA_PLATAFORMA, nome: sol.nomeTorcida, tema: { ...MARCA_PLATAFORMA.tema, ...(sol.tema ?? {}) } } as Torcida;
+  const primeiro = String(sol.responsavel?.nome ?? "").trim().split(/\s+/)[0] ?? "";
+  const m =
+    resultado === "aprovada"
+      ? montar(marca, `${sol.nomeTorcida} aprovada na Somos Organizada`, { email: sol.email, nome: sol.responsavel?.nome }, {
+          selo: "Cadastro aprovado",
+          titulo: primeiro ? `${esc(primeiro)}, a ${esc(sol.nomeTorcida)} está aprovada!` : `A ${esc(sol.nomeTorcida)} está aprovada!`,
+          paragrafos: [
+            "O painel da torcida já está liberado. Entre com o mesmo e-mail e a senha do cadastro.",
+            "Os primeiros passos estão no próprio painel: conectar a Pagar.me, personalizar a página com o escudo, criar eventos e planos de sócio e publicar o site.",
+          ],
+          botao: { texto: "Entrar no painel da torcida", url: `${URL_APP.value()}/${extra.slug ?? sol.slug}/admin` },
+          conta: true,
+        })
+      : montar(marca, `Cadastro da ${sol.nomeTorcida} não aprovado`, { email: sol.email, nome: sol.responsavel?.nome }, {
+          selo: "Resultado da análise",
+          titulo: "O cadastro não foi aprovado",
+          paragrafos: [`Motivo informado pela equipe: ${esc(extra.motivo ?? "")}`, "Se for um engano ou quiser corrigir os dados, fale com a equipe ou faça um novo cadastro."],
+          botao: { texto: "Ver meu cadastro", url: `${URL_APP.value()}/cadastro` },
+          conta: true,
+        });
+  await enviarAgora(m, `cadastro-${resultado}/${sol.slug}/${Date.now()}`).catch(() => undefined);
+}
+
+/** Tira acento, espaço e hífen: "Fúria Amapá" e "furia-amapa" viram "furiaamapa". */
+const compacto = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+function distancia(a: string, b: string): number {
+  if (a === b) return 0;
+  const linha = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let anterior = linha[0]!;
+    linha[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const guardado = linha[j]!;
+      linha[j] = Math.min(linha[j]! + 1, linha[j - 1]! + 1, anterior + (a[i - 1] === b[j - 1] ? 0 : 1));
+      anterior = guardado;
+    }
+  }
+  return linha[b.length]!;
+}
+
+let cacheTorcidas: { ate: number; lista: { slug: string; nome: string; logoUrl: string | null; c: string[] }[] } | null = null;
+
+/**
+ * "Seria esta torcida?" no login da equipe: endereço digitado errado (letra trocada, tudo junto, sem hífen) devolve
+ * até 3 torcidas parecidas pelo endereço ou pelo nome. Só nome, endereço e escudo (o que já é público).
+ */
+export const sugerirTorcidas = onCall(ESCALA_PUBLICA, async (req) => {
+  const busca = compacto(String((req.data ?? {}).texto ?? "").slice(0, 80));
+  if (busca.length < 3) return { sugestoes: [] };
+  if (!cacheTorcidas || cacheTorcidas.ate < Date.now()) {
+    const snap = await db.collection("torcidas").select("nome", "slug", "tema", "status").get();
+    cacheTorcidas = {
+      ate: Date.now() + 5 * 60_000,
+      lista: snap.docs
+        .map((d) => d.data() as { nome?: string; slug?: string; tema?: { logoUrl?: string }; status?: string })
+        .filter((t) => t.slug && t.nome && t.status !== "suspensa")
+        .map((t) => ({ slug: t.slug!, nome: t.nome!, logoUrl: t.tema?.logoUrl ?? null, c: [compacto(t.slug!), compacto(t.nome!)] })),
+    };
+  }
+  return { sugestoes: escolherSugestoes(busca, cacheTorcidas.lista) };
+});
+
+/** Até 3 torcidas mais parecidas (0 = igual sem acento/hífen; 1 = contém; depois, letras de diferença). */
+export function escolherSugestoes(texto: string, lista: { slug: string; nome: string; logoUrl: string | null; c?: string[] }[]) {
+  const busca = compacto(texto);
+  if (busca.length < 3) return [];
+  const limite = Math.max(2, Math.round(busca.length * 0.34));
+  return lista
+    .map((t) => {
+      const chaves = t.c ?? [compacto(t.slug), compacto(t.nome)];
+      const nota = Math.min(...chaves.map((c) => (c === busca ? 0 : c.includes(busca) || (busca.length >= 6 && busca.includes(c)) ? 1 : distancia(busca, c))));
+      return { t, nota };
+    })
+    .filter((x) => x.nota <= limite)
+    .sort((a, b) => a.nota - b.nota || a.t.nome.localeCompare(b.t.nome))
+    .slice(0, 3)
+    .map(({ t }) => ({ slug: t.slug, nome: t.nome, logoUrl: t.logoUrl }));
+}
+

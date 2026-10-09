@@ -19,15 +19,16 @@ import { BotaoVerSenha, Login } from "@/componentes/Login";
 import { Abas, Aviso, Botao, BotaoLink, Campo, Cartao, Carregando, cx, Etapas, Girando, Icone, OpcoesCartao } from "@/ui";
 import { SLUG_VALIDO, slugDoNome } from "./planos";
 import { CoresCadastro, type Cores } from "./CoresCadastro";
+import { CartaoChamada, PassoVideo } from "./VerificacaoVideo";
 
 const DOMINIO = "somosorganizada.com.br/";
 const MSG_SLUG_SEM_CONEXAO = "Não deu para conferir agora. Verifique sua conexão.";
 const WHATSAPP = "5571994095784";
-const ETAPAS = ["Conta", "E-mail", "Torcida", "Pessoa", "Entidade", "Revisão", "Análise"];
+const ETAPAS = ["Conta", "E-mail", "Torcida", "Pessoa", "Entidade", "Revisão", "Vídeo", "Análise"];
 const RESERVADOS = new Set([
   "admin", "api", "app", "assets", "conta", "login", "plataforma", "suporte", "painel", "portaria",
   "static", "www", "somos", "organizada", "termos", "privacidade", "ajuda", "sobre", "contato", "cadastro", "entrar",
-  "verificar", "convite",
+  "verificar", "convite", "redefinir-senha",
 ]);
 
 interface Dados {
@@ -198,8 +199,12 @@ export default function Cadastro() {
     );
   } else if (!logado) {
     conteudo = <PassoConta />;
+  } else if (ativa?.status === "pendente" && ativa.verificacao?.status !== "agendada" && ativa.verificacao?.status !== "realizada") {
+    // Enviado, mas sem a chamada de verificação marcada: é o último passo antes da análise
+    etapa = 6;
+    conteudo = <PassoVideo s={ativa} />;
   } else if (ativa || (recusada && !novoCadastro)) {
-    etapa = ativa?.status === "aprovada" ? ETAPAS.length : 6;
+    etapa = ativa?.status === "aprovada" ? ETAPAS.length : 7;
     conteudo = <EmAnalise s={(ativa ?? recusada)!} aoRecomecar={() => setNovoCadastro(true)} />;
   } else if (!(auth.currentUser?.emailVerified ?? usuario!.emailVerified)) {
     etapa = 1;
@@ -993,7 +998,7 @@ function FormularioTorcida({ usuario, inicial }: { usuario: User; inicial: Rascu
                 onClick={enviar}
                 aria-describedby={!declaro ? "cad-dica-declaracao" : undefined}
               >
-                Enviar para análise
+                Enviar e marcar a chamada
               </Botao>
             </div>
             {!declaro && (
@@ -1048,6 +1053,7 @@ function Linha({ r, v }: { r: string; v: ReactNode }) {
 
 // ── (g) Em análise / aprovada / recusada ────────────────────────
 function EmAnalise({ s, aoRecomecar }: { s: ComId<SolicitacaoTorcida>; aoRecomecar: () => void }) {
+  const [remarcando, setRemarcando] = useState(false);
   const contato = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Olá! Sobre o cadastro da ${s.nomeTorcida} (/${s.slug}).`)}`;
 
   if (s.status === "aprovada") {
@@ -1104,6 +1110,8 @@ function EmAnalise({ s, aoRecomecar }: { s: ComId<SolicitacaoTorcida>; aoRecomec
     );
   }
 
+  if (remarcando) return <PassoVideo s={s} remarcando aoCancelar={() => setRemarcando(false)} />;
+
   return (
     <Cartao className="p-6 sm:p-8 animate-surgir">
       <div className="flex items-center gap-4">
@@ -1133,10 +1141,11 @@ function EmAnalise({ s, aoRecomecar }: { s: ComId<SolicitacaoTorcida>; aoRecomec
           <dd className="text-right break-all">{s.email}</dd>
         </div>
       </dl>
+      <CartaoChamada s={s} aoRemarcar={() => setRemarcando(true)} />
       <h2 className="font-semibold mt-6">O que acontece agora</h2>
       <ol className="text-sm text-texto-2 mt-3 space-y-2">
-        <PassoLista n={1}>A equipe Somos Organizada confere os dados, normalmente em até 1 dia útil. Podemos chamar no WhatsApp do responsável.</PassoLista>
-        <PassoLista n={2}>Quando aprovar, esta página muda sozinha e mostra o botão para entrar no painel.</PassoLista>
+        <PassoLista n={1}>Na hora marcada, a equipe faz a chamada de vídeo com você na sede, com as testemunhas. Leva de 2 a 5 minutos.</PassoLista>
+        <PassoLista n={2}>A equipe confere os dados e aprova, normalmente em até 1 dia útil depois da chamada. Esta página muda sozinha e você recebe um e-mail.</PassoLista>
         <PassoLista n={3}>Você entra com este mesmo e-mail e senha. Pode fechar a página e voltar depois em {location.host}/cadastro.</PassoLista>
       </ol>
       <a href={contato} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 mt-6 text-sm font-semibold text-primaria-texto hover:underline">

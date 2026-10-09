@@ -30,7 +30,7 @@ export function codigoDoLink(link: string): string | null {
   }
 }
 
-const MARCA_PLATAFORMA = {
+export const MARCA_PLATAFORMA = {
   nome: "Somos Organizada",
   tema: { corPrimaria: "#2E6BFF", corSecundaria: "#FFCC00", corFundo: "#070A12", corTexto: "#F1F4FA" },
 } as unknown as Torcida;
