@@ -1,7 +1,7 @@
 /** Chamadas às Cloud Functions (functions/src/index.ts). Todas tipadas aqui, em um só lugar. */
 import { httpsCallable } from "firebase/functions";
 import { fns } from "./firebase";
-import type { Endereco, Papel, RecebedorSede, StatusTorcida, Stats, Tema } from "./tipos";
+import type { Endereco, Papel, PlanoSaas, RecebedorSede, StatusTorcida, Stats, Tema } from "./tipos";
 
 // Todas as ações passam pela function única "api" (functions/src/api/central.ts).
 const portaApi = httpsCallable<{ acao: string; dados: unknown }, unknown>(fns, "api");
@@ -257,9 +257,11 @@ export const api = {
   >("simularDemo"),
 
   // ── Site e mensalidade Somos Organizada ──────────────
-  publicarSite: chamar<{ tid: string; plano?: "pequena" | "grande" }, { publicada: boolean }>("publicarSite"),
+  publicarSite: chamar<{ tid: string; plano?: PlanoSaas }, { publicada: boolean }>("publicarSite"),
   despublicarSite: chamar<{ tid: string }, { publicada: boolean }>("despublicarSite"),
-  alterarPlanoSaas: chamar<{ tid: string; plano: "pequena" | "grande" }, { plano: string }>("alterarPlanoSaas"),
+  alterarPlanoSaas: chamar<{ tid: string; plano: PlanoSaas }, { plano: PlanoSaas }>("alterarPlanoSaas"),
+  /** Põe o evento à venda (só o servidor publica: confere o limite de eventos à venda do plano). */
+  publicarEvento: chamar<{ tid: string; eventoId: string }, { status: "publicado" }>("publicarEvento"),
   informarPagamentoSaas: chamar<{ tid: string; faturaId: string }, { ok: boolean }>("informarPagamentoSaas"),
   confirmarFaturaSaas: chamar<{ tid: string; faturaId: string }, { ok: boolean }>("confirmarFaturaSaas"),
   executarRotinaSaas: chamar<{ agora?: number }, { faturasGeradas: number; bloqueadas: number }>("executarRotinaSaas"),
@@ -321,7 +323,10 @@ export const api = {
         publicada: boolean;
         modulos: { eventos: boolean; socios: boolean };
         saas: {
-          plano: "pequena" | "grande";
+          /** Já normalizado pelo servidor (ids antigos viram pro/plus/max). */
+          plano: PlanoSaas;
+          /** Eventos publicados com data no futuro (limite do plano). */
+          eventosAVenda: number;
           situacao: "em_dia" | "aberta" | "atrasada" | "bloqueada";
           bloqueada: boolean;
           faturasAbertas: { id: string; valor: number; plano: string; vencimento: number | null; informadoPagamentoEm: number | null }[];

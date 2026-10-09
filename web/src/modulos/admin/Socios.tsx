@@ -21,6 +21,7 @@ import type { ComId, Membro, Socio, StatusSocio } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { Avatar, Aviso, Botao, CabecalhoPagina, Campo, Cartao, Gaveta, Icone, Selecao, Selo, useToast } from "@/ui";
 import { usePainel } from "./contexto";
+import { AvisoLimiteSocios } from "./usoPlano";
 import { useTourPagina } from "./tours";
 import { baixarCsv, CarregarMais, Confirmar, contarNoServidor, decimalBR, EstadoLista, Linha, LOTE, normalizar, numero, numeroWhatsapp, Pilulas, useAgregado } from "./util";
 
@@ -205,6 +206,8 @@ export default function Socios() {
           )}
         </div>
       </div>
+
+      {ehDiretoria && <AvisoLimiteSocios className="mb-4" />}
 
       {buscaLocal && temMais && !socios.erro && (
         <Aviso tom="info" className="mb-4">

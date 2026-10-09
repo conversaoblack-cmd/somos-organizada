@@ -91,8 +91,9 @@ service cloud.firestore {
       }
 
       match /eventos/{eventoId} {
-        // Subsede cria e edita só rascunho / "em aprovação". Publicar é da diretoria, e evento de
-        // subsede só pode ser publicado com a conta de recebimento (split) da subsede ativa.
+        // Subsede cria e edita só rascunho / "em aprovação". Publicar (pôr à venda) é só pelo servidor, na ação
+        // publicarEvento (diretoria; confere o limite de eventos à venda do plano e, em subsede, a conta de
+        // recebimento ativa). Aqui a diretoria só edita um evento que JÁ está publicado, mantendo publicado.
         function sedeDoEvento(sedeId) {
           return get(/databases/$(database)/documents/torcidas/$(tid)/sedes/$(sedeId)).data;
         }
@@ -100,10 +101,15 @@ service cloud.firestore {
           return sedeDoEvento(sedeId).tipo == 'principal'
             || sedeDoEvento(sedeId).get('recebedor', {}).get('status', '') == 'active';
         }
-        function statusPermitido(d, sedeId) {
-          return (papel(tid) == 'diretoria' && d.status in ['rascunho', 'em_aprovacao', 'publicado', 'encerrado', 'cancelado']
-                   && (d.status != 'publicado' || podePublicar(sedeId)))
+        function statusPermitido(d) {
+          return (papel(tid) == 'diretoria' && d.status in ['rascunho', 'em_aprovacao', 'encerrado', 'cancelado'])
             || (papel(tid) == 'subsede' && d.status in ['rascunho', 'em_aprovacao']);
+        }
+        function continuaPublicado() {
+          return papel(tid) == 'diretoria' && resource.data.status == 'publicado' && request.resource.data.status == 'publicado'
+            && podePublicar(request.resource.data.sedeId)
+            // evento que já passou não volta a ficar à venda trocando só a data: isso passa pelo limite do plano (publicarEvento)
+            && !(resource.data.data < request.time && request.resource.data.data >= request.time);
         }
         function valoresValidos(d) {
           return d.valorSocio is int && d.valorPublico is int && d.valorSocio >= 0 && d.valorPublico > 0;
@@ -120,7 +126,7 @@ service cloud.firestore {
         allow create: if daMinhaSede(tid, request.resource.data.sedeId)
           && request.resource.data.vendidos == 0 && request.resource.data.reservados == 0
           && valoresValidos(request.resource.data) && codigoValido(request.resource.data)
-          && statusPermitido(request.resource.data, request.resource.data.sedeId);
+          && statusPermitido(request.resource.data);
         // contadores (vendidos, reservados, entradas) são do servidor
         allow update: if daMinhaSede(tid, resource.data.sedeId)
           && daMinhaSede(tid, request.resource.data.sedeId)
@@ -128,7 +134,7 @@ service cloud.firestore {
           && request.resource.data.reservados == resource.data.reservados
           && request.resource.data.get('entradas', 0) == resource.data.get('entradas', 0)
           && valoresValidos(request.resource.data) && codigoValido(request.resource.data) && codigoMantido()
-          && statusPermitido(request.resource.data, request.resource.data.sedeId)
+          && (statusPermitido(request.resource.data) || continuaPublicado())
           && (papel(tid) == 'diretoria' || resource.data.status in ['rascunho', 'em_aprovacao']);
         allow delete: if daMinhaSede(tid, resource.data.sedeId) && resource.data.vendidos == 0 && resource.data.reservados == 0
           && (papel(tid) == 'diretoria' || resource.data.status in ['rascunho', 'em_aprovacao']);

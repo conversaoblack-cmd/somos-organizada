@@ -1,7 +1,7 @@
 /** Contexto e utilidades compartilhadas do painel da plataforma. */
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, mensagemDeErro } from "@/lib/api";
-import type { Stats, StatusTorcida } from "@/lib/tipos";
+import { nomePlanoSaas, normalizarPlano, PLANOS_SAAS_PADRAO, type PlanoSaas, type Stats, type StatusTorcida } from "@/lib/tipos";
 import type { Tom } from "@/ui";
 
 export type Resumo = Awaited<ReturnType<typeof api.resumoPlataforma>>;
@@ -136,21 +136,28 @@ export const TOM_SITUACAO_SAAS: Record<SituacaoSaas, Tom> = {
   atrasada: "alerta",
   bloqueada: "perigo",
 };
-export const ROTULO_PLANO_SAAS: Record<string, string> = {
-  pequena: "Torcida pequena",
-  grande: "Torcida grande",
-  gigante: "Torcida gigante",
-};
+/** Nome do plano Somos Organizada (aceita id antigo: pequena/grande/gigante). */
+export const rotuloPlanoSaas = (plano: unknown) => nomePlanoSaas(plano);
 
-/** Valor mensal previsto da torcida no plano Somos Organizada (gigante automático acima do limite). */
-export function valorPlanoDaTorcida(
-  t: LinhaTorcida,
-  planos: Record<string, { valor: number }>,
-  limiteGigante: number,
-): { plano: string; valor: number } | null {
+/** Valor mensal previsto da torcida no plano Somos Organizada (preço configurado pela equipe). */
+export function valorPlanoDaTorcida(t: LinhaTorcida, planos: Record<PlanoSaas, { valor: number }>): { plano: PlanoSaas; valor: number } | null {
   if (!t.saas) return null;
-  const plano = (t.geral.socios?.ativo ?? 0) > limiteGigante ? "gigante" : t.saas.plano;
-  return { plano, valor: planos[plano]?.valor ?? 0 };
+  const plano = normalizarPlano(t.saas.plano) ?? "pro";
+  return { plano, valor: planos[plano].valor };
+}
+
+/** Uso da torcida contra o limite do plano: sócios que ocupam vaga e eventos à venda. */
+export function usoDoPlanoDaTorcida(t: LinhaTorcida): { socios: number; eventos: number; limiteSocios: number; limiteEventos: number } | null {
+  if (!t.saas) return null;
+  const def = PLANOS_SAAS_PADRAO[normalizarPlano(t.saas.plano) ?? "pro"];
+  const n = (v: number | undefined) => Math.max(0, v ?? 0);
+  const s = t.geral.socios;
+  return {
+    socios: n(s?.ativo) + n(s?.inadimplente) + n(s?.em_analise),
+    eventos: t.saas.eventosAVenda ?? 0,
+    limiteSocios: def.socios,
+    limiteEventos: def.eventos,
+  };
 }
 
 export const ROTULO_AMBIENTE: Record<string, string> = { producao: "Produção", teste: "Teste", demo: "Demonstração" };

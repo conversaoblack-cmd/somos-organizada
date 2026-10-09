@@ -6,6 +6,7 @@ import { emailValido, slugValido, temaInformado, texto, umDe } from "../util/val
 import { competencia } from "../util/datas";
 import { exigirLogin, exigirPlataforma } from "../dominio/permissoes";
 import { concederAcesso } from "./torcida";
+import { contarEventosAVenda, normalizarPlano } from "./saas";
 import type { Pedido, Torcida } from "../dominio/tipos";
 
 /** Primeiro acesso da equipe Somos Organizada: e-mail verificado e listado em PLATAFORMA_EMAILS. */
@@ -148,13 +149,14 @@ export const resumoPlataforma = onCall(async (req) => {
         modulos: { eventos: dados.modulos?.eventos !== false, socios: dados.modulos?.socios !== false },
         saas: assinatura.exists
           ? {
-              plano: assinatura.get("plano"),
+              plano: normalizarPlano(assinatura.get("plano")) ?? "pro",
+              eventosAVenda: await contarEventosAVenda(t.id),
               situacao: assinatura.get("situacao"),
               bloqueada: dados.bloqueioSaas === true,
               faturasAbertas: faturasAbertas.docs.map((f) => ({
                 id: f.id,
                 valor: f.get("valor"),
-                plano: f.get("plano"),
+                plano: normalizarPlano(f.get("plano")) ?? f.get("plano"),
                 vencimento: f.get("vencimento")?.toMillis?.() ?? null,
                 informadoPagamentoEm: f.get("informadoPagamentoEm")?.toMillis?.() ?? null,
               })),

@@ -128,18 +128,26 @@ test("3. diretoria personaliza a página, cria subsede, plano e evento (regras d
     nome: "Sócio Infantil", valor: 500, intervalo: "mes", intervaloQtd: 1, pix: true, cartao: false, ativo: true, ordem: 2,
   });
 
-  // contadores de venda são do servidor (testado num evento da sede principal)
-  const evP = await addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), {
+  // publicar (pôr à venda) é só pelo servidor: o navegador não cria nem passa evento para "publicado"
+  const dadosReuniao = {
     nome: "Reunião geral", sedeId: ctx.sedePrincipal, data: Timestamp.fromMillis(Date.now() + 3 * 86400_000),
-    valorSocio: 0, valorPublico: 100, vendidos: 0, reservados: 0, status: "publicado",
-  });
+    valorSocio: 0, valorPublico: 100, vendidos: 0, reservados: 0,
+  };
+  await negado(addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), { ...dadosReuniao, status: "publicado" }));
+  const evP = await addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), { ...dadosReuniao, status: "rascunho" });
+  await negado(updateDoc(evP, { status: "publicado" }));
+  assert.equal((await b.chamar("publicarEvento", { tid: ctx.tid, eventoId: evP.id })).status, "publicado");
+  // contadores de venda são do servidor (testado num evento da sede principal)
   await negado(updateDoc(evP, { vendidos: 99 }));
+  // evento já publicado continua editável pela diretoria (sem sair de "publicado")
+  await updateDoc(evP, { local: "Sede Central" });
 
   // link direto (/torcida/e/codigo): código válido na criação, ganho depois por evento antigo e nunca trocado
-  const base = { nome: "Caravana", sedeId: ctx.sedePrincipal, data: Timestamp.fromMillis(Date.now() + 5 * 86400_000), valorSocio: 1000, valorPublico: 2000, vendidos: 0, reservados: 0, status: "publicado" };
+  const base = { nome: "Caravana", sedeId: ctx.sedePrincipal, data: Timestamp.fromMillis(Date.now() + 5 * 86400_000), valorSocio: 1000, valorPublico: 2000, vendidos: 0, reservados: 0, status: "rascunho" };
   await negado(addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), { ...base, codigo: "ABC123" }));
   await negado(addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), { ...base, codigo: "abc10o" }));
   const evC = await addDoc(collection(b.db, `torcidas/${ctx.tid}/eventos`), { ...base, codigo: "k7p2qx" });
+  await b.chamar("publicarEvento", { tid: ctx.tid, eventoId: evC.id });
   await negado(updateDoc(evC, { codigo: "m3n4pq" }));
   await updateDoc(evP, { codigo: "r5s6tu" });
   // o torcedor (sem login) acha o evento publicado pelo código
@@ -180,8 +188,10 @@ test("3b. subsede: convite, conta de recebimento com prova de vida, evento aprov
   });
   ctx.evento = ev.id;
   await negado(updateDoc(doc(sub.db, `torcidas/${ctx.tid}/eventos/${ev.id}`), { status: "publicado" }));
+  await assert.rejects(sub.chamar("publicarEvento", { tid: ctx.tid, eventoId: ev.id }), /permissão/);
   // diretoria também não publica enquanto a conta da subsede não estiver ativa
   await negado(updateDoc(doc(dir.db, `torcidas/${ctx.tid}/eventos/${ev.id}`), { status: "publicado" }));
+  await assert.rejects(dir.chamar("publicarEvento", { tid: ctx.tid, eventoId: ev.id }), /conta de recebimento ativa/);
 
   // subsede cadastra a conta de recebimento → precisa da prova de vida
   const cad = await sub.chamar("cadastrarRecebedor", { tid: ctx.tid, dados: dadosRecebedor });
@@ -205,8 +215,11 @@ test("3b. subsede: convite, conta de recebimento com prova de vida, evento aprov
   const viaDiretoria = await dir.chamar("atualizarRecebedor", { tid: ctx.tid, sedeId: ctx.subsede });
   assert.equal(viaDiretoria.recebedor.nomeTitular, undefined);
 
-  // agora a diretoria aprova (publica)
-  await updateDoc(doc(dir.db, `torcidas/${ctx.tid}/eventos/${ev.id}`), { status: "publicado" });
+  // agora a diretoria aprova (publica pelo servidor)
+  await dir.chamar("publicarEvento", { tid: ctx.tid, eventoId: ev.id });
+  const aprovado = await aDb.doc(`torcidas/${ctx.tid}/eventos/${ev.id}`).get();
+  assert.equal(aprovado.get("status"), "publicado");
+  assert.equal(aprovado.get("aprovadoPor"), ctx.dirUid);
   // depois de publicado, a subsede não altera mais o evento
   await negado(updateDoc(doc(sub.db, `torcidas/${ctx.tid}/eventos/${ev.id}`), { valorPublico: 1 }));
 });
@@ -225,15 +238,17 @@ test("3c. site só vende depois de publicado; publicar escolhe o plano e gera a 
   );
   // módulos: a diretoria pode ligar/desligar eventos e sócios
   await updateDoc(doc(ctx.dir.db, `torcidas/${ctx.tid}`), { modulos: { eventos: true, socios: true } });
-  await assert.rejects(ctx.sub.chamar("publicarSite", { tid: ctx.tid, plano: "pequena" }), /permissão/);
-  const r = await ctx.dir.chamar("publicarSite", { tid: ctx.tid, plano: "pequena" });
+  await assert.rejects(ctx.sub.chamar("publicarSite", { tid: ctx.tid, plano: "pro" }), /permissão/);
+  await assert.rejects(ctx.dir.chamar("publicarSite", { tid: ctx.tid, plano: "pequena" }), /Escolha um plano/);
+  const r = await ctx.dir.chamar("publicarSite", { tid: ctx.tid, plano: "pro" });
   assert.equal(r.publicada, true);
   const faturas = await aDb.collection(`torcidas/${ctx.tid}/faturasSaas`).get();
   assert.equal(faturas.size, 1);
   const f = faturas.docs[0];
-  assert.equal(f.get("valor"), 50000);
+  assert.equal(f.get("valor"), 19700);
+  assert.equal(f.get("plano"), "pro");
   assert.equal(f.get("status"), "aberta");
-  assert.match(f.get("pixCopiaECola"), /^000201.*br\.gov\.bcb\.pix.*5406500\.00/);
+  assert.match(f.get("pixCopiaECola"), /^000201.*br\.gov\.bcb\.pix.*5406197\.00/);
   const venc = f.get("vencimento").toMillis();
   assert.ok(venc > Date.now() + 6 * 86400_000 && venc < Date.now() + 8 * 86400_000);
   ctx.faturaSaas = f.id;
@@ -516,7 +531,70 @@ test("14. mensalidade Somos Organizada: 7 dias de atraso derrubam o site; confir
   assert.equal(t.get("status"), "ativa");
   assert.equal(t.get("bloqueioSaas"), false);
   const resumo = await ctx.plat.chamar("resumoPlataforma", {});
-  assert.equal(resumo.torcidas.find((x) => x.id === ctx.tid).saas.plano, "pequena");
+  assert.equal(resumo.torcidas.find((x) => x.id === ctx.tid).saas.plano, "pro");
+});
+
+test("14b. limites do plano Torcida Pro: 3 eventos à venda e 300 sócios; troca de plano confere o uso", async () => {
+  const { tid, dir } = { tid: ctx.tid, dir: ctx.dir };
+  // a torcida já tem 3 eventos à venda (Reunião geral, Caravana e Caravana Final), o limite do Pro
+  const resumo = await ctx.plat.chamar("resumoPlataforma", {});
+  assert.equal(resumo.torcidas.find((x) => x.id === tid).saas.eventosAVenda, 3);
+  const quarto = await addDoc(collection(dir.db, `torcidas/${tid}/eventos`), {
+    nome: "Quarto evento", sedeId: ctx.sedePrincipal, data: Timestamp.fromMillis(Date.now() + 12 * 86400_000),
+    valorSocio: 1000, valorPublico: 2000, vendidos: 0, reservados: 0, status: "rascunho",
+  });
+  // nem pelo navegador (regras) nem pelo servidor (limite do plano)
+  await negado(updateDoc(quarto, { status: "publicado" }));
+  await assert.rejects(dir.chamar("publicarEvento", { tid, eventoId: quarto.id }), (e) => {
+    assert.match(e.message, /Seu plano Torcida Pro permite 3 eventos à venda ao mesmo tempo\. Encerre um evento ou mude de plano\./);
+    assert.equal(e.details?.limitePlano, "eventos");
+    return true;
+  });
+  assert.equal((await aDb.doc(`torcidas/${tid}/eventos/${quarto.id}`).get()).get("status"), "rascunho");
+  // evento que já passou não conta como "à venda": dá para publicar mesmo no limite
+  const passado = await addDoc(collection(dir.db, `torcidas/${tid}/eventos`), {
+    nome: "Evento passado", sedeId: ctx.sedePrincipal, data: Timestamp.fromMillis(Date.now() - 2 * 86400_000),
+    valorSocio: 1000, valorPublico: 2000, vendidos: 0, reservados: 0, status: "rascunho",
+  });
+  await dir.chamar("publicarEvento", { tid, eventoId: passado.id });
+  // ...mas trocar só a data dele para o futuro (e furar o limite) é barrado pelas regras
+  await negado(updateDoc(passado, { data: Timestamp.fromMillis(Date.now() + 20 * 86400_000) }));
+  await updateDoc(passado, { nome: "Evento passado (editado)" }); // editar o resto continua livre
+
+  // sócios: no limite, novas adesões param (quem já é sócio não é afetado)
+  const statsRef = aDb.doc(`torcidas/${tid}/stats/geral`);
+  const antes = (await statsRef.get()).get("socios");
+  await statsRef.set({ socios: { ...antes, ativo: 298, inadimplente: 1, em_analise: 1 } }, { merge: true });
+  const novo = navegador("socio-no-limite");
+  await createUserWithEmailAndPassword(novo.auth, "nolimite@x.test", SENHA);
+  const dadosNovo = {
+    nome: "Torcedor No Limite", cpf: "86288366757", telefone: "71988880011", nascimento: "1995-02-02",
+    endereco: { cep: "40000000", logradouro: "Rua L", numero: "3", bairro: "Centro", cidade: "Salvador", uf: "BA" },
+  };
+  await assert.rejects(
+    novo.chamar("aderirSocio", { tid, planoId: "mensal", sedeId: ctx.sedePrincipal, metodo: "pix", dados: dadosNovo }),
+    /As novas associações desta torcida estão pausadas no momento\. Fale com a diretoria\./,
+  );
+  // troca só aceita os ids novos (pro, plus, max)
+  await assert.rejects(dir.chamar("alterarPlanoSaas", { tid, plano: "pequena" }), /Escolha um plano/);
+  // a diretoria muda para o Plus: os limites maiores valem na hora
+  await dir.chamar("alterarPlanoSaas", { tid, plano: "plus" });
+  await dir.chamar("publicarEvento", { tid, eventoId: quarto.id });
+  assert.equal((await aDb.doc(`torcidas/${tid}/eventos/${quarto.id}`).get()).get("status"), "publicado");
+  // voltar para o Pro agora não cabe (301+ sócios ou 4 eventos à venda)
+  await statsRef.set({ socios: { ativo: 412 } }, { merge: true });
+  await assert.rejects(
+    dir.chamar("alterarPlanoSaas", { tid, plano: "pro" }),
+    /O plano Torcida Pro vai até 300 sócios e 3 eventos à venda\. Hoje vocês têm 414 sócios e 4 eventos à venda\. Escolha um plano maior\./,
+  );
+  await statsRef.update({ socios: antes });
+  const assRef = aDb.doc(`torcidas/${tid}/saas/assinatura`);
+  assert.equal((await assRef.get()).get("plano"), "plus");
+  // torcida antiga (id "grande" gravado antes dos planos Pro/Plus/Max) aparece como Torcida Plus
+  await assRef.update({ plano: "grande" });
+  const legado = await ctx.plat.chamar("resumoPlataforma", {});
+  assert.equal(legado.torcidas.find((x) => x.id === tid).saas.plano, "plus");
+  await assRef.update({ plano: "plus" });
 });
 
 test("15. cadastro pela página principal: diretor solicita, equipe aprova, torcida nasce em implantação", async () => {
@@ -581,9 +659,9 @@ test("16. modo demonstração: torcida sem Pagar.me vende ingresso (Pix simulado
     valorSocio: 2000, valorPublico: 3000, vendidos: 0, reservados: 0, status: "em_aprovacao",
   });
   await updateDoc(ev, { status: "publicado" }).catch(() => undefined); // subsede não publica
-  await updateDoc(doc(dir.db, `torcidas/${tid}/eventos/${ev.id}`), { status: "publicado" });
+  await dir.chamar("publicarEvento", { tid, eventoId: ev.id });
   await setDoc(doc(dir.db, `torcidas/${tid}/planos/mensal`), { nome: "Mensal", valor: 1500, intervalo: "mes", intervaloQtd: 1, pix: true, cartao: true, ativo: true });
-  await dir.chamar("publicarSite", { tid, plano: "grande" });
+  await dir.chamar("publicarSite", { tid, plano: "plus" });
   assert.equal(t0.pagamentos.ambiente, "demo");
 
   // torcedor compra no Pix e "paga" pelo simulador
@@ -684,8 +762,9 @@ test("18. segurança: convite não toma conta existente; estorno só com confirm
   // compra de 2 ingressos no cartão
   const ev = await addDoc(collection(dir.db, `torcidas/${tid}/eventos`), {
     nome: "Jogo do estorno", sedeId: ctx.sedePrincipal, data: Timestamp.fromMillis(Date.now() + 9 * 86400_000),
-    valorSocio: 5000, valorPublico: 5000, capacidade: 10, vendidos: 0, reservados: 0, status: "publicado",
+    valorSocio: 5000, valorPublico: 5000, capacidade: 10, vendidos: 0, reservados: 0, status: "rascunho",
   });
+  await dir.chamar("publicarEvento", { tid, eventoId: ev.id });
   const b = navegador("estorno");
   await createUserWithEmailAndPassword(b.auth, "estorno@x.test", SENHA);
   const r = await b.chamar("criarPedidoIngresso", {

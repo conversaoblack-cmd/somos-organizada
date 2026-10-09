@@ -44,6 +44,7 @@ export const ACOES: Record<string, Acao> = {
   obterWebhookUrl: torcida.obterWebhookUrl,
   convidarMembro: torcida.convidarMembro,
   atualizarMembro: torcida.atualizarMembro,
+  publicarEvento: torcida.publicarEvento,
   reivindicarPlataforma: plataforma.reivindicarPlataforma,
   criarTorcida: plataforma.criarTorcida,
   atualizarTorcidaPlataforma: plataforma.atualizarTorcidaPlataforma,

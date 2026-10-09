@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { collection, deleteDoc, deleteField, doc, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, type DocumentReference } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { mensagemDeErro } from "@/lib/api";
+import { api, mensagemDeErro } from "@/lib/api";
 import { centavosDeTexto, cpfMascarado, dataExtensa, dataHora, diaDoMes, hora, mesAbrev, moeda, taxa } from "@/lib/formatos";
 import type { ComId, Evento, Ingresso, StatusEvento } from "@/lib/tipos";
 import { linkEvento, novoCodigoEvento } from "@/lib/eventos";
@@ -33,6 +33,7 @@ import {
 } from "@/ui";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
+import { ehErroDeLimitePlano, useJanelaLimitePlano } from "./usoPlano";
 import {
   BarraOcupacao,
   BotaoCopiar,
@@ -338,6 +339,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
   const [salvando, setSalvando] = useState(false);
   const [confirmarStatus, setConfirmarStatus] = useState(false);
   const [confirmarDescarte, setConfirmarDescarte] = useState(false);
+  const limitePlano = useJanelaLimitePlano();
   // Como o formulário estava ao abrir: serve para saber se há alteração não salva.
   const [inicial, setInicial] = useState<Form>(() => formDe(existente, sedePadrao));
   // Evento novo ganha o id ao abrir: se a internet cair e a pessoa tentar de novo, grava o mesmo documento (sem duplicar).
@@ -418,6 +420,10 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
 
   async function salvar() {
     setSalvando(true);
+    // Publicar (pôr à venda) é só pelo servidor, que confere o limite de eventos à venda do plano:
+    // grava o evento com a situação que ele já tinha (novo = rascunho) e depois pede a publicação.
+    const publicar = f.status === "publicado" && existente?.status !== "publicado";
+    const statusGravado: StatusEvento = publicar ? (existente?.status ?? "rascunho") : f.status;
     const dados = {
       nome: f.nome.trim(),
       descricao: f.descricao.trim(),
@@ -429,10 +435,11 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
       capacidade: f.capacidade ? Number(f.capacidade) : null,
       limitePorPedido: Number(f.limitePorPedido),
       vendaAte: f.vendaAte ? deInputDataHora(f.vendaAte) : null,
-      status: f.status,
+      status: statusGravado,
     };
     // Ao reenviar para aprovação (ou publicar), o motivo da devolução anterior deixa de valer.
     const limparDevolucao = !!existente?.motivoDevolucao && f.status !== "rascunho";
+    let eventoId = existente?.id ?? null;
     try {
       if (!existente) {
         novoRef.current ??= doc(collection(db, `torcidas/${tid}/eventos`));
@@ -444,14 +451,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
           reservados: 0,
           criadoEm: serverTimestamp(),
         }));
-        avisar(
-          f.status === "publicado"
-            ? "Evento publicado! Já está na página da torcida."
-            : f.status === "em_aprovacao"
-              ? "Evento enviado para a diretoria aprovar."
-              : "Rascunho salvo.",
-          "sucesso",
-        );
+        eventoId = novoRef.current.id;
       } else {
         // Só os campos que mudaram — nunca os contadores (vendidos/reservados/entradas), que são do servidor.
         const mudancas: Record<string, unknown> = {};
@@ -463,17 +463,39 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
           if (!igual) mudancas[k] = v;
         }
         if ((f.imagemUrl ?? null) !== (existente.imagemUrl ?? null)) mudancas.imagemUrl = f.imagemUrl ?? deleteField();
-        if (limparDevolucao) mudancas.motivoDevolucao = deleteField();
-        if (Object.keys(mudancas).length === 0) {
+        if (limparDevolucao && !publicar) mudancas.motivoDevolucao = deleteField();
+        if (Object.keys(mudancas).length === 0 && !publicar) {
           fechar();
           return;
         }
-        await comPrazo(updateDoc(doc(db, `torcidas/${tid}/eventos/${existente.id}`), { ...mudancas, atualizadoEm: serverTimestamp() }));
-        avisar("Evento atualizado.", "sucesso");
+        if (Object.keys(mudancas).length > 0) {
+          await comPrazo(updateDoc(doc(db, `torcidas/${tid}/eventos/${existente.id}`), { ...mudancas, atualizadoEm: serverTimestamp() }));
+        }
+      }
+    } catch (e) {
+      avisar(mensagemGravacao(e), "erro");
+      setSalvando(false);
+      return;
+    }
+    try {
+      if (publicar) {
+        await comPrazo(api.publicarEvento({ tid, eventoId: eventoId! }), 30_000);
+        avisar("Evento publicado! Já está na página da torcida.", "sucesso");
+      } else {
+        avisar(
+          !existente ? (f.status === "em_aprovacao" ? "Evento enviado para a diretoria aprovar." : "Rascunho salvo.") : "Evento atualizado.",
+          "sucesso",
+        );
       }
       fechar();
     } catch (e) {
-      avisar(mensagemGravacao(e), "erro");
+      if (ehErroDeLimitePlano(e)) {
+        // O evento ficou salvo (rascunho ou como estava); só não foi para a venda.
+        fechar();
+        limitePlano.mostrar(`${mensagemDeErro(e)} O evento ficou salvo sem ir para a venda.`);
+      } else {
+        avisar(`O evento foi salvo, mas não foi publicado: ${mensagemGravacao(e)}`, "erro");
+      }
     } finally {
       setSalvando(false);
     }
@@ -482,6 +504,7 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
   const sedesPermitidas = ehDiretoria ? sedes.filter((s) => s.ativa !== false || s.id === f.sedeId) : sedes.filter((s) => s.id === sedeEscopo);
 
   return (
+    <>
     <Gaveta
       aberto={!!evento}
       fechar={tentarFechar}
@@ -690,6 +713,8 @@ function FormEvento({ evento, fechar }: { evento: ComId<EventoAdm> | "novo" | nu
         <p className="text-texto-2 text-[15px] leading-relaxed">O que você preencheu neste evento ainda não foi salvo e vai se perder.</p>
       </Modal>
     </Gaveta>
+    {limitePlano.janela}
+    </>
   );
 }
 
@@ -700,13 +725,14 @@ const TOM_INGRESSO: Record<Ingresso["status"], Tom> = { valido: "sucesso", usado
 
 export function DetalheEvento() {
   const { eventoId = "" } = useParams();
-  const { tid, uid, torcida, ehDiretoria, sedeEscopo, nomeSede, base, pct, podePublicarNaSede } = usePainel();
+  const { tid, torcida, ehDiretoria, sedeEscopo, nomeSede, base, pct, podePublicarNaSede } = usePainel();
   const navegar = useNavigate();
   const avisar = useToast();
   const ev = useDocumento<EventoAdm>(`torcidas/${tid}/eventos/${eventoId}`);
   const [editando, setEditando] = useState(false);
   const [excluir, setExcluir] = useState(false);
   const [aprovar, setAprovar] = useState(false);
+  const limitePlano = useJanelaLimitePlano();
   const [devolver, setDevolver] = useState(false);
   const [enviar, setEnviar] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -1039,7 +1065,14 @@ export function DetalheEvento() {
         titulo="Aprovar e publicar?"
         rotulo="Aprovar e publicar"
         acao={async () => {
-          await updateDoc(refEvento, { status: "publicado", aprovadoEm: serverTimestamp(), aprovadoPor: uid, motivoDevolucao: deleteField() });
+          try {
+            // Só o servidor publica: confere a conta de recebimento da subsede e o limite de eventos à venda do plano
+            await api.publicarEvento({ tid, eventoId: e.id });
+          } catch (err) {
+            if (!ehErroDeLimitePlano(err)) throw err;
+            limitePlano.mostrar(mensagemDeErro(err));
+            return;
+          }
           avisar("Evento aprovado e publicado.", "sucesso");
         }}
       >
@@ -1113,6 +1146,7 @@ export function DetalheEvento() {
       >
         “{e.nome}” será apagado. Isso só é possível porque nenhum ingresso foi vendido ou reservado.
       </Confirmar>
+      {limitePlano.janela}
     </div>
   );
 }

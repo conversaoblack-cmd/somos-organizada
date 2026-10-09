@@ -135,13 +135,28 @@ trocar a QR_HMAC invalidaria ingressos e carteirinhas. Casos especiais, sempre d
 1. Abra `https://somosorganizada.com.br/plataforma`, crie a conta com o e-mail de `PLATAFORMA_EMAILS`
    (o painel pede a verificação do e-mail) e clique em **Ativar acesso da equipe**.
 2. Em **Configurações**: cadastre a **chave Pix** que recebe as mensalidades da plataforma, o nome e a cidade
-   do recebedor e confira os valores dos planos (pequena R$ 500, grande R$ 1.000, gigante R$ 1.500 acima de 3.000 sócios).
+   do recebedor e confira os valores dos planos. Padrão: **Torcida Pro** R$ 197 (até 300 sócios e 3 eventos à venda),
+   **Torcida Plus** R$ 347 (até 600 sócios e 6 eventos) e **Torcida Max** R$ 997 (até 2.000 sócios e 20 eventos).
+   A equipe muda só o preço; nome e limites são fixos no código (`functions/src/api/saas.ts`, `SAAS_PADRAO`).
 3. Torcidas novas chegam pelo cadastro da página inicial (`/cadastro`) e aparecem em **Solicitações**: aprovar cria
    a torcida e libera o painel para o diretor (ele entra com a mesma conta do cadastro). Também dá para criar
    direto em **Torcidas → Nova torcida**.
 4. **Mensalidades**: a 1ª fatura sai 7 dias depois de a torcida publicar o site; as seguintes 5 dias antes de vencer.
    Pagamento só no Pix, sem multa nem juros. Ao receber, toque em **Confirmar Pix recebido**.
    Com 7 dias de atraso o site da torcida sai do ar sozinho e volta na confirmação.
+5. **Limites do plano** (todos os planos têm todos os recursos; muda só o tamanho). Valem a partir da assinatura
+   (quando a diretoria publica o site); antes disso, não há limite.
+   - **Sócios** = ativos + inadimplentes + em análise (contador `stats/geral.socios`). No limite, `aderirSocio`
+     recusa só **novas** adesões ("As novas associações desta torcida estão pausadas no momento. Fale com a
+     diretoria."). Quem já é sócio renova normalmente e a diretoria pode reativar sócio pelo painel.
+   - **Eventos à venda** = publicados com data no futuro. Só o servidor publica evento (ação `publicarEvento`;
+     as regras recusam `status: "publicado"` vindo do navegador, salvo editar um evento que já está publicado).
+     No limite, a publicação é recusada e o painel leva a diretoria para **Plano Somos Organizada**.
+   - Escolher ou trocar de plano (`publicarSite`, `alterarPlanoSaas`) é recusado se o uso de hoje não couber no
+     plano novo. O preço novo vale na próxima fatura; os limites, na hora.
+   - Torcidas antigas: os ids `pequena`, `grande` e `gigante` gravados em assinaturas e faturas são lidos como
+     `pro`, `plus` e `max` (`normalizarPlano`, igual no servidor e no painel). Não existe mais plano automático
+     por número de sócios.
 
 ## 9. Onboarding de cada torcida (feito pela diretoria)
 
@@ -166,7 +181,7 @@ Tudo guiado no painel `/{torcida}/admin`:
 2. **Sedes e usuários**: cadastrar as subsedes/distritos e convidar o diretor de cada uma (ele recebe um
    e-mail para criar a senha). Cada diretor de subsede entra em **Recebimentos** e cadastra a conta dele.
 3. **Planos**: mensal, anual, mirim...
-4. **Eventos**: criar e publicar.
+4. **Eventos**: criar e publicar (o número de eventos à venda ao mesmo tempo depende do plano Somos Organizada).
 5. **Personalização**: cores, logo, banner e textos.
 6. **Usuários**: convidar subsedes e portaria.
 

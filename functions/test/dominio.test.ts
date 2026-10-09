@@ -6,7 +6,7 @@ import { cpfValido, mascararCpf, slugValido, telefoneBR } from "../src/util/vali
 import { statusAposPagamento } from "../src/dominio/processamento";
 import { crc16, pixCopiaECola } from "../src/util/pix";
 import { dividir, subsedePodeVender } from "../src/dominio/split";
-import { planoEfetivo } from "../src/api/saas";
+import { cabeNoPlano, limitesDoPlano, mensagemForaDoPlano, normalizarPlano, SAAS_PADRAO, sociosQueOcupamVaga } from "../src/api/saas";
 
 const CHAVE = "a".repeat(64);
 const SOCIO = { nome: "Sócio Teste", cpf: "52998224725" };
@@ -116,10 +116,47 @@ test("split: subsede ativa recebe o valor do ingresso, torcida recebe a taxa", (
   assert.equal(subsedePodeVender({ pagamentos: {} } as never, ativa), false);
 });
 
-test("plano da plataforma: gigante acima de 3.000 sócios ativos", () => {
-  assert.equal(planoEfetivo("pequena", 3000, 3000), "pequena");
-  assert.equal(planoEfetivo("pequena", 3001, 3000), "gigante");
-  assert.equal(planoEfetivo("grande", 120, 3000), "grande");
+test("planos da plataforma: ids antigos viram Pro/Plus/Max", () => {
+  assert.equal(normalizarPlano("pro"), "pro");
+  assert.equal(normalizarPlano("plus"), "plus");
+  assert.equal(normalizarPlano("max"), "max");
+  assert.equal(normalizarPlano("pequena"), "pro");
+  assert.equal(normalizarPlano("grande"), "plus");
+  assert.equal(normalizarPlano("gigante"), "max");
+  assert.equal(normalizarPlano("outro"), null);
+  assert.equal(normalizarPlano(undefined), null);
+});
+
+test("planos da plataforma: preços e limites", () => {
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(SAAS_PADRAO.planos).map(([k, p]) => [k, [p.nome, p.valor]])),
+    { pro: ["Torcida Pro", 19700], plus: ["Torcida Plus", 34700], max: ["Torcida Max", 99700] },
+  );
+  assert.deepEqual(limitesDoPlano("pro"), { socios: 300, eventos: 3 });
+  assert.deepEqual(limitesDoPlano("plus"), { socios: 600, eventos: 6 });
+  assert.deepEqual(limitesDoPlano("max"), { socios: 2000, eventos: 20 });
+});
+
+test("planos da plataforma: o uso cabe no plano (limite incluso) e a mensagem diz o que passou", () => {
+  assert.deepEqual(cabeNoPlano("pro", { socios: 300, eventos: 3 }), { cabe: true, socios: true, eventos: true });
+  assert.deepEqual(cabeNoPlano("pro", { socios: 301, eventos: 3 }), { cabe: false, socios: false, eventos: true });
+  assert.deepEqual(cabeNoPlano("pro", { socios: 10, eventos: 4 }), { cabe: false, socios: true, eventos: false });
+  assert.equal(cabeNoPlano("plus", { socios: 412, eventos: 4 }).cabe, true);
+  assert.equal(mensagemForaDoPlano("plus", { socios: 412, eventos: 4 }), null);
+  assert.equal(
+    mensagemForaDoPlano("pro", { socios: 412, eventos: 2 }),
+    "O plano Torcida Pro vai até 300 sócios e 3 eventos à venda. Hoje vocês têm 412 sócios. Escolha um plano maior.",
+  );
+  assert.equal(
+    mensagemForaDoPlano("plus", { socios: 1200, eventos: 7 }),
+    "O plano Torcida Plus vai até 600 sócios e 6 eventos à venda. Hoje vocês têm 1.200 sócios e 7 eventos à venda. Escolha um plano maior.",
+  );
+});
+
+test("planos da plataforma: sócios que ocupam vaga (ativo, inadimplente e em análise)", () => {
+  assert.equal(sociosQueOcupamVaga({ ativo: 280, inadimplente: 12, em_analise: 3, pendente_pagamento: 40, suspenso: 5, cancelado: 90 }), 295);
+  assert.equal(sociosQueOcupamVaga({ ativo: -1, inadimplente: 2 }), 2);
+  assert.equal(sociosQueOcupamVaga(undefined), 0);
 });
 
 test("recusa de cartão: código ABECS e código antigo da Pagar.me viram mensagem clara", async () => {

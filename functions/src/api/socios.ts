@@ -12,6 +12,7 @@ import { clientePg, enderecoPg } from "../pagarme/montagem";
 import { dividir } from "../dominio/split";
 import { PagarmeErro, type Pagarme } from "../pagarme/cliente";
 import { aplicarRespostaPedido, mensagemErroPagarme, pagamentoPg, torcidaVendendo } from "./ingressos";
+import { contarSociosNoPlano, limitesDoPlano, planoDaTorcida } from "./saas";
 import type { Pedido, Plano, Sede, Socio, StatusSocio, Torcida } from "../dominio/tipos";
 
 const segredos = [MASTER_KEY, QR_HMAC, EMAIL_API_KEY];
@@ -195,6 +196,23 @@ export async function sincronizarFaturas(tid: string, socio: Socio, pg: Pagarme)
 }
 
 /**
+ * Limite de sócios do plano Somos Organizada: com a torcida no limite, novas adesões param.
+ * Quem já é sócio (ativo, em análise, inadimplente, suspenso) não passa por aqui: renova pela mensalidade,
+ * e a diretoria reativa pelo painel (alterarStatusSocio), sem bloqueio. Sem assinatura, não há limite.
+ */
+async function exigirVagaNoPlano(tid: string, uid: string) {
+  const plano = await planoDaTorcida(tid);
+  if (!plano) return;
+  const atual = (await refs.socio(tid, uid).get()).get("status") as StatusSocio | undefined;
+  if (atual && ATIVOS.includes(atual)) return; // a transação abaixo responde "você já é sócio"
+  if ((await contarSociosNoPlano(tid)) >= limitesDoPlano(plano).socios) {
+    throw new HttpsError("failed-precondition", "As novas associações desta torcida estão pausadas no momento. Fale com a diretoria.", {
+      limitePlano: "socios",
+    });
+  }
+}
+
+/**
  * Adesão de sócio: grava a ficha, trava o CPF na torcida e inicia o pagamento.
  * Pix e cartão: cobrança por ciclo gerada pelo sistema (cartão salvo na Pagar.me).
  */
@@ -222,6 +240,7 @@ export const aderirSocio = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, asyn
   }
 
   const torcida = await torcidaVendendo(tid, { uid, modulo: "socios" });
+  await exigirVagaNoPlano(tid, uid);
   const [planoSnap, sedeSnap] = await Promise.all([refs.plano(tid, planoId).get(), refs.sede(tid, sedeId).get()]);
   const plano = planoSnap.data() as Plano | undefined;
   if (!plano?.ativo) throw new HttpsError("failed-precondition", "Plano indisponível.");

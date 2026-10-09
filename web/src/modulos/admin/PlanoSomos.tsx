@@ -4,14 +4,16 @@ import { collection, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
 import { dataCurta, dataHora, moeda } from "@/lib/formatos";
-import type { FaturaSaas } from "@/lib/tipos";
+import { normalizarPlano, type FaturaSaas, type PlanoSaas } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
 import { Aviso, Botao, CabecalhoPagina, Cartao, cx, Icone, Selo, useToast, type Tom } from "@/ui";
 import { QrCode } from "@/ui/qr";
 import { usePainel } from "./contexto";
-import { EscolhaPlano, ExplicacaoCobranca, usePlanosSaas } from "./Publicar";
+import { usePlanosSaas } from "@/modulos/inicio/planos";
+import { EscolhaPlano, ExplicacaoCobranca } from "./Publicar";
 import { useTourPagina } from "./tours";
-import { BotaoCopiar, Confirmar, EstadoLista } from "./util";
+import { UsoDoPlanoCartao, useUsoDoPlano } from "./usoPlano";
+import { BotaoCopiar, Confirmar, EstadoLista, numero } from "./util";
 
 const SITUACAO: Record<string, { rotulo: string; tom: Tom }> = {
   em_dia: { rotulo: "Em dia", tom: "sucesso" },
@@ -31,7 +33,8 @@ export default function PlanoSomos() {
   useTourPagina("plano-somos");
   const planos = usePlanosSaas();
   const faturas = useColecao<FaturaSaas>(query(collection(db, `torcidas/${tid}/faturasSaas`), orderBy("vencimento", "desc")), `faturas-${tid}`);
-  const [trocarPara, setTrocarPara] = useState<"pequena" | "grande" | null>(null);
+  const [trocarPara, setTrocarPara] = useState<PlanoSaas | null>(null);
+  const uso = useUsoDoPlano();
   const [informando, setInformando] = useState<string | null>(null);
 
   const abertas = faturas.dados.filter((f) => f.status === "aberta").sort((a, b) => a.vencimento.toMillis() - b.vencimento.toMillis());
@@ -53,7 +56,9 @@ export default function PlanoSomos() {
     return (
       <div className="max-w-3xl">
         <CabecalhoPagina titulo="Plano Somos Organizada" descricao="A mensalidade da plataforma." />
-        <Cartao className="p-5 sm:p-6 mb-4" data-tour="plano-atual">
+        {uso && <UsoDoPlanoCartao uso={uso} className="mb-4" />}
+
+      <Cartao className="p-5 sm:p-6 mb-4" data-tour="plano-atual">
           <p className="font-bold text-lg">Você ainda não escolheu um plano</p>
           <p className="text-texto-2 mt-1">O plano é escolhido quando você publica o site. A cobrança só começa a partir daí.</p>
           <Link to={`${base}/publicar?tour=admin-publicar`} className="inline-flex items-center gap-2 mt-4 h-11 px-5 rounded-2xl font-semibold bg-primaria text-sobre-primaria">
@@ -69,6 +74,7 @@ export default function PlanoSomos() {
   }
 
   const sit = SITUACAO[assinatura.situacao] ?? SITUACAO.em_dia!;
+  const planoAtual = normalizarPlano(assinatura.plano) ?? "pro";
 
   return (
     <div className="max-w-4xl">
@@ -131,6 +137,8 @@ export default function PlanoSomos() {
         </Cartao>
       )}
 
+      {uso && <UsoDoPlanoCartao uso={uso} className="mb-4" />}
+
       <Cartao className="p-5 sm:p-6 mb-4" data-tour="plano-atual">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
@@ -141,8 +149,8 @@ export default function PlanoSomos() {
             {sit.rotulo}
           </Selo>
         </div>
-        <EscolhaPlano valor={assinatura.plano} atual={assinatura.plano} onChange={(p) => p !== assinatura.plano && setTrocarPara(p)} />
-        <p className="text-xs text-texto-3 mt-2">A troca vale a partir da próxima fatura.</p>
+        <EscolhaPlano valor={planoAtual} atual={planoAtual} uso={uso} onChange={(p) => p !== planoAtual && setTrocarPara(p)} />
+        <p className="text-xs text-texto-3 mt-2">Os limites novos valem na hora; o preço novo, a partir da próxima fatura.</p>
       </Cartao>
 
       <section data-tour="faturas">
@@ -159,7 +167,7 @@ export default function PlanoSomos() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">
-                      {planos.nome(f.plano)} · {f.sociosAtivos} sócios ativos
+                      {planos.nome(f.plano)} · {numero(f.sociosAtivos)} sócios
                     </p>
                     <p className="text-xs text-texto-3">
                       Vence {dataCurta(f.vencimento)}
@@ -187,13 +195,14 @@ export default function PlanoSomos() {
         rotulo="Trocar plano"
         acao={async () => {
           await api.alterarPlanoSaas({ tid, plano: trocarPara! });
-          avisar("Plano alterado. Vale a partir da próxima fatura.", "sucesso");
+          avisar("Plano alterado. Os limites novos já valem; o preço muda na próxima fatura.", "sucesso");
         }}
       >
         {trocarPara && (
           <>
-            O plano passa a ser <strong className="text-texto">{planos.nome(trocarPara)}</strong> ({moeda(planos.valor(trocarPara))}/mês) a partir da próxima fatura.
-            A fatura em aberto não muda.
+            O plano passa a ser <strong className="text-texto">{planos.nome(trocarPara)}</strong>: até {numero(planos.planos[trocarPara].socios)} sócios e{" "}
+            {numero(planos.planos[trocarPara].eventos)} eventos à venda ao mesmo tempo, por {moeda(planos.valor(trocarPara))}/mês.
+            {" "}Os limites novos valem na hora. O preço novo vale a partir da próxima fatura; a fatura em aberto não muda.
           </>
         )}
       </Confirmar>

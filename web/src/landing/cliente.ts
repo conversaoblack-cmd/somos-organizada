@@ -6,7 +6,7 @@
 import "../index.css";
 import { CALCULO_INICIAL, calcularTaxa, reais } from "./calculo";
 import { PLANOS_SAAS_PADRAO } from "@/lib/tipos";
-let valorPequena = PLANOS_SAAS_PADRAO.pequena.valor;
+let valorPro = PLANOS_SAAS_PADRAO.pro.valor;
 
 // Calculadora
 const form = document.querySelector<HTMLFormElement>("[data-calculadora]");
@@ -17,13 +17,13 @@ function recalcular() {
     return Number.isFinite(v) && v > 0 ? Math.min(v, 100000) : 0;
   };
   const taxa = calcularTaxa({ socios: ler("socios"), mensalidade: ler("mensalidade"), ingressos: ler("ingressos"), preco: ler("preco") });
-  const saldo = taxa - valorPequena;
+  const saldo = taxa - valorPro;
   const escrever = (k: string, t: string) => {
     const el = form.querySelector(`[data-calc="${k}"]`);
     if (el) el.textContent = t;
   };
   escrever("taxa", reais(taxa));
-  escrever("plano", reais(valorPequena));
+  escrever("plano", reais(valorPro));
   escrever("saldo", saldo < 0 ? `− ${reais(-saldo)}` : reais(saldo));
 }
 form?.addEventListener("input", recalcular);
@@ -42,16 +42,14 @@ if (projeto && import.meta.env.VITE_USAR_EMULADORES !== "true") {
       .then((r) => (r.ok ? r.json() : null))
       .then((r: { found?: { fields?: Record<string, FirestoreValor> } }[] | null) => {
         const campos = r?.[0]?.found?.fields;
-        const limite = Number(campos?.limiteGigante?.integerValue ?? campos?.limiteGigante?.doubleValue);
-        if (Number.isInteger(limite) && limite > 0) document.querySelectorAll("[data-limite]").forEach((el) => (el.textContent = limite.toLocaleString("pt-BR")));
         const planos = campos?.planos?.mapValue?.fields;
         if (!planos) return;
-        for (const k of ["pequena", "grande", "gigante"] as const) {
+        for (const k of ["pro", "plus", "max"] as const) {
           const v = Number(planos[k]?.mapValue?.fields?.valor?.integerValue ?? planos[k]?.mapValue?.fields?.valor?.doubleValue);
           if (!Number.isInteger(v) || v <= 0) continue;
           const el = document.querySelector(`[data-plano="${k}"]`);
           if (el) el.textContent = reais(v);
-          if (k === "pequena") valorPequena = v;
+          if (k === "pro") valorPro = v;
         }
         recalcular();
       })

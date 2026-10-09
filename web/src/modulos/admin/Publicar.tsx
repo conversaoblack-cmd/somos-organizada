@@ -2,51 +2,79 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { api } from "@/lib/api";
 import { moeda } from "@/lib/formatos";
-import { PLANOS_SAAS_PADRAO, type ConfigPlataforma, type PlanoSaas } from "@/lib/tipos";
-import { useDocumento } from "@/hooks/dados";
+import type { PlanoSaas } from "@/lib/tipos";
 import { Aviso, Botao, CabecalhoPagina, Cartao, cx, Icone, Selo, useToast } from "@/ui";
 import { QrCode } from "@/ui/qr";
+import { ORDEM_PLANOS, usePlanosSaas } from "@/modulos/inicio/planos";
 import { usePainel } from "./contexto";
 import { modulosDa } from "./PrimeirosPassos";
 import { useTourPagina } from "./tours";
-import { BotaoCopiar, Confirmar } from "./util";
+import { useUsoDoPlano } from "./usoPlano";
+import { BotaoCopiar, Confirmar, numero } from "./util";
 
-export function usePlanosSaas() {
-  const cfg = useDocumento<ConfigPlataforma>("plataforma/publico");
-  const valor = (p: PlanoSaas) => cfg.dados?.planos?.[p]?.valor ?? PLANOS_SAAS_PADRAO[p].valor;
-  const nome = (p: PlanoSaas) => cfg.dados?.planos?.[p]?.nome ?? PLANOS_SAAS_PADRAO[p].nome;
-  const limite = cfg.dados?.limiteGigante ?? 3000;
-  return { valor, nome, limite, carregando: cfg.carregando };
-}
-
-/** Cartões de escolha entre Torcida pequena e Torcida grande. */
-export function EscolhaPlano({ valor: escolhido, onChange, atual }: { valor: "pequena" | "grande" | null; onChange: (p: "pequena" | "grande") => void; atual?: string }) {
+/**
+ * Cartões de escolha entre Torcida Pro, Plus e Max. Com `uso`, o plano em que a torcida não cabe
+ * (mais sócios ou eventos à venda do que o limite) aparece desativado, com o motivo.
+ */
+export function EscolhaPlano({
+  valor: escolhido,
+  onChange,
+  atual,
+  uso,
+}: {
+  valor: PlanoSaas | null;
+  onChange: (p: PlanoSaas) => void;
+  atual?: PlanoSaas | null;
+  uso?: { socios: number; eventos: number | null } | null;
+}) {
   const planos = usePlanosSaas();
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Plano Somos Organizada">
-        {(["pequena", "grande"] as const).map((p) => {
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3" role="radiogroup" aria-label="Plano Somos Organizada">
+        {ORDEM_PLANOS.map((p) => {
+          const def = planos.planos[p];
           const sel = escolhido === p;
+          const passaSocios = !!uso && uso.socios > def.socios;
+          const passaEventos = !!uso && uso.eventos !== null && uso.eventos > def.eventos;
+          const naoCabe = p !== atual && (passaSocios || passaEventos);
           return (
             <button
               key={p}
               type="button"
               role="radio"
               aria-checked={sel}
+              disabled={naoCabe}
               onClick={() => onChange(p)}
               className={cx(
-                "text-left rounded-2xl border p-5 transition-all relative",
+                "text-left rounded-2xl border p-5 transition-all relative flex flex-col",
                 sel ? "border-primaria bg-primaria/10 ring-1 ring-primaria" : "border-linha bg-superficie-2 hover:border-linha-forte",
+                naoCabe && "opacity-60 cursor-not-allowed hover:border-linha",
               )}
             >
-              {atual === p && <Selo tom="primaria" className="absolute top-4 right-4">Plano atual</Selo>}
-              <p className="font-bold text-lg">{planos.nome(p)}</p>
-              <p className="text-sm text-texto-2 mt-0.5">{PLANOS_SAAS_PADRAO[p].descricao}</p>
-              <p className="mt-3">
-                <span className="text-3xl font-bold numeros">{moeda(planos.valor(p))}</span>
+              <div className="flex items-start justify-between gap-2 pr-7">
+                <p className="font-bold text-lg">{def.nome}</p>
+                {atual === p && <Selo tom="primaria" className="shrink-0">Plano atual</Selo>}
+              </div>
+              <p className="mt-2">
+                <span className="text-3xl font-bold numeros">{moeda(def.valor)}</span>
                 <span className="text-texto-3 text-sm"> /mês</span>
               </p>
-              <span className={cx("absolute bottom-4 right-4 size-5 rounded-full border-2 grid place-items-center", sel ? "border-primaria" : "border-linha-forte")}>
+              <ul className="mt-3 space-y-1.5 text-sm">
+                <li className="flex gap-2">
+                  <Icone nome="usuarios" className="size-4 shrink-0 mt-0.5 text-texto-3" />
+                  <span>Até <strong className="numeros">{numero(def.socios)}</strong> sócios</span>
+                </li>
+                <li className="flex gap-2">
+                  <Icone nome="ingresso" className="size-4 shrink-0 mt-0.5 text-texto-3" />
+                  <span>Até <strong className="numeros">{numero(def.eventos)}</strong> eventos à venda ao mesmo tempo</span>
+                </li>
+              </ul>
+              {naoCabe && (
+                <p className="text-xs text-perigo mt-3">
+                  Não cabe: vocês têm {passaSocios ? `${numero(uso!.socios)} sócios` : `${numero(uso!.eventos)} eventos à venda`}.
+                </p>
+              )}
+              <span className={cx("absolute top-5 right-5 size-5 rounded-full border-2 grid place-items-center", sel ? "border-primaria" : "border-linha-forte")}>
                 {sel && <span className="size-2.5 rounded-full bg-primaria" />}
               </span>
             </button>
@@ -55,7 +83,7 @@ export function EscolhaPlano({ valor: escolhido, onChange, atual }: { valor: "pe
       </div>
       <p className="text-sm text-texto-3 mt-3 flex gap-2">
         <Icone nome="info" className="size-4 shrink-0 mt-0.5" />
-        Acima de {planos.limite.toLocaleString("pt-BR")} sócios ativos o plano passa automaticamente para {planos.nome("gigante")} ({moeda(planos.valor("gigante"))}/mês).
+        Todos os planos têm tudo: subsedes, portaria, divisão automática dos pagamentos e painel da diretoria. Muda só o tamanho.
       </p>
     </div>
   );
@@ -84,10 +112,12 @@ export default function Publicar() {
   const avisar = useToast();
   const publicada = !!torcida.publicada;
   useTourPagina(publicada ? "publicado" : "publicar");
-  const [plano, setPlano] = useState<"pequena" | "grande" | null>(assinatura?.plano ?? null);
+  const [plano, setPlano] = useState<PlanoSaas | null>(null);
   const [confirmar, setConfirmar] = useState(false);
   const [tirar, setTirar] = useState(false);
   const planos = usePlanosSaas();
+  // Antes de publicar: mostra em quais planos a torcida cabe (sócios e eventos de teste também contam)
+  const uso = useUsoDoPlano({ ativo: !assinatura && !publicada, mesmoSemAssinatura: true });
   const m = modulosDa(torcida);
   const feito = (chave: string) => primeirosPassos.find((i) => i.chave === chave)?.feito ?? false;
 
@@ -196,7 +226,7 @@ export default function Publicar() {
         <Cartao className="p-5 sm:p-6 mb-4" data-tour="publicar-planos">
           <h2 className="font-bold text-lg">Plano Somos Organizada</h2>
           <p className="text-sm text-texto-2 mt-1 mb-4">A mensalidade da plataforma. Você pode trocar entre os planos depois.</p>
-          <EscolhaPlano valor={plano} onChange={setPlano} />
+          <EscolhaPlano valor={plano} onChange={setPlano} uso={uso} />
         </Cartao>
       ) : (
         <Aviso tom="info" className="mb-4" titulo={`Plano ${planos.nome(assinatura.plano)}`}>

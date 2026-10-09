@@ -1,11 +1,13 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { MASTER_KEY, URL_APP } from "../config";
-import { auth, db, refs, FieldValue } from "../util/firebase";
+import { auth, db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { cifrar, tokenAleatorio } from "../util/cripto";
 import { emailValido, texto, umDe } from "../util/validacao";
 import { exigirMembro, type Membro, type Papel } from "../dominio/permissoes";
 import { Pagarme, PagarmeErro } from "../pagarme/cliente";
 import type { PrivadoPagarme } from "../pagarme/credenciais";
+import type { Evento, Sede } from "../dominio/tipos";
+import { contarEventosAVenda, limitesDoPlano, planoDaTorcida, SAAS_PADRAO } from "./saas";
 
 export function urlWebhook(tid: string, token: string): string {
   return `${URL_APP.value().replace(/\/$/, "")}/api/pagarme/webhook/${tid}/${token}`;
@@ -150,4 +152,60 @@ export const atualizarMembro = onCall(async (req) => {
     { merge: true },
   );
   return { ok: true };
+});
+
+/**
+ * Publica um evento (colocar à venda). Só o servidor grava status "publicado" (as regras do Firestore recusam
+ * no navegador), porque aqui conferimos o limite de eventos à venda do plano Somos Organizada.
+ * Mesmas condições das regras: diretoria; sede principal, ou subsede com conta de recebimento ativa.
+ * Serve para criar já publicado (o painel grava rascunho e chama esta ação), aprovar evento de subsede
+ * e reabrir as vendas de um evento encerrado.
+ */
+export const publicarEvento = onCall(async (req) => {
+  const d = (req.data ?? {}) as Record<string, unknown>;
+  const tid = texto(d.tid, "torcida", { max: 40 });
+  const eventoId = texto(d.eventoId, "evento", { max: 60 });
+  const quem = await exigirMembro(req, tid, ["diretoria"]);
+  const ref = refs.evento(tid, eventoId);
+  const ev = (await ref.get()).data() as Evento | undefined;
+  if (!ev) throw new HttpsError("not-found", "Evento não encontrado.");
+  if (ev.status === "publicado") return { status: "publicado" as const };
+
+  const sede = (await refs.sede(tid, ev.sedeId).get()).data() as Sede | undefined;
+  if (!sede) throw new HttpsError("failed-precondition", "A sede deste evento não existe mais. Escolha outra sede.");
+  if (sede.tipo !== "principal" && sede.recebedor?.status !== "active") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Esta subsede ainda não tem conta de recebimento ativa. Peça para o responsável dela cadastrar em Recebimentos.",
+    );
+  }
+
+  // Limite do plano: só conta evento futuro (evento que já passou não fica à venda)
+  const futuro = ev.data instanceof Timestamp ? ev.data.toMillis() >= Date.now() : true;
+  const plano = futuro ? await planoDaTorcida(tid) : null;
+  if (plano) {
+    const limite = limitesDoPlano(plano).eventos;
+    if ((await contarEventosAVenda(tid)) >= limite) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Seu plano ${SAAS_PADRAO.planos[plano].nome} permite ${limite} eventos à venda ao mesmo tempo. Encerre um evento ou mude de plano.`,
+        { limitePlano: "eventos" },
+      );
+    }
+  }
+
+  await db.runTransaction(async (tx) => {
+    const atual = (await tx.get(ref)).data() as Evento | undefined;
+    if (!atual) throw new HttpsError("not-found", "Evento não encontrado.");
+    if (atual.status === "publicado") return;
+    tx.update(ref, {
+      status: "publicado",
+      publicadoEm: FieldValue.serverTimestamp(),
+      publicadoPor: quem.uid,
+      motivoDevolucao: FieldValue.delete(),
+      atualizadoEm: FieldValue.serverTimestamp(),
+      ...(atual.status === "em_aprovacao" ? { aprovadoEm: FieldValue.serverTimestamp(), aprovadoPor: quem.uid } : {}),
+    });
+  });
+  return { status: "publicado" as const };
 });

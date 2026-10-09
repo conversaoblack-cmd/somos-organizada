@@ -10,6 +10,7 @@ import { usePainel } from "./contexto";
 import { GraficoReceita, type PontoReceita } from "./Grafico";
 import { CartaoPrimeirosPassos } from "./PrimeirosPassos";
 import { useTourPagina } from "./tours";
+import { textoLimite, useUsoDoPlano } from "./usoPlano";
 import { BarraOcupacao, contarNoServidor, EstadoLista, instanteSP, mesAtualSP, numero, rotuloMes, totaisDaSede, ultimosMeses, useAgregado, ValorKpi } from "./util";
 
 const ORDEM_STATUS: StatusSocio[] = ["ativo", "em_analise", "inadimplente", "pendente_pagamento", "suspenso", "cancelado"];
@@ -137,6 +138,7 @@ export default function VisaoGeral() {
   const dir = useResumoDiretoria(ehDiretoria);
   const sub = useResumoSubsede(ehDiretoria ? null : sedeEscopo);
   const r = ehDiretoria ? dir : sub;
+  const uso = useUsoDoPlano();
 
   const agora = useMemo(() => Timestamp.now(), []);
   const eventosQ = useColecao<Evento>(
@@ -202,6 +204,23 @@ export default function VisaoGeral() {
         : "É nela que caem as vendas dos eventos da sua subsede. Sem ela a diretoria não consegue aprovar seus eventos.",
       para: `${base}/recebimentos`,
       acao: "Ir para Recebimentos",
+    });
+  // Limite do plano Somos Organizada: amarelo a partir de 90%, vermelho no limite
+  if (uso && uso.nivelSocios !== "ok")
+    pendencias.push({
+      tom: uso.nivelSocios === "limite" ? "perigo" : "alerta",
+      titulo: `Sócios: ${numero(uso.socios)} de ${numero(uso.limites.socios)} no plano ${uso.nomePlano}`,
+      texto: textoLimite(uso, "socios"),
+      para: `${base}/plano`,
+      acao: "Ver plano",
+    });
+  if (uso && uso.eventos !== null && uso.nivelEventos !== "ok")
+    pendencias.push({
+      tom: uso.nivelEventos === "limite" ? "perigo" : "alerta",
+      titulo: `Eventos à venda: ${numero(uso.eventos)} de ${numero(uso.limites.eventos)} no plano ${uso.nomePlano}`,
+      texto: textoLimite(uso, "eventos"),
+      para: `${base}/plano`,
+      acao: "Ver plano",
     });
   if (emAnalise > 0)
     pendencias.push({ tom: "info", titulo: `${numero(emAnalise)} ${emAnalise === 1 ? "sócio aguardando" : "sócios aguardando"} aprovação`, texto: "Pagamento confirmado, falta só a sua aprovação.", para: `${base}/socios?status=em_analise`, acao: "Revisar sócios" });

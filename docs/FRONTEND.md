@@ -23,7 +23,8 @@ Um só deploy atende todas as torcidas. A torcida é resolvida pelo endereço: `
 
 - **Dinheiro e status nunca são gravados pelo navegador.** Pedidos, ingressos, sócios, lançamentos,
   credenciais e membros são escritos só pelas Cloud Functions (`web/src/lib/api.ts`).
-  O navegador grava direto no Firestore apenas: eventos, planos, sedes, aparência/textos/contato da
+  O navegador grava direto no Firestore apenas: eventos (menos a publicação, que é `api.publicarEvento` por causa
+  do limite do plano), planos, sedes, aparência/textos/contato da
   torcida, repasses (diretoria), chamados e mensagens de suporte, e `logsErro`. As regras estão em
   `firestore.rules`; leia antes de gravar qualquer coisa.
 - **Valores em centavos** (`number` inteiro). Use `moeda()` de `lib/formatos.ts` para exibir e

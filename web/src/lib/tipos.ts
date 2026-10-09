@@ -288,18 +288,30 @@ export interface Faq {
   ordem?: number;
 }
 
-export type PlanoSaas = "pequena" | "grande" | "gigante";
+/** Planos da mensalidade Somos Organizada (todos com todos os recursos; muda só o tamanho). */
+export type PlanoSaas = "pro" | "plus" | "max";
+export const ORDEM_PLANOS_SAAS: PlanoSaas[] = ["pro", "plus", "max"];
 
-/** plataforma/publico */
+/** Ids antigos (pequena/grande/gigante) continuam em assinaturas e faturas já gravadas. */
+const PLANOS_LEGADOS: Record<string, PlanoSaas> = { pequena: "pro", grande: "plus", gigante: "max" };
+
+/** "pro" | "plus" | "max" (ou id antigo) → id atual; qualquer outra coisa → null. Mesma regra do servidor. */
+export function normalizarPlano(plano: unknown): PlanoSaas | null {
+  const p = String(plano ?? "");
+  if ((ORDEM_PLANOS_SAAS as string[]).includes(p)) return p as PlanoSaas;
+  return PLANOS_LEGADOS[p] ?? null;
+}
+
+/** plataforma/publico (a equipe muda só o valor de cada plano; nome e limites são fixos). */
 export interface ConfigPlataforma {
   planos?: Partial<Record<PlanoSaas, { nome?: string; valor?: number }>>;
-  limiteGigante?: number;
   pix?: { chave?: string; nome?: string; cidade?: string };
 }
 
 /** torcidas/{tid}/saas/assinatura */
 export interface AssinaturaSaas {
-  plano: "pequena" | "grande";
+  /** Pode vir com id antigo (pequena/grande): use normalizarPlano. */
+  plano: PlanoSaas | "pequena" | "grande";
   diaVencimento: number;
   proximoVencimento: Timestamp;
   situacao: "em_dia" | "aberta" | "atrasada" | "bloqueada";
@@ -310,7 +322,8 @@ export interface AssinaturaSaas {
 /** torcidas/{tid}/faturasSaas/{AAAA-MM-DD} */
 export interface FaturaSaas {
   competencia: string;
-  plano: PlanoSaas;
+  /** Pode vir com id antigo (pequena/grande/gigante): use normalizarPlano. */
+  plano: PlanoSaas | "pequena" | "grande" | "gigante";
   valor: number;
   sociosAtivos: number;
   vencimento: Timestamp;
@@ -341,9 +354,25 @@ export interface SolicitacaoTorcida {
   criadoEm: Timestamp;
 }
 
-/** Valores padrão (o servidor usa plataforma/publico quando houver). Centavos. */
-export const PLANOS_SAAS_PADRAO: Record<PlanoSaas, { nome: string; valor: number; descricao: string }> = {
-  pequena: { nome: "Torcida pequena", valor: 50000, descricao: "Para torcidas em crescimento." },
-  grande: { nome: "Torcida grande", valor: 100000, descricao: "Para torcidas com várias subsedes." },
-  gigante: { nome: "Torcida gigante", valor: 150000, descricao: "Automático acima de 3.000 sócios ativos." },
+/**
+ * Planos padrão (o servidor usa o valor de plataforma/publico quando houver). Valor em centavos.
+ * socios = sócios que ocupam vaga (ativo, inadimplente e em análise); eventos = eventos à venda ao mesmo tempo.
+ */
+export interface DefinicaoPlanoSaas {
+  nome: string;
+  valor: number;
+  socios: number;
+  eventos: number;
+  descricao: string;
+}
+export const PLANOS_SAAS_PADRAO: Record<PlanoSaas, DefinicaoPlanoSaas> = {
+  pro: { nome: "Torcida Pro", valor: 19700, socios: 300, eventos: 3, descricao: "Para começar a vender e organizar o quadro de sócios." },
+  plus: { nome: "Torcida Plus", valor: 34700, socios: 600, eventos: 6, descricao: "Para a torcida que já tem caravana e festa todo mês." },
+  max: { nome: "Torcida Max", valor: 99700, socios: 2000, eventos: 20, descricao: "Para torcida grande, com muitas subsedes vendendo juntas." },
 };
+
+/** Nome do plano para exibir, aceitando id antigo (fatura de antes dos planos Pro/Plus/Max). */
+export function nomePlanoSaas(plano: unknown): string {
+  const p = normalizarPlano(plano);
+  return p ? PLANOS_SAAS_PADRAO[p].nome : String(plano ?? "");
+}

@@ -7,7 +7,9 @@ plataforma, com painel da diretoria e painel da equipe Somos Organizada.
 - Cada torcida conecta **a própria conta Pagar.me**: o dinheiro cai direto na conta da torcida.
 - **Taxa de serviço de 10%** cobrada por cima do ingresso e da mensalidade; fica no caixa da diretoria.
 - Sede principal + subsedes: o painel calcula quanto repassar para cada subsede.
-- A receita da plataforma é a mensalidade do contrato com a diretoria, cobrada por fora do sistema.
+- A receita da plataforma é a mensalidade paga pela diretoria no Pix, gerada pelo próprio sistema quando o site é
+  publicado: **Torcida Pro** R$ 197 (até 300 sócios e 3 eventos à venda), **Torcida Plus** R$ 347 (600 e 6) e
+  **Torcida Max** R$ 997 (2.000 e 20). Todos os planos têm todos os recursos; muda só o tamanho.
 
 ## Estrutura
 

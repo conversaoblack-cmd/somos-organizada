@@ -37,7 +37,7 @@ export default function Dashboard() {
       ativas: ativas.length,
       implantacao: ts.filter((t) => t.status === "implantacao").length,
       suspensas: ts.filter((t) => t.status === "suspensa").length,
-      mrr: ts.reduce((s, t) => s + (t.saas && !t.saas.bloqueada ? (valorPlanoDaTorcida(t, cfg.planos, cfg.limiteGigante)?.valor ?? 0) : 0), 0),
+      mrr: ts.reduce((s, t) => s + (t.saas && !t.saas.bloqueada ? (valorPlanoDaTorcida(t, cfg.planos)?.valor ?? 0) : 0), 0),
       assinantes: ts.filter((t) => t.saas && !t.saas.bloqueada).length,
       atrasadas: ts.filter((t) => t.saas && (t.saas.situacao === "atrasada" || t.saas.situacao === "bloqueada")).length,
       publicadas: ts.filter((t) => t.publicada).length,
@@ -45,7 +45,7 @@ export default function Dashboard() {
       ranking: [...ts].sort((a, b) => gmv(b.mes) - gmv(a.mes)).slice(0, 8),
       alertas: ts.flatMap((t) => alertasDaTorcida(t).map((a) => ({ ...a, torcida: t }))),
     };
-  }, [resumo, cfg.planos, cfg.limiteGigante]);
+  }, [resumo, cfg.planos]);
 
   return (
     <>

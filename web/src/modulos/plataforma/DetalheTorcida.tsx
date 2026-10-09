@@ -13,7 +13,8 @@ import { Abas, AreaTexto, Aviso, Botao, Campo, Cartao, Carregando, Icone, Indica
 import {
   gmv,
   numero,
-  ROTULO_PLANO_SAAS,
+  rotuloPlanoSaas,
+  usoDoPlanoDaTorcida,
   ROTULO_SITUACAO_SAAS,
   ROTULO_STATUS_TORCIDA,
   TOM_SITUACAO_SAAS,
@@ -269,7 +270,8 @@ function CartaoPlanoSomos({ tid, linha, aoSalvar }: { tid: string; linha: LinhaT
   const [salvando, setSalvando] = useState(false);
   const avisar = useToast();
   useEffect(() => setObs(contrato?.observacoes ?? ""), [contrato?.observacoes]);
-  const valor = linha ? valorPlanoDaTorcida(linha, cfg.planos, cfg.limiteGigante) : null;
+  const valor = linha ? valorPlanoDaTorcida(linha, cfg.planos) : null;
+  const uso = linha ? usoDoPlanoDaTorcida(linha) : null;
 
   async function salvarObs() {
     setSalvando(true);
@@ -300,13 +302,20 @@ function CartaoPlanoSomos({ tid, linha, aoSalvar }: { tid: string; linha: LinhaT
       </div>
       {!linha?.saas ? (
         <p className="text-sm text-texto-3 mb-4">
-          Sem assinatura: a cobrança começa quando a diretoria publicar o site e escolher entre Torcida pequena e Torcida grande.
+          Sem assinatura: a cobrança começa quando a diretoria publicar o site e escolher o plano (Torcida Pro, Plus ou Max). Até lá, sem limite de sócios
+          e eventos.
         </p>
       ) : (
         <>
           <p className="text-sm text-texto-2 mb-4">
-            {ROTULO_PLANO_SAAS[valor?.plano ?? linha.saas.plano]} · <strong className="text-texto">{moeda(valor?.valor ?? 0)}/mês</strong> · Pix, sem multa nem juros
+            {rotuloPlanoSaas(valor?.plano ?? linha.saas.plano)} · <strong className="text-texto">{moeda(valor?.valor ?? 0)}/mês</strong> · Pix, sem multa nem juros
           </p>
+          {uso && (
+            <p className="text-sm text-texto-2 -mt-2 mb-4 numeros">
+              Sócios: <strong className={uso.socios >= uso.limiteSocios ? "text-perigo" : "text-texto"}>{numero(uso.socios)} de {numero(uso.limiteSocios)}</strong> · Eventos à venda:{" "}
+              <strong className={uso.eventos >= uso.limiteEventos ? "text-perigo" : "text-texto"}>{numero(uso.eventos)} de {numero(uso.limiteEventos)}</strong>
+            </p>
+          )}
           {faturas.dados.length > 0 && (
             <ul className="divide-y divide-linha text-sm mb-4">
               {faturas.dados.map((f) => (

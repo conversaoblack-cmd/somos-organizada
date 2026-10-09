@@ -11,7 +11,6 @@ import { CALCULO_INICIAL, calcularTaxa, reais } from "./calculo";
 
 export const WHATSAPP = "5571994095784";
 export const LINK_WHATSAPP = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent("Olá! Quero conhecer a Somos Organizada para a minha torcida.")}`;
-const LIMITE_GIGANTE = 3000;
 
 export interface OpcoesLanding {
   /** Endereço da torcida de demonstração (ex.: "demo"); sem ele o botão não aparece. */
@@ -43,6 +42,10 @@ export const PERGUNTAS: { p: string; r: string }[] = [
   {
     p: "Dá para testar antes de pagar?",
     r: "Sim. Depois da aprovação, a torcida monta tudo em modo demonstração, com pagamentos simulados. A mensalidade da plataforma só começa quando a diretoria publica o site, e a primeira vence 7 dias depois.",
+  },
+  {
+    p: "O que acontece quando a torcida chega no limite do plano?",
+    r: "Quem já é sócio continua normal: paga, renova e entra nos eventos. No limite de sócios, novas adesões ficam pausadas até a diretoria mudar de plano, direto no painel. Eventos à venda são os publicados com data no futuro: no limite, é só encerrar um evento ou mudar de plano.",
   },
   {
     p: "Funciona com subsedes em outras cidades?",
@@ -465,7 +468,7 @@ function Calculadora() {
     { id: "preco", rotulo: "Preço médio do ingresso", prefixo: "R$", max: 10000 },
   ];
   const taxa = calcularTaxa(CALCULO_INICIAL);
-  const plano = PLANOS_SAAS_PADRAO.pequena.valor;
+  const plano = PLANOS_SAAS_PADRAO.pro.valor;
   return (
     <Secao
       id="conta"
@@ -504,7 +507,7 @@ function Calculadora() {
           </p>
           <dl className="mt-6 space-y-2 text-[15px] border-t border-linha pt-4">
             <div className="flex justify-between gap-4">
-              <dt className="text-texto-2">Plano Torcida pequena</dt>
+              <dt className="text-texto-2">Plano {PLANOS_SAAS_PADRAO.pro.nome}</dt>
               <dd className="font-semibold numeros" data-calc="plano">
                 {reais(plano)}
               </dd>
@@ -551,12 +554,8 @@ function ComoFunciona() {
 }
 
 function Planos() {
-  const detalhes: Record<keyof typeof PLANOS_SAAS_PADRAO, string[]> = {
-    pequena: ["Eventos e programa de sócios", "Página com as cores da torcida", "Painel da diretoria e portaria"],
-    grande: ["Tudo do plano Torcida pequena", "Várias subsedes com divisão automática", "Usuários por sede"],
-    gigante: ["Para torcidas com milhares de sócios", "Muda sozinho, sem precisar pedir", "Tudo do plano Torcida grande"],
-  };
-  const ordem = ["pequena", "grande", "gigante"] as const;
+  const ordem = ["pro", "plus", "max"] as const;
+  const numero = (n: number) => n.toLocaleString("pt-BR");
   return (
     <Secao
       id="planos"
@@ -564,15 +563,17 @@ function Planos() {
       titulo="Mensalidade fixa. Nenhuma porcentagem sobre as vendas."
       descricao={
         <>
-          A cobrança só começa quando a diretoria publica o site. Pagamento <strong className="text-texto">no Pix</strong>, sem multa e sem juros.
+          Todos os planos têm tudo; muda só o tamanho. A cobrança só começa quando a diretoria publica o site. Pagamento{" "}
+          <strong className="text-texto">no Pix</strong>, sem multa e sem juros.
         </>
       }
       className="border-t border-linha"
     >
       <div className="grid gap-4 md:grid-cols-3 mt-10">
         {ordem.map((k) => {
-          const destaque = k === "grande";
+          const destaque = k === "plus";
           const p = PLANOS_SAAS_PADRAO[k];
+          const itens = [`Até ${numero(p.socios)} sócios`, `Até ${numero(p.eventos)} eventos à venda ao mesmo tempo`];
           return (
             <article
               key={k}
@@ -580,8 +581,7 @@ function Planos() {
             >
               <div className="flex items-center justify-between gap-2">
                 <h3 className="font-bold text-lg">{p.nome}</h3>
-                {destaque && <span className="text-[11px] font-bold uppercase rounded-full bg-primaria text-sobre-primaria px-2 py-0.5">Com subsedes</span>}
-                {k === "gigante" && <span className="text-[11px] font-bold uppercase rounded-full bg-secundaria text-sobre-secundaria px-2 py-0.5">Automático</span>}
+                {destaque && <span className="text-[11px] font-bold uppercase rounded-full bg-primaria text-sobre-primaria px-2 py-0.5">Recomendado</span>}
               </div>
               <p className="mt-3">
                 <span className="text-4xl font-bold numeros" data-plano={k}>
@@ -589,20 +589,18 @@ function Planos() {
                 </span>
                 <span className="text-texto-2"> /mês</span>
               </p>
-              <p className="text-sm text-texto-2 mt-1">{k === "gigante" ? (
-                  <>
-                    Automático acima de <span data-limite>{LIMITE_GIGANTE.toLocaleString("pt-BR")}</span> sócios ativos.
-                  </>
-                ) : (
-                  p.descricao
-                )}</p>
+              <p className="text-sm text-texto-2 mt-1">{p.descricao}</p>
               <ul className="mt-5 space-y-2 text-[15px] flex-1">
-                {detalhes[k].map((d) => (
+                {itens.map((d) => (
                   <li key={d} className="flex gap-2">
                     <Icone nome="check" className="size-4 text-secundaria shrink-0 mt-1" />
                     {d}
                   </li>
                 ))}
+                <li className="flex gap-2">
+                  <Icone nome="check" className="size-4 text-secundaria shrink-0 mt-1" />
+                  Subsedes, portaria e divisão automática dos pagamentos
+                </li>
               </ul>
               <a
                 href="/cadastro"

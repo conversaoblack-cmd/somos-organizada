@@ -102,7 +102,7 @@ export const TOURS: Record<string, PassoTour[]> = {
   ],
   "admin-publicar": [
     { alvo: "publicar-checklist", titulo: "O que falta", texto: "Os itens obrigatórios precisam estar prontos. Os recomendados deixam o site mais completo." },
-    { alvo: "publicar-planos", opcional: true, titulo: "Plano Somos Organizada", texto: "Escolha o plano da mensalidade da plataforma. Dá para trocar depois." },
+    { alvo: "publicar-planos", opcional: true, titulo: "Plano Somos Organizada", texto: "Escolha pelo tamanho da torcida: quantos sócios e quantos eventos à venda ao mesmo tempo. Todos os planos têm todos os recursos, e dá para trocar depois." },
     { alvo: "publicar-cobranca", titulo: "Como funciona a cobrança", texto: "Só Pix, sem multa e sem juros. A primeira fatura vence 7 dias depois de publicar." },
     { alvo: "publicar-botao", titulo: "Publicar", texto: "Pronto! Depois de publicar, compartilhe o link nos grupos da torcida." },
   ],
@@ -111,7 +111,8 @@ export const TOURS: Record<string, PassoTour[]> = {
     { alvo: "publicar-tirar", titulo: "Tirar do ar", texto: "Se precisar, tire o site do ar. Os dados não são apagados." },
   ],
   "admin-plano-somos": [
-    { alvo: "plano-atual", titulo: "Seu plano", texto: "O plano da mensalidade da plataforma. A troca vale a partir da próxima fatura." },
+    { alvo: "plano-uso", opcional: true, titulo: "Uso do plano", texto: "Quantos sócios e eventos à venda vocês têm agora. Fica amarelo perto do limite e vermelho quando chega nele." },
+    { alvo: "plano-atual", titulo: "Seu plano", texto: "Torcida Pro, Plus ou Max. Os limites novos valem na hora; o preço novo, a partir da próxima fatura." },
     { alvo: "fatura-aberta", titulo: "Pagar a fatura", texto: "Leia o QR Code no app do banco ou copie o “Pix copia e cola”. Depois toque em “Já paguei”." },
     { alvo: "faturas", titulo: "Histórico", texto: "Todas as faturas, pagas e em aberto." },
   ],

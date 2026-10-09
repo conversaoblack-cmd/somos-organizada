@@ -1,11 +1,18 @@
 /**
  * Mensalidade da plataforma Somos Organizada (paga pela diretoria, só em Pix, sem multa nem juros).
  *
- *  - Planos: Torcida pequena R$ 500, Torcida grande R$ 1.000 (escolha da diretoria) e Torcida gigante
- *    R$ 1.500 (automático acima de 3.000 sócios ativos).
+ *  - Planos (todos com todos os recursos; muda só o tamanho):
+ *      Torcida Pro  R$ 197: até 300 sócios e 3 eventos à venda ao mesmo tempo;
+ *      Torcida Plus R$ 347: até 600 sócios e 6 eventos à venda;
+ *      Torcida Max  R$ 997: até 2.000 sócios e 20 eventos à venda.
+ *    A equipe pode mudar só o preço (plataforma/publico.planos.{id}.valor); os limites são fixos.
+ *  - Sócios que ocupam vaga: ativo + inadimplente + em_analise (stats/geral). No limite, novas adesões param.
+ *  - Eventos à venda: status "publicado" com data no futuro. No limite, a diretoria não publica outro.
+ *  - Sem assinatura (site ainda não publicado) não há limite.
  *  - A cobrança começa ao PUBLICAR o site: 1ª fatura vence em 7 dias; depois, todo mês no mesmo dia.
  *  - Pix estático (chave da plataforma). A diretoria avisa que pagou; a equipe confirma no painel.
  *  - 7 dias após o vencimento sem pagamento: o site e as vendas da torcida saem do ar até a confirmação.
+ *  - Torcidas antigas: pequena → pro, grande → plus, gigante → max (normalizarPlano).
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
@@ -13,21 +20,31 @@ import { logger } from "firebase-functions/v2";
 import { FUSO } from "../config";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { dias } from "../util/datas";
-import { texto, umDe } from "../util/validacao";
+import { texto } from "../util/validacao";
 import { pixCopiaECola } from "../util/pix";
 import { avancarCiclo } from "../dominio/precos";
 import { exigirMembro, exigirPlataforma } from "../dominio/permissoes";
 import type { Torcida } from "../dominio/tipos";
 
-export type PlanoSaas = "pequena" | "grande" | "gigante";
+export type PlanoSaas = "pro" | "plus" | "max";
+export const PLANOS_SAAS: readonly PlanoSaas[] = ["pro", "plus", "max"];
+
+export interface DefinicaoPlano {
+  nome: string;
+  /** Centavos por mês. */
+  valor: number;
+  /** Sócios que ocupam vaga (ativo + inadimplente + em análise). */
+  socios: number;
+  /** Eventos à venda ao mesmo tempo (publicados com data no futuro). */
+  eventos: number;
+}
 
 export const SAAS_PADRAO = {
   planos: {
-    pequena: { nome: "Torcida pequena", valor: 50000 },
-    grande: { nome: "Torcida grande", valor: 100000 },
-    gigante: { nome: "Torcida gigante", valor: 150000 },
-  } as Record<PlanoSaas, { nome: string; valor: number }>,
-  limiteGigante: 3000,
+    pro: { nome: "Torcida Pro", valor: 19700, socios: 300, eventos: 3 },
+    plus: { nome: "Torcida Plus", valor: 34700, socios: 600, eventos: 6 },
+    max: { nome: "Torcida Max", valor: 99700, socios: 2000, eventos: 20 },
+  } as Record<PlanoSaas, DefinicaoPlano>,
   diasPrimeiraFatura: 7,
   diasTolerancia: 7,
   diasGerarAntes: 5,
@@ -35,16 +52,67 @@ export const SAAS_PADRAO = {
 };
 
 export interface ConfigSaas {
-  planos: Record<PlanoSaas, { nome: string; valor: number }>;
-  limiteGigante: number;
+  planos: Record<PlanoSaas, DefinicaoPlano>;
   diasPrimeiraFatura: number;
   diasTolerancia: number;
   diasGerarAntes: number;
   pix: { chave: string; nome: string; cidade: string };
 }
 
+/** Ids antigos (antes de Pro/Plus/Max) continuam valendo em assinaturas e faturas já gravadas. */
+const PLANOS_LEGADOS: Record<string, PlanoSaas> = { pequena: "pro", grande: "plus", gigante: "max" };
+
+/** "pro" | "plus" | "max" (ou id antigo) → id atual; qualquer outra coisa → null. */
+export function normalizarPlano(plano: unknown): PlanoSaas | null {
+  const p = String(plano ?? "");
+  if ((PLANOS_SAAS as readonly string[]).includes(p)) return p as PlanoSaas;
+  return PLANOS_LEGADOS[p] ?? null;
+}
+
+/** Limites fixos do plano (não mudam com o preço configurado pela equipe). */
+export function limitesDoPlano(plano: PlanoSaas): { socios: number; eventos: number } {
+  const p = SAAS_PADRAO.planos[plano];
+  return { socios: p.socios, eventos: p.eventos };
+}
+
+export interface UsoDoPlano {
+  /** Sócios que ocupam vaga. */
+  socios: number;
+  /** Eventos à venda agora. */
+  eventos: number;
+}
+
+/** O uso atual cabe no plano? (limite incluso: 300 sócios cabem no Torcida Pro.) */
+export function cabeNoPlano(plano: PlanoSaas, uso: UsoDoPlano): { cabe: boolean; socios: boolean; eventos: boolean } {
+  const lim = limitesDoPlano(plano);
+  const socios = uso.socios <= lim.socios;
+  const eventos = uso.eventos <= lim.eventos;
+  return { cabe: socios && eventos, socios, eventos };
+}
+
+const fmt = (n: number) => n.toLocaleString("pt-BR");
+
+/** "O plano Torcida Pro vai até 300 sócios e 3 eventos à venda. Hoje vocês têm 412 sócios. Escolha um plano maior." */
+export function mensagemForaDoPlano(plano: PlanoSaas, uso: UsoDoPlano): string | null {
+  const c = cabeNoPlano(plano, uso);
+  if (c.cabe) return null;
+  const p = SAAS_PADRAO.planos[plano];
+  const excede = [
+    ...(!c.socios ? [`${fmt(uso.socios)} sócios`] : []),
+    ...(!c.eventos ? [`${fmt(uso.eventos)} eventos à venda`] : []),
+  ].join(" e ");
+  return `O plano ${p.nome} vai até ${fmt(p.socios)} sócios e ${fmt(p.eventos)} eventos à venda. Hoje vocês têm ${excede}. Escolha um plano maior.`;
+}
+
+/** Sócios que ocupam vaga a partir do contador stats/geral.socios. */
+export function sociosQueOcupamVaga(contador: Record<string, unknown> | undefined | null): number {
+  const n = (k: string) => Math.max(0, Number(contador?.[k] ?? 0) || 0);
+  return n("ativo") + n("inadimplente") + n("em_analise");
+}
+
 export interface AssinaturaSaas {
-  plano: Exclude<PlanoSaas, "gigante">;
+  /** Pode ter id antigo (pequena/grande) em torcidas anteriores aos planos Pro/Plus/Max: use normalizarPlano. */
+  plano: PlanoSaas | "pequena" | "grande";
   diaVencimento: number;
   proximoVencimento: Timestamp;
   situacao: "em_dia" | "aberta" | "atrasada" | "bloqueada";
@@ -54,7 +122,8 @@ export interface AssinaturaSaas {
 
 export interface FaturaSaas {
   competencia: string;
-  plano: PlanoSaas;
+  /** Faturas antigas podem ter pequena/grande/gigante: use normalizarPlano para exibir. */
+  plano: PlanoSaas | "pequena" | "grande" | "gigante";
   valor: number;
   sociosAtivos: number;
   vencimento: Timestamp;
@@ -76,30 +145,59 @@ const refsSaas = {
 };
 export { refsSaas };
 
+/** Configuração com os preços da equipe (só o valor de cada plano muda; nome e limites são fixos). */
 export async function configSaas(): Promise<ConfigSaas> {
   const c = (await refsSaas.config().get()).data() ?? {};
   const planos = { ...SAAS_PADRAO.planos };
-  for (const k of Object.keys(planos) as PlanoSaas[]) {
+  for (const k of PLANOS_SAAS) {
     const v = Number(c.planos?.[k]?.valor);
     if (Number.isInteger(v) && v > 0) planos[k] = { ...planos[k], valor: v };
   }
   return {
     ...SAAS_PADRAO,
     planos,
-    limiteGigante: Number(c.limiteGigante) > 0 ? Number(c.limiteGigante) : SAAS_PADRAO.limiteGigante,
     pix: { ...SAAS_PADRAO.pix, ...(c.pix ?? {}) },
   };
 }
 
-export function planoEfetivo(escolhido: Exclude<PlanoSaas, "gigante">, sociosAtivos: number, limite: number): PlanoSaas {
-  return sociosAtivos > limite ? "gigante" : escolhido;
-}
-
 const idFatura = (venc: Date) => venc.toISOString().slice(0, 10);
 
-async function sociosAtivos(tid: string): Promise<number> {
+/** Sócios que ocupam vaga na torcida (contador agregado, sem ler as fichas). */
+export async function contarSociosNoPlano(tid: string): Promise<number> {
   const g = (await refs.statsGeral(tid).get()).data();
-  return Math.max(0, Number(g?.socios?.ativo ?? 0));
+  return sociosQueOcupamVaga(g?.socios);
+}
+
+/** Eventos à venda agora: publicados com data no futuro (contagem no servidor; índice status+data). */
+export async function contarEventosAVenda(tid: string): Promise<number> {
+  const q = db.collection(`torcidas/${tid}/eventos`).where("status", "==", "publicado").where("data", ">=", Timestamp.now());
+  return (await q.count().get()).data().count;
+}
+
+export async function usoDoPlano(tid: string): Promise<UsoDoPlano> {
+  const [socios, eventos] = await Promise.all([contarSociosNoPlano(tid), contarEventosAVenda(tid)]);
+  return { socios, eventos };
+}
+
+/** Plano da assinatura da torcida (já normalizado) ou null se ela ainda não publicou o site. */
+export async function planoDaTorcida(tid: string): Promise<PlanoSaas | null> {
+  const ass = (await refsSaas.assinatura(tid).get()).data() as AssinaturaSaas | undefined;
+  if (!ass) return null;
+  return normalizarPlano(ass.plano) ?? "pro";
+}
+
+function planoEscolhido(v: unknown): PlanoSaas {
+  const p = String(v ?? "");
+  if (!(PLANOS_SAAS as readonly string[]).includes(p)) {
+    throw new HttpsError("invalid-argument", "Escolha um plano: Torcida Pro, Torcida Plus ou Torcida Max.");
+  }
+  return p as PlanoSaas;
+}
+
+/** Recusa a escolha/troca se a torcida já usa mais do que o plano permite. */
+async function exigirQueCaiba(tid: string, plano: PlanoSaas) {
+  const msg = mensagemForaDoPlano(plano, await usoDoPlano(tid));
+  if (msg) throw new HttpsError("failed-precondition", msg, { limitePlano: "troca" });
 }
 
 /** Cria (se ainda não existir) a fatura com o vencimento dado. Idempotente pelo id = data do vencimento. */
@@ -108,8 +206,8 @@ export async function gerarFatura(tid: string, vencimento: Date, cfg: ConfigSaas
   const ref = refsSaas.fatura(tid, id);
   const ass = (await refsSaas.assinatura(tid).get()).data() as AssinaturaSaas | undefined;
   if (!ass) throw new Error("Torcida sem assinatura");
-  const qtd = await sociosAtivos(tid);
-  const plano = planoEfetivo(ass.plano, qtd, cfg.limiteGigante);
+  const qtd = await contarSociosNoPlano(tid);
+  const plano = normalizarPlano(ass.plano) ?? "pro";
   const valor = cfg.planos[plano].valor;
   const torcida = (await refs.torcida(tid).get()).data() as Torcida;
   const txid = `SO${tid.slice(0, 8)}${id.replace(/-/g, "")}`.replace(/[^A-Za-z0-9]/g, "");
@@ -155,7 +253,8 @@ export const publicarSite = onCall(async (req) => {
 
   const assRef = refsSaas.assinatura(tid);
   if (!(await assRef.get()).exists) {
-    const plano = umDe(d.plano, "plano", ["pequena", "grande"] as const);
+    const plano = planoEscolhido(d.plano);
+    await exigirQueCaiba(tid, plano);
     const venc = new Date(Date.now() + dias(SAAS_PADRAO.diasPrimeiraFatura));
     venc.setUTCHours(12, 0, 0, 0);
     const ass: AssinaturaSaas = {
@@ -186,14 +285,18 @@ export const despublicarSite = onCall(async (req) => {
   return { publicada: false };
 });
 
-/** Troca entre Torcida pequena e Torcida grande (vale a partir da próxima fatura). */
+/**
+ * Troca entre Torcida Pro, Plus e Max. O preço novo vale a partir da próxima fatura; os limites, na hora.
+ * Não deixa ir para um plano menor do que o uso de hoje (sócios que ocupam vaga e eventos à venda).
+ */
 export const alterarPlanoSaas = onCall(async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
   await exigirMembro(req, tid, ["diretoria"]);
-  const plano = umDe(d.plano, "plano", ["pequena", "grande"] as const);
+  const plano = planoEscolhido(d.plano);
   const ref = refsSaas.assinatura(tid);
   if (!(await ref.get()).exists) throw new HttpsError("failed-precondition", "O plano é escolhido ao publicar o site.");
+  await exigirQueCaiba(tid, plano);
   await ref.update({ plano });
   return { plano };
 });

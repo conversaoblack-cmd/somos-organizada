@@ -6,8 +6,10 @@ import { dataCurta, dataHora, moeda, relativo } from "@/lib/formatos";
 import { usePlanosSaas } from "@/modulos/inicio/planos";
 import { Aviso, Botao, CabecalhoPagina, Cartao, Carregando, cx, Icone, Indicador, Modal, Selo, Vazio, useToast } from "@/ui";
 import {
+  numero,
   plural,
-  ROTULO_PLANO_SAAS,
+  rotuloPlanoSaas,
+  usoDoPlanoDaTorcida,
   ROTULO_SITUACAO_SAAS,
   ROTULO_STATUS_TORCIDA,
   TOM_SITUACAO_SAAS,
@@ -106,13 +108,13 @@ export default function Mensalidades() {
           a.nome.localeCompare(b.nome, "pt-BR"),
       ),
       semAssinatura: ts.filter((t) => !t.saas),
-      mrr: comAssinatura.reduce((s, t) => s + (valorPlanoDaTorcida(t, cfg.planos, cfg.limiteGigante)?.valor ?? 0), 0),
+      mrr: comAssinatura.reduce((s, t) => s + (valorPlanoDaTorcida(t, cfg.planos)?.valor ?? 0), 0),
       emAberto: comAssinatura.reduce((s, t) => s + t.saas!.faturasAbertas.reduce((x, f) => x + f.valor, 0), 0),
       atrasadas: comAssinatura.filter((t) => t.saas!.situacao === "atrasada").length,
       bloqueadas: comAssinatura.filter((t) => t.saas!.situacao === "bloqueada" || t.saas!.bloqueada).length,
       informados: comAssinatura.reduce((s, t) => s + t.saas!.faturasAbertas.filter((f) => f.informadoPagamentoEm).length, 0),
     };
-  }, [resumo, cfg.planos, cfg.limiteGigante]);
+  }, [resumo, cfg.planos]);
 
   const lista = dados.comAssinatura.filter((t) => filtro === "todas" || t.saas!.situacao === filtro);
 
@@ -192,7 +194,7 @@ export default function Mensalidades() {
           ) : (
             <div className="grid gap-4 xl:grid-cols-2">
               {lista.map((t) => (
-                <CartaoAssinatura key={t.id} t={t} valor={valorPlanoDaTorcida(t, cfg.planos, cfg.limiteGigante)} aoConfirmar={() => void recarregar()} />
+                <CartaoAssinatura key={t.id} t={t} valor={valorPlanoDaTorcida(t, cfg.planos)} aoConfirmar={() => void recarregar()} />
               ))}
             </div>
           )}
@@ -221,7 +223,7 @@ export default function Mensalidades() {
 
 function CartaoAssinatura({ t, valor, aoConfirmar }: { t: LinhaTorcida; valor: { plano: string; valor: number } | null; aoConfirmar: () => void }) {
   const s = t.saas!;
-  const gigante = valor?.plano === "gigante";
+  const uso = usoDoPlanoDaTorcida(t);
   return (
     <Cartao className={cx("p-5", (s.situacao === "bloqueada" || s.bloqueada) && "border-perigo/40")}>
       <div className="flex items-start justify-between gap-3">
@@ -230,8 +232,12 @@ function CartaoAssinatura({ t, valor, aoConfirmar }: { t: LinhaTorcida; valor: {
             {t.nome}
           </Link>
           <p className="text-sm text-texto-2 mt-0.5">
-            {ROTULO_PLANO_SAAS[valor?.plano ?? s.plano]} · {moeda(valor?.valor ?? 0)}/mês
-            {gigante && <span className="text-texto-3"> (escolheu {ROTULO_PLANO_SAAS[s.plano]}; passou de sócios ativos)</span>}
+            {rotuloPlanoSaas(valor?.plano ?? s.plano)} · {moeda(valor?.valor ?? 0)}/mês
+            {uso && (
+              <span className="block text-xs text-texto-3 numeros">
+                Sócios: {numero(uso.socios)} de {numero(uso.limiteSocios)} · Eventos à venda: {numero(uso.eventos)} de {numero(uso.limiteEventos)}
+              </span>
+            )}
           </p>
         </div>
         <Selo tom={TOM_SITUACAO_SAAS[s.situacao]} ponto>
@@ -257,7 +263,7 @@ function CartaoAssinatura({ t, valor, aoConfirmar }: { t: LinhaTorcida; valor: {
                     {vencida ? `Venceu em ${dataCurta(f.vencimento)} · ${plural(diasAtraso, "dia", "dias")} de atraso` : `Vence em ${dataCurta(f.vencimento)}`}
                   </p>
                 </div>
-                <p className="text-xs text-texto-3 mt-0.5">{ROTULO_PLANO_SAAS[f.plano] ?? f.plano} · fatura {f.id}</p>
+                <p className="text-xs text-texto-3 mt-0.5">{rotuloPlanoSaas(f.plano)} · fatura {f.id}</p>
                 {f.informadoPagamentoEm && (
                   <p className="mt-2 text-sm font-semibold text-info flex items-center gap-1.5">
                     <Icone nome="pix" className="size-4" /> Pagamento informado em {dataHora(f.informadoPagamentoEm)} ({relativo(f.informadoPagamentoEm)})

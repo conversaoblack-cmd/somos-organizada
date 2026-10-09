@@ -163,13 +163,16 @@ for (const [email, cpf, nomeTitular] of [
 const eventos = {};
 const criarEvento = async (b, ev, status) =>
   (await addDoc(collection(b.db, `torcidas/${tid}/eventos`), { ...ev, vendidos: 0, reservados: 0, status, limitePorPedido: 6 })).id;
-// Eventos da sede principal: a diretoria publica direto
+// Publicar é só pelo servidor (confere o limite de eventos à venda do plano)
+const publicar = (id) => d.chamar("publicarEvento", { tid, eventoId: id });
+// Eventos da sede principal: a diretoria cria e publica
 for (const [chave, ev] of [
   ["final", { nome: "Caravana para a Final", descricao: "Ônibus saindo da Sede Central às 13h, ingresso do setor da torcida incluso. Chegue com 30 min de antecedência com documento com foto.", sedeId: sedePrincipal, local: "Saída: Sede Central", data: em(9, 13), valorSocio: 12000, valorPublico: 15000, capacidade: 180 }],
   ["aniversario", { nome: "Festa de 36 anos da Torcida", descricao: "A noite mais esperada do ano. Show, homenagens e o lançamento do novo bandeirão.", sedeId: sedePrincipal, local: "Clube Central", data: em(21, 21), valorSocio: 5000, valorPublico: 8000, capacidade: 600 }],
   ["classico", { nome: "Clássico — Bloco da Torcida", descricao: "Setor exclusivo da torcida. Ingresso nominal, entrada até 1h antes do jogo.", sedeId: sedePrincipal, local: "Arena", data: em(30, 16), valorSocio: 6000, valorPublico: 9000, capacidade: 400 }],
 ]) {
-  eventos[chave] = await criarEvento(d, ev, "publicado");
+  eventos[chave] = await criarEvento(d, ev, "rascunho");
+  await publicar(eventos[chave]);
 }
 // Eventos de subsede: a subsede envia para aprovação e a diretoria publica (conta de recebimento ativa)
 for (const [chave, email, ev] of [
@@ -177,7 +180,7 @@ for (const [chave, email, ev] of [
   ["interior", "subsede12@brasil.test", { nome: "Excursão Interior → Capital", descricao: "Ônibus do 12º Distrito para o jogo de domingo.", sedeId: sedes.d12, local: "Rodoviária de Feira", data: em(16, 9), valorSocio: 7000, valorPublico: 9000, capacidade: 46 }],
 ]) {
   eventos[chave] = await criarEvento(contas[email], ev, "em_aprovacao");
-  await updateDoc(doc(d.db, `torcidas/${tid}/eventos/${eventos[chave]}`), { status: "publicado" });
+  await publicar(eventos[chave]);
 }
 // 7º Distrito: evento aguardando aprovação, mas sem conta de recebimento ainda (a diretoria não consegue aprovar)
 eventos.bateria = await criarEvento(contas["subsede7@brasil.test"], {
@@ -188,17 +191,14 @@ await addDoc(collection(d.db, `torcidas/${tid}/eventos`), {
   nome: "Bingo beneficente", descricao: "Rascunho — ainda não publicado.", sedeId: sedePrincipal, local: "Sede Central",
   data: em(40, 15), valorSocio: 1500, valorPublico: 2000, capacidade: 150, vendidos: 0, reservados: 0, status: "rascunho",
 });
-{
-  const passado = await addDoc(collection(d.db, `torcidas/${tid}/eventos`), {
-    nome: "Caravana semifinal", descricao: "Evento encerrado.", sedeId: sedePrincipal, local: "Arena",
-    data: em(-12, 16), valorSocio: 9000, valorPublico: 12000, capacidade: 100, vendidos: 0, reservados: 0, status: "publicado",
-  });
-  await updateDoc(passado, { status: "encerrado" });
-}
+await addDoc(collection(d.db, `torcidas/${tid}/eventos`), {
+  nome: "Caravana semifinal", descricao: "Evento encerrado.", sedeId: sedePrincipal, local: "Arena",
+  data: em(-12, 16), valorSocio: 9000, valorPublico: 12000, capacidade: 100, vendidos: 0, reservados: 0, status: "encerrado",
+});
 
-// Site publicado no plano "Torcida grande" (gera a 1ª fatura da mensalidade Somos Organizada)
+// Site publicado no plano "Torcida Plus" (gera a 1ª fatura da mensalidade Somos Organizada)
 await aDb.doc("plataforma/publico").set({ pix: { chave: "financeiro@somosorganizada.com.br", nome: "Somos Organizada", cidade: "Salvador" } });
-await d.chamar("publicarSite", { tid, plano: "grande" });
+await d.chamar("publicarSite", { tid, plano: "plus" });
 
 // Pedido de cadastro de outra torcida aguardando a aprovação da equipe
 {

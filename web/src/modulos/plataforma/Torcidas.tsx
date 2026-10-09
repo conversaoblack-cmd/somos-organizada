@@ -23,7 +23,7 @@ import {
   gmv,
   numero,
   ROTULO_AMBIENTE,
-  ROTULO_PLANO_SAAS,
+  rotuloPlanoSaas,
   TOM_AMBIENTE,
   ROTULO_SITUACAO_SAAS,
   ROTULO_STATUS_TORCIDA,
@@ -54,7 +54,7 @@ export function SeloPlano({ t }: { t: LinhaTorcida }) {
   if (!t.saas) return <span className="text-xs text-texto-3">{t.publicada ? "Sem assinatura" : "Ainda não publicou"}</span>;
   return (
     <span className="inline-flex flex-col gap-1 items-start">
-      <span className="text-sm">{ROTULO_PLANO_SAAS[t.saas.plano] ?? t.saas.plano}</span>
+      <span className="text-sm">{rotuloPlanoSaas(t.saas.plano)}</span>
       <Selo tom={TOM_SITUACAO_SAAS[t.saas.situacao]}>{ROTULO_SITUACAO_SAAS[t.saas.situacao]}</Selo>
     </span>
   );
