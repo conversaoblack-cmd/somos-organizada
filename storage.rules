@@ -3,6 +3,8 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function logado() { return request.auth != null; }
+    // Sessão anônima (compra sem cadastro) não envia arquivo: só contas com e-mail
+    function contaComEmail() { return logado() && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
     function plataforma() { return logado() && request.auth.token.get('plataforma', false) == true; }
     function membroAtivo(tid) {
       return logado() && firestore.exists(/databases/(default)/documents/torcidas/$(tid)/membros/$(request.auth.uid))
@@ -29,23 +31,25 @@ service firebase.storage {
       allow update, delete: if membroAtivo(tid) && papel(tid) == 'diretoria' && (request.resource == null || imagem(5));
     }
 
-    // Foto 3x4 do sócio: o próprio sócio envia; diretoria e portaria consultam
+    // Foto 3x4 do sócio: o próprio sócio envia; diretoria e portaria consultam.
+    // Um arquivo só por sócio (foto.jpg, o nome que o CheckoutSocio usa; trocar a foto sobrescreve): a pasta
+    // não vira depósito de arquivos. A adesão exige conta com e-mail, então anônimo não envia.
     match /torcidas/{tid}/socios/{uid}/{arquivo} {
       allow read: if (logado() && request.auth.uid == uid) || membroAtivo(tid) || plataforma();
-      allow write: if logado() && request.auth.uid == uid && imagem(3);
+      allow write: if contaComEmail() && request.auth.uid == uid && arquivo == 'foto.jpg' && imagem(3);
     }
 
     // Vídeo de verificação do cadastro da torcida: só quem enviou e a equipe veem; ninguém troca nem apaga (é a prova)
     match /verificacoes/{uid}/{arquivo=**} {
       allow read: if (logado() && request.auth.uid == uid) || plataforma();
-      allow create: if logado() && request.auth.uid == uid && resource == null
+      allow create: if contaComEmail() && request.auth.uid == uid && resource == null
         && request.resource.size < 500 * 1024 * 1024 && request.resource.contentType.matches('video/.*');
     }
 
     // Anexos de suporte (prints)
     match /suporte/{uid}/{arquivo} {
       allow read: if (logado() && request.auth.uid == uid) || plataforma();
-      allow write: if logado() && request.auth.uid == uid && imagem(5);
+      allow write: if contaComEmail() && request.auth.uid == uid && imagem(5);
     }
   }
 }

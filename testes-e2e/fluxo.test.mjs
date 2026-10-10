@@ -7,7 +7,7 @@ import { getAuth as adminAuth } from "firebase-admin/auth";
 import { getFirestore as adminDb } from "firebase-admin/firestore";
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator, doc, getDoc, getDocs, query, where, setDoc, updateDoc, addDoc, collection, Timestamp } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator, doc, getDoc, getDocs, query, where, setDoc, updateDoc, addDoc, collection, Timestamp, serverTimestamp, increment } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator, httpsCallable } from "firebase/functions";
 import { getStorage, connectStorageEmulator, ref as sRef, uploadBytes, getBytes } from "firebase/storage";
 import { iniciar, chamadas } from "./pagarme-simulada.mjs";
@@ -265,6 +265,11 @@ test("3c. site só vende depois de publicado; publicar escolhe o plano e gera a 
   await assert.rejects(ctx.dir.chamar("publicarSite", { tid: ctx.tid, plano: "pequena" }), /Escolha um plano/);
   const r = await ctx.dir.chamar("publicarSite", { tid: ctx.tid, plano: "pro" });
   assert.equal(r.publicada, true);
+  // site no ar não troca a Pagar.me pelo simulador (pagamentos falsos)
+  await assert.rejects(
+    ctx.dir.chamar("salvarCredenciaisPagarme", { tid: ctx.tid, chaveSecreta: "sk_demo_abc123456", chavePublica: "pk_demo_abc123456" }),
+    /antes de publicar/,
+  );
   const faturas = await aDb.collection(`torcidas/${ctx.tid}/faturasSaas`).get();
   assert.equal(faturas.size, 1);
   const f = faturas.docs[0];
@@ -715,7 +720,10 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
   const link = (await aDb.doc(`_emulador/senha-${u.uid}`).get()).data();
   assert.match(link.url, /\/redefinir-senha\?oobCode=.+&continuar=%2Ffuria-azul%2Fadmin$/);
   assert.deepEqual(await visitante.chamar("redefinirSenhaPorEmail", { email: "ninguem@x.test", continuar: "/entrar" }), { enviado: true });
-  await assert.rejects(visitante.chamar("redefinirSenhaPorEmail", { email: "novo.diretor@x.test", continuar: "/entrar" }), /Espere um minuto/);
+  // no limite (2º pedido em menos de 45 s) a resposta é a mesma: não revela quem tem conta; só não manda outro link
+  await aDb.doc(`_emulador/senha-${u.uid}`).delete();
+  assert.deepEqual(await visitante.chamar("redefinirSenhaPorEmail", { email: "novo.diretor@x.test", continuar: "/entrar" }), { enviado: true });
+  assert.equal((await aDb.doc(`_emulador/senha-${u.uid}`).get()).exists, false);
 });
 
 test("16. modo demonstração: torcida sem Pagar.me vende ingresso (Pix simulado) e sócio no cartão de teste, com split", async () => {
@@ -941,9 +949,34 @@ test("18. segurança: convite não toma conta existente; estorno só com confirm
 
 test("13. Storage: sócio envia a própria foto; estranhos são barrados", async () => {
   await ctx.socio.enviar(`suporte/${ctx.socioUid}/print.png`);
-  await ctx.socio.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.png`);
-  await assert.rejects(ctx.torcedor.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.png`));
+  await ctx.socio.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.jpg`);
+  await ctx.socio.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.jpg`); // trocar a foto sobrescreve
+  // um arquivo só por sócio (o nome que o checkout usa): outros nomes são recusados
+  await assert.rejects(ctx.socio.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/outra.png`));
+  await assert.rejects(ctx.torcedor.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.jpg`));
+  // sessão anônima não envia anexo de suporte
+  await assert.rejects(ctx.torcedor.enviar(`suporte/${ctx.torcedor.auth.currentUser.uid}/print.png`));
   await assert.rejects(ctx.torcedor.enviar(`torcidas/${ctx.tid}/publico/marca/hack.png`));
+
+  // logsErro: só em nome da própria sessão, campos conhecidos e hora do servidor
+  const log = (extra = {}) => ({ torcidaId: ctx.tid, uid: ctx.torcedor.auth.currentUser.uid, mensagem: "x", stack: "", url: "http://x", navegador: "teste", versao: "dev", contexto: "", criadoEm: serverTimestamp(), ...extra });
+  await addDoc(collection(ctx.torcedor.db, "logsErro"), log());
+  await negado(addDoc(collection(ctx.torcedor.db, "logsErro"), log({ uid: "outra-pessoa" })));
+  await negado(addDoc(collection(ctx.torcedor.db, "logsErro"), log({ lixo: "a" })));
+  await negado(addDoc(collection(ctx.torcedor.db, "logsErro"), log({ stack: "x".repeat(9000) })));
+  await negado(addDoc(collection(ctx.torcedor.db, "logsErro"), log({ criadoEm: Timestamp.fromMillis(0) })));
+  // suporte: campos do SuporteFlutuante, e-mail da própria conta, contador de não lidas só +1
+  const u = ctx.socio.auth.currentUser;
+  const chamado = (extra = {}) => ({ uid: u.uid, nome: "Sócio", email: u.email, torcidaId: ctx.tid, torcidaNome: "T", papel: "socio", assunto: "Ajuda",
+    status: "aberto", naoLidasPlataforma: 1, diagnostico: { url: "x" }, criadoEm: serverTimestamp(), atualizadoEm: serverTimestamp(), ...extra });
+  await negado(addDoc(collection(ctx.socio.db, "suporte"), chamado({ email: "outro@x.test" })));
+  await negado(addDoc(collection(ctx.socio.db, "suporte"), chamado({ prioridade: "alta" })));
+  await negado(addDoc(collection(ctx.socio.db, "suporte"), chamado({ naoLidasPlataforma: 999 })));
+  const ch = await addDoc(collection(ctx.socio.db, "suporte"), chamado());
+  await addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), { autor: "usuario", texto: "oi", nome: "Sócio", criadoEm: serverTimestamp() });
+  await negado(addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), { autor: "usuario", texto: "oi", nome: "Sócio", criadoEm: serverTimestamp(), extra: 1 }));
+  await updateDoc(doc(ctx.socio.db, "suporte", ch.id), { status: "aberto", atualizadoEm: serverTimestamp(), naoLidasPlataforma: increment(1) });
+  await negado(updateDoc(doc(ctx.socio.db, "suporte", ch.id), { status: "aberto", atualizadoEm: serverTimestamp(), naoLidasPlataforma: 0 }));
   // Regras que consultam o Firestore (diretoria enviando banner/logo) dependem do acesso
   // cruzado Storage→Firestore do emulador, que não funciona em todo ambiente (ex.: sem IPv6).
   // Rode com STORAGE_CRUZADO=1 onde funcionar; em produção é validado no primeiro upload.
@@ -975,6 +1008,9 @@ test("19. compra repetida não cobra duas vezes; sócio grátis sai sem cobranç
   assert.equal(b.pedidoId, a.pedidoId);
   assert.equal(b.status, "aguardando");
   assert.equal(await reservados(), 1);
+  // uma compra em andamento por pessoa e evento: outro Pix (id novo) espera o primeiro ser pago ou vencer
+  await assert.rejects(tor.chamar("criarPedidoIngresso", { ...compra, idCompra: "OutraCompraAbcdef123" }), /aguardando pagamento/);
+  assert.equal(await reservados(), 1);
   // outra pessoa não "pega" o pedido de alguém pelo id
   const intruso = navegador("intruso-compra");
   await signInAnonymously(intruso.auth);
@@ -1002,6 +1038,16 @@ test("19. compra repetida não cobra duas vezes; sócio grátis sai sem cobranç
   const [ingresso] = (await aDb.collection(`torcidas/${tid}/ingressos`).where("pedidoId", "==", gratis.pedidoId).get()).docs;
   assert.equal(ingresso.get("tipo"), "socio");
   assert.equal(ingresso.get("status"), "valido");
+  // trava do preço de sócio gravada junto com o pedido: a 2ª compra do sócio no evento sai pelo preço público
+  assert.equal((await aDb.doc(`torcidas/${tid}/eventos/${ev.id}/precoSocio/${s.auth.currentUser.uid}`).get()).get("pedidoId"), gratis.pedidoId);
+  const segunda = await s.chamar("criarPedidoIngresso", {
+    tid, eventoId: ev.id, metodo: "pix",
+    comprador: { nome: "Sócio Grátis", email: "gratis@furia.test", cpf: "39053344705", telefone: "71977770011" },
+    titulares: [{ nome: "Amigo Do Sócio", cpf: "52998224725" }],
+  });
+  const pSegunda = (await aDb.doc(`torcidas/${tid}/pedidos/${segunda.pedidoId}`).get()).data();
+  assert.deepEqual(pSegunda.itens.map((i) => i.tipo), ["publico"]);
+  assert.ok(pSegunda.total >= 2500);
 
   // 3) portaria: a resposta da baixa se perdeu e o porteiro tocou em "Tentar de novo" (mesma leitura) → "liberado"
   const leituraId = "leitura-teste-123";

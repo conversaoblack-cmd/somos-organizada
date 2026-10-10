@@ -4,16 +4,19 @@
  * botão para somosorganizada.com.br/verificar, que confirma o código e continua o cadastro naquela mesma aba.
  * Sem provedor de e-mail configurado, responde { enviado: false } e o site usa o e-mail padrão do Firebase.
  */
+import { createHash } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { EMAIL_API_KEY, URL_APP } from "../config";
-import { auth, db, refs, FieldValue } from "../util/firebase";
+import { auth, db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { exigirLogin } from "../dominio/permissoes";
 import { enviarAgora } from "../email/enviar";
 import { esc, montar } from "../email/modelos";
 import type { Torcida } from "../dominio/tipos";
 
 const ESPERA_REENVIO_MS = 45_000;
+/** Teto por e-mail (não só por conta): várias contas com o mesmo e-mail não viram fábrica de envios. */
+const MAX_POR_HORA_EMAIL = 5;
 
 /** Para onde voltar depois de confirmar: só caminhos deste site (nada de redirecionar para fora). */
 export function caminhoSeguro(v: unknown): string {
@@ -45,12 +48,23 @@ export const enviarConfirmacaoEmail = onCall({ secrets: [EMAIL_API_KEY] }, async
 
   // Reenvio com intervalo: protege a cota de e-mails e evita vários links válidos ao mesmo tempo
   const controle = db.doc(`usuarios/${uid}/privado/confirmacaoEmail`);
+  // e, por e-mail, até 5 por hora (mesmo mecanismo do "esqueci minha senha"; só o resumo do e-mail fica gravado)
+  const porEmail = db.doc(`confirmacoesEmail/${createHash("sha256").update(email).digest("hex")}`);
   await db.runTransaction(async (tx) => {
-    const ultimo = (await tx.get(controle)).get("ultimoEnvio")?.toMillis?.() ?? 0;
-    if (Date.now() - ultimo < ESPERA_REENVIO_MS) {
+    const [cSnap, eSnap] = await Promise.all([tx.get(controle), tx.get(porEmail)]);
+    const ultimo = cSnap.get("ultimoEnvio")?.toMillis?.() ?? 0;
+    const agora = Date.now();
+    if (agora - ultimo < ESPERA_REENVIO_MS) {
       throw new HttpsError("resource-exhausted", "Acabamos de enviar. Espere alguns segundos para pedir de novo.");
     }
+    const e = eSnap.data() as { qtd?: number; janelaAte?: Timestamp } | undefined;
+    const janelaAberta = !!e?.janelaAte && e.janelaAte.toMillis() > agora;
+    const qtd = janelaAberta ? e?.qtd ?? 0 : 0;
+    if (qtd >= MAX_POR_HORA_EMAIL) {
+      throw new HttpsError("resource-exhausted", "Já enviamos vários e-mails de confirmação. Confira a caixa de entrada (e o spam) ou tente de novo em uma hora.");
+    }
     tx.set(controle, { ultimoEnvio: FieldValue.serverTimestamp() }, { merge: true });
+    tx.set(porEmail, { qtd: qtd + 1, janelaAte: janelaAberta ? e!.janelaAte : Timestamp.fromMillis(agora + 3600_000) });
   });
 
   // E-mail com a identidade da torcida quando o cadastro é feito no site dela (/{torcida}/...)

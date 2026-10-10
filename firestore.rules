@@ -20,10 +20,15 @@ service cloud.firestore {
     function sedeDoMembro(tid) {
       return get(/databases/$(database)/documents/torcidas/$(tid)/membros/$(request.auth.uid)).data.get('sedeId', '');
     }
+    // Escopo de subsede: a sede do membro precisa existir (nunca vazia). Sem isso, um membro sem sedeId
+    // "casaria" com documentos sem sedeId (sedeId == '' ou ausente).
+    function naMinhaSede(tid, sedeId) {
+      return sedeDoMembro(tid) != '' && sedeDoMembro(tid) == sedeId;
+    }
     function diretoria(tid) { return membro(tid) && papel(tid) == 'diretoria'; }
     function gestor(tid) { return membro(tid) && papel(tid) in ['diretoria', 'subsede']; }
     function daMinhaSede(tid, sedeId) {
-      return diretoria(tid) || (membro(tid) && papel(tid) == 'subsede' && sedeDoMembro(tid) == sedeId);
+      return diretoria(tid) || (membro(tid) && papel(tid) == 'subsede' && naMinhaSede(tid, sedeId));
     }
     function apenas(campos) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos); }
     function corValida(c) { return c is string && c.matches('^#[0-9A-Fa-f]{6}$'); }
@@ -74,7 +79,7 @@ service cloud.firestore {
         // o usuário daquela subsede. A diretoria vê apenas a situação (campo "recebedor" da sede, público) e não
         // consegue ler os dados criando outro usuário para a subsede.
         match /privado/{doc} {
-          allow read: if membro(tid) && papel(tid) == 'subsede' && sedeDoMembro(tid) == sedeId
+          allow read: if membro(tid) && papel(tid) == 'subsede' && naMinhaSede(tid, sedeId)
             && resource.data.cadastradoPor == request.auth.uid;
           allow write: if false;
         }
@@ -140,9 +145,11 @@ service cloud.firestore {
           && (papel(tid) == 'diretoria' || resource.data.status in ['rascunho', 'em_aprovacao']);
       }
 
+      // Subsede não tem a página Sócios, mas o painel dela conta os sócios da própria sede (visão geral e
+      // "aguardando aprovação", que ela pode aprovar): por isso continua lendo, só os da sede dela.
       match /socios/{uid} {
         allow read: if (logado() && request.auth.uid == uid)
-          || diretoria(tid) || (gestor(tid) && resource.data.sedeId == sedeDoMembro(tid));
+          || diretoria(tid) || (gestor(tid) && naMinhaSede(tid, resource.data.get('sedeId', '')));
         allow write: if false;
       }
 
@@ -150,24 +157,24 @@ service cloud.firestore {
 
       match /pedidos/{pedidoId} {
         allow read: if (logado() && resource.data.uid == request.auth.uid)
-          || diretoria(tid) || (gestor(tid) && resource.data.sedeId == sedeDoMembro(tid));
+          || diretoria(tid) || (gestor(tid) && naMinhaSede(tid, resource.data.get('sedeId', '')));
         allow write: if false;
       }
 
       match /ingressos/{ingressoId} {
         allow read: if (logado() && resource.data.uid == request.auth.uid)
-          || diretoria(tid) || (membro(tid) && resource.data.sedeId == sedeDoMembro(tid));
+          || diretoria(tid) || (membro(tid) && naMinhaSede(tid, resource.data.get('sedeId', '')));
         allow write: if false;
       }
 
       match /lancamentos/{id} {
-        allow read: if diretoria(tid) || (gestor(tid) && resource.data.sedeId == sedeDoMembro(tid));
+        allow read: if diretoria(tid) || (gestor(tid) && naMinhaSede(tid, resource.data.get('sedeId', '')));
         allow write: if false;
       }
 
       // Repasses: diretoria registra o que já transferiu para cada subsede.
       match /repasses/{id} {
-        allow read: if diretoria(tid) || (gestor(tid) && resource.data.sedeId == sedeDoMembro(tid));
+        allow read: if diretoria(tid) || (gestor(tid) && naMinhaSede(tid, resource.data.get('sedeId', '')));
         allow create: if diretoria(tid) && request.resource.data.valor is int && request.resource.data.valor > 0
           && request.resource.data.registradoPor == request.auth.uid;
         allow update: if diretoria(tid) && apenas(['comprovanteUrl', 'observacao', 'status']);
@@ -213,18 +220,39 @@ service cloud.firestore {
     // ── Suporte ──────────────────────────────────────────────
     match /suporte/{chamadoId} {
       allow read: if plataforma() || (logado() && resource.data.uid == request.auth.uid);
+      // Campos exatamente os que o SuporteFlutuante grava; datas do servidor; tamanhos limitados.
+      function textoAte(v, max) { return v is string && v.size() <= max; }
       allow create: if logado() && !anonimo()
+        && request.resource.data.keys().hasOnly(['uid', 'nome', 'email', 'torcidaId', 'torcidaNome', 'papel', 'assunto',
+             'status', 'naoLidasPlataforma', 'diagnostico', 'criadoEm', 'atualizadoEm'])
         && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
         && request.resource.data.status == 'aberto'
-        && request.resource.data.assunto is string && request.resource.data.assunto.size() <= 140;
+        && request.resource.data.naoLidasPlataforma == 1
+        && textoAte(request.resource.data.assunto, 140)
+        && textoAte(request.resource.data.nome, 200)
+        && textoAte(request.resource.data.get('torcidaId', ''), 64)
+        && textoAte(request.resource.data.get('torcidaNome', ''), 200)
+        && request.resource.data.get('papel', 'torcedor') in ['diretoria', 'subsede', 'portaria', 'socio', 'torcedor']
+        && (!('diagnostico' in request.resource.data)
+            || (request.resource.data.diagnostico is map && request.resource.data.diagnostico.size() <= 20))
+        && request.resource.data.criadoEm == request.time
+        && request.resource.data.atualizadoEm == request.time;
+      // Dono do chamado: reabre (nova mensagem soma 1 em naoLidasPlataforma) ou marca como resolvido.
       allow update: if plataforma()
         || (logado() && resource.data.uid == request.auth.uid && apenas(['status', 'atualizadoEm', 'naoLidasPlataforma'])
-            && request.resource.data.status in ['aberto', 'resolvido']);
+            && request.resource.data.status in ['aberto', 'resolvido']
+            && request.resource.data.atualizadoEm == request.time
+            && (request.resource.data.get('naoLidasPlataforma', 0) == resource.data.get('naoLidasPlataforma', 0)
+                || request.resource.data.get('naoLidasPlataforma', 0) == resource.data.get('naoLidasPlataforma', 0) + 1));
 
       match /mensagens/{mid} {
         allow read: if plataforma()
           || (logado() && get(/databases/$(database)/documents/suporte/$(chamadoId)).data.uid == request.auth.uid);
-        allow create: if request.resource.data.texto is string && request.resource.data.texto.size() <= 4000 && (
+        allow create: if request.resource.data.keys().hasOnly(['autor', 'texto', 'nome', 'criadoEm'])
+          && request.resource.data.texto is string && request.resource.data.texto.size() <= 4000
+          && request.resource.data.get('nome', '') is string && request.resource.data.get('nome', '').size() <= 200
+          && request.resource.data.criadoEm == request.time && (
           (plataforma() && request.resource.data.autor == 'plataforma')
           || (logado() && get(/databases/$(database)/documents/suporte/$(chamadoId)).data.uid == request.auth.uid
               && request.resource.data.autor == 'usuario'));
@@ -239,9 +267,19 @@ service cloud.firestore {
 
     // Erros capturados no navegador (alimentam a janela de depuração do suporte)
     match /logsErro/{id} {
-      allow create: if request.resource.data.mensagem is string && request.resource.data.mensagem.size() <= 2000
-        && request.resource.data.get('stack', '').size() <= 6000
-        && request.resource.data.keys().hasOnly(['torcidaId', 'uid', 'mensagem', 'stack', 'url', 'navegador', 'versao', 'contexto', 'criadoEm']);
+      // Só com sessão (anônima serve), em nome de si mesmo, campos e tamanhos do web/src/lib/erros.ts e hora do servidor
+      allow create: if logado()
+        && request.resource.data.keys().hasOnly(['torcidaId', 'uid', 'mensagem', 'stack', 'url', 'navegador', 'versao', 'contexto', 'criadoEm'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.mensagem is string && request.resource.data.mensagem.size() <= 2000
+        && request.resource.data.get('stack', '') is string && request.resource.data.get('stack', '').size() <= 8000
+        && request.resource.data.get('contexto', '') is string && request.resource.data.get('contexto', '').size() <= 8000
+        && request.resource.data.get('url', '') is string && request.resource.data.get('url', '').size() <= 500
+        && request.resource.data.get('navegador', '') is string && request.resource.data.get('navegador', '').size() <= 500
+        && request.resource.data.get('versao', '') is string && request.resource.data.get('versao', '').size() <= 100
+        && (request.resource.data.get('torcidaId', null) == null
+            || (request.resource.data.torcidaId is string && request.resource.data.torcidaId.size() <= 64))
+        && request.resource.data.criadoEm == request.time;
       allow read: if plataforma();
       allow update, delete: if false;
     }

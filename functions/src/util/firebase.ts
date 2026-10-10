@@ -18,6 +18,8 @@ export const refs = {
   sedes: (tid: string) => db.collection(`torcidas/${tid}/sedes`),
   plano: (tid: string, id: string) => db.doc(`torcidas/${tid}/planos/${id}`),
   evento: (tid: string, id: string) => db.doc(`torcidas/${tid}/eventos/${id}`),
+  /** Trava do preço de sócio: um pedido por sócio e evento (aberto ou pago) leva o preço de sócio. */
+  precoSocio: (tid: string, eventoId: string, uid: string) => db.doc(`torcidas/${tid}/eventos/${eventoId}/precoSocio/${uid}`),
   socio: (tid: string, uid: string) => db.doc(`torcidas/${tid}/socios/${uid}`),
   socios: (tid: string) => db.collection(`torcidas/${tid}/socios`),
   cpf: (tid: string, cpf: string) => db.doc(`torcidas/${tid}/cpfs/${cpf}`),

@@ -50,3 +50,10 @@ test("código curto de evento gerado no servidor segue o formato das regras", as
   const { codigoEvento } = await import("../src/api/agendados");
   for (let i = 0; i < 200; i++) assert.match(codigoEvento(), /^[a-hjkmnp-z2-9]{6}$/);
 });
+
+test("prévia não interpreta $&, $` e $' do texto da torcida (replace com função)", () => {
+  const html = montarPrevia(APP, { titulo: "Promo $` $& $'", descricao: "Desc $&", url: "https://x/y", imagem: null } as never);
+  assert.ok(html.includes("<title>Promo $` $&amp; $'</title>"), "o texto entra literal");
+  assert.equal((html.match(/<title>/g) ?? []).length, 1);
+  assert.equal((html.match(/<\/head>/g) ?? []).length, 1);
+});

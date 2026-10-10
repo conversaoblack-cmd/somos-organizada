@@ -152,20 +152,16 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
   const torcida = await torcidaVendendo(tid, { uid, modulo: "eventos" });
   const pct = torcida.taxaServicoPct ?? PADROES.taxaServicoPct;
 
-  // Sócio ativo?
+  // Sócio ativo? (se já usou o preço de sócio neste evento, é conferido dentro da transação, pela trava)
   let socio: Titular | null = null;
   let socioJaUsouPreco = false;
   if (req.auth?.token.firebase?.sign_in_provider !== "anonymous") {
     const s = (await refs.socio(tid, uid).get()).data() as Socio | undefined;
     if (s && s.status === "ativo" && s.validoAte && s.validoAte.toMillis() > Date.now()) {
       socio = { nome: s.nome, cpf: s.cpf };
-      const [emitidos, pendentes] = await Promise.all([
-        refs.ingressos(tid).where("uid", "==", uid).where("eventoId", "==", eventoId).get(),
-        refs.pedidos(tid).where("uid", "==", uid).where("eventoId", "==", eventoId).where("status", "==", "aguardando").get(),
-      ]);
-      socioJaUsouPreco =
-        emitidos.docs.some((x) => x.get("tipo") === "socio" && x.get("status") !== "cancelado") ||
-        pendentes.docs.some((x) => ((x.get("itens") ?? []) as { tipo: string }[]).some((i) => i.tipo === "socio"));
+      // Ingressos de sócio emitidos antes da trava existir continuam contando
+      const emitidos = await refs.ingressos(tid).where("uid", "==", uid).where("eventoId", "==", eventoId).get();
+      socioJaUsouPreco = emitidos.docs.some((x) => x.get("tipo") === "socio" && x.get("status") !== "cancelado");
     }
   }
 
@@ -183,7 +179,31 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
   const calc = await db.runTransaction(async (tx) => {
     if (idCompra && (await tx.get(pedidoRef)).exists) return null; // duas chamadas iguais ao mesmo tempo: só uma reserva
     const evRef = refs.evento(tid, eventoId);
-    const ev = (await tx.get(evRef)).data() as Evento | undefined;
+    const travaRef = refs.precoSocio(tid, eventoId, uid);
+    const [evSnap, abertos, travaSnap] = await Promise.all([
+      tx.get(evRef),
+      // Uma compra em andamento por pessoa e evento: sem isso, uma sessão anônima reservava todos os lugares
+      // abrindo vários Pix (cada um segura os lugares por 30 min) e ninguém mais conseguia comprar.
+      tx.get(refs.pedidos(tid).where("uid", "==", uid).where("eventoId", "==", eventoId).where("status", "in", ["criando", "aguardando"])),
+      socio && !socioJaUsouPreco ? tx.get(travaRef) : Promise.resolve(null),
+    ]);
+    if (!abertos.empty) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Você já tem uma compra aguardando pagamento neste evento. Pague o Pix que foi gerado (está em \"Minha conta\") ou espere ele vencer, em até 30 minutos, para fazer outra.",
+        { pedidoAberto: abertos.docs[0].id },
+      );
+    }
+    // Trava do preço de sócio, lida e gravada na mesma transação: duas compras ao mesmo tempo não levam
+    // as duas o preço de sócio (antes a conferência era feita fora da transação e ignorava pedidos "criando").
+    // Trava de pedido recusado, vencido, cancelado ou estornado não vale (normalmente já foi apagada).
+    let usouPreco = socioJaUsouPreco;
+    const travaPedido = travaSnap?.get("pedidoId") as string | undefined;
+    if (socio && !usouPreco && travaPedido && travaPedido !== pedidoRef.id) {
+      const st = (await tx.get(refs.pedido(tid, travaPedido))).get("status") as string | undefined;
+      usouPreco = st === "criando" || st === "aguardando" || st === "pago";
+    }
+    const ev = evSnap.data() as Evento | undefined;
     if (!ev || ev.status !== "publicado") throw new HttpsError("failed-precondition", "Evento indisponível para venda.");
     const agora = Date.now();
     if (ev.data.toMillis() < agora - 6 * 3600_000) throw new HttpsError("failed-precondition", "Este evento já aconteceu.");
@@ -197,7 +217,7 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
     if (!subsedePodeVender(torcida, sede)) {
       throw new HttpsError("failed-precondition", "As vendas deste evento ainda não foram liberadas: a conta de recebimento da subsede não está ativa.");
     }
-    const c = calcularPedidoIngresso({ evento: ev, titulares, socio, socioJaUsouPreco, pct });
+    const c = calcularPedidoIngresso({ evento: ev, titulares, socio, socioJaUsouPreco: usouPreco, pct });
     if (c.total < 0 || (c.total === 0 && c.itens.some((i) => i.tipo !== "socio"))) {
       throw new HttpsError("failed-precondition", "Evento sem valor configurado.");
     }
@@ -221,6 +241,7 @@ export const criarPedidoIngresso = onCall({ secrets: segredos, ...ESCALA_PUBLICA
       criadoEm: Timestamp.now(),
     };
     tx.set(pedidoRef, pedido);
+    if (c.itens.some((i) => i.tipo === "socio")) tx.set(travaRef, { pedidoId: pedidoRef.id, criadoEm: FieldValue.serverTimestamp() });
     return { ...c, eventoNome: ev.nome, split: divisao.split };
   });
   if (!calc) return await respostaDaCompraRepetida(tid, pedidoRef.id, (await pedidoRef.get()).data() as Pedido, uid);

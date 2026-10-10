@@ -34,10 +34,12 @@ export function montarPrevia(html: string, m: Meta): string {
   ]
     .filter(Boolean)
     .join("\n    ");
+  // Substituição por função: com texto, o replace interpretaria $&, $` e $' vindos do nome do evento/torcida
+  // (ex.: "Ingresso $` promo" colaria um pedaço da página dentro da tag).
   return html
-    .replace(/<title>[^<]*<\/title>/, `<title>${esc(m.titulo)}</title>`)
-    .replace(/<meta\s+name="description"[^>]*>/, `<meta name="description" content="${esc(m.descricao)}" />`)
-    .replace("</head>", `    ${tags}\n  </head>`);
+    .replace(/<title>[^<]*<\/title>/, () => `<title>${esc(m.titulo)}</title>`)
+    .replace(/<meta\s+name="description"[^>]*>/, () => `<meta name="description" content="${esc(m.descricao)}" />`)
+    .replace("</head>", () => `    ${tags}\n  </head>`);
 }
 
 export function metaDoEvento(t: Pick<Torcida, "nome" | "tema">, e: Evento, url: string): Meta {

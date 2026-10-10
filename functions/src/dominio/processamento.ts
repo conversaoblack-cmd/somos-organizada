@@ -247,6 +247,16 @@ export async function confirmarFaturaSocio(tid: string, socioUid: string, fatura
   });
 }
 
+/**
+ * Trava do preço de sócio que pertence a este pedido (ou null). Só leitura: quem chama apaga depois das
+ * outras leituras da transação (o Firestore exige todas as leituras antes das escritas).
+ */
+async function travaPrecoSocioDoPedido(tx: FirebaseFirestore.Transaction, tid: string, pedidoId: string, p: Pedido) {
+  if (p.tipo !== "ingresso" || !p.eventoId || !(p.itens ?? []).some((i) => i.tipo === "socio")) return null;
+  const ref = refs.precoSocio(tid, p.eventoId, p.uid);
+  return (await tx.get(ref)).get("pedidoId") === pedidoId ? ref : null;
+}
+
 /** Pedido não pago (recusado, expirado ou cancelado): libera a reserva de ingressos. */
 export async function encerrarPedidoNaoPago(
   tid: string,
@@ -258,9 +268,12 @@ export async function encerrarPedidoNaoPago(
     const pRef = refs.pedido(tid, pedidoId);
     const p = (await tx.get(pRef)).data() as Pedido | undefined;
     if (!p || (p.status !== "aguardando" && p.status !== "criando")) return false;
+    // Tentativa que não foi paga não gasta o preço de sócio: solta a trava (se for deste pedido)
+    const trava = await travaPrecoSocioDoPedido(tx, tid, pedidoId, p);
     if (p.tipo === "ingresso" && p.eventoId) {
       tx.update(refs.evento(tid, p.eventoId), { reservados: FieldValue.increment(-(p.itens?.length ?? 0)) });
     }
+    if (trava) tx.delete(trava);
     if (p.tipo === "socio" && p.socioUid) {
       const sRef = refs.socio(tid, p.socioUid);
       const s = (await tx.get(sRef)).data() as Socio | undefined;
@@ -277,6 +290,8 @@ export async function estornarPedido(tid: string, pedidoId: string, motivo: "est
     const pRef = refs.pedido(tid, pedidoId);
     const p = (await tx.get(pRef)).data() as Pedido | undefined;
     if (!p || p.status !== "pago") return false;
+    // Ingresso de sócio estornado volta a não contar (como o ingresso cancelado em criarPedidoIngresso)
+    const trava = await travaPrecoSocioDoPedido(tx, tid, pedidoId, p);
     const torcida = await lerTorcida(tx, tid);
     const ingressos = p.ingressoIds?.length
       ? await Promise.all(p.ingressoIds.map((id) => tx.get(refs.ingresso(tid, id))))
@@ -321,6 +336,7 @@ export async function estornarPedido(tid: string, pedidoId: string, motivo: "est
       taxaServico: -p.taxa,
       estornos: 1,
     });
+    if (trava) tx.delete(trava);
     tx.update(pRef, { status: "estornado", motivoEstorno: motivo, estornadoEm: FieldValue.serverTimestamp() });
     return true;
   });

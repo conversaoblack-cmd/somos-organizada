@@ -22,7 +22,12 @@ const PRECISA_KYC = new Set(["registration", "affiliation"]);
 
 function erroPagarme(e: unknown, padrao: string): never {
   if (e instanceof HttpsError) throw e;
-  if (e instanceof PagarmeErro) throw new HttpsError("invalid-argument", `Pagar.me: ${e.message}`);
+  if (e instanceof PagarmeErro) {
+    // O texto da Pagar.me pode trazer detalhes internos (ids, campos, dados do titular): fica só no log
+    logger.error(padrao, { status: e.status, erro: e.message });
+    if (e.status >= 500 || e.status === 0) throw new HttpsError("unavailable", "A Pagar.me está instável agora. Tente de novo em alguns minutos.");
+    throw new HttpsError("invalid-argument", "A Pagar.me não aceitou estes dados. Confira CPF, nascimento, telefone, endereço e a conta bancária e tente de novo.");
+  }
   logger.error(padrao, { erro: String(e) });
   throw new HttpsError("internal", padrao);
 }

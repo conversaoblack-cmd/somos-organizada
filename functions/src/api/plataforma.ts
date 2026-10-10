@@ -1,10 +1,10 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { PADROES, PLATAFORMA_EMAILS } from "../config";
+import { PADROES } from "../config";
 import { auth, db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { mascararCpf } from "../util/validacao";
 import { emailValido, slugValido, temaInformado, texto, umDe } from "../util/validacao";
 import { competencia } from "../util/datas";
-import { exigirLogin, exigirPlataforma } from "../dominio/permissoes";
+import { emailsPlataforma, exigirLogin, exigirPlataforma } from "../dominio/permissoes";
 import { concederAcesso } from "./torcida";
 import { contarEventosAVenda, normalizarPlano } from "./saas";
 import type { Pedido, Torcida } from "../dominio/tipos";
@@ -13,7 +13,7 @@ import type { Pedido, Torcida } from "../dominio/tipos";
 export const reivindicarPlataforma = onCall(async (req) => {
   const uid = exigirLogin(req);
   const email = String(req.auth?.token.email ?? "").toLowerCase();
-  const permitidos = PLATAFORMA_EMAILS.value().split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+  const permitidos = emailsPlataforma();
   if (!req.auth?.token.email_verified || !permitidos.includes(email)) {
     throw new HttpsError("permission-denied", "Este e-mail não faz parte da equipe Somos Organizada.");
   }

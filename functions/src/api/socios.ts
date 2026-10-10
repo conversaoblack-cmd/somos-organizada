@@ -334,9 +334,11 @@ export const sincronizarAssinatura = onCall({ secrets: segredos }, async (req) =
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
   const alvo = d.socioUid ? texto(d.socioUid, "sócio", { max: 128 }) : uid;
-  if (alvo !== uid) await exigirMembro(req, tid, ["diretoria", "subsede"]);
+  const membro = alvo !== uid ? await exigirMembro(req, tid, ["diretoria", "subsede"]) : null;
   const socio = (await refs.socio(tid, alvo).get()).data() as Socio | undefined;
   if (!socio) throw new HttpsError("not-found", "Sócio não encontrado.");
+  // Subsede só sincroniza sócio da própria sede (como em alterarStatusSocio)
+  if (membro) exigirEscopoSede(membro, socio.sedeId);
   const pg = await pagarmeDaTorcida(tid);
   return sincronizarFaturas(tid, socio, pg);
 });

@@ -38,15 +38,18 @@ export function registrarErro(erro: unknown, contexto?: string) {
   recentes.push(item);
   if (recentes.length > 15) recentes.shift();
   if (enviados >= 10 || import.meta.env.DEV) return; // limite por sessão
+  // As regras só aceitam log de quem tem sessão (anônima serve) e em nome dela mesma
+  const uid = auth.currentUser?.uid;
+  if (!uid) return;
   enviados++;
   addDoc(collection(db, "logsErro"), {
-    torcidaId: torcidaAtual,
-    uid: auth.currentUser?.uid ?? null,
+    torcidaId: torcidaAtual ? torcidaAtual.slice(0, 64) : null,
+    uid,
     mensagem: item.mensagem,
     stack: item.stack ?? "",
     url: item.url,
     navegador: navigator.userAgent.slice(0, 300),
-    versao: VERSAO_APP,
+    versao: String(VERSAO_APP).slice(0, 100),
     contexto: (contexto ?? contextoAtual).slice(0, 200),
     criadoEm: serverTimestamp(),
   }).catch(() => undefined);

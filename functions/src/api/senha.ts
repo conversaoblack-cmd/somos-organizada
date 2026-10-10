@@ -79,9 +79,11 @@ async function enviarPeloFirebase(email: string, continuar: string): Promise<Res
 
 /** Manda o link de nova senha para um e-mail (se houver conta). Usado pelo e-mail e pelo CPF. */
 export async function enviarLinkRedefinicao(email: string, opcoes: { continuar: string; tid?: string | null }): Promise<ResultadoEnvio> {
+  // O limite vem antes de procurar a conta: assim ele vale igual para e-mail com e sem cadastro e a
+  // resposta (ou o tempo dela) não revela quem tem conta.
+  if (!(await reservarEnvio(email))) return "limite";
   const usuario = await auth.getUserByEmail(email).catch(() => null);
   if (!usuario || usuario.disabled) return "sem_conta";
-  if (!(await reservarEnvio(email))) return "limite";
   const continuar = caminhoSeguro(opcoes.continuar);
 
   let codigo: string | null = null;
@@ -126,8 +128,8 @@ export const redefinirSenhaPorEmail = onCall(ESCALA_PUBLICA, async (req) => {
   const email = typeof d.email === "string" ? d.email.trim().toLowerCase().slice(0, 120) : "";
   if (!emailValido(email)) throw new HttpsError("invalid-argument", "Digite um e-mail válido.");
   const tid = typeof d.tid === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(d.tid) ? d.tid : null;
-  const r = await enviarLinkRedefinicao(email, { continuar: typeof d.continuar === "string" ? d.continuar : "/entrar", tid });
-  if (r === "limite") throw new HttpsError("resource-exhausted", "Acabamos de enviar um link. Espere um minuto e confira o seu e-mail (e o spam).");
-  // Mesma resposta com ou sem conta
+  // Mesma resposta com ou sem conta e também no limite (só não envia de novo): um erro de "espere" só
+  // apareceria para e-mails com cadastro e entregaria quem tem conta.
+  await enviarLinkRedefinicao(email, { continuar: typeof d.continuar === "string" ? d.continuar : "/entrar", tid });
   return { enviado: true };
 });

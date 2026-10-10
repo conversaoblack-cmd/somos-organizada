@@ -50,6 +50,14 @@ export const salvarCredenciaisPagarme = onCall({ secrets: [MASTER_KEY] }, async 
   if (sk.startsWith("sk_test_") !== pk.startsWith("pk_test_") || demo !== pk.startsWith("pk_demo_")) {
     throw new HttpsError("invalid-argument", "As duas chaves precisam ser do mesmo ambiente (as duas de teste, de produção ou de demonstração).");
   }
+  // Simulador só antes de publicar: uma torcida no ar não pode trocar a Pagar.me real pelo modo demonstração
+  // (ingressos e carteirinhas "pagos" sem dinheiro de verdade). Quem já estava em demonstração continua.
+  if (demo) {
+    const t = (await refs.torcida(tid).get()).data() as { publicada?: boolean; pagamentos?: { ambiente?: string } } | undefined;
+    if (t?.publicada === true && t.pagamentos?.ambiente !== "demo") {
+      throw new HttpsError("failed-precondition", "O modo demonstração só pode ser ativado antes de publicar o site. Use as chaves da Pagar.me.");
+    }
+  }
   const pix = d.pix !== false;
   const cartao = d.cartao !== false;
   if (!pix && !cartao) throw new HttpsError("invalid-argument", "Ative ao menos uma forma de pagamento.");
@@ -166,19 +174,25 @@ export const atualizarMembro = onCall(async (req) => {
   if (!atual) throw new HttpsError("not-found", "Usuário não encontrado.");
   const upd: Record<string, unknown> = { atualizadoEm: FieldValue.serverTimestamp(), atualizadoPor: quem.uid };
   if (d.papel !== undefined) upd.papel = umDe(d.papel, "papel", ["diretoria", "subsede", "portaria"] as const);
-  if (d.sedeId !== undefined) upd.sedeId = d.sedeId ? texto(d.sedeId, "sede", { max: 40 }) : FieldValue.delete();
+  if (d.sedeId !== undefined) {
+    const novaSede = d.sedeId ? texto(d.sedeId, "sede", { max: 40 }) : null;
+    // Mesma conferência do convidarMembro: sede inexistente deixaria o usuário com um escopo fantasma
+    if (novaSede && !(await refs.sede(tid, novaSede).get()).exists) throw new HttpsError("invalid-argument", "Sede inválida.");
+    upd.sedeId = novaSede ?? FieldValue.delete();
+  }
   if (d.ativo !== undefined) upd.ativo = d.ativo === true;
   const ficaraDiretoriaAtiva = (upd.papel ?? atual.papel) === "diretoria" && (upd.ativo ?? atual.ativo);
   if (atual.papel === "diretoria" && atual.ativo && !ficaraDiretoriaAtiva) {
     const diretores = await db.collection(`torcidas/${tid}/membros`).where("papel", "==", "diretoria").where("ativo", "==", true).get();
     if (diretores.size <= 1) throw new HttpsError("failed-precondition", "A torcida precisa de pelo menos um usuário de diretoria ativo.");
   }
-  if ((upd.papel ?? atual.papel) === "subsede" && !(upd.sedeId ?? atual.sedeId)) {
+  const sedeFinal = d.sedeId !== undefined ? (typeof upd.sedeId === "string" ? upd.sedeId : undefined) : atual.sedeId;
+  if ((upd.papel ?? atual.papel) === "subsede" && !sedeFinal) {
     throw new HttpsError("invalid-argument", "Usuário de subsede precisa de uma sede.");
   }
   await ref.update(upd);
   await db.doc(`usuarios/${uid}/acessos/${tid}`).set(
-    { papel: upd.papel ?? atual.papel, sedeId: (upd.sedeId as string | undefined) ?? atual.sedeId ?? null, ativo: upd.ativo ?? atual.ativo },
+    { papel: upd.papel ?? atual.papel, sedeId: sedeFinal ?? null, ativo: upd.ativo ?? atual.ativo },
     { merge: true },
   );
   return { ok: true };

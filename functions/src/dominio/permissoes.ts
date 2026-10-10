@@ -1,5 +1,6 @@
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { refs } from "../util/firebase";
+import { PLATAFORMA_EMAILS } from "../config";
 
 export type Papel = "diretoria" | "subsede" | "portaria";
 
@@ -21,8 +22,20 @@ export function exigirLogin(req: CallableRequest, { permitirAnonimo = false } = 
   return uid;
 }
 
+/** E-mails da equipe (parâmetro PLATAFORMA_EMAILS, separado por vírgula). */
+export function emailsPlataforma(): string[] {
+  return PLATAFORMA_EMAILS.value().split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+}
+
+/**
+ * Equipe Somos Organizada: além da marca na conta (dada por reivindicarPlataforma), o e-mail confirmado ainda
+ * precisa estar em PLATAFORMA_EMAILS. Assim, tirar um e-mail da lista corta o acesso nas functions na hora,
+ * sem depender de alguém apagar a marca da conta.
+ */
 export function ehPlataforma(req: CallableRequest): boolean {
-  return req.auth?.token.plataforma === true;
+  const t = req.auth?.token;
+  if (t?.plataforma !== true || t.email_verified !== true) return false;
+  return emailsPlataforma().includes(String(t.email ?? "").toLowerCase());
 }
 
 export function exigirPlataforma(req: CallableRequest): string {

@@ -12,7 +12,7 @@ import { getAuth as adminAuth } from "firebase-admin/auth";
 import { getFirestore as adminDb, Timestamp as AdminTs, FieldValue } from "firebase-admin/firestore";
 import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, signInWithEmailAndPassword, signInAnonymously, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator, doc, setDoc, addDoc, updateDoc, collection, getDoc, Timestamp } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator, doc, setDoc, addDoc, updateDoc, collection, getDoc, Timestamp, serverTimestamp } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator, httpsCallable } from "firebase/functions";
 
 process.env.FIREBASE_AUTH_EMULATOR_HOST ??= "127.0.0.1:9099";
@@ -295,10 +295,10 @@ await addDoc(collection(d.db, `torcidas/${tid}/repasses`), {
     torcidaId: tid, torcidaNome: "Torcida Brasil", papel: "subsede",
     assunto: "Não acho onde mudar a foto do evento", status: "aberto", naoLidasPlataforma: 1,
     diagnostico: { url: "http://127.0.0.1:5173/brasil/admin/eventos", navegador: "Chrome Android", erros: [] },
-    criadoEm: Timestamp.now(), atualizadoEm: Timestamp.now(),
+    criadoEm: serverTimestamp(), atualizadoEm: serverTimestamp(), // as regras exigem a hora do servidor
   });
   await addDoc(collection(b.db, `suporte/${c.id}/mensagens`), {
-    autor: "usuario", nome: "Coordenador 4º Distrito", texto: "Boa tarde! Criei o churrasco mas não estou achando onde troco a imagem do evento.", criadoEm: Timestamp.now(),
+    autor: "usuario", nome: "Coordenador 4º Distrito", texto: "Boa tarde! Criei o churrasco mas não estou achando onde troco a imagem do evento.", criadoEm: serverTimestamp(),
   });
   await signOut(b.auth);
 }

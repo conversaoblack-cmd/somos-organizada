@@ -52,6 +52,14 @@ export async function enviarConvite(a: {
   let url = painel;
   if (a.precisaSenha) {
     const token = tokenAleatorio(32);
+    // Convite novo para a mesma pessoa e torcida: os anteriores ainda abertos deixam de valer
+    // (só o link mais recente funciona; um e-mail antigo esquecido não vira porta de entrada).
+    const abertos = await db.collection("convites").where("uid", "==", a.uid).where("tid", "==", a.tid).where("usado", "==", false).get();
+    if (!abertos.empty) {
+      const lote = db.batch();
+      abertos.docs.forEach((x) => lote.update(x.ref, { usado: true, substituido: true, usadoEm: FieldValue.serverTimestamp() }));
+      await lote.commit();
+    }
     await refConvite(token).set({
       uid: a.uid,
       tid: a.tid,
@@ -128,8 +136,12 @@ export const aceitarConvite = onCall(ESCALA_PUBLICA, async (req) => {
   const c = await db.runTransaction(async (tx) => {
     const dados = (await tx.get(ref)).data();
     if (!dados) throw new HttpsError("not-found", "Este convite não existe. Peça um novo à diretoria.");
+    if (dados.substituido) throw new HttpsError("failed-precondition", "Este convite foi trocado por um mais novo. Use o link do último e-mail que você recebeu.");
     if (dados.usado) throw new HttpsError("failed-precondition", "Este convite já foi usado. Entre com o seu e-mail e a senha que você criou.");
     if ((dados.expiraEm as Timestamp).toMillis() < Date.now()) throw new HttpsError("failed-precondition", "Este convite venceu. Peça um novo à diretoria.");
+    // Acesso removido (ou desativado) depois do convite: o link não cria mais senha para o painel
+    const membro = (await tx.get(refs.membro(dados.tid as string, dados.uid as string))).data();
+    if (!membro?.ativo) throw new HttpsError("failed-precondition", "Este convite foi cancelado pela diretoria.");
     tx.update(ref, { usado: true, usadoEm: FieldValue.serverTimestamp() });
     return dados;
   });
