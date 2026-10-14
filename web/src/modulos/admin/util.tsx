@@ -519,8 +519,24 @@ export function Pilulas<T extends string>({
   opcoes: { valor: T; rotulo: ReactNode; contador?: number }[];
   className?: string;
 }) {
+  // No celular as pílulas rolam para o lado: um esmaecido na borda direita mostra que há mais opções
+  // e some quando a pessoa chega ao fim (no computador elas quebram a linha e não rolam).
+  const trilho = useRef<HTMLDivElement>(null);
+  const [temMais, setTemMais] = useState(false);
+  const conferir = () => {
+    const el = trilho.current;
+    if (el) setTemMais(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+  useEffect(() => {
+    conferir();
+    window.addEventListener("resize", conferir);
+    return () => {
+      window.removeEventListener("resize", conferir);
+    };
+  }, [opcoes.length]);
   return (
-    <div className={cx("flex gap-2 overflow-x-auto sem-rolagem -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap", className)} role="tablist">
+    <div className={cx("relative -mx-4 sm:mx-0", className)}>
+    <div ref={trilho} onScroll={conferir} className="flex gap-2 overflow-x-auto sem-rolagem px-4 sm:px-0 sm:flex-wrap" role="tablist">
       {opcoes.map((o) => {
         const ativo = o.valor === valor;
         return (
@@ -542,6 +558,13 @@ export function Pilulas<T extends string>({
           </button>
         );
       })}
+    </div>
+      {/* cor sólida do fundo indo para o mesmo fundo transparente (rgb com alfa 0): sem color-mix e sem faixa cinza no iOS 15 */}
+      <span
+        aria-hidden
+        className={cx("pointer-events-none absolute inset-y-0 right-0 w-12 transition-opacity sm:hidden", temMais ? "opacity-100" : "opacity-0")}
+        style={{ backgroundImage: "linear-gradient(to left, var(--cor-fundo), rgb(var(--cor-fundo-rgb) / 0))" }}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { deleteField, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
+import { CartaoNotificacoes } from "./Notificacoes";
 import { centavosDeTexto, moeda } from "@/lib/formatos";
 import type { PlanoSaas } from "@/lib/tipos";
 import { ORDEM_PLANOS, usePlanosSaas } from "@/modulos/inicio/planos";
@@ -82,6 +83,7 @@ export default function Configuracoes() {
   return (
     <>
       <CabecalhoPagina titulo="Configurações" descricao="Pix de recebimento e preços da mensalidade Somos Organizada. Valem para as próximas faturas." />
+      <CartaoNotificacoes />
       <form onSubmit={salvar} className="grid gap-6 xl:grid-cols-2 items-start" noValidate>
         <Cartao className="p-5 sm:p-6 space-y-4">
           <div>

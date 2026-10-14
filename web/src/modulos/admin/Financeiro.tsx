@@ -253,17 +253,24 @@ export default function Financeiro() {
                   detalhe={`Ingressos ${moeda(minha.ingressos)} · sócios ${moeda(minha.socios)}`}
                 />
                 <Indicador rotulo="Já repassado" icone="enviar" tom="info" valor={<ValorKpi>{moeda(minha.repassado)}</ValorKpi>} detalhe="Repasses da diretoria" />
-                <Indicador
-                  rotulo="Saldo a receber"
-                  icone="dinheiro"
-                  tom={minha.ingressos + minha.socios - minha.repassado > 0 ? "alerta" : "sucesso"}
-                  valor={<ValorKpi>{moeda(minha.ingressos + minha.socios - minha.repassado)}</ValorKpi>}
-                  detalhe={
-                    minha.ingressos + minha.socios - minha.repassado < 0
-                      ? "A diretoria já passou mais do que a sua sede tinha a receber"
-                      : "Pela conta da torcida, menos o que já foi repassado"
-                  }
-                />
+                {/* saldo negativo não aparece como "-R$ 50,00" solto: vira "Recebido a mais", com o que fazer */}
+                {minha.ingressos + minha.socios - minha.repassado < 0 ? (
+                  <Indicador
+                    rotulo="Recebido a mais"
+                    icone="alerta"
+                    tom="alerta"
+                    valor={<ValorKpi>{moeda(minha.repassado - minha.ingressos - minha.socios)}</ValorKpi>}
+                    detalhe="A diretoria repassou mais do que a sua sede tinha a receber. Acerte a diferença com ela."
+                  />
+                ) : (
+                  <Indicador
+                    rotulo="Saldo a receber"
+                    icone="dinheiro"
+                    tom={minha.ingressos + minha.socios - minha.repassado > 0 ? "alerta" : "sucesso"}
+                    valor={<ValorKpi>{moeda(minha.ingressos + minha.socios - minha.repassado)}</ValorKpi>}
+                    detalhe="Pela conta da torcida, menos o que já foi repassado"
+                  />
+                )}
               </div>
             )
           )}

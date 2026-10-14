@@ -21,6 +21,7 @@ import { texto } from "../util/validacao";
 import { enviarAgora } from "../email/enviar";
 import { esc, montar } from "../email/modelos";
 import { MARCA_PLATAFORMA } from "./verificacao";
+import { alertarEquipe } from "./alertas";
 import type { Torcida } from "../dominio/tipos";
 
 export const VIDEO_MAX_BYTES = 500 * 1024 * 1024;
@@ -99,6 +100,7 @@ export const registrarVideoVerificacao = onCall(async (req) => {
     conta: true,
   });
   await enviarAgora(m, `verificacao-video/${solDoc.id}/${caminho}`).catch((e) => logger.error("Falha ao enviar e-mail de vídeo recebido", { erro: String(e) }));
+  await alertarEquipe(`cadastro-${solDoc.id}`, { titulo: "Cadastro para analisar", corpo: `${sol.nomeTorcida} enviou o vídeo de verificação.`, url: `/plataforma/solicitacoes/${solDoc.id}` });
   return { status: "enviado" };
 });
 

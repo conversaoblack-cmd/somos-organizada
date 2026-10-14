@@ -10,7 +10,8 @@ import type { Papel } from "@/lib/tipos";
 const ajuda: PassoTour = {
   alvo: "botao-passo-a-passo",
   titulo: "Ficou com dúvida?",
-  texto: "Toque em “Ver passo a passo” a qualquer momento para rever esta explicação.",
+  // no celular o botão mostra só o "?"; no computador, "? Ver passo a passo"
+  texto: "Toque no botão de ajuda (?) no topo da tela a qualquer momento para rever esta explicação.",
 };
 
 export const TOURS: Record<string, PassoTour[]> = {
@@ -20,13 +21,13 @@ export const TOURS: Record<string, PassoTour[]> = {
     { alvo: "primeiros-passos", opcional: true, titulo: "Comece por aqui", texto: "Esta lista mostra o que falta para colocar o site no ar. Toque em cada item e o painel te leva até lá, com o passo a passo." },
     { alvo: "pendencias", opcional: true, titulo: "Avisos importantes", texto: "Quando algo precisa da sua atenção (pagamentos, eventos para aprovar, sócios para conferir), aparece aqui." },
     { alvo: "kpis", titulo: "Números do mês", texto: "Quanto entrou com ingressos, com sócios e com a taxa de serviço, que fica no caixa da diretoria." },
-    { alvo: "grafico-receita", opcional: true, titulo: "Receita dos últimos meses", texto: "Passe o dedo (ou o mouse) nas barras para ver o valor de cada mês." },
-    { alvo: "proximos-eventos", opcional: true, titulo: "Próximos eventos", texto: "Acompanhe quantos ingressos já foram vendidos em cada evento." },
+    { alvo: "grafico-receita", opcional: true, titulo: "Receita dos últimos meses", texto: "Quanto entrou em cada mês. Quando houver vendas, toque numa barra (ou passe o mouse) para ver o valor." },
+    { alvo: "proximos-eventos", opcional: true, titulo: "Próximos eventos", texto: "Os eventos que vêm por aí aparecem aqui, com quantos ingressos já foram vendidos em cada um." },
     ajuda,
   ],
   "admin-primeiros-passos": [
     { alvo: "lista-primeiros-passos", titulo: "Primeiros passos", texto: "Siga a lista de cima para baixo. Cada item fica verde quando estiver feito." },
-    { alvo: "primeiro-pendente", opcional: true, titulo: "Próxima tarefa", texto: "Toque em “Fazer agora”: o painel abre a página certa e mostra o passo a passo dela." },
+    { alvo: "primeiro-pendente", opcional: true, titulo: "Próxima tarefa", texto: "Toque no botão deste item (por exemplo, “Personalizar”): o painel abre a página certa e mostra o passo a passo dela." },
     ajuda,
   ],
   "admin-eventos": [
@@ -36,13 +37,23 @@ export const TOURS: Record<string, PassoTour[]> = {
     ajuda,
   ],
   "admin-eventos-criar": [
-    { alvo: "evento-nome", titulo: "Nome e descrição", texto: "Escreva um nome curto e, na descrição, horário de saída, o que está incluso e as regras de entrada." },
-    { alvo: "evento-sede", opcional: true, titulo: "Sede organizadora", texto: "O valor dos ingressos vai para esta sede. Para publicar evento de subsede, ela precisa ter conta de recebimento ativa." },
+    // no máximo 5 passos: no celular cada passo a mais é uma folha a mais por cima do formulário
+    {
+      alvo: "evento-nome",
+      titulo: "Nome e descrição",
+      texto: "Nome curto e, na descrição, horário de saída, o que está incluso e as regras de entrada. Logo abaixo, a sede organizadora: o valor dos ingressos vai para ela.",
+    },
     { alvo: "evento-data", titulo: "Data, hora e local", texto: "Use o horário do início do evento (ou da saída do ônibus)." },
-    { alvo: "evento-valores", titulo: "Preços", texto: "Coloque o valor para sócio e para o público. Embaixo aparece quanto o torcedor paga com a taxa de serviço." },
-    { alvo: "evento-capacidade", titulo: "Lugares e limite por compra", texto: "Se o ônibus tem 46 lugares, coloque 46: o sistema para de vender quando lotar." },
-    { alvo: "evento-imagem", opcional: true, titulo: "Imagem", texto: "Uma foto bonita faz vender mais. Prefira imagem horizontal." },
-    { alvo: "evento-situacao", titulo: "Rascunho ou publicado", texto: "Rascunho não aparece para ninguém. Publicado aparece na página e já pode ser comprado." },
+    {
+      alvo: "evento-valores",
+      titulo: "Preços e lugares",
+      texto: "Valor para sócio e para o público (embaixo aparece quanto o torcedor paga com a taxa). Se o ônibus tem 46 lugares, coloque 46: o sistema para de vender quando lotar.",
+    },
+    {
+      alvo: "evento-situacao",
+      titulo: "Rascunho ou publicado",
+      texto: "Rascunho não aparece para ninguém; Publicado aparece na página e já pode ser comprado. Dica: logo acima, uma foto horizontal do evento faz vender mais.",
+    },
     { alvo: "evento-salvar", titulo: "Salvar", texto: "Pronto! Depois você pode voltar e editar quando quiser." },
   ],
   "admin-evento-detalhe": [
@@ -84,21 +95,24 @@ export const TOURS: Record<string, PassoTour[]> = {
     { alvo: "papeis", titulo: "Quem pode o quê", texto: "Diretoria vê tudo. Subsede vê só a sede dela. Portaria só usa o leitor de ingressos." },
     { alvo: "lista-usuarios", titulo: "Equipe", texto: "Edite o papel, bloqueie o acesso ou reenvie o convite de quem não conseguiu entrar." },
   ],
+  // Mesma ordem da página, de cima para baixo (no celular a prévia fica no fim; no computador, ao lado e fixa).
   "admin-personalizacao": [
-    { alvo: "modulos", titulo: "O que o site vai oferecer", texto: "Escolha venda de ingressos, associação de sócios ou os dois." },
+    { alvo: "imagens", titulo: "Escudo e banner", texto: "Comece pelo escudo: é obrigatório para publicar (de preferência PNG com fundo transparente). O banner, uma foto da arquibancada para o topo, é opcional." },
     { alvo: "cores", titulo: "Cores da torcida", texto: "Escolha uma paleta pronta ou ajuste cada cor. A prévia mostra na hora como fica." },
-    { alvo: "imagens", titulo: "Escudo e banner", texto: "Envie o escudo (de preferência PNG com fundo transparente) e uma foto da arquibancada para o topo." },
+    { alvo: "modulos", titulo: "O que o site vai oferecer", texto: "Escolha venda de ingressos, associação de sócios ou os dois." },
     { alvo: "textos", titulo: "Textos", texto: "Título, frase de apresentação e a história da torcida, que aparece na aba Sócios." },
-    { alvo: "previa", titulo: "Prévia ao vivo", texto: "Assim fica a página no celular do torcedor." },
-    { alvo: "regras-socio", titulo: "Regras de sócio", texto: "Decida se aprova cada sócio novo e para onde vai o valor das mensalidades. Depois toque em “Salvar alterações”." },
+    { alvo: "contato", titulo: "Contato", texto: "WhatsApp, Instagram e e-mail da torcida, para o torcedor falar com vocês." },
+    { alvo: "regras-socio", titulo: "Regras de sócio", texto: "Decida se aprova cada sócio novo e para onde vai o valor das mensalidades." },
+    { alvo: "previa", titulo: "Prévia ao vivo", texto: "Assim fica a página no celular do torcedor. Quando terminar, toque em “Salvar alterações”." },
   ],
+  // Os passos são uma sanfona: só o primeiro que falta vem aberto. O alvo é o passo inteiro (título sempre visível).
   "admin-pagamentos": [
     { alvo: "pag-status", titulo: "Situação dos pagamentos", texto: "Aqui você vê se a Pagar.me está conectada, em teste ou vendendo de verdade." },
     { alvo: "pag-demo", opcional: true, titulo: "Quer só testar?", texto: "O modo demonstração deixa você experimentar tudo sem conta na Pagar.me. Nenhum pagamento é real." },
-    { alvo: "passo-1", titulo: "Conta na Pagar.me", texto: "Para vender de verdade, a torcida cria a própria conta na Pagar.me. O dinheiro cai direto na conta de vocês." },
-    { alvo: "passo-3", titulo: "Cole as chaves", texto: "Copie as chaves no painel da Pagar.me e cole aqui. Ninguém consegue ver a chave secreta depois." },
-    { alvo: "passo-5", opcional: true, titulo: "Aviso de pagamento (webhook)", texto: "Copie a URL e cadastre na Pagar.me para os Pix confirmarem na hora." },
-    { alvo: "passo-6", opcional: true, titulo: "Divisão com as subsedes", texto: "Opcional: cada subsede recebe as vendas dos próprios eventos direto na conta dela." },
+    { alvo: "passo-1", titulo: "Conta na Pagar.me", texto: "Para vender de verdade, a torcida cria a própria conta na Pagar.me e o dinheiro cai direto na conta de vocês. Faça os passos na ordem: toque no título de um passo para abrir ou fechar." },
+    { alvo: "passo-3", titulo: "Cole as chaves", texto: "Copie as chaves no painel da Pagar.me e cole neste passo (toque no título para abrir). Ninguém consegue ver a chave secreta depois." },
+    { alvo: "passo-5", opcional: true, titulo: "Aviso de pagamento (webhook)", texto: "Toque para abrir, copie a URL e cadastre na Pagar.me para os Pix confirmarem na hora." },
+    { alvo: "passo-6", opcional: true, titulo: "Divisão com as subsedes", texto: "Opcional: cada subsede recebe as vendas dos próprios eventos direto na conta dela. Toque para abrir e ligar." },
   ],
   "admin-publicar": [
     { alvo: "publicar-checklist", titulo: "O que falta", texto: "Os itens obrigatórios precisam estar prontos. Os recomendados deixam o site mais completo." },
@@ -135,7 +149,7 @@ export const TOURS: Record<string, PassoTour[]> = {
   ],
   "subsede-primeiros-passos": [
     { alvo: "lista-primeiros-passos", titulo: "Primeiros passos", texto: "Siga a lista de cima para baixo. Cada item fica verde quando estiver feito." },
-    { alvo: "primeiro-pendente", opcional: true, titulo: "Próxima tarefa", texto: "Toque em “Fazer agora” para ir até a página certa, com o passo a passo." },
+    { alvo: "primeiro-pendente", opcional: true, titulo: "Próxima tarefa", texto: "Toque no botão deste item (por exemplo, “Cadastrar”) para ir até a página certa, com o passo a passo." },
   ],
   "subsede-eventos": [
     { alvo: "aviso-conta", opcional: true, titulo: "Conta de recebimento", texto: "Sem a conta de recebimento ativa, a diretoria não consegue aprovar seus eventos. Cadastre em Recebimentos." },
@@ -147,8 +161,11 @@ export const TOURS: Record<string, PassoTour[]> = {
   "subsede-eventos-criar": [
     { alvo: "evento-nome", titulo: "Nome e descrição", texto: "Nome curto e uma descrição com horário, local e o que está incluso." },
     { alvo: "evento-data", titulo: "Data, hora e local", texto: "Use o horário de início (ou de saída do ônibus)." },
-    { alvo: "evento-valores", titulo: "Preços", texto: "Valor para sócio e para o público. O valor do ingresso cai na conta da sua subsede; a taxa de serviço vai para a torcida." },
-    { alvo: "evento-capacidade", titulo: "Lugares", texto: "Coloque quantos lugares tem. O sistema para de vender quando lotar." },
+    {
+      alvo: "evento-valores",
+      titulo: "Preços e lugares",
+      texto: "Valor para sócio e para o público: o ingresso cai na conta da sua subsede e a taxa de serviço vai para a torcida. Coloque quantos lugares tem: o sistema para de vender quando lotar.",
+    },
     { alvo: "evento-situacao", titulo: "Enviar para aprovação", texto: "Escolha “Aguardando aprovação” para a diretoria conferir e publicar. Rascunho fica só com você." },
     { alvo: "evento-salvar", titulo: "Enviar", texto: "Pronto! Você recebe o retorno da diretoria no próprio evento." },
   ],

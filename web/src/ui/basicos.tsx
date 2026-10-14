@@ -224,16 +224,18 @@ export function Indicador({
   className?: string;
 }) {
   return (
-    <Cartao className={cx("p-5", className)}>
+    <Cartao className={cx("p-4 sm:p-5", className)}>
       <div className="flex items-center justify-between gap-2 text-texto-2 text-sm">
-        <span>{rotulo}</span>
+        <span className="min-w-0">{rotulo}</span>
+        {/* abaixo de 400 px o ícone some: o rótulo fica numa linha só no cartão de meia largura */}
         {icone && (
-          <span className={cx("size-8 rounded-xl grid place-items-center", tom ? TONS[tom] : "bg-superficie-2 text-texto-2")}>
+          <span className={cx("size-8 shrink-0 rounded-xl hidden min-[400px]:grid place-items-center", tom ? TONS[tom] : "bg-superficie-2 text-texto-2")}>
             <Icone nome={icone} className="size-4" />
           </span>
         )}
       </div>
-      <p className="mt-2 text-[28px] leading-tight font-bold numeros tracking-tight">{valor}</p>
+      {/* valor grande ("R$ 1.325,00") diminui no celular para caber no cartão de 360 px sem vazar */}
+      <p className="mt-2 text-xl min-[400px]:text-2xl sm:text-[28px] leading-tight font-bold numeros tracking-tight break-words">{valor}</p>
       {detalhe && <p className="mt-1 text-xs text-texto-3">{detalhe}</p>}
     </Cartao>
   );

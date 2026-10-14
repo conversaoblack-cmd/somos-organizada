@@ -4,7 +4,7 @@ import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
 import type { ComId, Membro, Papel } from "@/lib/tipos";
 import { useColecao } from "@/hooks/dados";
-import { Aviso, Avatar, Botao, BotaoIcone, CabecalhoPagina, Cartao, cx, Interruptor, Modal, Selecao, Selo, useToast } from "@/ui";
+import { Aviso, Avatar, Botao, BotaoIcone, CabecalhoPagina, Cartao, cx, Icone, Interruptor, Modal, Selecao, Selo, useToast } from "@/ui";
 import { ROTULO_PAPEL, usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
 import { DESCRICAO_PAPEL, enviarConvite, ModalConvite, ResultadoConvite, type Convite } from "./ConviteUsuario";
@@ -19,6 +19,13 @@ export default function Usuarios() {
   const [editando, setEditando] = useState<ComId<Membro> | null>(null);
   const [link, setLink] = useState<Convite | null>(null);
   useTourPagina("usuarios");
+  const [papeisAbertos, setPapeisAbertos] = useState(() => {
+    try {
+      return window.matchMedia("(min-width: 640px)").matches;
+    } catch {
+      return true;
+    }
+  });
 
   async function reenviar(m: ComId<Membro>) {
     setReenviando(m.id);
@@ -51,14 +58,28 @@ export default function Usuarios() {
         }
       />
 
-      <div className="grid sm:grid-cols-3 gap-3 mb-6" data-tour="papeis">
-        {(["diretoria", "subsede", "portaria"] as Papel[]).map((p) => (
-          <Cartao key={p} className="p-4">
-            <p className="font-semibold">{ROTULO_PAPEL[p]}</p>
-            <p className="text-xs text-texto-3 mt-1">{DESCRICAO_PAPEL[p]}</p>
-          </Cartao>
-        ))}
-      </div>
+      {/* "Quem pode o quê": aberto no computador; no celular começa fechado para a equipe aparecer sem rolar */}
+      <details
+        className="group mb-6"
+        data-tour="papeis"
+        open={papeisAbertos}
+        onToggle={(e) => {
+          setPapeisAbertos(e.currentTarget.open);
+        }}
+      >
+        <summary className="flex items-center justify-between gap-2 min-h-11 cursor-pointer list-none rounded-xl font-semibold [&::-webkit-details-marker]:hidden">
+          Quem pode o quê
+          <Icone nome="chevronBaixo" className="size-5 text-texto-3 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+          {(["diretoria", "subsede", "portaria"] as Papel[]).map((p) => (
+            <Cartao key={p} className="p-4">
+              <p className="font-semibold">{ROTULO_PAPEL[p]}</p>
+              <p className="text-xs text-texto-3 mt-1">{DESCRICAO_PAPEL[p]}</p>
+            </Cartao>
+          ))}
+        </div>
+      </details>
 
       {membros.carregando || membros.erro || ordenados.length === 0 ? (
         <EstadoLista carregando={membros.carregando} erro={membros.erro} semConexao={membros.semConexao} vazio icone="usuarios" tituloVazio="Nenhum usuário" />
@@ -87,12 +108,14 @@ export default function Usuarios() {
                   <Selo tom={m.papel === "diretoria" ? "primaria" : m.papel === "subsede" ? "info" : "neutro"}>{ROTULO_PAPEL[m.papel]}</Selo>
                   {!m.ativo && <Selo tom="perigo">Sem acesso</Selo>}
                 </div>
+                {/* no celular só o lápis (o nome não fica espremido): "Reenviar convite" fica dentro da edição */}
                 {m.ativo && m.id !== uid && (
                   <BotaoIcone
                     icone={reenviando === m.id ? "relogio" : "enviar"}
                     rotulo={`Reenviar convite para ${m.nome || m.email}`}
                     disabled={!!reenviando}
                     onClick={() => reenviar(m)}
+                    className="max-sm:hidden"
                   />
                 )}
                 <BotaoIcone icone="lapis" rotulo={`Editar ${m.nome}`} onClick={() => setEditando(m)} />
@@ -103,14 +126,29 @@ export default function Usuarios() {
       )}
 
       <ModalConvite aberto={convidar} fechar={() => setConvidar(false)} sucesso={(r) => setLink(r)} />
-      {editando && <ModalEditar m={editando} fechar={() => setEditando(null)} />}
+      {editando && (
+        <ModalEditar
+          m={editando}
+          fechar={() => setEditando(null)}
+          reenviar={
+            editando.ativo && editando.id !== uid
+              ? () => {
+                  const m = editando;
+                  setEditando(null);
+                  void reenviar(m);
+                }
+              : undefined
+          }
+          reenviando={reenviando === editando.id}
+        />
+      )}
 
       <ResultadoConvite convite={link} fechar={() => setLink(null)} />
     </div>
   );
 }
 
-function ModalEditar({ m, fechar }: { m: ComId<Membro>; fechar: () => void }) {
+function ModalEditar({ m, fechar, reenviar, reenviando }: { m: ComId<Membro>; fechar: () => void; reenviar?: () => void; reenviando?: boolean }) {
   const { tid, uid, sedes } = usePainel();
   const avisar = useToast();
   const [papel, setPapel] = useState<Papel>(m.papel);
@@ -188,6 +226,11 @@ function ModalEditar({ m, fechar }: { m: ComId<Membro>; fechar: () => void }) {
         <Cartao className="p-4">
           <Interruptor ligado={ativo} onChange={setAtivo} rotulo="Acesso liberado" descricao="Desligue para bloquear o acesso sem apagar o histórico." />
         </Cartao>
+        {reenviar && (
+          <Botao variante="contorno" icone="enviar" largo onClick={reenviar} carregando={reenviando} disabled={salvando}>
+            Reenviar convite
+          </Botao>
+        )}
         {ehVoce && <Aviso tom="alerta">Este é o seu usuário. Se tirar seu próprio acesso de diretoria, você sai do painel.</Aviso>}
         {erro && <Aviso tom="perigo">{erro}</Aviso>}
       </div>

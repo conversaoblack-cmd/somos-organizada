@@ -71,6 +71,29 @@ const TOM_STATUS_EVENTO: Record<StatusEvento, Tom> = {
   cancelado: "perigo",
 };
 
+/** Link do wa.me com o texto de divulgação do evento (lista e detalhe usam o mesmo). */
+function linkWhatsappEvento(e: Pick<Evento, "nome" | "data" | "local">, link: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(`*${e.nome}*\n${dataExtensa(e.data)}, ${hora(e.data)}${e.local ? ` · ${e.local}` : ""}\nGaranta seu ingresso: ${link}`)}`;
+}
+
+/** Ocupação numa linha (barra e "12/80" lado a lado): versão do cartão de evento no celular. */
+function OcupacaoCompacta({ vendidos, reservados = 0, capacidade, className }: { vendidos: number; reservados?: number; capacidade?: number | null; className?: string }) {
+  if (!capacidade) return <p className={cx("text-xs text-texto-3 numeros", className)}>{numero(vendidos)} vendidos · sem limite</p>;
+  const pct = Math.min(100, Math.round((vendidos / capacidade) * 100));
+  const pctRes = Math.min(100 - pct, Math.round((reservados / capacidade) * 100));
+  return (
+    <div className={cx("flex items-center gap-2 min-w-0", className)}>
+      <div className="h-2 flex-1 rounded-full bg-superficie-3 overflow-hidden flex" role="meter" aria-valuemin={0} aria-valuemax={capacidade} aria-valuenow={vendidos} aria-label="Ocupação">
+        <div className={cx("h-full rounded-full", pct >= 90 ? "bg-alerta" : "bg-primaria")} style={{ width: `${pct}%` }} />
+        {pctRes > 0 && <div className="h-full bg-primaria/35" style={{ width: `${pctRes}%` }} />}
+      </div>
+      <span className="text-xs text-texto-3 numeros shrink-0">
+        {numero(vendidos)}/{numero(capacidade)} vendidos
+      </span>
+    </div>
+  );
+}
+
 /** Campos extras do fluxo de aprovação (gravados pela diretoria). */
 type EventoAdm = Evento & { motivoDevolucao?: string; devolvidoEm?: Timestamp; aprovadoEm?: Timestamp };
 
@@ -247,46 +270,64 @@ export default function Eventos() {
 }
 
 function CartaoEvento({ e, sede, para, editar, passado }: { e: ComId<EventoAdm>; sede: string; para: string; editar?: () => void; passado?: boolean }) {
+  const { torcida } = usePainel();
+  // No celular o cartão é compacto (data de 56 px, informação em uma linha, ocupação e contagem lado a lado):
+  // antes cada um tinha ~200 px e a lista virava rolagem sem fim.
   return (
     <Cartao className={cx("relative overflow-hidden flex flex-col transition-colors hover:border-linha-forte", passado && "opacity-75")}>
-      <Link to={para} className="flex gap-4 p-4 pb-3 min-w-0">
-        <div className="relative size-20 sm:size-24 shrink-0 rounded-2xl overflow-hidden bg-superficie-2">
+      <Link to={para} className="flex gap-3 sm:gap-4 p-3 pb-2 sm:p-4 sm:pb-3 min-w-0">
+        <div className="relative size-14 sm:size-24 shrink-0 rounded-xl sm:rounded-2xl overflow-hidden bg-superficie-2">
           {e.imagemUrl ? (
             <img src={e.imagemUrl} alt="" width={96} height={96} className="size-full object-cover" loading="lazy" decoding="async" />
           ) : (
             <div className="size-full grid place-items-center text-center leading-none">
               <span>
-                <span className="block text-2xl font-bold numeros">{diaDoMes(e.data)}</span>
-                <span className="block text-xs text-texto-3 font-semibold mt-1">{mesAbrev(e.data)}</span>
+                <span className="block text-lg sm:text-2xl font-bold numeros">{diaDoMes(e.data)}</span>
+                <span className="block text-[11px] sm:text-xs text-texto-3 font-semibold mt-0.5 sm:mt-1">{mesAbrev(e.data)}</span>
               </span>
             </div>
           )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2 justify-between">
-            <p className="font-semibold leading-snug line-clamp-2">{e.nome}</p>
+            <p className="font-semibold leading-snug line-clamp-1 sm:line-clamp-2 break-words">{e.nome}</p>
           </div>
-          <p className="text-sm text-texto-2 mt-1 truncate">
+          <p className="text-sm text-texto-2 mt-0.5 sm:mt-1 truncate">
             {dataExtensa(e.data)} · {hora(e.data)}
+            <span className="sm:hidden"> · {sede}</span>
           </p>
-          <p className="text-xs text-texto-3 truncate mt-0.5">{sede}</p>
-          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+          <p className="hidden sm:block text-xs text-texto-3 truncate mt-0.5">{sede}</p>
+          <div className="flex flex-wrap items-center gap-1.5 mt-1.5 sm:mt-2">
             <Selo tom={TOM_STATUS_EVENTO[e.status]} ponto>
               {ROTULO_STATUS_EVENTO[e.status]}
             </Selo>
             {e.status === "rascunho" && e.motivoDevolucao && <Selo tom="perigo">Devolvido</Selo>}
-            <span className="text-xs text-texto-3 numeros">
+            <span className="hidden sm:inline text-xs text-texto-3 numeros">
               Sócio {e.valorSocio ? moeda(e.valorSocio) : "grátis"} · Público {moeda(e.valorPublico)}
             </span>
           </div>
         </div>
       </Link>
-      <div className="px-4 pb-4 mt-auto flex items-end gap-3">
-        <BarraOcupacao vendidos={e.vendidos} reservados={e.reservados} capacidade={e.capacidade} className="flex-1" />
+      <div className="px-3 pb-2 sm:px-4 sm:pb-4 mt-auto flex items-center sm:items-end gap-1 sm:gap-3">
+        <OcupacaoCompacta vendidos={e.vendidos} reservados={e.reservados} capacidade={e.capacidade} className="flex-1 sm:hidden" />
+        <BarraOcupacao vendidos={e.vendidos} reservados={e.reservados} capacidade={e.capacidade} className="hidden sm:block flex-1" />
+        {/* Divulgar direto da lista: só evento publicado (rascunho e em aprovação não abrem para o público) */}
+        {e.status === "publicado" && (
+          <a
+            href={linkWhatsappEvento(e, linkEvento(torcida.slug, e))}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Divulgar no WhatsApp"
+            title="Divulgar no WhatsApp"
+            className="inline-grid place-items-center size-11 sm:size-10 shrink-0 rounded-xl text-texto-2 hover:text-texto hover:bg-superficie-2 sm:-mb-1"
+          >
+            <Icone nome="whatsapp" className="size-5" />
+          </a>
+        )}
         {editar ? (
-          <BotaoIcone icone="lapis" rotulo="Editar evento" onClick={editar} className="-mb-1 -mr-1" />
+          <BotaoIcone icone="lapis" rotulo="Editar evento" onClick={editar} className="shrink-0 -mr-1 sm:-mb-1" />
         ) : (
-          <span className="size-10 grid place-items-center text-texto-3 -mb-1 -mr-1" title="Só a diretoria altera eventos publicados">
+          <span className="size-11 sm:size-10 shrink-0 grid place-items-center text-texto-3 -mr-1 sm:-mb-1" title="Só a diretoria altera eventos publicados">
             <Icone nome="cadeado" className="size-4" />
           </span>
         )}
@@ -805,6 +846,43 @@ export function DetalheEvento() {
   const refEvento = doc(db, `torcidas/${tid}/eventos/${e.id}`);
   const contaAtiva = podePublicarNaSede(e.sedeId);
   const daSubsede = e.sedeId !== torcida.sedePrincipalId;
+  const publicado = e.status === "publicado";
+  const zap = linkWhatsappEvento(e, linkPublico);
+  // Publicado: o "Link direto" sobe para logo abaixo do evento (é o que mais se usa). Antes disso fica no lugar de sempre.
+  const cartaoLink = (
+    <Cartao className="p-4 sm:p-5 mb-4" data-tour="evento-link">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <p className="text-sm font-semibold">Link direto do evento</p>
+        {e.codigo && (
+          <span className="text-xs text-texto-3">
+            Código <strong className="font-mono text-texto-2 tracking-wider">{e.codigo.toUpperCase()}</strong>
+          </span>
+        )}
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <code className="flex-1 min-w-0 truncate rounded-xl bg-superficie-2 border border-linha px-3 h-11 leading-[2.75rem] sm:h-9 sm:leading-9 text-sm text-texto-2">{linkPublico}</code>
+        <div className="flex flex-wrap gap-2">
+          <BotaoCopiar texto={linkPublico} rotulo="Copiar link" />
+          <a
+            href={zap}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
+          >
+            <Icone nome="whatsapp" className="size-4" /> WhatsApp
+          </a>
+          <button
+            type="button"
+            onClick={() => setQrAberto(true)}
+            className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
+          >
+            <Icone nome="qr" className="size-4" /> QR Code
+          </button>
+        </div>
+      </div>
+      <p className="text-xs text-texto-3 mt-2">Quem abre o link cai direto na página deste evento, pronta para comprar.</p>
+    </Cartao>
+  );
 
   return (
     <div>
@@ -814,7 +892,8 @@ export function DetalheEvento() {
 
       <Cartao className="overflow-hidden mb-4">
         <div className="grid md:grid-cols-[280px_1fr]">
-          <div className="relative aspect-[16/9] md:aspect-auto md:min-h-full bg-superficie-2">
+          {/* Sem imagem, o quadro com a data só ocupava meia tela no celular (a data já está logo abaixo do nome) */}
+          <div className={cx("relative aspect-[16/9] md:aspect-auto md:min-h-full bg-superficie-2", !e.imagemUrl && "hidden md:block")}>
             {e.imagemUrl ? (
               <img src={e.imagemUrl} alt="" width={560} height={315} decoding="async" className="absolute inset-0 size-full object-cover" />
             ) : (
@@ -849,8 +928,19 @@ export function DetalheEvento() {
               {e.vendaAte && ` · vendas até ${dataHora(e.vendaAte)}`}
             </p>
             <div className="flex flex-wrap gap-2 mt-5" data-tour="evento-acoes">
+              {/* Publicado, a ação principal é divulgar: o link no grupo do WhatsApp é por onde a torcida compra */}
+              {publicado && (
+                <a
+                  href={zap}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 min-h-11 sm:min-h-9 px-3.5 rounded-xl text-sm font-semibold bg-primaria text-sobre-primaria hover:brightness-110"
+                >
+                  <Icone nome="whatsapp" className="size-4" /> Divulgar no WhatsApp
+                </a>
+              )}
               {podeEditar && (
-                <Botao tamanho="sm" icone="lapis" onClick={() => setEditando(true)}>
+                <Botao tamanho="sm" variante={publicado ? "suave" : "primaria"} icone="lapis" onClick={() => setEditando(true)}>
                   Editar
                 </Botao>
               )}
@@ -869,6 +959,8 @@ export function DetalheEvento() {
           </div>
         </div>
       </Cartao>
+
+      {publicado && cartaoLink}
 
       {/* Fluxo de aprovação */}
       {ehDiretoria && e.status === "em_aprovacao" && (
@@ -929,38 +1021,7 @@ export function DetalheEvento() {
       )}
       </div>
 
-      <Cartao className="p-4 sm:p-5 mb-4" data-tour="evento-link">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-          <p className="text-sm font-semibold">Link direto do evento</p>
-          {e.codigo && (
-            <span className="text-xs text-texto-3">
-              Código <strong className="font-mono text-texto-2 tracking-wider">{e.codigo.toUpperCase()}</strong>
-            </span>
-          )}
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <code className="flex-1 min-w-0 truncate rounded-xl bg-superficie-2 border border-linha px-3 h-11 leading-[2.75rem] sm:h-9 sm:leading-9 text-sm text-texto-2">{linkPublico}</code>
-          <div className="flex flex-wrap gap-2">
-            <BotaoCopiar texto={linkPublico} rotulo="Copiar link" />
-            <a
-              href={`https://wa.me/?text=${encodeURIComponent(`*${e.nome}*\n${dataExtensa(e.data)}, ${hora(e.data)}${e.local ? ` · ${e.local}` : ""}\nGaranta seu ingresso: ${linkPublico}`)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
-            >
-              <Icone nome="whatsapp" className="size-4" /> WhatsApp
-            </a>
-            <button
-              type="button"
-              onClick={() => setQrAberto(true)}
-              className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3"
-            >
-              <Icone nome="qr" className="size-4" /> QR Code
-            </button>
-          </div>
-        </div>
-        <p className="text-xs text-texto-3 mt-2">Quem abre o link cai direto na página deste evento, pronta para comprar.</p>
-      </Cartao>
+      {!publicado && cartaoLink}
       <Modal
         aberto={qrAberto}
         fechar={() => setQrAberto(false)}

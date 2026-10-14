@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { collection, limit, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -16,6 +16,7 @@ export interface ItemPrimeiroPasso {
   opcional?: boolean;
   /** Rota relativa a /:slug/admin, já com ?tour= para abrir o passo a passo da página. */
   para: string;
+  /** Rótulo do botão: verbo curto e específico do item ("Personalizar", "Criar plano"), igual no celular e no computador. */
   acao: string;
 }
 
@@ -82,7 +83,7 @@ export function usePrimeirosPassos(args: { tid: string; torcida: ComId<Torcida>;
           feito: !!p?.splitAtivo,
           opcional: true,
           para: "pagamentos?tour=admin-pagamentos",
-          acao: "Ver como",
+          acao: "Ativar",
         },
       ];
       if (m.socios)
@@ -172,51 +173,86 @@ export function usePrimeirosPassos(args: { tid: string; torcida: ComId<Torcida>;
   }, [diretoria, papel, torcida, sedes, sedeEscopo, planos.dados.length, eventos.dados, membrosSubsede.dados.length, porteiros.dados.length]);
 }
 
-function ListaPassos({ itens, compacta }: { itens: ItemPrimeiroPasso[]; compacta?: boolean }) {
+function ItemPasso({ it, numero, proximo, compacta }: { it: ItemPrimeiroPasso; numero?: number; proximo: boolean; compacta?: boolean }) {
   const { base } = usePainel();
-  const primeiroPendente = itens.find((i) => !i.feito && !i.opcional)?.chave ?? itens.find((i) => !i.feito)?.chave;
   return (
-    <ol className="divide-y divide-linha">
-      {itens.map((it, n) => (
-        <li
-          key={it.chave}
-          className={cx("flex items-center gap-3 py-3.5", compacta && it.feito && "hidden")}
-          data-tour={it.chave === primeiroPendente ? "primeiro-pendente" : undefined}
-        >
-          <span
-            className={cx(
-              "size-9 shrink-0 rounded-full grid place-items-center text-sm font-bold",
-              it.feito ? "bg-sucesso/15 text-sucesso" : it.chave === primeiroPendente ? "bg-primaria text-sobre-primaria" : "bg-superficie-2 text-texto-2",
-            )}
-          >
-            {it.feito ? <Icone nome="check" className="size-5" /> : n + 1}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className={cx("font-semibold leading-snug", it.feito && "text-texto-2")}>
-              {it.titulo}
-              {it.opcional && <span className="text-xs font-normal text-texto-3"> · opcional</span>}
-            </p>
-            {!compacta && <p className="text-sm text-texto-3 mt-0.5">{it.descricao}</p>}
-          </div>
-          {it.feito ? (
-            <Selo tom="sucesso" className="shrink-0">
-              Feito
-            </Selo>
-          ) : it.para ? (
-            <BotaoLink
-              to={`${base}/${it.para}`}
-              tamanho="sm"
-              variante={it.chave === primeiroPendente ? "primaria" : "suave"}
-              iconeDireita="setaDireita"
-              className="shrink-0"
-            >
-              <span className="hidden sm:inline">{it.acao}</span>
-              <span className="sm:hidden">Fazer</span>
-            </BotaoLink>
-          ) : null}
-        </li>
-      ))}
-    </ol>
+    <li className="flex items-center gap-3 py-3.5" data-tour={proximo ? "primeiro-pendente" : undefined}>
+      <span
+        className={cx(
+          "size-9 shrink-0 rounded-full grid place-items-center text-sm font-bold",
+          it.feito
+            ? "bg-sucesso/15 text-sucesso"
+            : proximo
+              ? "bg-primaria text-sobre-primaria"
+              : numero
+                ? "bg-superficie-2 text-texto-2"
+                : "border-2 border-linha-forte",
+        )}
+        aria-hidden="true"
+      >
+        {it.feito ? <Icone nome="check" className="size-5" /> : numero ?? (proximo ? <Icone nome="setaDireita" className="size-4" /> : null)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className={cx("font-semibold leading-snug", it.feito && "text-texto-2")}>
+          {numero ? <span className="sr-only">{numero}. </span> : null}
+          {it.titulo}
+          {it.feito && <span className="sr-only"> (feito)</span>}
+        </p>
+        {!compacta && <p className="text-sm text-texto-3 mt-0.5">{it.descricao}</p>}
+      </div>
+      {it.feito ? (
+        <Selo tom="sucesso" className="shrink-0">
+          Feito
+        </Selo>
+      ) : it.para ? (
+        <BotaoLink to={`${base}/${it.para}`} tamanho="sm" variante={proximo ? "primaria" : "suave"} className="shrink-0">
+          {it.acao}
+          <Icone nome="setaDireita" className="size-4 hidden sm:block" />
+        </BotaoLink>
+      ) : null}
+    </li>
+  );
+}
+
+/**
+ * Lista dos primeiros passos. Os obrigatórios vêm numerados em ordem (1, 2, 3…); os opcionais ficam
+ * em "Depois, se quiser", fechado até acabar os obrigatórios. Na versão compacta (cartão da Visão geral)
+ * só aparecem os que faltam, com círculo vazio no lugar do número (assim nenhum número "some").
+ */
+function ListaPassos({ itens, compacta }: { itens: ItemPrimeiroPasso[]; compacta?: boolean }) {
+  const principais = itens.filter((i) => !i.opcional);
+  const opcionais = itens.filter((i) => i.opcional);
+  const todosPrincipais = principais.every((i) => i.feito);
+  const primeiroPendente = principais.find((i) => !i.feito)?.chave ?? opcionais.find((i) => !i.feito)?.chave;
+  const mostrados = compacta ? principais.filter((i) => !i.feito) : principais;
+  const extras = compacta ? opcionais.filter((i) => !i.feito) : opcionais;
+  const [verExtras, setVerExtras] = useState(todosPrincipais);
+  useEffect(() => {
+    if (todosPrincipais) setVerExtras(true);
+  }, [todosPrincipais]);
+
+  return (
+    <>
+      <ol className="divide-y divide-linha">
+        {mostrados.map((it, n) => (
+          <ItemPasso key={it.chave} it={it} numero={compacta ? undefined : n + 1} proximo={it.chave === primeiroPendente} compacta={compacta} />
+        ))}
+      </ol>
+      {extras.length > 0 && (
+        <details open={verExtras} onToggle={(e) => setVerExtras(e.currentTarget.open)} className="border-t border-linha group">
+          <summary className="min-h-11 py-2 flex items-center gap-2 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden font-semibold text-texto-2 hover:text-texto">
+            <Icone nome="chevronDireita" className="size-4 transition-transform group-open:rotate-90" />
+            Depois, se quiser
+            <span className="text-sm font-normal text-texto-3 numeros">({extras.length})</span>
+          </summary>
+          <ul className="divide-y divide-linha">
+            {extras.map((it) => (
+              <ItemPasso key={it.chave} it={it} proximo={it.chave === primeiroPendente} compacta={compacta} />
+            ))}
+          </ul>
+        </details>
+      )}
+    </>
   );
 }
 
@@ -226,14 +262,15 @@ export function CartaoPrimeirosPassos() {
   const obrigatorios = itens.filter((i) => !i.opcional);
   const feitos = obrigatorios.filter((i) => i.feito).length;
   if (!itens.length || feitos === obrigatorios.length) return null;
+  const faltam = obrigatorios.length - feitos;
   return (
     <Cartao className="p-5 sm:p-6 mb-6 border-primaria/35" data-tour="primeiros-passos">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold">Primeiros passos</h2>
-          {/* no cartão da Visão geral só aparecem os que faltam; os feitos viram o contador */}
+          {/* no cartão da Visão geral só aparecem os obrigatórios que faltam: o contador conta os mesmos itens */}
           <p className="text-sm text-texto-2 numeros">
-            {feitos} de {obrigatorios.length} feitos
+            {faltam === 1 ? "Falta 1" : `Faltam ${faltam}`} de {obrigatorios.length}
           </p>
         </div>
         <Link to={`${base}/primeiros-passos`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 shrink-0 min-h-11 sm:min-h-0">
@@ -279,7 +316,7 @@ export default function PrimeirosPassos() {
           <div className="h-full bg-primaria rounded-full" style={{ width: `${(feitos / Math.max(1, obrigatorios.length)) * 100}%` }} />
         </div>
         <p className="text-sm text-texto-3 mt-2">
-          {feitos} de {obrigatorios.length} obrigatórios concluídos
+          {feitos} de {obrigatorios.length} concluídos
         </p>
         <ListaPassos itens={itens} />
       </Cartao>

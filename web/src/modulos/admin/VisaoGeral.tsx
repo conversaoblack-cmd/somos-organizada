@@ -225,6 +225,13 @@ export default function VisaoGeral() {
   if (ehDiretoria && emAnalise > 0)
     pendencias.push({ tom: "info", titulo: `${numero(emAnalise)} ${emAnalise === 1 ? "sócio aguardando" : "sócios aguardando"} aprovação`, texto: "Pagamento confirmado, falta só a sua aprovação.", para: `${base}/socios?status=em_analise`, acao: "Revisar sócios" });
 
+  // Sem pagamentos a diretoria não vende: "Novo evento" no topo levaria a um evento que ninguém compra.
+  const semPagamentos = ehDiretoria && !pag?.configurado;
+  // Torcida que ainda não vendeu nada: em vez de quatro zeros, gráfico vazio e seis linhas de "0", um cartão só.
+  const receitaTotal = (r.geral.receitaIngressos ?? 0) + (r.geral.receitaSocios ?? 0) + (r.geral.taxaServico ?? 0);
+  const semNumeros =
+    !r.carregando && !r.erro && !r.semConexao && receitaTotal === 0 && totalSocios === 0 && (ehDiretoria ? (r.geral.ingressosQtd ?? 0) === 0 : ingressosSubsede === 0);
+
   const titulo = ehDiretoria ? "Visão geral" : `Visão geral · ${nomeSede(sedeEscopo)}`;
   const mesNome = rotuloMes(mesAtualSP(), true);
 
@@ -234,9 +241,11 @@ export default function VisaoGeral() {
         titulo={titulo}
         descricao={`Olá, ${membro.nome?.split(" ")[0] || "diretoria"}. Números de ${mesNome}${ehDiretoria ? "" : " da sua sede"}.`}
         acoes={
-          <BotaoLink to={`${base}/eventos?novo=1`} icone="mais" tamanho="sm">
-            Novo evento
-          </BotaoLink>
+          !semPagamentos && (
+            <BotaoLink to={`${base}/eventos?novo=1`} icone="mais" tamanho="sm">
+              Novo evento
+            </BotaoLink>
+          )
         }
       />
 
@@ -274,6 +283,24 @@ export default function VisaoGeral() {
 
       {r.erro || r.semConexao ? (
         <EstadoLista carregando={false} erro={r.erro} semConexao={r.semConexao} vazio={false} tituloVazio="" />
+      ) : semNumeros ? (
+        // data-tour="kpis": o passo "Números do mês" do tour aponta para cá enquanto não há números
+        <Cartao className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4" data-tour="kpis">
+          <span className="size-12 shrink-0 rounded-2xl bg-primaria/12 text-primaria-texto grid place-items-center">
+            <Icone nome="dinheiro" className="size-6" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-bold">Seus números aparecem aqui depois da primeira venda</h2>
+            <p className="text-sm text-texto-2 mt-1">
+              {ehDiretoria
+                ? "Ingressos vendidos, mensalidades de sócios e a taxa de serviço do caixa. Siga os primeiros passos para começar a vender."
+                : "Quanto os eventos da sua sede renderam e quanto você tem a receber. Siga os primeiros passos para começar a vender."}
+            </p>
+          </div>
+          <BotaoLink to={`${base}/primeiros-passos`} tamanho="sm" variante="contorno" iconeDireita="setaDireita" className="self-start sm:self-center shrink-0">
+            Ver primeiros passos
+          </BotaoLink>
+        </Cartao>
       ) : (
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4" data-tour="kpis">
           <Indicador
@@ -310,15 +337,20 @@ export default function VisaoGeral() {
               detalhe={`Total arrecadado: ${moeda(r.geral.taxaServico)}`}
             />
           ) : (
+            // saldo negativo não aparece como "-R$ 50,00" solto: vira "Recebido a mais", com o que fazer (igual ao Financeiro)
             <Indicador
-              rotulo="A receber da diretoria"
-              icone="dinheiro"
-              tom={sub.saldo > 0 ? "alerta" : "sucesso"}
-              valor={<ValorKpi>{r.carregando ? "…" : moeda(sub.saldo)}</ValorKpi>}
+              rotulo={sub.saldo < 0 ? "Recebido a mais" : "A receber da diretoria"}
+              icone={sub.saldo < 0 ? "alerta" : "dinheiro"}
+              tom={sub.saldo !== 0 ? "alerta" : "sucesso"}
+              valor={<ValorKpi>{r.carregando ? "…" : moeda(sub.saldo < 0 ? -sub.saldo : sub.saldo)}</ValorKpi>}
               detalhe={
-                <Link to={`${base}/financeiro`} className="inline-flex items-center min-h-11 sm:min-h-0 hover:underline">
-                  Ver extrato e repasses →
-                </Link>
+                <>
+                  {sub.saldo < 0 && <span className="block">Acerte a diferença com a diretoria</span>}
+                  <Link to={`${base}/financeiro`} className="inline-flex items-center gap-1 whitespace-nowrap min-h-11 sm:min-h-0 hover:underline">
+                    Ver extrato e repasses
+                    <Icone nome="setaDireita" className="size-3.5 shrink-0" />
+                  </Link>
+                </>
               }
             />
           )}
@@ -331,59 +363,61 @@ export default function VisaoGeral() {
         </div>
       )}
 
-      <div className={cx("grid grid-cols-1 gap-4 mt-4", ehDiretoria && "lg:grid-cols-[1.6fr_1fr]")}>
-        <Cartao className="p-5 sm:p-6 min-w-0" data-tour="grafico-receita">
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div>
-              <h2 className="font-bold">Receita dos últimos 6 meses</h2>
-              <p className="text-sm text-texto-3">Valor dos ingressos e mensalidades, sem a taxa de serviço</p>
-            </div>
-          </div>
-          {r.carregando ? <Carregando /> : <GraficoReceita dados={r.historico} />}
-        </Cartao>
-
-        {ehDiretoria && (
-          <Cartao className="p-5 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold">Sócios</h2>
-              <Link to={`${base}/socios`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 min-h-11 sm:min-h-0">
-                Ver todos <Icone nome="chevronDireita" className="size-4" />
-              </Link>
-            </div>
-            <div className="flex items-end gap-6 mb-4">
+      {!semNumeros && (
+        <div className={cx("grid grid-cols-1 gap-4 mt-4", ehDiretoria && "lg:grid-cols-[1.6fr_1fr]")}>
+          <Cartao className="p-5 sm:p-6 min-w-0" data-tour="grafico-receita">
+            <div className="flex items-start justify-between gap-3 mb-4">
               <div>
-                <p className="text-[34px] font-bold leading-none numeros">{numero(socios.ativo)}</p>
-                <p className="text-sm text-texto-3 mt-1">ativos</p>
-              </div>
-              <div>
-                <p className="text-xl font-bold leading-none numeros text-primaria-texto">+{numero(r.mes.novosSocios)}</p>
-                <p className="text-sm text-texto-3 mt-1">novos no mês</p>
+                <h2 className="font-bold">Receita dos últimos 6 meses</h2>
+                <p className="text-sm text-texto-3">Valor dos ingressos e mensalidades, sem a taxa de serviço</p>
               </div>
             </div>
-            {totalSocios > 0 && (
-              <div className="flex h-2.5 rounded-full overflow-hidden gap-[2px] mb-4" aria-hidden="true">
-                {ORDEM_STATUS.filter((k) => (socios[k] ?? 0) > 0).map((k) => (
-                  <div key={k} className={COR_STATUS[k]} style={{ width: `${((socios[k] ?? 0) / totalSocios) * 100}%` }} />
-                ))}
-              </div>
-            )}
-            {/* 1 coluna no celular estreito: "Aguardando pagamento" não cabe em meia largura de 360 px */}
-            <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              {ORDEM_STATUS.map((k) => (
-                <li key={k} className="flex items-center justify-between gap-2">
-                  <Link to={`${base}/socios?status=${k}`} className="flex items-center gap-2 text-texto-2 hover:text-texto min-w-0 min-h-11 sm:min-h-0">
-                    <span className={`size-2 rounded-full shrink-0 ${COR_STATUS[k]}`} />
-                    <span className="leading-snug break-words">{ROTULO_STATUS_SOCIO[k]}</span>
-                  </Link>
-                  <span className="font-semibold numeros">{numero(Math.max(0, socios[k] ?? 0))}</span>
-                </li>
-              ))}
-            </ul>
+            {r.carregando ? <Carregando /> : <GraficoReceita dados={r.historico} />}
           </Cartao>
-        )}
-      </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mt-4">
+          {ehDiretoria && (
+            <Cartao className="p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold">Sócios</h2>
+                <Link to={`${base}/socios`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 min-h-11 sm:min-h-0">
+                  Ver todos <Icone nome="chevronDireita" className="size-4" />
+                </Link>
+              </div>
+              <div className="flex items-end gap-6 mb-4">
+                <div>
+                  <p className="text-[34px] font-bold leading-none numeros">{numero(socios.ativo)}</p>
+                  <p className="text-sm text-texto-3 mt-1">ativos</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold leading-none numeros text-primaria-texto">+{numero(r.mes.novosSocios)}</p>
+                  <p className="text-sm text-texto-3 mt-1">novos no mês</p>
+                </div>
+              </div>
+              {totalSocios > 0 && (
+                <div className="flex h-2.5 rounded-full overflow-hidden gap-[2px] mb-4" aria-hidden="true">
+                  {ORDEM_STATUS.filter((k) => (socios[k] ?? 0) > 0).map((k) => (
+                    <div key={k} className={COR_STATUS[k]} style={{ width: `${((socios[k] ?? 0) / totalSocios) * 100}%` }} />
+                  ))}
+                </div>
+              )}
+              {/* 1 coluna no celular estreito: "Aguardando pagamento" não cabe em meia largura de 360 px */}
+              <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                {ORDEM_STATUS.map((k) => (
+                  <li key={k} className="flex items-center justify-between gap-2">
+                    <Link to={`${base}/socios?status=${k}`} className="flex items-center gap-2 text-texto-2 hover:text-texto min-w-0 min-h-11 sm:min-h-0">
+                      <span className={`size-2 rounded-full shrink-0 ${COR_STATUS[k]}`} />
+                      <span className="leading-snug break-words">{ROTULO_STATUS_SOCIO[k]}</span>
+                    </Link>
+                    <span className="font-semibold numeros">{numero(Math.max(0, socios[k] ?? 0))}</span>
+                  </li>
+                ))}
+              </ul>
+            </Cartao>
+          )}
+        </div>
+      )}
+
+      <div className={cx("grid grid-cols-1 gap-4 mt-4", !semNumeros && "lg:grid-cols-2")}>
         <Cartao className="p-5 sm:p-6" data-tour="proximos-eventos">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold">Próximos eventos</h2>
@@ -399,8 +433,14 @@ export default function VisaoGeral() {
               vazio
               icone="calendario"
               tituloVazio="Nenhum evento futuro"
-              textoVazio="Crie um evento para começar a vender ingressos."
-              acaoVazio={<BotaoLink to={`${base}/eventos?novo=1`} tamanho="sm" icone="mais">Criar evento</BotaoLink>}
+              textoVazio={semPagamentos ? "Para vender ingressos, configure os pagamentos primeiro. Depois é só criar o evento." : "Crie um evento para começar a vender ingressos."}
+              acaoVazio={
+                semPagamentos ? (
+                  <BotaoLink to={`${base}/pagamentos?tour=admin-pagamentos`} tamanho="sm" icone="cartao">Configurar pagamentos</BotaoLink>
+                ) : (
+                  <BotaoLink to={`${base}/eventos?novo=1`} tamanho="sm" icone="mais">Criar evento</BotaoLink>
+                )
+              }
             />
           ) : (
             <ul className="divide-y divide-linha -my-3">
@@ -430,37 +470,40 @@ export default function VisaoGeral() {
           )}
         </Cartao>
 
-        <Cartao className="p-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold">Últimos pedidos pagos</h2>
-            <Link to={`${base}/pedidos`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 min-h-11 sm:min-h-0">
-              Todos <Icone nome="chevronDireita" className="size-4" />
-            </Link>
-          </div>
-          {pedidosQ.carregando || pedidosQ.erro || pagos.length === 0 ? (
-            <EstadoLista carregando={pedidosQ.carregando} erro={pedidosQ.erro} semConexao={pedidosQ.semConexao} vazio icone="ingresso" tituloVazio="Nenhum pedido pago ainda" />
-          ) : (
-            <ul className="divide-y divide-linha -my-3">
-              {pagos.map((p) => (
-                <li key={p.id} className="flex items-center gap-3 py-3">
-                  <span className={`size-10 shrink-0 rounded-xl grid place-items-center ${p.tipo === "ingresso" ? "bg-primaria/12 text-primaria-texto" : "bg-secundaria/15 text-secundaria"}`}>
-                    <Icone nome={p.tipo === "ingresso" ? "ingresso" : "estrela"} className="size-5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{p.comprador?.nome}</p>
-                    <p className="text-xs text-texto-3 truncate">
-                      {p.tipo === "ingresso" ? `${p.itens?.length ?? 1}× ${p.eventoNome ?? "Ingresso"}` : "Mensalidade de sócio"} · {relativo(p.pagoEm ?? p.criadoEm)}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-semibold numeros">{moeda(p.total)}</p>
-                    <p className="text-xs text-texto-3">{p.metodo === "pix" ? "Pix" : "Cartão"}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Cartao>
+        {/* sem nenhuma venda, a lista vazia só repetiria o cartão "Seus números aparecem aqui..." */}
+        {!semNumeros && (
+          <Cartao className="p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold">Últimos pedidos pagos</h2>
+              <Link to={`${base}/pedidos`} className="text-sm text-texto-2 hover:text-texto inline-flex items-center gap-1 min-h-11 sm:min-h-0">
+                Todos <Icone nome="chevronDireita" className="size-4" />
+              </Link>
+            </div>
+            {pedidosQ.carregando || pedidosQ.erro || pagos.length === 0 ? (
+              <EstadoLista carregando={pedidosQ.carregando} erro={pedidosQ.erro} semConexao={pedidosQ.semConexao} vazio icone="ingresso" tituloVazio="Nenhum pedido pago ainda" />
+            ) : (
+              <ul className="divide-y divide-linha -my-3">
+                {pagos.map((p) => (
+                  <li key={p.id} className="flex items-center gap-3 py-3">
+                    <span className={`size-10 shrink-0 rounded-xl grid place-items-center ${p.tipo === "ingresso" ? "bg-primaria/12 text-primaria-texto" : "bg-secundaria/15 text-secundaria"}`}>
+                      <Icone nome={p.tipo === "ingresso" ? "ingresso" : "estrela"} className="size-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{p.comprador?.nome}</p>
+                      <p className="text-xs text-texto-3 truncate">
+                        {p.tipo === "ingresso" ? `${p.itens?.length ?? 1}× ${p.eventoNome ?? "Ingresso"}` : "Mensalidade de sócio"} · {relativo(p.pagoEm ?? p.criadoEm)}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-semibold numeros">{moeda(p.total)}</p>
+                      <p className="text-xs text-texto-3">{p.metodo === "pix" ? "Pix" : "Cartão"}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Cartao>
+        )}
       </div>
     </div>
   );

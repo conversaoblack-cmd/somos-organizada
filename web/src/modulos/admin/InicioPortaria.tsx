@@ -8,6 +8,7 @@ import { useColecao } from "@/hooks/dados";
 import { CabecalhoPagina, Cartao, Icone, Selo } from "@/ui";
 import { usePainel } from "./contexto";
 import { useTourPagina } from "./tours";
+import { prepararAudio } from "../portaria/feedback";
 import { EstadoLista, inicioDoDiaSP, numero } from "./util";
 
 /** Tela inicial da portaria: atalho grande para o leitor e eventos de hoje. */
@@ -71,7 +72,7 @@ export default function InicioPortaria() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {hoje.map((e) => (
-            <ItemEvento key={e.id} e={e} sede={nomeSede(e.sedeId)} destaque />
+            <ItemEvento key={e.id} e={e} slug={torcida.slug} sede={nomeSede(e.sedeId)} destaque />
           ))}
         </div>
       )}
@@ -81,7 +82,7 @@ export default function InicioPortaria() {
           <h2 className="text-lg font-bold mt-10 mb-3">Próximos eventos</h2>
           <div className="grid grid-cols-1 gap-3">
             {proximos.map((e) => (
-              <ItemEvento key={e.id} e={e} sede={nomeSede(e.sedeId)} />
+              <ItemEvento key={e.id} e={e} slug={torcida.slug} sede={nomeSede(e.sedeId)} />
             ))}
           </div>
         </>
@@ -90,28 +91,37 @@ export default function InicioPortaria() {
   );
 }
 
-function ItemEvento({ e, sede, destaque }: { e: Evento & { id: string }; sede: string; destaque?: boolean }) {
+/** Cartão de evento: toque abre o leitor já com este evento escolhido (`?evento=`). */
+function ItemEvento({ e, slug, sede, destaque }: { e: Evento & { id: string }; slug: string; sede: string; destaque?: boolean }) {
   return (
-    <Cartao className="p-4 flex items-center gap-4">
-      <div className="size-14 shrink-0 rounded-2xl bg-superficie-2 grid place-items-center text-center leading-none">
-        <span>
-          <span className="block text-xl font-bold numeros">{diaDoMes(e.data)}</span>
-          <span className="block text-[11px] text-texto-3 font-semibold mt-0.5">{mesAbrev(e.data)}</span>
-        </span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-semibold line-clamp-2 break-words">{e.nome}</p>
-        <p className="text-sm text-texto-3 line-clamp-2 break-words">
-          {dataExtensa(e.data)} · {hora(e.data)} · {e.local || sede}
-        </p>
-      </div>
-      <div className="text-right shrink-0">
-        {destaque && <Selo tom="sucesso" ponto>Hoje</Selo>}
-        <p className="text-sm font-semibold mt-1 numeros leading-none">
-          {numero(e.entradas)}/{numero(e.vendidos)}
-        </p>
-        <p className="text-xs text-texto-3">entradas</p>
-      </div>
-    </Cartao>
+    <Link
+      to={`/${slug}/portaria?evento=${encodeURIComponent(e.id)}`}
+      state={{ toque: true }}
+      onClick={prepararAudio}
+      className="block rounded-cartao active:scale-[0.99] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+    >
+      <Cartao className="p-4 flex items-center gap-4 hover:border-linha-forte transition-colors">
+        <div className="size-14 shrink-0 rounded-2xl bg-superficie-2 grid place-items-center text-center leading-none">
+          <span>
+            <span className="block text-xl font-bold numeros">{diaDoMes(e.data)}</span>
+            <span className="block text-[11px] text-texto-3 font-semibold mt-0.5">{mesAbrev(e.data)}</span>
+          </span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold line-clamp-2 break-words">{e.nome}</p>
+          <p className="text-sm text-texto-3 line-clamp-2 break-words">
+            {dataExtensa(e.data)} · {hora(e.data)} · {e.local || sede}
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          {destaque && <Selo tom="sucesso" ponto>Hoje</Selo>}
+          <p className="text-sm font-semibold mt-1 numeros leading-none">
+            {numero(e.entradas)}/{numero(e.vendidos)}
+          </p>
+          <p className="text-xs text-texto-3">entradas</p>
+        </div>
+        <Icone nome="chevronDireita" className="size-5 text-texto-3 shrink-0 -ml-1" />
+      </Cartao>
+    </Link>
   );
 }

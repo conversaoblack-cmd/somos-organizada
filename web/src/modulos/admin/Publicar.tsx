@@ -121,10 +121,11 @@ export default function Publicar() {
   const m = modulosDa(torcida);
   const feito = (chave: string) => primeirosPassos.find((i) => i.chave === chave)?.feito ?? false;
 
+  // Mesma ordem dos Primeiros passos (escudo, módulos, pagamentos): quem segue uma lista reconhece a outra.
   const obrigatorios = [
-    { ok: !!torcida.pagamentos?.configurado, titulo: "Pagamentos configurados", detalhe: "Pagar.me conectada ou modo demonstração.", para: "pagamentos?tour=admin-pagamentos" },
-    { ok: m.eventos || m.socios, titulo: "Pelo menos um módulo ligado", detalhe: "Eventos, Sócios ou os dois.", para: "personalizacao?tour=admin-personalizacao" },
     { ok: !!torcida.tema?.logoUrl, titulo: "Escudo da torcida", detalhe: "Em Personalizar página. O banner é opcional, o escudo não.", para: "personalizacao?tour=admin-personalizacao" },
+    { ok: m.eventos || m.socios, titulo: "Pelo menos um módulo ligado", detalhe: "Eventos, Sócios ou os dois.", para: "personalizacao?tour=admin-personalizacao" },
+    { ok: !!torcida.pagamentos?.configurado, titulo: "Pagamentos configurados", detalhe: "Pagar.me conectada ou modo demonstração.", para: "pagamentos?tour=admin-pagamentos" },
   ];
   const recomendados = [
     ...(m.socios ? [{ ok: feito("planos"), titulo: "Plano de sócio criado", detalhe: "Para receber associações.", para: "planos?tour=admin-planos" }] : []),

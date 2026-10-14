@@ -18,6 +18,7 @@ import * as torcida from "./torcida";
 import * as plataforma from "./plataforma";
 import * as demo from "./demo";
 import * as saas from "./saas";
+import * as alertas from "./alertas";
 import * as cadastro from "./cadastro";
 import * as conta from "./conta";
 import * as convite from "./convite";
@@ -60,6 +61,8 @@ export const ACOES: Record<string, Acao> = {
   informarPagamentoSaas: saas.informarPagamentoSaas,
   confirmarFaturaSaas: saas.confirmarFaturaSaas,
   executarRotinaSaas: saas.executarRotinaSaas,
+  registrarNotificacao: alertas.registrarNotificacao,
+  testarNotificacao: alertas.testarNotificacao,
   atualizarPixFaturas: saas.atualizarPixFaturas,
   conferirPixFatura: saas.conferirPixFatura,
   slugDisponivel: cadastro.slugDisponivel,
@@ -83,6 +86,14 @@ export const api = onCall(
     if (typeof acao !== "string" || !Object.prototype.hasOwnProperty.call(ACOES, acao)) {
       throw new HttpsError("not-found", "Ação desconhecida.");
     }
-    return ACOES[acao].run({ ...req, data: dados ?? {} });
+    try {
+      return await ACOES[acao].run({ ...req, data: dados ?? {} });
+    } catch (e) {
+      // Erro esperado (validação, permissão) já tem mensagem para a pessoa; erro inesperado avisa a equipe no celular
+      if (!(e instanceof HttpsError) || e.code === "internal" || e.code === "unknown") {
+        await alertas.alertarEquipe(`api-${acao}`, { titulo: "Erro no sistema", corpo: `Ação "${acao}": ${String((e as Error)?.message ?? e).slice(0, 160)}`, url: "/plataforma/depuracao" });
+      }
+      throw e;
+    }
   },
 );

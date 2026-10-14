@@ -148,3 +148,34 @@ async function guardarJaCarregados(urls) {
     }
   }
 }
+
+// ── Notificações da equipe (painel da plataforma instalado na tela de início) ──
+// O servidor manda pelo Firebase Cloud Messaging: { notification: { title, body }, data: { url } }.
+self.addEventListener("push", (evento) => {
+  let dados = {};
+  try {
+    dados = evento.data ? evento.data.json() : {};
+  } catch {
+    dados = { notification: { title: "Somos Organizada", body: evento.data ? evento.data.text() : "" } };
+  }
+  const n = dados.notification || {};
+  const url = (dados.data && dados.data.url) || (dados.fcmOptions && dados.fcmOptions.link) || "/plataforma";
+  evento.waitUntil(
+    self.registration.showNotification(n.title || "Somos Organizada", { body: n.body || "", icon: "/icone-192.png", badge: "/icone-192.png", data: { url } }),
+  );
+});
+
+self.addEventListener("notificationclick", (evento) => {
+  evento.notification.close();
+  const url = (evento.notification.data && evento.notification.data.url) || "/plataforma";
+  evento.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((janelas) => {
+      const aberta = janelas.find((j) => "focus" in j);
+      if (aberta) {
+        aberta.navigate(url).catch(() => undefined);
+        return aberta.focus();
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
+});

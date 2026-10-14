@@ -51,6 +51,8 @@ export function LayoutPainel({
   menu,
   usuario,
   acoesTopo,
+  tituloCelular,
+  semMenu,
   children,
 }: {
   marca: ReactNode;
@@ -58,6 +60,10 @@ export function LayoutPainel({
   menu: ItemMenu[];
   usuario: { nome: string; detalhe?: string };
   acoesTopo?: ReactNode;
+  /** No celular, entra no lugar do título da página no cabeçalho (ex.: escudo + nome da torcida). No computador fica o título. */
+  tituloCelular?: ReactNode;
+  /** Esconde o botão do menu no celular (ex.: portaria, cujo menu teria um item só). */
+  semMenu?: boolean;
   children: ReactNode;
 }) {
   const [aberto, setAberto] = useState(false);
@@ -199,16 +205,19 @@ export function LayoutPainel({
 
       <div className="min-w-0">
         <header className="sticky top-0 z-30 h-16 flex items-center gap-3 px-4 sm:px-6 border-b border-linha bg-fundo/85 backdrop-blur">
-          <BotaoIcone
-            icone="menu"
-            rotulo="Abrir menu"
-            className="lg:hidden -ml-2"
-            aria-expanded={aberto}
-            aria-controls={idMenu}
-            aria-haspopup="dialog"
-            onClick={() => setAberto(true)}
-          />
-          <p className="font-semibold truncate flex-1">{atual?.rotulo}</p>
+          {!semMenu && (
+            <BotaoIcone
+              icone="menu"
+              rotulo="Abrir menu"
+              className="lg:hidden -ml-2"
+              aria-expanded={aberto}
+              aria-controls={idMenu}
+              aria-haspopup="dialog"
+              onClick={() => setAberto(true)}
+            />
+          )}
+          {tituloCelular && <div className="lg:hidden min-w-0 flex-1">{tituloCelular}</div>}
+          <p className={cx("font-semibold truncate flex-1", !!tituloCelular && "max-lg:hidden")}>{atual?.rotulo}</p>
           {acoesTopo}
         </header>
         <main className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-[1400px]">{children}</main>

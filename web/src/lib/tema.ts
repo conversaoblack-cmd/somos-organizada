@@ -118,6 +118,21 @@ export function misturarOklab(a: string, b: string, peso: number): string {
 }
 const canais = (hex: string) => rgb(hex).join(" ");
 
+/**
+ * Texto discreto (datas, legendas, "entradas"): o mais apagado possível que ainda dá 4,5:1 (AA) sobre a
+ * superfície mais clara usada em cartões (superficie-3). Começa em 60% do texto e só se aproxima do texto-2
+ * (70%) quando o fundo exige (tema claro, por exemplo). É usado por todos os navegadores (index.css lê
+ * --cor-texto-3 direto, sem color-mix), então a conta daqui vale para iPhone antigo e Chrome novo.
+ */
+export function textoDiscreto(texto: string, fundo: string): string {
+  const superficie3 = misturarOklab(fundo, texto, 0.14);
+  for (let peso = 0.4; peso > 0.3; peso -= 0.02) {
+    const c = misturarOklab(texto, fundo, peso);
+    if (contraste(c, superficie3) >= 4.5) return c;
+  }
+  return misturarOklab(texto, fundo, 0.3);
+}
+
 /** Variáveis usadas no lugar do color-mix quando o navegador não tem color-mix (mesmas contas do index.css). */
 export function variaveisCompat(alvo: HTMLElement, fundo: string, texto: string): Record<string, string> {
   const derivadas: Record<string, string> = {
@@ -125,7 +140,7 @@ export function variaveisCompat(alvo: HTMLElement, fundo: string, texto: string)
     "superficie-2": misturarOklab(fundo, texto, 0.09),
     "superficie-3": misturarOklab(fundo, texto, 0.14),
     "texto-2": misturarOklab(texto, fundo, 0.3),
-    "texto-3": misturarOklab(texto, fundo, 0.52),
+    "texto-3": textoDiscreto(texto, fundo),
   };
   const v: Record<string, string> = {};
   for (const [nome, cor] of Object.entries(derivadas)) {

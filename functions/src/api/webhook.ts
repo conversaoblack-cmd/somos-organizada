@@ -1,4 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
+import { alertarEquipe } from "./alertas";
 import { logger } from "firebase-functions/v2";
 import { EMAIL_API_KEY, MASTER_KEY, QR_HMAC, PADROES, ESCALA_PUBLICA } from "../config";
 import { refs, FieldValue } from "../util/firebase";
@@ -62,6 +63,7 @@ export const pagarmeWebhook = onRequest({ secrets: [MASTER_KEY, QR_HMAC, EMAIL_A
     res.status(200).json({ ok: true });
   } catch (e) {
     logger.error("Erro ao processar webhook", { tid, tipo, eventoId, erro: String(e) });
+    await alertarEquipe(`webhook-${tid}`, { titulo: "Aviso da Pagar.me com erro", corpo: `Torcida ${tid}, evento ${tipo}: ${String(e).slice(0, 140)}`, url: "/plataforma/depuracao" });
     await logRef.set({ erro: String(e).slice(0, 500) }, { merge: true });
     res.status(500).json({ ok: false }); // a Pagar.me reenvia
   }

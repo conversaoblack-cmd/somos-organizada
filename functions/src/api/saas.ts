@@ -19,6 +19,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions/v2";
 import { EMAIL_API_KEY, FUSO } from "../config";
 import { avisarFaturaSaas } from "../email/saas";
+import { alertarEquipe } from "./alertas";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { dias } from "../util/datas";
 import { texto } from "../util/validacao";
@@ -343,6 +344,8 @@ export const informarPagamentoSaas = onCall(async (req) => {
   const f = (await ref.get()).data() as FaturaSaas | undefined;
   if (!f || f.status !== "aberta") throw new HttpsError("failed-precondition", "Fatura não está em aberto.");
   await ref.update({ informadoPagamentoEm: FieldValue.serverTimestamp() });
+  const nome = (await refs.torcida(tid).get()).get("nome") ?? tid;
+  await alertarEquipe(`saas-pago-${tid}-${id}`, { titulo: "Pix da mensalidade informado", corpo: `${nome} informou o pagamento de ${(f.valor / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}. Confira e confirme.`, url: "/plataforma/mensalidades" });
   return { ok: true };
 });
 

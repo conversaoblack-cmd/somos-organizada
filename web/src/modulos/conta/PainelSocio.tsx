@@ -96,10 +96,13 @@ function Topo({ torcida, usuario }: { torcida: Torcida; usuario?: { nome: string
         </div>
         <Link
           to={`/${torcida.slug}`}
-          className="inline-flex items-center gap-1.5 min-h-11 sm:min-h-9 max-w-[104px] sm:max-w-none px-2.5 sm:px-3 rounded-xl text-[13px] sm:text-sm leading-tight font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2 shrink-0"
+          aria-label="Ver site da torcida"
+          className="inline-flex items-center gap-1.5 min-h-11 sm:min-h-9 px-2.5 sm:px-3 rounded-xl text-sm leading-tight font-semibold whitespace-nowrap text-texto-2 hover:text-texto hover:bg-superficie-2 shrink-0"
         >
           <Icone nome="setaEsquerda" className="size-4 shrink-0" />
-          Ver site da torcida
+          {/* no celular "Ver site" numa linha só (o texto inteiro quebrava ao lado do avatar) */}
+          <span className="sm:hidden">Ver site</span>
+          <span className="hidden sm:inline">Ver site da torcida</span>
         </Link>
         {usuario && <MenuUsuario {...usuario} />}
       </div>

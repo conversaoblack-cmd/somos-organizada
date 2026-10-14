@@ -29,6 +29,10 @@ interface Retangulo {
 
 const MARGEM = 8;
 const LARGURA_BALAO = 360;
+/** Celular: a folha do balão ocupa no máximo esta fração da tela; o resto fica para o item destacado. */
+const FRACAO_FOLHA = 0.45;
+/** Celular: distância do topo onde o item destacado para depois de rolar (abaixo do cabeçalho fixo). */
+const TOPO_CELULAR = 76;
 
 function medir(alvo?: string): Retangulo | null {
   if (!alvo) return null;
@@ -48,14 +52,23 @@ export function medirEscondido(alvo?: string): boolean {
   return r.width > 0 && r.height > 0;
 }
 
+/** O alvo é algo para tocar (botão ou link pequeno)? Só nele aparece o círculo "toque aqui". */
+function alvoTocavel(alvo?: string): boolean {
+  if (!alvo) return false;
+  const el = document.querySelector<HTMLElement>(`[data-tour="${alvo}"]`);
+  if (!el || !el.matches('button, a[href], [role="button"], summary')) return false;
+  return el.getBoundingClientRect().height <= 80;
+}
+
 function rolarAte(alvo: string | undefined, celular: boolean) {
   if (!alvo) return;
   const el = document.querySelector<HTMLElement>(`[data-tour="${alvo}"]`);
   if (!el) return;
   const antes = el.style.scrollMarginTop;
-  el.style.scrollMarginTop = celular ? "84px" : "96px";
+  el.style.scrollMarginTop = celular ? `${TOPO_CELULAR}px` : "96px";
   const r = el.getBoundingClientRect();
-  const visivel = r.top >= 72 && r.bottom <= window.innerHeight * (celular ? 0.55 : 0.85);
+  // Celular: o balão vira folha embaixo (até 45% da tela); o alvo precisa caber (ou começar) na parte de cima
+  const visivel = r.top >= 64 && r.bottom <= window.innerHeight * (celular ? 1 - FRACAO_FOLHA : 0.85);
   if (!visivel) el.scrollIntoView({ block: celular || r.height > window.innerHeight * 0.6 ? "start" : "center", behavior: "smooth" });
   setTimeout(() => (el.style.scrollMarginTop = antes), 800);
 }
@@ -82,8 +95,9 @@ export function Tour({
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<Retangulo | null>(null);
   const [tela, setTela] = useState({ w: typeof window !== "undefined" ? window.innerWidth : 1280, h: typeof window !== "undefined" ? window.innerHeight : 800 });
-  // O vídeo abre junto com o tour (1º passo) em qualquer tela; "Ver vídeo" / "Voltar ao passo" alterna depois
-  const [verVideo, setVerVideo] = useState(true);
+  // Computador: o vídeo abre junto com o tour (1º passo). Celular: começa desligado (tela pequena e internet
+  // pré-paga); o botão "Ver vídeo" liga e desliga
+  const [verVideo, setVerVideo] = useState(() => typeof window === "undefined" || window.innerWidth >= 640);
   const [alturaBalao, setAlturaBalao] = useState(0);
   const balao = useRef<HTMLDivElement>(null);
   // Parte que rola (título, texto e vídeo); os botões ficam sempre à vista embaixo
@@ -95,7 +109,7 @@ export function Tour({
   useEffect(() => {
     if (aberto) {
       setI(0);
-      setVerVideo(true);
+      setVerVideo(window.innerWidth >= 640);
     }
   }, [aberto, id]);
 
@@ -215,11 +229,19 @@ export function Tour({
   let estiloBalao: CSSProperties = { maxHeight: alturaMax };
   let classeBalao = "";
   if (celular) {
-    // Folha embaixo ou em cima, do lado oposto ao destaque, sem cobrir o item destacado quando houver espaço
-    const alvoEmbaixo = !!rect && rect.top + rect.height / 2 > tela.h * 0.5;
-    const livre = rect ? (alvoEmbaixo ? rect.top - pad - 2 * MARGEM : tela.h - (rect.top + rect.height) - pad - 2 * MARGEM) : alturaMax;
-    estiloBalao = { ...estiloBalao, maxHeight: Math.min(alturaMax, Math.max(livre, tela.h * 0.5)) };
-    classeBalao = cx("fixed inset-x-0 mx-2 rounded-[24px]", alvoEmbaixo ? "top-2" : "bottom-2");
+    // Folha embaixo (padrão): o tour rola o alvo para o topo e a folha ocupa no máximo 45% da tela, rolando por
+    // dentro. Só vai para cima quando o alvo é baixo e ficou na metade de baixo (fim da página, não dá para rolar).
+    const alto = !!rect && rect.height > tela.h * FRACAO_FOLHA;
+    const emCima = !!rect && (alto || rect.top < tela.h * 0.5);
+    const folhaEmCima = !!rect && !emCima;
+    // Com o vídeo ligado a pessoa pediu para ver: a folha pode crescer (o vídeo tem no máximo 40% da tela)
+    // Sem alvo (passo de boas-vindas) não há nada a proteger: a folha pode ser maior
+    const limite = tela.h * (!rect || (verVideo && video) ? 0.8 : FRACAO_FOLHA);
+    estiloBalao = { ...estiloBalao, maxHeight: Math.min(alturaMax, limite) };
+    classeBalao = cx(
+      "fixed inset-x-0 mx-2 rounded-[24px]",
+      folhaEmCima ? "top-2" : "bottom-[max(0.5rem,env(safe-area-inset-bottom))]",
+    );
   } else if (destaque) {
     const largura = Math.min(LARGURA_BALAO, tela.w - 2 * MARGEM);
     const altura = Math.min(alturaBalao || 240, alturaMax);
@@ -251,7 +273,8 @@ export function Tour({
     classeBalao = "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[24px] w-[min(92vw,420px)]";
   }
 
-  const indicar = temAlvo && passo.indicarToque !== false;
+  // Círculo "toque aqui" só em botão ou link (nunca em cima de texto), no canto de baixo à direita
+  const indicar = temAlvo && passo.indicarToque !== false && (passo.indicarToque === true || alvoTocavel(passo.alvo));
 
   return createPortal(
     <div className="fixed inset-0 z-[80]" aria-live="polite">
@@ -268,7 +291,10 @@ export function Tour({
       {indicar && destaque && (
         <span
           className="absolute pointer-events-none"
-          style={{ top: destaque.top + destaque.height / 2 - 14, left: destaque.left + Math.min(destaque.width / 2, 60) - 14 }}
+          style={{
+            top: Math.min(destaque.top + destaque.height - 16, tela.h - 32),
+            left: Math.min(destaque.left + destaque.width - 16, tela.w - 32),
+          }}
           aria-hidden="true"
         >
           <span className="absolute inset-0 size-7 rounded-full bg-primaria/60 animate-ping" />
@@ -304,36 +330,41 @@ export function Tour({
 
           {video && verVideo && (
             <video
-              key={video}
-              src={video}
-              className={cx("mt-3 w-full rounded-xl border border-linha bg-black object-contain", celular ? "max-h-[30dvh]" : "max-h-[36vh]")}
+              key={video.webm}
+              className={cx(
+                "mt-3 rounded-xl border border-linha bg-black object-contain",
+                // celular: vídeo em pé (gravado a 390×844), centralizado, sem esticar na largura toda
+                celular ? "mx-auto block aspect-[390/844] max-h-[40dvh] max-w-full" : "w-full max-h-[36vh]",
+              )}
               autoPlay
               muted
               loop
               playsInline
               controls
-            />
+              preload="metadata"
+            >
+              {/* iPhone sem VP9 pula o WebM e toca o MP4 (H.264) */}
+              <source src={video.webm} type='video/webm; codecs="vp9"' />
+              <source src={video.mp4} type="video/mp4" />
+            </video>
           )}
         </div>
 
-        <div className="shrink-0 px-5 pt-3 pb-5 flex flex-wrap items-center justify-end gap-2">
-          <div className="flex gap-1 mr-auto basis-full sm:basis-auto mb-1 sm:mb-0" aria-hidden="true">
-            {passos.map((_, n) => (
-              <span key={n} className={cx("h-1.5 rounded-full transition-all", n === i ? "w-5 bg-primaria" : "w-1.5 bg-superficie-3")} />
-            ))}
+        <div className="shrink-0 px-5 pt-3 pb-5 flex flex-col gap-2">
+          {/* Linha 1 no celular: pontinhos + vídeo (sempre com texto). No computador, tudo numa linha. */}
+          <div className="flex items-center gap-2 min-h-11">
+            <div className="flex gap-1 mr-auto" aria-hidden="true">
+              {passos.map((_, n) => (
+                <span key={n} className={cx("h-1.5 rounded-full transition-all", n === i ? "w-5 bg-primaria" : "w-1.5 bg-superficie-3")} />
+              ))}
+            </div>
+            {video && (
+              <Botao variante="suave" tamanho="sm" icone={verVideo ? "x" : "camera"} onClick={() => setVerVideo((v) => !v)} aria-pressed={verVideo}>
+                {verVideo ? "Esconder vídeo" : "Ver vídeo"}
+              </Botao>
+            )}
           </div>
-          {video && (
-            <Botao
-              variante="fantasma"
-              tamanho="sm"
-              icone={verVideo ? "setaEsquerda" : "camera"}
-              onClick={() => setVerVideo((v) => !v)}
-              aria-label={verVideo ? "Esconder o vídeo e ver só o passo" : "Ver o vídeo"}
-              aria-pressed={verVideo}
-            >
-              <span className="hidden min-[400px]:inline">{verVideo ? "Só o passo" : "Ver vídeo"}</span>
-            </Botao>
-          )}
+          <div className="flex items-center justify-end gap-2">
           {i === 0 ? (
             <Botao variante="fantasma" tamanho="sm" onClick={fechar}>
               Pular
@@ -346,6 +377,7 @@ export function Tour({
           <Botao tamanho="sm" iconeDireita={i === passos.length - 1 ? "check" : "setaDireita"} onClick={proximo} data-tour-proximo="">
             {i === passos.length - 1 ? "Concluir" : "Próximo"}
           </Botao>
+          </div>
         </div>
       </div>
     </div>,

@@ -23,8 +23,13 @@ function escalaBonita(max: number): number {
   return passo * exp;
 }
 
-/** Barras empilhadas (ingressos + sócios) em SVG próprio, com dica ao passar o dedo/mouse. */
-export function GraficoReceita({ dados, altura = 220 }: { dados: PontoReceita[]; altura?: number }) {
+/**
+ * Barras empilhadas (ingressos + sócios) em SVG próprio, com dica ao passar o dedo/mouse.
+ * `socios`: mostra a série "Sócios" (legenda e dica). Sem a prop, só aparece quando algum mês tem receita de
+ * sócios: a subsede que não recebe mensalidades não vê uma legenda de algo que ela não tem.
+ */
+export function GraficoReceita({ dados, altura = 220, socios }: { dados: PontoReceita[]; altura?: number; socios?: boolean }) {
+  const comSocios = socios ?? dados.some((p) => p.socios > 0);
   const ref = useRef<HTMLDivElement>(null);
   const [largura, setLargura] = useState(600);
   const [ativo, setAtivo] = useState<number | null>(null);
@@ -37,7 +42,7 @@ export function GraficoReceita({ dados, altura = 220 }: { dados: PontoReceita[];
     return () => ro.disconnect();
   }, []);
 
-  const maxTotal = Math.max(0, ...dados.map((d) => d.ingressos + d.socios));
+  const maxTotal = Math.max(0, ...dados.map((d) => d.ingressos + (comSocios ? d.socios : 0)));
   const topo = escalaBonita(maxTotal);
   // No celular: menos marcas no eixo e rótulos de mês alternados, para não colarem uns nos outros.
   const estreito = largura < 480;
@@ -68,9 +73,11 @@ export function GraficoReceita({ dados, altura = 220 }: { dados: PontoReceita[];
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2.5 rounded-sm bg-primaria" /> Ingressos
         </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-secundaria" /> Sócios
-        </span>
+        {comSocios && (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm bg-secundaria" /> Sócios
+          </span>
+        )}
       </div>
       <div ref={ref} className="relative w-full" onMouseLeave={() => setAtivo(null)}>
         <svg width={largura} height={altura} role="img" aria-label="Receita dos últimos meses" className="block overflow-visible">
@@ -85,7 +92,7 @@ export function GraficoReceita({ dados, altura = 220 }: { dados: PontoReceita[];
           {dados.map((p, i) => {
             const x = margem.esq + i * coluna + (coluna - barra) / 2;
             const hIng = (p.ingressos / topo) * h;
-            const hSoc = (p.socios / topo) * h;
+            const hSoc = comSocios ? (p.socios / topo) * h : 0;
             const base = margem.cima + h;
             const temAmbos = hIng > 0 && hSoc > 0;
             const apagado = ativo != null && ativo !== i;
@@ -125,7 +132,7 @@ export function GraficoReceita({ dados, altura = 220 }: { dados: PontoReceita[];
             className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-xl border border-linha bg-fundo/95 backdrop-blur px-3 py-2 text-xs shadow-xl min-w-40"
             style={{
               left: Math.min(Math.max(margem.esq + ativo * coluna + coluna / 2, 80), largura - 80),
-              top: Math.max(0, y(d.ingressos + d.socios) - 78),
+              top: Math.max(0, y(d.ingressos + (comSocios ? d.socios : 0)) - (comSocios ? 78 : 60)),
             }}
           >
             <p className="font-semibold text-texto mb-1">{d.rotulo}</p>
@@ -136,13 +143,15 @@ export function GraficoReceita({ dados, altura = 220 }: { dados: PontoReceita[];
               </span>
               <span className="numeros text-texto">{moeda(d.ingressos)}</span>
             </p>
-            <p className="flex justify-between gap-4 text-texto-2">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-2 rounded-sm bg-secundaria" />
-                Sócios
-              </span>
-              <span className="numeros text-texto">{moeda(d.socios)}</span>
-            </p>
+            {comSocios && (
+              <p className="flex justify-between gap-4 text-texto-2">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="size-2 rounded-sm bg-secundaria" />
+                  Sócios
+                </span>
+                <span className="numeros text-texto">{moeda(d.socios)}</span>
+              </p>
+            )}
           </div>
         )}
       </div>

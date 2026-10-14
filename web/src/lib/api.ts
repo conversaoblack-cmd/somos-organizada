@@ -292,6 +292,8 @@ export const api = {
   executarRotinaSaas: chamar<{ agora?: number }, { faturasGeradas: number; bloqueadas: number }>("executarRotinaSaas"),
   atualizarPixFaturas: chamar<Record<string, never>, { atualizadas: number }>("atualizarPixFaturas"),
   conferirPixFatura: chamar<{ tid: string }, { atualizadas: number }>("conferirPixFatura"),
+  registrarNotificacao: chamar<{ token: string; aparelho?: string }, { ok: boolean }>("registrarNotificacao"),
+  testarNotificacao: chamar<Record<string, never>, { enviadas: number }>("testarNotificacao"),
 
   // ── Cadastro de torcida (página principal) ───────────
   entrarComCpf: chamar<{ cpf: string; senha: string }, { email: string }>("entrarComCpf"),

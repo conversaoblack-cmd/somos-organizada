@@ -79,17 +79,6 @@ export default function Pedidos() {
       <CabecalhoPagina
         titulo="Pedidos e ingressos"
         descricao="Pedidos de ingressos e de mensalidades, do mais recente para o mais antigo."
-        acoes={
-          <button
-            type="button"
-            onClick={exportar}
-            disabled={!filtrados.length}
-            data-tour="pedidos-exportar"
-            className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2 disabled:opacity-50"
-          >
-            <Icone nome="download" className="size-4" /> Baixar planilha
-          </button>
-        }
       />
 
       <div className="flex flex-col gap-3 mb-5" data-tour="pedidos-filtros">
@@ -104,7 +93,7 @@ export default function Pedidos() {
           ]}
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_240px]">
-          <Campo value={busca} onChange={setBusca} placeholder="Nome, e-mail, CPF, evento ou nº do pedido" icone="busca" aria-label="Buscar pedidos" />
+          <Campo value={busca} onChange={setBusca} placeholder="Nome, CPF ou evento" icone="busca" aria-label="Buscar pedidos" />
           <Selecao value={status} onChange={(e) => setStatus(e.target.value as StatusPedido | "")} aria-label="Filtrar por situação">
             <option value="">Todas as situações</option>
             {(Object.keys(ROTULO_STATUS_PEDIDO) as StatusPedido[]).map((s) => (
@@ -123,6 +112,21 @@ export default function Pedidos() {
         </Aviso>
       )}
 
+      {/* Planilha depois dos filtros (ação secundária): sai com os filtros escolhidos, sem ficar antes da lista no celular */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-3">
+        <p className="text-sm text-texto-3 numeros min-w-0">
+          {!pedidos.erro && filtrados.length > 0 && (
+            <>
+              {numero(filtrados.length)} {filtrados.length === 1 ? "pedido" : "pedidos"} · {moeda(somaPagos)} pagos
+              {temMais && " · há pedidos mais antigos"}
+            </>
+          )}
+        </p>
+        <Botao variante="fantasma" tamanho="sm" icone="download" onClick={exportar} disabled={!filtrados.length} data-tour="pedidos-exportar" className="ml-auto">
+          Baixar planilha
+        </Botao>
+      </div>
+
       {(pedidos.carregando && !pedidos.dados.length) || pedidos.erro || filtrados.length === 0 ? (
         <>
           <EstadoLista
@@ -138,10 +142,6 @@ export default function Pedidos() {
         </>
       ) : (
         <div data-tour="pedidos-lista">
-          <p className="text-sm text-texto-3 mb-3 numeros">
-            {numero(filtrados.length)} {filtrados.length === 1 ? "pedido" : "pedidos"} · {moeda(somaPagos)} pagos
-            {temMais && " · há pedidos mais antigos"}
-          </p>
           {/* Tabela (desktop) */}
           <Cartao className="hidden md:block overflow-hidden">
             <table className="w-full text-sm">

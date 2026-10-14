@@ -77,13 +77,23 @@ export default function Pagamentos() {
   const pag = torcida.pagamentos ?? { configurado: false, pix: true, cartao: true };
   const [sinalTrocar, setSinalTrocar] = useState(0);
   const ambiente = !pag.configurado ? null : demo ? "demo" : pag.ambiente === "producao" ? "producao" : "teste";
+  const [dominioFeito, setDominioFeito] = useMarcado(`pagarme-dominio-${tid}`);
+  const webhookOk = !!pag.webhookRecebidoEm;
+  const chavesOk = pag.configurado && !demo;
+  // Passo a passo em sanfona (no celular a página passava de 5.000 px): abre só o primeiro passo que falta;
+  // os outros mostram o título e o "Feito". Depois que a pessoa abre ou fecha um, vale a escolha dela.
+  const feitos: Record<number, boolean> = { 1: chavesOk, 2: chavesOk, 3: chavesOk, 4: dominioFeito, 5: webhookOk, 6: !!pag.splitAtivo, 7: webhookOk && pag.ambiente === "producao" };
+  const primeiroPendente = [1, 2, 3, 4, 5, 6, 7].find((n) => !feitos[n]);
+  const [escolhidos, setEscolhidos] = useState<number[] | null>(null);
+  const abertos = escolhidos ?? (primeiroPendente ? [primeiroPendente] : []);
+  const alternar = (n: number) => setEscolhidos(abertos.includes(n) ? abertos.filter((x) => x !== n) : [...abertos, n]);
   const sairDaDemo = () => {
     setSinalTrocar((n) => n + 1);
+    setEscolhidos(abertos.includes(3) ? abertos : [...abertos, 3]);
     setTimeout(() => document.querySelector('[data-tour="passo-3"]')?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   };
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
   const [carregandoUrl, setCarregandoUrl] = useState(false);
-  const [dominioFeito, setDominioFeito] = useMarcado(`pagarme-dominio-${tid}`);
   const logs = useColecao<LogWebhook>(query(collection(db, `torcidas/${tid}/webhooks`), orderBy("recebidoEm", "desc"), limit(20)), `webhooks-${tid}`);
 
   useEffect(() => {
@@ -100,7 +110,6 @@ export default function Pagamentos() {
     };
   }, [tid, pag.configurado]);
 
-  const webhookOk = !!pag.webhookRecebidoEm;
   // Domínio onde o torcedor paga (não onde a diretoria está agora: plataforma., *.web.app etc. dariam o errado)
   const origem = "https://somosorganizada.com.br";
 
@@ -146,39 +155,42 @@ export default function Pagamentos() {
             </p>
           </div>
         </div>
-        <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-          <Info rotulo="Ambiente">
-            {ambiente === "producao" ? (
-              <Selo tom="sucesso">Produção</Selo>
-            ) : ambiente === "demo" ? (
-              <Selo tom="info">Demonstração</Selo>
-            ) : ambiente === "teste" ? (
-              <Selo tom="alerta">Teste</Selo>
-            ) : (
-              "—"
-            )}
-          </Info>
-          <Info rotulo="Formas aceitas">
-            {pag.configurado ? [pag.pix && "Pix", pag.cartao && "Cartão"].filter(Boolean).join(" + ") || "—" : "—"}
-          </Info>
-          <Info rotulo="Chave pública">{pag.chavePublica ? <span className="font-mono text-xs">{pag.chavePublica.slice(0, 12)}…</span> : "—"}</Info>
-          <Info rotulo="Último aviso da Pagar.me">
-            {pag.webhookRecebidoEm ? (
-              <span title={dataHora(pag.webhookRecebidoEm)}>{relativo(pag.webhookRecebidoEm)}</span>
-            ) : (
-              <span className="text-alerta">Nunca recebido</span>
-            )}
-          </Info>
-        </dl>
+        {/* Antes de conectar, a grade só teria "—": aparece depois do passo 3 (ou da demonstração). */}
+        {pag.configurado && (
+          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+            <Info rotulo="Ambiente">
+              {ambiente === "producao" ? (
+                <Selo tom="sucesso">Produção</Selo>
+              ) : ambiente === "demo" ? (
+                <Selo tom="info">Demonstração</Selo>
+              ) : ambiente === "teste" ? (
+                <Selo tom="alerta">Teste</Selo>
+              ) : (
+                "—"
+              )}
+            </Info>
+            <Info rotulo="Formas aceitas">
+              {pag.configurado ? [pag.pix && "Pix", pag.cartao && "Cartão"].filter(Boolean).join(" + ") || "—" : "—"}
+            </Info>
+            <Info rotulo="Chave pública">{pag.chavePublica ? <span className="font-mono text-xs">{pag.chavePublica.slice(0, 12)}…</span> : "—"}</Info>
+            <Info rotulo="Último aviso da Pagar.me">
+              {pag.webhookRecebidoEm ? (
+                <span title={dataHora(pag.webhookRecebidoEm)}>{relativo(pag.webhookRecebidoEm)}</span>
+              ) : (
+                <span className="text-alerta">Nunca recebido</span>
+              )}
+            </Info>
+          </dl>
+        )}
       </Cartao>
 
       {(!pag.configurado || demo) && <CartaoDemo demo={demo} sair={sairDaDemo} />}
 
       <h2 className="text-xl font-bold mb-1">Passo a passo</h2>
-      <p className="text-sm text-texto-2 mb-5">Faça na ordem. Você pode voltar aqui quando quiser.</p>
+      <p className="text-sm text-texto-2 mb-5">Faça na ordem. Toque num passo para abrir ou fechar.</p>
 
       <ol className="relative">
-        <Passo n={1} titulo="Crie a conta da torcida na Pagar.me" feito={pag.configurado && !demo}>
+        <Passo n={1} aberto={abertos.includes(1)} alternar={alternar} titulo="Crie a conta da torcida na Pagar.me" feito={chavesOk}>
           <p>
             Entre em{" "}
             <a href="https://pagar.me" target="_blank" rel="noreferrer" className="text-primaria-texto font-semibold hover:underline">
@@ -193,7 +205,7 @@ export default function Pagamentos() {
           <Dica>Informe a conta bancária da torcida: é para lá que a Pagar.me transfere o dinheiro das vendas.</Dica>
         </Passo>
 
-        <Passo n={2} titulo="Copie as duas chaves de acesso" feito={pag.configurado && !demo}>
+        <Passo n={2} aberto={abertos.includes(2)} alternar={alternar} titulo="Copie as duas chaves de acesso" feito={chavesOk}>
           <p>
             No painel da Pagar.me, vá em <Caminho>Configurações</Caminho> → <Caminho>Chaves</Caminho>. Você vai ver duas chaves:
           </p>
@@ -232,11 +244,11 @@ export default function Pagamentos() {
           </div>
         </Passo>
 
-        <Passo n={3} titulo="Cole as chaves aqui" feito={pag.configurado && !demo}>
-          <FormChaves configurado={pag.configurado && !demo} sinalAbrir={sinalTrocar} aoSalvar={(url) => setWebhookUrl(url)} />
+        <Passo n={3} aberto={abertos.includes(3)} alternar={alternar} titulo="Cole as chaves aqui" feito={chavesOk}>
+          <FormChaves configurado={chavesOk} sinalAbrir={sinalTrocar} aoSalvar={(url) => setWebhookUrl(url)} />
         </Passo>
 
-        <Passo n={4} titulo="Libere o endereço do app para pagamentos com cartão" feito={dominioFeito}>
+        <Passo n={4} aberto={abertos.includes(4)} alternar={alternar} titulo="Libere o endereço do app para pagamentos com cartão" feito={feitos[4]}>
           <p>
             Para o cartão funcionar, a Pagar.me precisa saber de onde vêm os pagamentos. No painel deles, vá em <Caminho>Configurações</Caminho> →{" "}
             <Caminho>Domínios</Caminho> (em algumas contas fica em <Caminho>Checkout</Caminho>) e adicione:
@@ -249,7 +261,7 @@ export default function Pagamentos() {
           <p className="text-xs text-texto-3">Se só for aceitar Pix, este passo é opcional.</p>
         </Passo>
 
-        <Passo n={5} titulo="Ligue o aviso automático de pagamento (webhook)" feito={webhookOk}>
+        <Passo n={5} aberto={abertos.includes(5)} alternar={alternar} titulo="Ligue o aviso automático de pagamento (webhook)" feito={webhookOk}>
           <p>É por ele que a Pagar.me avisa na hora que um Pix foi pago ou que uma cobrança foi recusada.</p>
           {demo ? (
             <Aviso tom="info">No modo demonstração não precisa configurar: os pagamentos simulados confirmam na hora.</Aviso>
@@ -286,11 +298,11 @@ export default function Pagamentos() {
           )}
         </Passo>
 
-        <Passo n={6} titulo="Dividir as vendas direto com as subsedes" feito={!!pag.splitAtivo}>
+        <Passo n={6} aberto={abertos.includes(6)} alternar={alternar} titulo="Dividir as vendas direto com as subsedes" feito={!!pag.splitAtivo}>
           <PassoSplit configurado={pag.configurado} />
         </Passo>
 
-        <Passo n={7} titulo="Faça uma compra de teste" feito={webhookOk && pag.ambiente === "producao"} ultimo>
+        <Passo n={7} aberto={abertos.includes(7)} alternar={alternar} titulo="Faça uma compra de teste" feito={feitos[7]} ultimo>
           <p>
             Crie um evento de <strong>R$ 1,00</strong> (pode ser rascunho e depois publicado), abra a página da torcida e compre com Pix e com cartão.
           </p>
@@ -381,6 +393,14 @@ function FormChaves({ configurado, aoSalvar, sinalAbrir }: { configurado: boolea
   const skLimpa = sk.trim();
   const pkLimpa = pk.trim();
   const producao = skLimpa.startsWith("sk_") && !skLimpa.startsWith("sk_test_") && !skLimpa.startsWith("sk_demo_");
+  // exemplo com o nome da própria torcida (sem acento, espaço nem símbolo, até 13 letras)
+  const exemploDescritor =
+    (torcida.nome || torcida.slug)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Za-z0-9]/g, "")
+      .toUpperCase()
+      .slice(0, 13) || "NOMEDATORCIDA";
 
   function validar(): boolean {
     setErro(null);
@@ -480,7 +500,7 @@ function FormChaves({ configurado, aoSalvar, sinalAbrir }: { configurado: boolea
         onChange={(v) => setDescritor(v.slice(0, 13))}
         maxLength={13}
         dica={`Até 13 letras. É o que aparece na fatura do torcedor. ${descritor.length}/13`}
-        placeholder="TORCIDABRASIL"
+        placeholder={exemploDescritor}
       />
       {erro && <Aviso tom="perigo">{erro}</Aviso>}
       <div className="flex flex-wrap gap-2">
@@ -531,6 +551,9 @@ function CartaoDemo({ demo, sair }: { demo: boolean; sair: () => void }) {
   const avisar = useToast();
   const [ativando, setAtivando] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
+  // Fora da demonstração, os detalhes (cartões de teste, Pix) ficam atrás do "Como funciona": o cartão inteiro
+  // empurrava o passo a passo para longe no celular. Na demonstração, ficam abertos (é quando servem).
+  const [detalhes, setDetalhes] = useState(demo);
   return (
     <Cartao className="p-5 sm:p-6 mb-8 border-info/40" data-tour="pag-demo">
       <div className="flex items-start gap-4">
@@ -544,7 +567,7 @@ function CartaoDemo({ demo, sair }: { demo: boolean; sair: () => void }) {
           </p>
         </div>
       </div>
-      <div className="grid sm:grid-cols-2 gap-3 mt-4 text-sm">
+      <div id="demo-como-testar" hidden={!detalhes} className="grid sm:grid-cols-2 gap-3 mt-4 text-sm">
         <div className="rounded-2xl bg-superficie-2 border border-linha p-3">
           <p className="font-semibold mb-1">Cartões de teste</p>
           <p className="text-texto-2">
@@ -571,6 +594,10 @@ function CartaoDemo({ demo, sair }: { demo: boolean; sair: () => void }) {
             Ativar modo demonstração
           </Botao>
         )}
+        <Botao variante="fantasma" aria-expanded={detalhes} aria-controls="demo-como-testar" onClick={() => setDetalhes((v) => !v)}>
+          {detalhes ? "Esconder como testar" : "Como testar"}
+          <Icone nome="chevronBaixo" className={cx("size-5 shrink-0 transition-transform", detalhes && "rotate-180")} />
+        </Botao>
       </div>
       <Confirmar
         aberto={confirmar}
@@ -712,23 +739,56 @@ function PassoSplit({ configurado }: { configurado: boolean }) {
   );
 }
 
-function Passo({ n, titulo, feito, ultimo, children }: { n: number; titulo: string; feito?: boolean; ultimo?: boolean; children: ReactNode }) {
+function Passo({
+  n,
+  titulo,
+  feito,
+  ultimo,
+  aberto,
+  alternar,
+  children,
+}: {
+  n: number;
+  titulo: string;
+  feito?: boolean;
+  ultimo?: boolean;
+  aberto: boolean;
+  alternar: (n: number) => void;
+  children: ReactNode;
+}) {
+  const idConteudo = `passo-pagamento-${n}`;
   return (
-    <li className="relative pl-12 sm:pl-14 pb-8" data-tour={`passo-${n}`}>
+    <li className={cx("relative pl-12 sm:pl-14", aberto ? "pb-8" : "pb-4")} data-tour={`passo-${n}`}>
       {!ultimo && <span className={cx("absolute left-[17px] sm:left-[19px] top-10 bottom-0 w-px", feito ? "bg-primaria/50" : "bg-linha-forte")} aria-hidden="true" />}
       <span
         className={cx(
           "absolute left-0 top-0 size-9 sm:size-10 rounded-full grid place-items-center font-bold text-sm",
           feito ? "bg-primaria text-sobre-primaria" : "bg-superficie-2 border border-linha-forte text-texto",
         )}
+        aria-hidden="true"
       >
         {feito ? <Icone nome="check" className="size-5" /> : n}
       </span>
-      <h3 className="text-lg font-bold pt-1 sm:pt-1.5 flex flex-wrap items-center gap-2">
-        {titulo}
-        {feito && <Selo tom="sucesso">Feito</Selo>}
+      <h3 className="text-lg font-bold">
+        <button
+          type="button"
+          onClick={() => alternar(n)}
+          aria-expanded={aberto}
+          aria-controls={idConteudo}
+          className="w-full min-h-11 -mt-1 sm:mt-0 flex items-center gap-2 text-left rounded-xl hover:text-primaria-texto"
+        >
+          <span className="flex-1 min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="sr-only">Passo {n}: </span>
+            {titulo}
+            {feito && <Selo tom="sucesso">Feito</Selo>}
+          </span>
+          <Icone nome="chevronBaixo" className={cx("size-5 shrink-0 text-texto-3 transition-transform", aberto && "rotate-180")} />
+        </button>
       </h3>
-      <div className="mt-3 space-y-3 text-[15px] text-texto-2 leading-relaxed">{children}</div>
+      {/* hidden em vez de desmontar: o que foi digitado (chaves, código rp_) continua ao fechar e abrir */}
+      <div id={idConteudo} hidden={!aberto} className="mt-3 space-y-3 text-[15px] text-texto-2 leading-relaxed">
+        {children}
+      </div>
     </li>
   );
 }

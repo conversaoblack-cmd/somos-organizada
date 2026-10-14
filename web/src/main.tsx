@@ -6,11 +6,13 @@ import { App } from "./App";
 import { instalarCapturaDeErros } from "./lib/erros";
 import { vigiarDadosOffline } from "./lib/offline";
 import { registrarServiceWorker } from "./lib/sw";
+import { bloquearZoom } from "./lib/semZoom";
 import { ProvedorToast } from "./ui";
 
 instalarCapturaDeErros();
 vigiarDadosOffline();
 registrarServiceWorker();
+bloquearZoom();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

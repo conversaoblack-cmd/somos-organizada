@@ -176,11 +176,6 @@ export default function Socios() {
       <CabecalhoPagina
         titulo="Sócios"
         descricao={ehDiretoria ? "Todos os sócios da torcida, do cadastro mais recente para o mais antigo." : `Sócios da ${nomeSede(sedeEscopo)}.`}
-        acoes={
-          <Botao variante="contorno" tamanho="sm" icone="download" onClick={exportar} carregando={baixando} disabled={!podeLer || (!socios.dados.length && !socios.carregando)} data-tour="socios-exportar">
-            Baixar planilha
-          </Botao>
-        }
       />
 
       <div className="flex flex-col gap-3 mb-5">
@@ -211,6 +206,20 @@ export default function Socios() {
 
       {ehDiretoria && <AvisoLimiteSocios className="mb-4" />}
 
+      {/* Planilha depois dos filtros (ação secundária): no celular a lista vem primeiro, e a planilha sai com os filtros escolhidos */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-3">
+        <p className="text-sm text-texto-3 numeros min-w-0">
+          {!lista.carregando && !lista.erro && filtrados.length > 0
+            ? buscaNoServidor
+              ? `${numero(filtrados.length)} ${filtrados.length === 1 ? "sócio encontrado" : "sócios encontrados"}`
+              : `${numero(filtrados.length)} ${filtrados.length === 1 ? "sócio" : "sócios"}${temMais ? " · há cadastros mais antigos" : ""}`
+            : null}
+        </p>
+        <Botao variante="fantasma" tamanho="sm" icone="download" onClick={exportar} carregando={baixando} disabled={!podeLer || (!socios.dados.length && !socios.carregando)} data-tour="socios-exportar" className="ml-auto">
+          Baixar planilha
+        </Botao>
+      </div>
+
       {buscaLocal && temMais && !socios.erro && (
         <Aviso tom="info" className="mb-4">
           A busca por nome ou e-mail olha só os {numero(socios.dados.length)} sócios já carregados. Para achar qualquer sócio, busque pelo CPF ou pela
@@ -239,11 +248,6 @@ export default function Socios() {
         </>
       ) : (
         <div data-tour="socios-lista">
-          <p className="text-sm text-texto-3 mb-3 numeros">
-            {buscaNoServidor
-              ? `${numero(filtrados.length)} ${filtrados.length === 1 ? "sócio encontrado" : "sócios encontrados"}`
-              : `${numero(filtrados.length)} ${filtrados.length === 1 ? "sócio" : "sócios"}${temMais ? " · há cadastros mais antigos" : ""}`}
-          </p>
           <Cartao className="hidden md:block overflow-hidden">
             <table className="w-full text-sm">
               <thead className="text-left text-texto-3 text-xs uppercase tracking-wide">
@@ -300,14 +304,18 @@ export default function Socios() {
               <button key={s.id} type="button" onClick={() => setAbertoId(s.id)} className="text-left min-w-0 w-full">
                 <Cartao className="p-4 flex items-center gap-3 active:bg-superficie-2">
                   <Avatar nome={s.nome} />
+                  {/* situação embaixo do nome: no celular o selo ao lado cortava o nome do sócio */}
                   <div className="min-w-0 flex-1">
                     <p className="font-medium truncate">{s.nome}</p>
                     <p className="text-xs text-texto-3 truncate">
                       {s.matricula ? `Nº ${s.matricula} · ` : ""}
                       {s.planoNome}
                     </p>
+                    <Selo tom={TOM_STATUS_SOCIO[s.status]} className="mt-1.5">
+                      {ROTULO_STATUS_SOCIO[s.status]}
+                    </Selo>
                   </div>
-                  <Selo tom={TOM_STATUS_SOCIO[s.status]}>{ROTULO_STATUS_SOCIO[s.status]}</Selo>
+                  <Icone nome="chevronDireita" className="size-5 text-texto-3 shrink-0" />
                 </Cartao>
               </button>
             ))}

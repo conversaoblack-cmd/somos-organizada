@@ -12,6 +12,7 @@ import { ConfirmarPix } from "./Mensalidades";
 import { Abas, AreaTexto, Aviso, Botao, Campo, Cartao, Carregando, Icone, Indicador, Modal, OpcoesCartao, Selo, Vazio, useToast } from "@/ui";
 import {
   gmv,
+  moedaCompacta,
   numero,
   rotuloPlanoSaas,
   usoDoPlanoDaTorcida,
@@ -106,7 +107,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
         <div className="space-y-6">
           {linha && (
             <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
-              <Indicador rotulo="Receita do mês" valor={moeda(gmv(linha.mes))} detalhe={`Taxa gerada ${moeda(linha.mes.taxaServico)}`} icone="dinheiro" />
+              <Indicador rotulo="Receita do mês" valor={moedaCompacta(gmv(linha.mes))} detalhe={`Taxa gerada ${moeda(linha.mes.taxaServico)}`} icone="dinheiro" />
               <Indicador rotulo="Ingressos no mês" valor={numero(linha.mes.ingressosQtd)} detalhe={`${numero(linha.geral.ingressosQtd)} no total`} icone="ingresso" />
               <Indicador rotulo="Sócios ativos" valor={numero(linha.geral.socios?.ativo)} detalhe={`${numero(linha.mes.novosSocios)} novos no mês`} icone="usuarios" />
               <Indicador

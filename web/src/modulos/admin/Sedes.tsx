@@ -81,8 +81,9 @@ export default function Sedes() {
   const subsedes = sedes.filter((s) => s.tipo !== "principal");
 
   const item = (s: ComId<Sede>) => (
-    <Cartao key={s.id} className={cx("p-4 sm:p-5 flex items-start gap-4", s.ativa === false && "opacity-60")}>
-      <span className={cx("size-11 shrink-0 rounded-2xl grid place-items-center", s.tipo === "principal" ? "bg-primaria/15 text-primaria-texto" : "bg-superficie-2 text-texto-2")}>
+    <Cartao key={s.id} className={cx("p-4 sm:p-5 flex flex-wrap items-start gap-x-4", s.ativa === false && "opacity-60")}>
+      {/* ícone só a partir de 640 px: no celular a caixa da conta de recebimento precisa da largura toda */}
+      <span className={cx("size-11 shrink-0 rounded-2xl hidden sm:grid place-items-center", s.tipo === "principal" ? "bg-primaria/15 text-primaria-texto" : "bg-superficie-2 text-texto-2")}>
         <Icone nome={s.tipo === "principal" ? "escudo" : "casa"} className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
@@ -96,49 +97,6 @@ export default function Sedes() {
             <Icone nome="usuario" className="size-4" /> {s.responsavel}
           </p>
         )}
-        {s.tipo !== "principal" && (
-          <div className="mt-3 rounded-2xl border border-linha bg-superficie-2 px-3 py-2.5 flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-texto-3">Conta de recebimento</span>
-                <SeloRecebedor r={s.recebedor} />
-              </div>
-              <p className="text-xs mt-1 text-texto-2">
-                {s.recebedor
-                  ? "Cadastrada pelo responsável da subsede. Por segurança, os dados bancários ficam só com ele."
-                  : "O responsável cadastra pelo painel da subsede, em Recebimentos. Sem ela, os eventos da subsede não podem ser publicados."}
-              </p>
-              {!s.recebedor && s.ativa !== false && !membros.carregando && (
-                <AcessoSubsede
-                  responsaveis={responsaveis(s.id)}
-                  reenviando={reenviando}
-                  convidar={() => setConvidarSede(s.id)}
-                  reenviar={reenviar}
-                />
-              )}
-            </div>
-            {demo && s.recebedor && s.recebedor.status !== "active" && (
-              <Botao tamanho="sm" variante="suave" icone="raio" className="shrink-0" carregando={atualizando === s.id} onClick={() => simularProvaDeVida(s.id)}>
-                <span className="hidden sm:inline">Simular prova de vida aprovada</span>
-                <span className="sm:hidden">Simular</span>
-              </Botao>
-            )}
-            {s.recebedor && (
-              <Botao
-                tamanho="sm"
-                variante="fantasma"
-                icone="atualizar"
-                className="shrink-0"
-                carregando={atualizando === s.id}
-                onClick={() => atualizarRecebedor(s.id)}
-                aria-label={`Atualizar a situação da conta de recebimento de ${s.nome}`}
-                title="Atualizar situação"
-              >
-                <span className="hidden sm:inline">Atualizar</span>
-              </Botao>
-            )}
-          </div>
-        )}
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {s.tipo !== "principal" && (
@@ -150,6 +108,50 @@ export default function Sedes() {
         )}
         <BotaoIcone icone="lapis" rotulo={`Editar ${s.nome}`} onClick={() => setEditando(s)} />
       </div>
+      {/* conta de recebimento numa linha própria, abaixo do nome (fora da coluna espremida entre ícone e lápis) */}
+      {s.tipo !== "principal" && (
+        <div className="mt-3 w-full sm:ml-15 sm:w-[calc(100%-3.75rem)] rounded-2xl border border-linha bg-superficie-2 px-3 py-2.5 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-texto-3">Conta de recebimento</span>
+              <SeloRecebedor r={s.recebedor} />
+            </div>
+            <p className="text-xs mt-1 text-texto-2">
+              {s.recebedor
+                ? "Cadastrada pelo responsável da subsede. Por segurança, os dados bancários ficam só com ele."
+                : "O responsável cadastra pelo painel da subsede, em Recebimentos. Sem ela, os eventos da subsede não podem ser publicados."}
+            </p>
+            {!s.recebedor && s.ativa !== false && !membros.carregando && (
+              <AcessoSubsede
+                responsaveis={responsaveis(s.id)}
+                reenviando={reenviando}
+                convidar={() => setConvidarSede(s.id)}
+                reenviar={reenviar}
+              />
+            )}
+          </div>
+          {demo && s.recebedor && s.recebedor.status !== "active" && (
+            <Botao tamanho="sm" variante="suave" icone="raio" className="shrink-0" carregando={atualizando === s.id} onClick={() => simularProvaDeVida(s.id)}>
+              <span className="hidden sm:inline">Simular prova de vida aprovada</span>
+              <span className="sm:hidden">Simular</span>
+            </Botao>
+          )}
+          {s.recebedor && (
+            <Botao
+              tamanho="sm"
+              variante="fantasma"
+              icone="atualizar"
+              className="shrink-0"
+              carregando={atualizando === s.id}
+              onClick={() => atualizarRecebedor(s.id)}
+              aria-label={`Atualizar a situação da conta de recebimento de ${s.nome}`}
+              title="Atualizar situação"
+            >
+              <span className="hidden sm:inline">Atualizar</span>
+            </Botao>
+          )}
+        </div>
+      )}
     </Cartao>
   );
 
@@ -345,7 +347,7 @@ function AcessoSubsede({
     return (
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
         <span className="text-xs text-texto-3">Ninguém tem acesso ao painel desta subsede ainda.</span>
-        <Botao tamanho="sm" icone="enviar" onClick={convidar}>
+        <Botao tamanho="sm" icone="enviar" onClick={convidar} className="w-full whitespace-nowrap sm:w-auto">
           Convidar responsável
         </Botao>
       </div>
@@ -354,10 +356,10 @@ function AcessoSubsede({
     <ul className="mt-2.5 space-y-1.5">
       {responsaveis.map((m) => (
         <li key={m.id} className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-texto-2 min-w-0 truncate">
+          <span className="text-xs text-texto-2 min-w-0 max-w-full truncate">
             Responsável: <strong className="text-texto">{m.nome || m.email}</strong> <span className="text-texto-3">({m.email})</span>
           </span>
-          <Botao tamanho="sm" variante="suave" icone="enviar" carregando={reenviando === m.id} disabled={!!reenviando && reenviando !== m.id} onClick={() => reenviar(m)}>
+          <Botao tamanho="sm" variante="suave" icone="enviar" carregando={reenviando === m.id} disabled={!!reenviando && reenviando !== m.id} onClick={() => reenviar(m)} className="whitespace-nowrap">
             Reenviar convite
           </Botao>
         </li>

@@ -1,3 +1,4 @@
+import { usarManifestoDaPlataforma } from "@/lib/notificacoes";
 import { rp } from "@/lib/hosts";
 import { enviarConfirmacaoEmail } from "@/lib/emailsConta";
 import { useCallback, useEffect, useState } from "react";
@@ -66,6 +67,9 @@ export default function PainelPlataforma() {
   const u = useUsuario();
   const { acesso, verificar } = useClaimPlataforma(u);
 
+  useEffect(() => {
+    usarManifestoDaPlataforma();
+  }, []);
   useEffect(() => {
     aplicarTema(TEMA_PAINEL);
     const titulo = document.title;

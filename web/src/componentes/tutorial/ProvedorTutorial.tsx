@@ -169,6 +169,16 @@ export function ProvedorTutorial({ children }: { children: ReactNode }) {
     setAberto(null);
   }, [marcarVisto]);
 
+  // Enquanto o tour está aberto, body[data-tour-aberto]: o botão flutuante de ajuda some (não tapa o balão)
+  const tourAberto = !!aberto;
+  useEffect(() => {
+    if (!tourAberto) return;
+    document.body.setAttribute("data-tour-aberto", "");
+    return () => {
+      document.body.removeAttribute("data-tour-aberto");
+    };
+  }, [tourAberto]);
+
   const atual = registros.length ? registros[registros.length - 1]! : null;
   const valor = useMemo(() => ({ registrar, abrir, autoIniciar, atual }), [registrar, abrir, autoIniciar, atual]);
 
@@ -207,7 +217,7 @@ export function BotaoPassoAPasso({ className }: { className?: string }) {
       onClick={() => c.abrir(id)}
       data-tour="botao-passo-a-passo"
       className={cx(
-        "inline-flex items-center gap-1.5 h-9 pl-2 pr-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto bg-superficie-2 hover:bg-superficie-3 border border-linha",
+        "inline-flex items-center justify-center gap-1.5 h-11 min-w-11 sm:h-9 sm:min-w-0 px-2.5 sm:pl-2 sm:pr-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto bg-superficie-2 hover:bg-superficie-3 border border-linha",
         className,
       )}
       aria-label="Ver passo a passo desta página"

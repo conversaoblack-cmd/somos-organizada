@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useLocation, useSearchParams } from "react-router";
 import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { api, ehErroDeConexao, mensagemDeErro } from "@/lib/api";
 import { aplicarTema, temaDoPainel } from "@/lib/tema";
-import { cpfValido, dataExtensa, hora, paraData, relativo } from "@/lib/formatos";
+import { cpfValido, dataExtensa, hora, mesAbrev, paraData, relativo } from "@/lib/formatos";
 import type { ComId, Evento, Membro, Papel } from "@/lib/tipos";
 import { useColecao, useDocumento } from "@/hooks/dados";
 import { useMembro, useTorcida } from "@/hooks/torcida";
@@ -204,6 +205,7 @@ function EscolherEvento({ tid, membro, escolher }: { tid: string; membro: Membro
         <span className={cx("w-16 shrink-0 rounded-2xl py-2 text-center", destaque ? "bg-primaria text-sobre-primaria" : "bg-superficie-2")}>
           <span className="block text-[11px] font-bold uppercase">{dataExtensa(e.data).split(",")[0]?.replace(".", "")}</span>
           <span className="block text-2xl font-black leading-none numeros">{paraData(e.data)?.toLocaleDateString("pt-BR", { day: "2-digit", timeZone: "America/Sao_Paulo" })}</span>
+          <span className="block text-[11px] font-bold">{mesAbrev(e.data)}</span>
           <span className="block text-[11px] font-semibold numeros">{hora(e.data)}</span>
         </span>
         <span className="min-w-0 flex-1">
@@ -250,19 +252,19 @@ function EscolherEvento({ tid, membro, escolher }: { tid: string; membro: Membro
         <div className="mt-6 space-y-7">
           {!!grupos.hoje.length && (
             <section>
-              <h2 className="text-xs font-bold uppercase tracking-[.18em] text-primaria-texto mb-2.5">Hoje</h2>
+              <h2 className="text-base font-bold text-primaria-texto mb-2.5">Hoje</h2>
               <ul className="space-y-3">{grupos.hoje.map((e) => item(e, true))}</ul>
             </section>
           )}
           {!!grupos.proximos.length && (
             <section>
-              <h2 className="text-xs font-bold uppercase tracking-[.18em] text-texto-3 mb-2.5">Próximos</h2>
+              <h2 className="text-base font-bold text-texto-2 mb-2.5">Próximos</h2>
               <ul className="space-y-3">{grupos.proximos.map((e) => item(e))}</ul>
             </section>
           )}
           {!!grupos.anteriores.length && (
             <section>
-              <h2 className="text-xs font-bold uppercase tracking-[.18em] text-texto-3 mb-2.5">Anteriores</h2>
+              <h2 className="text-base font-bold text-texto-2 mb-2.5">Anteriores</h2>
               <ul className="space-y-3 opacity-75">{grupos.anteriores.map((e) => item(e))}</ul>
             </section>
           )}
@@ -802,11 +804,29 @@ export default function Portaria() {
   const { tid, torcida } = useTorcida();
   const { membro, carregando, usuario, incerto } = useMembro(tid);
   const chaveEvento = `portaria:evento:${tid}`;
-  const [eventoId, setEventoId] = useState<string | null>(() => ler(chaveEvento));
+  // ?evento=ID (cartão de evento do painel da portaria) já abre a leitura daquele evento.
+  const [busca, setBusca] = useSearchParams();
+  const eventoDaUrl = busca.get("evento");
+  // O painel manda { toque: true } quando o porteiro tocou no cartão: o áudio já foi liberado por esse toque.
+  const veioDeToque = !!(useLocation().state as { toque?: boolean } | null)?.toque;
+  const [eventoId, setEventoId] = useState<string | null>(() => eventoDaUrl || ler(chaveEvento));
   // Evento lembrado da sessão (a página foi recarregada): sem um toque o navegador bloqueia som e vibração,
   // então a leitura espera "Toque para começar". Escolhendo o evento na lista, o toque já aconteceu.
-  const [pronto, setPronto] = useState(() => !eventoId);
+  const [pronto, setPronto] = useState(() => !eventoId || (!!eventoDaUrl && veioDeToque));
   const [tentativa, setTentativa] = useState(0);
+
+  // Guarda o evento da URL na sessão e limpa o endereço: recarregar e "Trocar evento" seguem o fluxo normal.
+  useEffect(() => {
+    if (!eventoDaUrl) return;
+    gravar(chaveEvento, eventoDaUrl);
+    setBusca(
+      (b) => {
+        b.delete("evento");
+        return b;
+      },
+      { replace: true },
+    );
+  }, [eventoDaUrl, chaveEvento, setBusca]);
 
   // Cores da torcida em alto contraste (reaplica se o documento da torcida mudar).
   useEffect(() => {

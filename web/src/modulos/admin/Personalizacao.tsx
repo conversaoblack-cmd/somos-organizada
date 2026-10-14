@@ -84,7 +84,7 @@ export default function Personalizacao() {
     };
   }, [alterado]);
 
-  // Botão "Ver prévia" fixo no celular: some quando a prévia já está na tela.
+  // "Ver prévia" na barra de salvar (celular): some quando a prévia já está na tela.
   const [previaVisivel, setPreviaVisivel] = useState(false);
   useEffect(() => {
     const el = document.getElementById("previa");
@@ -106,6 +106,9 @@ export default function Personalizacao() {
 
   const setTema = (k: keyof Tema, v: string | undefined) => setF((x) => ({ ...x, tema: { ...x.tema, [k]: v } }));
   const coresInvalidas = CORES.filter((c) => !corValida(f.tema[c.chave]));
+  const [ajusteAberto, setAjustarCores] = useState(false);
+  // com cor inválida o campo precisa aparecer (é onde está o erro)
+  const ajustarCores = ajusteAberto || coresInvalidas.length > 0;
   const avisos = coresInvalidas.length ? [] : avisosDeContraste(f.tema);
   const emailInvalido = !!f.contato.email && !emailValido(f.contato.email);
   const zapDig = soDigitos(f.contato.whatsapp);
@@ -153,7 +156,7 @@ export default function Personalizacao() {
     <div className="pb-[calc(6rem+var(--folga-inferior,0px))]">
       <CabecalhoPagina
         titulo="Personalizar página"
-        descricao="Cores, imagens, textos e regras da página pública da torcida."
+        descricao="Escudo, cores, textos e regras da página pública da torcida."
         acoes={
           <>
           <a href="#previa" className="xl:hidden inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3">
@@ -173,47 +176,31 @@ export default function Personalizacao() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_400px] items-start">
         <div className="space-y-6 min-w-0">
-          <Secao titulo="O que o site vai oferecer" descricao="Ligue pelo menos um. Dá para mudar quando quiser." tour="modulos">
-            <div className="space-y-5">
-              <Interruptor
-                ligado={f.modulos.eventos}
-                onChange={(v) => setF((x) => ({ ...x, modulos: { ...x.modulos, eventos: v } }))}
-                disabled={f.modulos.eventos && !f.modulos.socios}
-                rotulo="Venda de ingressos (Eventos)"
-                descricao="Caravanas, festas, jogos: o torcedor compra o ingresso pela página e recebe o QR Code."
+          {/* Escudo primeiro: é o único item obrigatório para publicar (antes ficava a ~1.000 px do topo no celular). */}
+          <Secao titulo="Imagens" descricao="O escudo é obrigatório para publicar. O banner é opcional." tour="imagens">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-[180px_1fr]">
+              <SeletorImagem
+                // no celular o quadro do escudo ocupava a largura toda (~330 px de altura)
+                className="max-w-40 sm:max-w-none"
+                rotulo="Escudo / logo"
+                url={f.tema.logoUrl}
+                onChange={(u) => setTema("logoUrl", u ?? undefined)}
+                pasta={`torcidas/${tid}/publico/marca`}
+                prefixo="logo"
+                ladoMaximo={512}
+                proporcao="aspect-square"
+                dica="Quadrada, fundo transparente (PNG)."
               />
-              <Interruptor
-                ligado={f.modulos.socios}
-                onChange={(v) => setF((x) => ({ ...x, modulos: { ...x.modulos, socios: v } }))}
-                disabled={f.modulos.socios && !f.modulos.eventos}
-                rotulo="Associação de sócios"
-                descricao="Planos mensais ou anuais, carteirinha digital e preço de sócio nos eventos."
+              <SeletorImagem
+                rotulo="Banner do topo"
+                url={f.tema.bannerUrl}
+                onChange={(u) => setTema("bannerUrl", u ?? undefined)}
+                pasta={`torcidas/${tid}/publico/marca`}
+                prefixo="banner"
+                proporcao="aspect-[16/7]"
+                dica="Foto da arquibancada, horizontal (1600×700). Até 5 MB."
               />
             </div>
-            {torcida.modulos === undefined && !alterado && (
-              <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-info/30 bg-info/10 p-4">
-                <p className="text-sm text-texto-2 flex-1">Confirme a escolha para concluir este passo (pode deixar os dois ligados).</p>
-                <Botao
-                  tamanho="sm"
-                  icone="check"
-                  carregando={confirmandoModulos}
-                  onClick={async () => {
-                    if (confirmandoModulos) return;
-                    setConfirmandoModulos(true);
-                    try {
-                      await comPrazo(updateDoc(doc(db, `torcidas/${tid}`), { modulos: f.modulos }));
-                      avisar("Módulos confirmados.", "sucesso");
-                    } catch (e) {
-                      avisar(mensagemGravacao(e), "erro");
-                    } finally {
-                      setConfirmandoModulos(false);
-                    }
-                  }}
-                >
-                  Confirmar módulos
-                </Botao>
-              </div>
-            )}
           </Secao>
 
           <Secao titulo="Cores" descricao="Escolha uma paleta pronta ou ajuste cada cor." tour="cores">
@@ -234,7 +221,29 @@ export default function Personalizacao() {
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Os códigos #RRGGBB ficam atrás do "Ajustar cores": a maioria só escolhe uma paleta. */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="flex -space-x-1" aria-hidden="true">
+                {CORES.map((c) => (
+                  <span
+                    key={c.chave}
+                    className="size-6 rounded-full border border-linha-forte"
+                    style={{ backgroundColor: corValida(f.tema[c.chave]) ? f.tema[c.chave] : "transparent" }}
+                  />
+                ))}
+              </span>
+              <Botao
+                variante="contorno"
+                tamanho="sm"
+                icone="pincel"
+                aria-expanded={ajustarCores}
+                aria-controls="ajuste-cores"
+                onClick={() => setAjustarCores((v) => !v)}
+              >
+                {ajustarCores ? "Esconder ajuste das cores" : "Ajustar cores"}
+              </Botao>
+            </div>
+            <div id="ajuste-cores" hidden={!ajustarCores} className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
               {CORES.map((c) => {
                 const v = f.tema[c.chave];
                 const ok = corValida(v);
@@ -279,28 +288,47 @@ export default function Personalizacao() {
             )}
           </Secao>
 
-          <Secao titulo="Imagens" tour="imagens">
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-[180px_1fr]">
-              <SeletorImagem
-                rotulo="Escudo / logo"
-                url={f.tema.logoUrl}
-                onChange={(u) => setTema("logoUrl", u ?? undefined)}
-                pasta={`torcidas/${tid}/publico/marca`}
-                prefixo="logo"
-                ladoMaximo={512}
-                proporcao="aspect-square"
-                dica="Quadrada, fundo transparente (PNG)."
+          <Secao titulo="O que o site vai oferecer" descricao="Ligue pelo menos um. Dá para mudar quando quiser." tour="modulos">
+            <div className="space-y-5">
+              <Interruptor
+                ligado={f.modulos.eventos}
+                onChange={(v) => setF((x) => ({ ...x, modulos: { ...x.modulos, eventos: v } }))}
+                disabled={f.modulos.eventos && !f.modulos.socios}
+                rotulo="Venda de ingressos (Eventos)"
+                descricao="Caravanas, festas, jogos: o torcedor compra o ingresso pela página e recebe o QR Code."
               />
-              <SeletorImagem
-                rotulo="Banner do topo"
-                url={f.tema.bannerUrl}
-                onChange={(u) => setTema("bannerUrl", u ?? undefined)}
-                pasta={`torcidas/${tid}/publico/marca`}
-                prefixo="banner"
-                proporcao="aspect-[16/7]"
-                dica="Foto da arquibancada, horizontal (1600×700). Até 5 MB."
+              <Interruptor
+                ligado={f.modulos.socios}
+                onChange={(v) => setF((x) => ({ ...x, modulos: { ...x.modulos, socios: v } }))}
+                disabled={f.modulos.socios && !f.modulos.eventos}
+                rotulo="Associação de sócios"
+                descricao="Planos mensais ou anuais, carteirinha digital e preço de sócio nos eventos."
               />
             </div>
+            {torcida.modulos === undefined && !alterado && (
+              <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-info/30 bg-info/10 p-4">
+                <p className="text-sm text-texto-2 flex-1">Confirme a escolha para concluir este passo (pode deixar os dois ligados).</p>
+                <Botao
+                  tamanho="sm"
+                  icone="check"
+                  carregando={confirmandoModulos}
+                  onClick={async () => {
+                    if (confirmandoModulos) return;
+                    setConfirmandoModulos(true);
+                    try {
+                      await comPrazo(updateDoc(doc(db, `torcidas/${tid}`), { modulos: f.modulos }));
+                      avisar("Módulos confirmados.", "sucesso");
+                    } catch (e) {
+                      avisar(mensagemGravacao(e), "erro");
+                    } finally {
+                      setConfirmandoModulos(false);
+                    }
+                  }}
+                >
+                  Confirmar módulos
+                </Botao>
+              </div>
+            )}
           </Secao>
 
           <Secao titulo="Textos" tour="textos">
@@ -323,7 +351,7 @@ export default function Personalizacao() {
             </div>
           </Secao>
 
-          <Secao titulo="Contato">
+          <Secao titulo="Contato" tour="contato">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
               <Campo
                 rotulo="WhatsApp"
@@ -389,24 +417,23 @@ export default function Personalizacao() {
         </div>
       </div>
 
-      {!previaVisivel && (
-        <a
-          href="#previa"
-          className="xl:hidden fixed z-30 left-4 lg:left-[288px] bottom-[calc(max(1rem,env(safe-area-inset-bottom))+var(--folga-inferior,0px))] inline-flex items-center gap-2 h-12 px-4 rounded-full bg-superficie-3 text-texto text-sm font-semibold border border-linha-forte shadow-[0_10px_30px_-8px_rgba(0,0,0,.6)] animate-deslizar"
-        >
-          <Icone nome="olho" className="size-5" /> Ver prévia
-        </a>
-      )}
-
       {alterado && (
         <div
           ref={barra}
           className="fixed bottom-0 inset-x-0 lg:left-[272px] z-30 border-t border-linha bg-fundo/95 backdrop-blur px-4 sm:px-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] animate-deslizar"
         >
           <div className="max-w-[1400px] flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:justify-end">
-            <p className="text-sm text-texto-2 sm:mr-auto text-center sm:text-left" role="status">
-              Você tem alterações não salvas.
-            </p>
+            <div className="flex items-center gap-2 sm:mr-auto">
+              <p className="text-sm text-texto-2 flex-1" role="status">
+                Você tem alterações não salvas.
+              </p>
+              {/* "Ver prévia" mora aqui (e no topo da página): flutuando, cobria os campos no celular */}
+              {!previaVisivel && (
+                <a href="#previa" className="xl:hidden shrink-0 inline-flex items-center gap-1.5 h-11 sm:h-9 px-3 rounded-xl text-sm font-semibold bg-superficie-2 hover:bg-superficie-3">
+                  <Icone nome="olho" className="size-4" /> Ver prévia
+                </a>
+              )}
+            </div>
             <div className="flex flex-col-reverse sm:flex-row gap-2">
               <Botao variante="fantasma" onClick={() => setF(formDe(torcida))} disabled={salvando} className="w-full sm:w-auto">
                 Descartar

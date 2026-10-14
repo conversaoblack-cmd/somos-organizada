@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, Navigate, Route, Routes } from "react-router";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router";
 import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -10,7 +10,7 @@ import { useMembro, useTorcida } from "@/hooks/torcida";
 import { LayoutPainel, type ItemMenu } from "@/componentes/LayoutPainel";
 import { Login } from "@/componentes/Login";
 import { BotaoPassoAPasso, ProvedorTutorial } from "@/componentes/tutorial";
-import { Botao, BotaoLink, cx, Icone, TelaCarregando, Vazio } from "@/ui";
+import { Botao, BotaoIcone, BotaoLink, cx, Icone, TelaCarregando, Vazio } from "@/ui";
 import { CtxPainel, ROTULO_PAPEL, usePainel, type ContextoPainel } from "./contexto";
 import VisaoGeral from "./VisaoGeral";
 import Eventos, { DetalheEvento } from "./Eventos";
@@ -24,7 +24,7 @@ import Personalizacao from "./Personalizacao";
 import Pagamentos from "./Pagamentos";
 import InicioPortaria from "./InicioPortaria";
 import Recebimentos from "./Recebimentos";
-import PrimeirosPassos, { usePrimeirosPassos } from "./PrimeirosPassos";
+import PrimeirosPassos, { modulosDa, usePrimeirosPassos } from "./PrimeirosPassos";
 import Publicar from "./Publicar";
 import PlanoSomos from "./PlanoSomos";
 import PortariaEquipe from "./PortariaEquipe";
@@ -165,6 +165,8 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
     const PAGINA = "Página e equipe";
     const CONFIG = "Configurações";
     const pagamentosOk = !!torcida.pagamentos?.configurado;
+    // No celular o "Ver página" sai do cabeçalho (apertado) e fica aqui; mesma aba, com o aviso de alteração não salva.
+    const verPagina: ItemMenu = { para: `/${torcida.slug}`, rotulo: "Ver página da torcida", icone: "externo", fim: true, grupo: PAGINA };
     const itens: (ItemMenu & { so?: boolean })[] = [
       { para: base, rotulo: "Visão geral", icone: "painel", fim: true, grupo: DIA },
       { para: `${base}/primeiros-passos`, rotulo: "Primeiros passos", icone: "lista", contador: passosPendentes || undefined, grupo: DIA },
@@ -187,8 +189,13 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
       { para: `${base}/plano`, rotulo: "Plano Somos Organizada", icone: "bandeira", so: true, grupo: CONFIG },
       { para: `${base}/dominio`, rotulo: "Domínio", icone: "cadeado", so: true, grupo: CONFIG },
     ];
-    return itens.filter((i) => !i.so || ehDiretoria);
-  }, [papel, base, ehDiretoria, analise.dados.length, aprovacao.dados.length, contaPendente, passosPendentes, torcida.pagamentos?.configurado, torcida.publicada]);
+    const visiveis: ItemMenu[] = itens.filter((i) => !i.so || ehDiretoria);
+    // depois do último item de "Página e equipe" (a subsede não tem esse grupo: vai para o fim)
+    const fimPagina = visiveis.reduce((ult, it, i) => (it.grupo === PAGINA ? i : ult), -1);
+    if (fimPagina >= 0) visiveis.splice(fimPagina + 1, 0, verPagina);
+    else visiveis.push(verPagina);
+    return visiveis;
+  }, [papel, base, ehDiretoria, analise.dados.length, aprovacao.dados.length, contaPendente, passosPendentes, torcida.pagamentos?.configurado, torcida.publicada, torcida.slug]);
 
   const marca = (
     <div className="flex items-center gap-3">
@@ -207,30 +214,49 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
     </div>
   );
 
+  // Cabeçalho no celular: a identidade da torcida (escudo + nome) no lugar do título da página, que o H1 já repete
+  // logo abaixo e que cortava ("Pedidos e in…").
+  const identidadeCelular = (
+    <div className="flex items-center gap-2 min-w-0">
+      {torcida.tema?.logoUrl ? (
+        <img src={torcida.tema.logoUrl} alt="" width={32} height={32} decoding="async" className="size-8 shrink-0 rounded-lg object-contain bg-superficie-2" />
+      ) : (
+        <span className="size-8 shrink-0 rounded-lg bg-primaria text-sobre-primaria grid place-items-center font-display text-xs leading-none" aria-hidden="true">
+          {iniciaisTorcida(torcida.nome)}
+        </span>
+      )}
+      <p className="font-semibold truncate min-w-0">{torcida.nome}</p>
+    </div>
+  );
+
   const detalheUsuario = `${ROTULO_PAPEL[papel]}${sedeEscopo ? ` · ${ctx.nomeSede(sedeEscopo)}` : ""}`;
 
   const soDiretoria = (el: ReactNode) => (ehDiretoria ? el : <Navigate to={base} replace />);
 
   return (
     <CtxPainel.Provider value={ctx}>
+      {/* Na portaria o menu teria um item só: some o botão do menu e o "Sair" vai para o cabeçalho. */}
       <LayoutPainel
         marca={marca}
         menu={menu}
         usuario={{ nome: membro.nome || membro.email, detalhe: detalheUsuario }}
+        tituloCelular={identidadeCelular}
+        semMenu={papel === "portaria"}
         acoesTopo={
           <div className="flex items-center gap-2">
             <ContadorFatura />
-            <BotaoPassoAPasso />
+            <BotaoPassoAPasso className="max-sm:h-11" />
             <a
               href={`/${torcida.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center gap-1.5 min-w-11 h-11 sm:h-9 px-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2"
+              className="hidden lg:inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2"
               aria-label="Ver página da torcida"
             >
               <Icone nome="externo" className="size-4" />
-              <span className="hidden md:inline">Ver página</span>
+              <span>Ver página</span>
             </a>
+            {papel === "portaria" && <BotaoIcone icone="sair" rotulo="Sair" className="lg:hidden -mr-2" onClick={() => signOut(auth)} />}
           </div>
         }
       >
@@ -292,15 +318,20 @@ function ContadorFatura() {
     <Link
       to={`${base}/plano`}
       className={cx(
-        "inline-flex items-center gap-1.5 h-9 px-2.5 rounded-xl text-sm font-semibold border whitespace-nowrap",
+        "inline-flex items-center gap-1.5 h-11 sm:h-9 px-2.5 rounded-xl text-sm font-semibold border whitespace-nowrap shrink-0",
         urgente ? "border-alerta/40 bg-alerta/10 text-alerta" : "border-linha bg-superficie-2 text-texto-2 hover:text-texto",
       )}
       aria-label={`Fatura da Somos Organizada vence em ${curto}. Abrir o plano para pagar.`}
       title="Ver a fatura e pagar no Pix"
     >
       <Icone nome="relogio" className="size-4" />
-      <span className="numeros">{curto}</span>
-      <span className="hidden md:inline font-normal">para a fatura</span>
+      {/* diz o que é a contagem (só "7 dias" não explicava nada) */}
+      <span className="md:hidden">
+        Fatura: <span className="numeros">{curto}</span>
+      </span>
+      <span className="hidden md:inline">
+        <span className="numeros">{curto}</span> <span className="font-normal">para a fatura</span>
+      </span>
     </Link>
   );
 }
@@ -308,6 +339,7 @@ function ContadorFatura() {
 /** Faixas no topo de todo o painel: demonstração, site fora do ar, mensalidade em atraso. */
 function FaixasGlobais() {
   const { torcida, tid, ehDiretoria, base, assinatura, demo } = usePainel();
+  const { pathname } = useLocation();
   const fatura = useDocumento<FaturaSaas>(ehDiretoria && assinatura?.faturaAbertaId ? `torcidas/${tid}/faturasSaas/${assinatura.faturaAbertaId}` : null);
   const faixas: ReactNode[] = [];
 
@@ -333,17 +365,34 @@ function FaixasGlobais() {
         <strong>Modo de demonstração:</strong> nenhum pagamento é real.
       </Faixa>,
     );
-  if (!torcida.publicada && !torcida.bloqueioSaas)
+  // Na própria página Publicar a faixa só repetiria o que está na tela.
+  if (!torcida.publicada && !torcida.bloqueioSaas && pathname !== `${base}/publicar`) {
+    // Mesmos obrigatórios da página Publicar: escudo, um módulo ligado e pagamentos. Antes disso o botão "Publicar"
+    // levaria a uma página com o botão desativado; a faixa só informa e mostra o que falta.
+    const m = modulosDa(torcida);
+    const pronto = !!torcida.tema?.logoUrl && (m.eventos || m.socios) && !!torcida.pagamentos?.configurado;
     faixas.push(
       <Faixa
         key="publicar"
         tom="neutro"
         icone="olho"
-        acao={ehDiretoria && <BotaoLink to={`${base}/publicar`} tamanho="sm" icone="raio">Publicar</BotaoLink>}
+        acao={
+          ehDiretoria &&
+          (pronto ? (
+            <BotaoLink to={`${base}/publicar`} tamanho="sm" icone="raio">Publicar</BotaoLink>
+          ) : (
+            pathname !== `${base}/primeiros-passos` && (
+              <Link to={`${base}/primeiros-passos`} className="inline-flex items-center gap-1 min-h-11 sm:min-h-0 font-semibold text-primaria-texto hover:underline">
+                Ver o que falta <Icone nome="setaDireita" className="size-4" />
+              </Link>
+            )
+          ))
+        }
       >
         Seu site ainda não está no ar. Só a sua equipe consegue ver e testar.
       </Faixa>,
     );
+  }
   if (!faixas.length) return null;
   return <div className="space-y-2 mb-5 -mt-1">{faixas}</div>;
 }

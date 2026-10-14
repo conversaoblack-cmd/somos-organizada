@@ -80,6 +80,39 @@ function diagnosticoSeguro(): Record<string, unknown> {
   return { ...d, url: limparUrl(d.url), erros };
 }
 
+/**
+ * O botão de ajuda some quando atrapalha:
+ * - com o passo a passo aberto (body[data-tour-aberto], posto pelo ProvedorTutorial);
+ * - no celular/tablet, quando a tela tem barra fixa embaixo (barra de compra do evento, "Salvar alterações"): essas
+ *   telas já avisam com --folga-inferior no <html>; tela nova pode usar body[data-barra-fixa].
+ */
+function useBotaoAtrapalha(): boolean {
+  const [atrapalha, setAtrapalha] = useState(false);
+  useEffect(() => {
+    const raiz = document.documentElement;
+    const corpo = document.body;
+    const mq = typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 1023px)") : null;
+    const conferir = () => {
+      const folga = parseFloat(raiz.style.getPropertyValue("--folga-inferior")) || 0;
+      const barra = corpo.hasAttribute("data-barra-fixa") || folga > 0;
+      setAtrapalha(corpo.hasAttribute("data-tour-aberto") || (!!mq?.matches && barra));
+    };
+    conferir();
+    const obs = typeof MutationObserver !== "undefined" ? new MutationObserver(conferir) : null;
+    obs?.observe(corpo, { attributes: true, attributeFilter: ["data-tour-aberto", "data-barra-fixa"] });
+    obs?.observe(raiz, { attributes: true, attributeFilter: ["style"] });
+    // Safari 13 só tem addListener
+    if (mq?.addEventListener) mq.addEventListener("change", conferir);
+    else mq?.addListener(conferir);
+    return () => {
+      obs?.disconnect();
+      if (mq?.removeEventListener) mq.removeEventListener("change", conferir);
+      else mq?.removeListener(conferir);
+    };
+  }, []);
+  return atrapalha;
+}
+
 export default function SuporteFlutuante() {
   const { tid, torcida } = useTorcida();
   const { pathname } = useLocation();
@@ -94,6 +127,7 @@ export default function SuporteFlutuante() {
   const [vistos, setVistos] = useState<Record<string, number>>({});
   const botao = useRef<HTMLButtonElement>(null);
   const painel = useRef<HTMLDivElement>(null);
+  const escondido = useBotaoAtrapalha();
 
   // Chamados do usuário (só com login de e-mail) — alimenta o aviso de resposta nova
   const chamados = useColecao<Chamado>(
@@ -153,7 +187,9 @@ export default function SuporteFlutuante() {
           aria-label={naoVistos.length ? `Ajuda — ${naoVistos.length} resposta(s) nova(s) da equipe` : "Ajuda"}
           aria-haspopup="dialog"
           data-botao-ajuda=""
-          className="fixed bottom-[calc(1.25rem+var(--folga-inferior,0px))] right-5 z-40 size-12 rounded-full bg-primaria text-sobre-primaria shadow-[0_10px_30px_-8px_rgba(0,0,0,.6)] grid place-items-center hover:brightness-110 active:scale-95 transition"
+          // escondido sem sair da página: o espaço reservado no fim (index.css) não pula
+          style={escondido ? { display: "none" } : undefined}
+          className="fixed bottom-[calc(max(1rem,env(safe-area-inset-bottom))+var(--folga-inferior,0px))] right-4 sm:right-5 z-40 size-12 rounded-full bg-primaria text-sobre-primaria shadow-[0_10px_30px_-8px_rgba(0,0,0,.6)] grid place-items-center hover:brightness-110 active:scale-95 transition"
         >
           <Icone nome="chat" className="size-6" />
           {naoVistos.length > 0 && (
