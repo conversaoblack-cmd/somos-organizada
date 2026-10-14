@@ -89,7 +89,7 @@ function MenuUsuario({ nome, email, foto }: { nome: string; email: string; foto:
 
 function Topo({ torcida, usuario }: { torcida: Torcida; usuario?: { nome: string; email: string; foto: string | null } | null }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-linha bg-fundo/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 pt-[env(safe-area-inset-top)] border-b border-linha bg-fundo/85 backdrop-blur-xl">
       <div className="mx-auto max-w-5xl h-16 px-4 sm:px-6 flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <MarcaTorcida torcida={torcida} />

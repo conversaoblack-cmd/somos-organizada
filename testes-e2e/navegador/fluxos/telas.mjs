@@ -33,6 +33,27 @@ async function percorrerTour(ap, p, id) {
   await balao.waitFor({ state: "detached", timeout: 5_000 }).catch(() => undefined);
 }
 
+/** Celular: arrastar da borda esquerda para a direita abre o menu; arrastar para a esquerda fecha. */
+async function gestoDoMenu(ap, p) {
+  if (await p.locator('[aria-labelledby="tour-titulo"]').count()) await p.keyboard.press("Escape");
+  const arrastar = (x1, x2) =>
+    p.evaluate(([a, b]) => {
+      const toque = (x) => new Touch({ identifier: 1, target: document.body, clientX: x, clientY: 400 });
+      document.dispatchEvent(new TouchEvent("touchstart", { touches: [toque(a)], changedTouches: [toque(a)], bubbles: true }));
+      document.dispatchEvent(new TouchEvent("touchend", { touches: [], changedTouches: [toque(b)], bubbles: true }));
+    }, [x1, x2]);
+  await arrastar(6, 180);
+  const menu = p.getByRole("dialog", { name: "Menu do painel" });
+  await menu.waitFor({ timeout: 5_000 }).catch(() => {
+    throw new Error(`[${ap.rotulo}] arrastar da borda esquerda não abriu o menu`);
+  });
+  await p.waitForTimeout(300);
+  await arrastar(250, 60);
+  await menu.waitFor({ state: "detached", timeout: 5_000 }).catch(() => {
+    throw new Error(`[${ap.rotulo}] arrastar para a esquerda não fechou o menu`);
+  });
+}
+
 async function visitar(estado, email, entrada, telas) {
   // os outros fluxos fecham o tour sozinhos (Esc); aqui ele é o que está sendo testado
   const ap = await novoAparelho(estado, `telas-${email.split("@")[0]}`, { fecharTour: false });
@@ -41,6 +62,7 @@ async function visitar(estado, email, entrada, telas) {
   await entrar(p, email);
   await p.waitForLoadState("networkidle").catch(() => undefined);
   await p.waitForTimeout(2_000);
+  if (ap.largura <= 480 && email !== "portaria@brasil.test" && email !== "socio@brasil.test") await gestoDoMenu(ap, p);
   for (const [rota, tour] of telas) {
     await p.goto(`${BASE}${rota}${tour ? `${rota.includes("?") ? "&" : "?"}tour=${tour}` : ""}`);
     if (tour) await percorrerTour(ap, p, tour);

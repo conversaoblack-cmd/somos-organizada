@@ -68,7 +68,7 @@ export function CabecalhoTorcida() {
   const { ficha, usuario } = useMinhaFicha(tid);
   const ehSocio = socioEmDia(ficha);
   return (
-    <header className="sticky top-0 z-30 border-b border-linha bg-fundo/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 pt-[env(safe-area-inset-top)] border-b border-linha bg-fundo/80 backdrop-blur-xl">
       <div className="mx-auto max-w-6xl h-16 px-4 sm:px-6 flex items-center gap-3">
         <Marca />
         <div className="flex-1" />

@@ -31,6 +31,7 @@ import PortariaEquipe from "./PortariaEquipe";
 import Dominio from "./Dominio";
 import { recebedorAtivo } from "./recebedor";
 import { iniciaisTorcida, SemConexao } from "../publico/comum";
+import { modoApp } from "@/lib/notificacoes";
 
 function Centro({ children }: { children: ReactNode }) {
   return <div className="min-h-dvh grid place-items-center px-4 py-10">{children}</div>;
@@ -45,6 +46,7 @@ export default function PainelDiretoria() {
   useEffect(() => {
     aplicarTema(temaDoPainel(torcida.tema));
     document.title = `Painel · ${torcida.nome}`;
+    modoApp(torcida.nome); // atalho na tela de início abre o painel como app
   }, [torcida]);
 
   if (carregando) return <TelaCarregando />;

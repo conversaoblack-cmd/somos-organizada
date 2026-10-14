@@ -34,22 +34,35 @@ export async function ativarNotificacoes(): Promise<void> {
   await api.registrarNotificacao({ token, aparelho: navigator.userAgent.slice(0, 120) });
 }
 
-/** iPhone: o atalho na tela de início lê o manifesto ao ser criado; no painel da plataforma ele abre como app. */
-export function usarManifestoDaPlataforma() {
-  if (document.querySelector('link[rel="manifest"]')) return;
-  const link = document.createElement("link");
-  link.rel = "manifest";
-  link.href = "/plataforma.webmanifest";
-  document.head.appendChild(link);
+/**
+ * Painel aberto como app pelo atalho na tela de início (iPhone e Android), sem a barra do navegador.
+ * O iPhone lê estas marcações ao criar o atalho e abre na página onde ele foi criado.
+ * O cabeçalho dos painéis desce para a área livre (env(safe-area-inset-top)): a faixa da hora e da bateria não recebe toque.
+ */
+export function modoApp(titulo: string, manifesto?: string) {
+  if (manifesto && !document.querySelector('link[rel="manifest"]')) {
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = manifesto;
+    document.head.appendChild(link);
+  }
   for (const [nome, valor] of [
     ["apple-mobile-web-app-capable", "yes"],
     ["mobile-web-app-capable", "yes"],
-    ["apple-mobile-web-app-title", "Somos Equipe"],
+    ["apple-mobile-web-app-title", titulo.slice(0, 30)],
     ["apple-mobile-web-app-status-bar-style", "black-translucent"],
   ]) {
-    const m = document.createElement("meta");
-    m.name = nome;
+    let m = document.querySelector<HTMLMetaElement>(`meta[name="${nome}"]`);
+    if (!m) {
+      m = document.createElement("meta");
+      m.name = nome;
+      document.head.appendChild(m);
+    }
     m.content = valor;
-    document.head.appendChild(m);
   }
+}
+
+/** Painel da plataforma: ícone "Somos Equipe" com o manifesto próprio (necessário para as notificações no iPhone). */
+export function usarManifestoDaPlataforma() {
+  modoApp("Somos Equipe", "/plataforma.webmanifest");
 }

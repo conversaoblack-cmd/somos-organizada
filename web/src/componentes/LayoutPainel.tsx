@@ -111,6 +111,34 @@ export function LayoutPainel({
     };
   }, [aberto, idMenu]);
 
+  // Celular: arrastar da borda esquerda para a direita abre o menu; com ele aberto, arrastar para a esquerda fecha.
+  useEffect(() => {
+    if (semMenu) return;
+    let inicio: { x: number; y: number } | null = null;
+    const comecar = (e: TouchEvent) => {
+      if (window.matchMedia("(min-width: 1024px)").matches || e.touches.length !== 1) return;
+      const t = e.touches[0]!;
+      // fechado: só a faixa de 28 px junto à borda (o resto da tela rola e toca normal)
+      inicio = aberto || t.clientX <= 28 ? { x: t.clientX, y: t.clientY } : null;
+    };
+    const terminar = (e: TouchEvent) => {
+      if (!inicio) return;
+      const t = e.changedTouches[0]!;
+      const dx = t.clientX - inicio.x;
+      const dy = Math.abs(t.clientY - inicio.y);
+      inicio = null;
+      if (dy > Math.abs(dx)) return; // gesto vertical: era rolagem
+      if (!aberto && dx > 60) setAberto(true);
+      else if (aberto && dx < -60) setAberto(false);
+    };
+    document.addEventListener("touchstart", comecar, { passive: true });
+    document.addEventListener("touchend", terminar, { passive: true });
+    return () => {
+      document.removeEventListener("touchstart", comecar);
+      document.removeEventListener("touchend", terminar);
+    };
+  }, [aberto, semMenu]);
+
   function aoClicarItem(e: MouseEvent<HTMLAnchorElement>, para: string) {
     setAberto(false);
     if (pendentes > 0 && local.pathname !== para) {
@@ -188,7 +216,7 @@ export function LayoutPainel({
             aria-modal="true"
             aria-label="Menu do painel"
             tabIndex={-1}
-            className="absolute left-0 top-0 h-full w-[84%] max-w-xs bg-fundo border-r border-linha p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col outline-none animate-[surgir_.2s_ease_both]"
+            className="absolute left-0 top-0 h-full w-[84%] max-w-xs bg-fundo border-r border-linha p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col outline-none animate-[surgir_.2s_ease_both]"
           >
             <div className="px-2 pt-1 pb-6 flex items-start justify-between">
               <div className="min-w-0">
@@ -204,7 +232,7 @@ export function LayoutPainel({
       )}
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 h-16 flex items-center gap-3 px-4 sm:px-6 border-b border-linha bg-fundo/85 backdrop-blur">
+        <header className="sticky top-0 z-30 h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex items-center gap-3 px-4 sm:px-6 border-b border-linha bg-fundo/85 backdrop-blur">
           {!semMenu && (
             <BotaoIcone
               icone="menu"

@@ -99,7 +99,7 @@ function Cabecalho({ titulo, subtitulo, voltar, membro }: { titulo: string; subt
   const [confirmarSaida, setConfirmarSaida] = useState(false);
   const [saindo, setSaindo] = useState(false);
   return (
-    <header className="sticky top-0 z-30 bg-fundo/90 backdrop-blur-xl border-b border-linha">
+    <header className="sticky top-0 z-30 pt-[env(safe-area-inset-top)] bg-fundo/90 backdrop-blur-xl border-b border-linha">
       <div className="mx-auto max-w-5xl h-16 px-3 sm:px-6 flex items-center gap-2">
         {voltar ? (
           <BotaoIcone icone="chevronEsquerda" rotulo="Trocar evento" onClick={voltar} className="size-12" />
