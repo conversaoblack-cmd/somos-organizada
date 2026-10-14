@@ -8,9 +8,10 @@ import type { ReactNode } from "react";
 import { Icone, type NomeIcone } from "@/ui/icones";
 import { PLANOS_SAAS_PADRAO } from "@/lib/tipos";
 import { CALCULO_INICIAL, calcularTaxa, reais } from "./calculo";
+import { linkWhatsappEquipe, WHATSAPP_EQUIPE } from "@/lib/contato";
 
-export const WHATSAPP = "5571994095784";
-export const LINK_WHATSAPP = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent("Olá! Quero conhecer a Somos Organizada para a minha torcida.")}`;
+export const WHATSAPP = WHATSAPP_EQUIPE;
+export const LINK_WHATSAPP = linkWhatsappEquipe("Olá! Quero conhecer a Somos Organizada para a minha torcida.");
 
 export interface OpcoesLanding {
   /** Endereço da torcida de demonstração (ex.: "demo"); sem ele o botão não aparece. */

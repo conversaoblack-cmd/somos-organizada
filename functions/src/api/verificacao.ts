@@ -8,6 +8,8 @@ import { createHash } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { EMAIL_API_KEY, URL_APP } from "../config";
+import { origemDaTorcida } from "../util/urls";
+import { areaDoCaminhoInterno } from "../dominio/enderecos";
 import { auth, db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { exigirLogin } from "../dominio/permissoes";
 import { enviarAgora } from "../email/enviar";
@@ -86,7 +88,9 @@ export const enviarConfirmacaoEmail = onCall({ secrets: [EMAIL_API_KEY] }, async
 
   const usuario = await auth.getUser(uid).catch(() => null);
   const primeiroNome = (usuario?.displayName ?? "").trim().split(/\s+/)[0];
-  const url = `${URL_APP.value()}/verificar?oobCode=${encodeURIComponent(codigo)}&continuar=${encodeURIComponent(continuar)}`;
+  // No domínio próprio da torcida (se estiver no ar): a confirmação continua no mesmo endereço em que a pessoa se cadastrou
+  const origem = marca === MARCA_PLATAFORMA ? URL_APP.value().replace(/\/+$/, "") : origemDaTorcida(marca, areaDoCaminhoInterno(continuar));
+  const url = `${origem}/verificar?oobCode=${encodeURIComponent(codigo)}&continuar=${encodeURIComponent(continuar)}`;
   const m = montar(marca, "Confirme seu e-mail para continuar", { email, nome: usuario?.displayName ?? undefined }, {
     selo: "Confirmação de e-mail",
     titulo: primeiroNome ? `Falta só confirmar, ${esc(primeiroNome)}!` : "Falta só confirmar seu e-mail",

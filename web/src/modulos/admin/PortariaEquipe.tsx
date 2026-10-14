@@ -3,6 +3,7 @@
  * aos porteiros, convida quem vai trabalhar na entrada e abre o leitor para a própria diretoria.
  */
 import { useMemo, useState } from "react";
+import { urlTorcida } from "@/lib/hosts";
 import { Link } from "react-router";
 import { collection, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -24,14 +25,14 @@ export default function PortariaEquipe() {
   const [convidar, setConvidar] = useState(false);
   const [resultado, setResultado] = useState<Convite | null>(null);
   const [reenviando, setReenviando] = useState<string | null>(null);
-  const link = `${location.origin}/${torcida.slug}/portaria`;
+  const link = urlTorcida(torcida, "/portaria");
   const textoZap = `Portaria da ${torcida.nome}: no dia do evento, abra ${link} no celular, entre com o seu e-mail e a senha que você criou no convite e aponte a câmera para o QR Code do ingresso.`;
   const lista = [...porteiros.dados].sort((a, b) => Number(b.ativo) - Number(a.ativo) || (a.nome ?? "").localeCompare(b.nome ?? ""));
 
   async function reenviar(m: ComId<Membro>) {
     setReenviando(m.id);
     try {
-      setResultado(await enviarConvite({ tid, slug: torcida.slug, nome: m.nome || m.email, email: m.email, papel: "portaria", sedeId: m.sedeId }));
+      setResultado(await enviarConvite({ tid, slug: torcida.slug, dominio: torcida.dominio, nome: m.nome || m.email, email: m.email, papel: "portaria", sedeId: m.sedeId }));
     } catch (e) {
       avisar(mensagemDeErro(e), "erro");
     } finally {

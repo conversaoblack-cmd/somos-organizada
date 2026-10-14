@@ -130,7 +130,27 @@ export interface DadosCartao {
   endereco: Endereco;
 }
 
+/** Domínio próprio de uma torcida, como a equipe vê (api/dominios.ts). */
+export interface HostDominio {
+  host: string;
+  tipo: "vitrine" | "painel" | "www";
+  estado: "pendente_dns" | "emitindo_certificado" | "ativo" | "erro";
+  registros: { tipo: string; nome: string; valor: string; acao: "adicionar" | "remover" | "ok" }[];
+  erro: string | null;
+  criadoEm: number | null;
+  ativoEm: number | null;
+}
+export interface ResumoDominio {
+  hosts: HostDominio[];
+  dominio: { vitrine?: string; painel?: string } | null;
+}
+
 export const api = {
+  // ── Domínio próprio (só a equipe) ─────────────────────
+  configurarDominio: chamar<{ tid: string; vitrine?: string; painel?: string }, ResumoDominio>("configurarDominio"),
+  consultarDominio: chamar<{ tid: string }, ResumoDominio>("consultarDominio"),
+  removerDominio: chamar<{ tid: string; host: string }, ResumoDominio>("removerDominio"),
+
   // ── Público / checkout ───────────────────────────────
   cotarIngresso: chamar<
     { tid: string; eventoId: string },

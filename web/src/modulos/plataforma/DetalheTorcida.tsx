@@ -1,4 +1,4 @@
-import { rp, origemTorcidas } from "@/lib/hosts";
+import { rp, urlTorcida } from "@/lib/hosts";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useColecao, useDocumento } from "@/hooks/dados";
@@ -26,6 +26,7 @@ import {
 } from "./comum";
 import { SeloPagamentos, SeloSite } from "./Torcidas";
 import Depuracao from "./Depuracao";
+import { CartaoDominio } from "./CartaoDominio";
 
 /** Formata centavos para o campo com máscara de moeda ("1.234,56"). */
 
@@ -45,7 +46,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
       </Cartao>
     );
   }
-  const pagina = `${origemTorcidas()}/${torcida.slug}`;
+  const pagina = urlTorcida(torcida);
 
   return (
     <>
@@ -80,7 +81,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
             <Icone nome="externo" className="size-4" /> Abrir página pública
           </a>
           <a
-            href={`${pagina}/admin`}
+            href={urlTorcida(torcida, "/admin")}
             target="_blank"
             rel="noreferrer"
             title="Só para visualizar: a equipe da plataforma não tem login na diretoria."
@@ -136,6 +137,7 @@ export default function DetalheTorcida({ aba }: { aba: "geral" | "depuracao" }) 
             <CartaoTaxa tid={id} atual={torcida.taxaServicoPct} aoSalvar={recarregar} />
             <CartaoPlanoSomos tid={id} linha={linha} aoSalvar={recarregar} />
           </div>
+          <CartaoDominio tid={id} />
         </div>
       )}
     </>

@@ -2,13 +2,14 @@
  * Quando cada e-mail sai. Nada aqui interrompe pagamento ou rotina: qualquer falha vira registro.
  */
 import { logger } from "firebase-functions/v2";
-import { URL_APP } from "../config";
+import { urlDaTorcida } from "../util/urls";
 import { auth, refs } from "../util/firebase";
 import type { Evento, Ingresso, Pedido, Socio, Torcida } from "../dominio/tipos";
 import { enviarUmaVez } from "./enviar";
 import { emailCartaoRecusado, emailIngressoComprado, emailIngressoNoSeuNome, emailRenovacaoPix, emailSocioConfirmado } from "./modelos";
 
-const link = (t: Torcida, caminho: string) => `${URL_APP.value().replace(/\/+$/, "")}/${t.slug}${caminho}`;
+/** Página da torcida: no domínio próprio quando ele está no ar (util/urls.ts). */
+const link = (t: Torcida, caminho: string) => urlDaTorcida(t, caminho);
 
 async function seguro(o: string, f: () => Promise<unknown>) {
   try {

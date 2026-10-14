@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { urlTorcida } from "@/lib/hosts";
 import { collection, doc, limit, orderBy, query, Timestamp, updateDoc, where } from "firebase/firestore";
 import { useNavigate } from "react-router";
 import { db } from "@/lib/firebase";
@@ -163,7 +164,7 @@ export default function Personalizacao() {
             <Icone nome="olho" className="size-4" /> Ver prévia
           </a>
           <a
-            href={`/${torcida.slug}`}
+            href={urlTorcida(torcida)}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 h-11 sm:h-9 px-3.5 rounded-xl text-sm font-semibold border border-linha-forte hover:bg-superficie-2"

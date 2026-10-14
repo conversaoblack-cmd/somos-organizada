@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Timestamp } from "firebase-admin/firestore";
-import { metaDaTorcida, metaDoEvento, montarPrevia } from "../src/api/previa";
+import { hostDoPedido, metaDaTorcida, metaDoEvento, montarPrevia, talvezDominioProprio } from "../src/api/previa";
 
 const APP = `<!doctype html>
 <html lang="pt-BR">
@@ -56,4 +56,14 @@ test("prévia não interpreta $&, $` e $' do texto da torcida (replace com funç
   assert.ok(html.includes("<title>Promo $` $&amp; $'</title>"), "o texto entra literal");
   assert.equal((html.match(/<title>/g) ?? []).length, 1);
   assert.equal((html.match(/<\/head>/g) ?? []).length, 1);
+});
+
+test("prévia no domínio próprio: host vem do X-Forwarded-Host; endereços da plataforma não consultam domínio", () => {
+  const cab = (h: Record<string, string>) => ({ get: (n: string) => h[n.toLowerCase()] });
+  assert.equal(hostDoPedido(cab({ "x-forwarded-host": "Furia.com.br", host: "previalink-abc.run.app" })), "furia.com.br");
+  assert.equal(hostDoPedido(cab({ host: "furia.com.br:443" })), "furia.com.br");
+  assert.equal(hostDoPedido(cab({})), "");
+  const p = "somosorganizada.com.br";
+  assert.equal(talvezDominioProprio("furia.com.br", p), true);
+  for (const h of ["", p, `www.${p}`, "somos-organizada.web.app", "previalink-x.a.run.app", "127.0.0.1", "localhost"]) assert.equal(talvezDominioProprio(h, p), false, h);
 });

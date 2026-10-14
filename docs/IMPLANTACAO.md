@@ -106,7 +106,7 @@ Endereços:
 - `plataforma.somosorganizada.com.br`: painel da equipe Somos Organizada, em subdomínio próprio para a sessão
   da equipe ficar separada das páginas das torcidas (`somosorganizada.com.br/plataforma` redireciona para lá).
 
-No futuro, a torcida que contratar domínio próprio terá tudo no domínio dela (página **Domínio** do painel).
+Domínio próprio da torcida (ex.: `furiaamapaense.com.br`): ver "Domínio próprio das torcidas" abaixo.
 
 Passos:
 1. Firebase Console → Hosting → **Adicionar domínio personalizado**: `somosorganizada.com.br`,
@@ -119,6 +119,41 @@ Passos:
    - autoriza os domínios no login do Firebase se o `gcloud` estiver logado (senão: Authentication →
      Configurações → Domínios autorizados → adicione os três).
    Para outro domínio: `DOMINIO=meudominio.com.br bash scripts/implantar.sh`.
+
+### Domínio próprio das torcidas
+
+Não é autoatendimento: a diretoria pede pelo botão do comercial (página **Domínio** do painel) e a equipe liga no
+painel da plataforma (Torcidas → a torcida → **Domínio próprio**). Dois endereços, os dois opcionais:
+- **vitrine**: o domínio raiz (`furiaamapaense.com.br`), o site público (eventos, ingressos, sócio, conta). O
+  `www.` é criado junto e redireciona para ele;
+- **painel**: um subdomínio (`painel.furiaamapaense.com.br`) para diretoria, subsedes e portaria.
+
+O endereço padrão (`somosorganizada.com.br/{torcida}`) continua valendo sempre. O servidor liga cada endereço no
+Firebase Hosting pela API (`customDomains`), mostra os registros de DNS para mandar à torcida (botão "Copiar
+instruções") e confere a situação: Aguardando DNS → Gerando certificado → No ar. A rotina diária confere os
+pendentes e avisa a equipe com 25 dias (o Firebase apaga com 30). No ar, a diretoria recebe um e-mail e os links de
+e-mail e de divulgação passam a usar o domínio da torcida.
+
+**Uma vez só, no Google Cloud (IAM)**: dê à conta de serviço das functions o papel **Administrador do Firebase
+Hosting** (`roles/firebasehosting.admin`). Sem ele, "Ligar domínio" mostra o erro com este passo.
+1. Console do Google Cloud → IAM e administrador → IAM → projeto `somos-organizada`;
+2. ache a conta de serviço usada pelas functions (Functions v2 usa a conta padrão do Compute Engine,
+   `<número-do-projeto>-compute@developer.gserviceaccount.com`, a menos que outra tenha sido configurada);
+3. Editar → Adicionar outro papel → "Administrador do Firebase Hosting" → Salvar.
+   Pelo terminal: `gcloud projects add-iam-policy-binding somos-organizada --member="serviceAccount:<conta>" --role="roles/firebasehosting.admin"`.
+
+Por torcida, confira também:
+- **Pagar.me**: na conta da torcida, adicione o domínio da vitrine aos domínios permitidos (o cartão é tokenizado
+  no navegador; sem isso só o Pix funciona);
+- **Firebase Authentication → Domínios autorizados**: adicione a vitrine e o painel (só o e-mail de reserva do
+  Firebase usa; o nosso e-mail funciona sem isso);
+- se a chave de API do app Web tiver restrição de sites (Google Cloud → Credenciais), inclua os dois endereços.
+
+Site antigo no domínio raiz sai do ar (os registros A antigos são trocados); o e-mail (MX) não muda. Limitação
+conhecida: a prévia do WhatsApp do endereço raiz da vitrine (`furia.com.br/`) mostra a da Somos Organizada, porque o
+Hosting serve a página inicial estática antes de qualquer function; os links de evento (`/e/{codigo}`) têm prévia
+própria. Parâmetro opcional `DOMINIO_SITE_ID` (functions/.env): site do Hosting que recebe os domínios (padrão: o
+site principal do projeto).
 
 ### Chaves de segurança: nunca recriar
 

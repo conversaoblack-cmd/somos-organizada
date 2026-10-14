@@ -4,6 +4,7 @@
  * Eventos antigos, sem código, continuam abrindo por /{torcida}/evento/{id}.
  */
 import type { ComId, Evento } from "./tipos";
+import { urlTorcida } from "./hosts";
 
 const ALFABETO = "abcdefghjkmnpqrstuvwxyz23456789";
 export const CODIGO_EVENTO = /^[a-hjkmnp-z2-9]{6}$/;
@@ -18,5 +19,6 @@ export function novoCodigoEvento(): string {
 export const caminhoEvento = (slug: string, e: Pick<ComId<Evento>, "id" | "codigo">) =>
   e.codigo ? `/${slug}/e/${e.codigo}` : `/${slug}/evento/${e.id}`;
 
-/** Endereço completo para divulgar (WhatsApp, cartaz, QR Code). */
-export const linkEvento = (slug: string, e: Pick<ComId<Evento>, "id" | "codigo">) => `${location.origin}${caminhoEvento(slug, e)}`;
+/** Endereço completo para divulgar (WhatsApp, cartaz, QR Code): no domínio próprio da torcida, se estiver no ar. */
+export const linkEvento = (t: { slug: string; dominio?: { vitrine?: string; painel?: string } }, e: Pick<ComId<Evento>, "id" | "codigo">) =>
+  urlTorcida(t, caminhoEvento(t.slug, e).slice(t.slug.length + 1));

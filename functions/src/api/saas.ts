@@ -20,6 +20,7 @@ import { logger } from "firebase-functions/v2";
 import { EMAIL_API_KEY, FUSO } from "../config";
 import { avisarFaturaSaas } from "../email/saas";
 import { alertarEquipe } from "./alertas";
+import { revisarDominios } from "./dominios";
 import { db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { dias } from "../util/datas";
 import { texto } from "../util/validacao";
@@ -434,6 +435,12 @@ export async function processarSaas(agora = Date.now()) {
 export const rotinaSaas = onSchedule({ schedule: "20 7 * * *", timeZone: FUSO, timeoutSeconds: 300, secrets: [EMAIL_API_KEY] }, async () => {
   const r = await processarSaas();
   logger.info("Rotina SaaS", r);
+  // Domínios próprios ainda pendentes (DNS/certificado): confere e avisa a equipe antes de o Firebase apagar
+  try {
+    logger.info("Rotina de domínios", await revisarDominios());
+  } catch (e) {
+    logger.error("Rotina de domínios falhou", { erro: String(e) });
+  }
 });
 
 /** Equipe: depois de salvar a chave Pix, refaz o Pix das faturas em aberto de todas as torcidas. */

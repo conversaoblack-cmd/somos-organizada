@@ -14,6 +14,8 @@ import { emailValido } from "../util/validacao";
 import { enviarAgora } from "../email/enviar";
 import { esc, montar } from "../email/modelos";
 import { caminhoSeguro, codigoDoLink, MARCA_PLATAFORMA } from "./verificacao";
+import { origemDaTorcida } from "../util/urls";
+import { areaDoCaminhoInterno } from "../dominio/enderecos";
 import type { Torcida } from "../dominio/tipos";
 
 export type ResultadoEnvio = "enviado" | "sem_conta" | "limite";
@@ -95,7 +97,9 @@ export async function enviarLinkRedefinicao(email: string, opcoes: { continuar: 
   if (codigo) {
     const marca = await marcaDoCaminho(continuar, opcoes.tid);
     const daTorcida = marca !== MARCA_PLATAFORMA;
-    const url = `${URL_APP.value().replace(/\/+$/, "")}/redefinir-senha?oobCode=${encodeURIComponent(codigo)}&continuar=${encodeURIComponent(continuar)}`;
+    // No domínio próprio da torcida (vitrine ou painel, conforme a página de volta), se estiver no ar: a pessoa já entra nele
+    const origem = daTorcida ? origemDaTorcida(marca, areaDoCaminhoInterno(continuar)) : URL_APP.value().replace(/\/+$/, "");
+    const url = `${origem}/redefinir-senha?oobCode=${encodeURIComponent(codigo)}&continuar=${encodeURIComponent(continuar)}`;
     if (process.env.FUNCTIONS_EMULATOR === "true") await db.doc(`_emulador/senha-${usuario.uid}`).set({ url, codigo, continuar, email });
     const primeiro = (usuario.displayName ?? "").trim().split(/\s+/)[0];
     const m = montar(marca, daTorcida ? `Nova senha da sua conta na ${marca.nome}` : "Nova senha da sua conta na Somos Organizada", { email, nome: usuario.displayName ?? undefined }, {

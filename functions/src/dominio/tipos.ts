@@ -30,6 +30,8 @@ export interface Torcida {
   /** Razão social, CNPJ e cidade (públicos; gravados pelo servidor na aprovação ou ao publicar). */
   identificacao?: IdentificacaoTorcida;
   contato?: { whatsapp?: string; email?: string; instagram?: string };
+  /** Domínio próprio no ar (só o servidor grava; ver api/dominios.ts). Sem ele, vale só o endereço padrão. */
+  dominio?: { vitrine?: string; painel?: string };
   pagamentos: {
     configurado: boolean;
     ambiente?: "teste" | "producao" | "demo";

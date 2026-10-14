@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { urlTorcida } from "@/lib/hosts";
 import { Link } from "react-router";
 import { api } from "@/lib/api";
 import { moeda } from "@/lib/formatos";
@@ -133,7 +134,7 @@ export default function Publicar() {
   ];
   const prontoParaPublicar = obrigatorios.every((o) => o.ok) && (!!assinatura || !!plano) && !torcida.bloqueioSaas;
 
-  const site = `${location.origin}/${torcida.slug}`;
+  const site = urlTorcida(torcida);
   const siteSocios = `${site}?aba=socios`;
   const textoZap = `Conheça a página oficial da ${torcida.nome}: ${m.eventos ? "ingressos dos eventos" : ""}${m.eventos && m.socios ? " e " : ""}${m.socios ? "programa de sócios" : ""}. ${site}`;
 

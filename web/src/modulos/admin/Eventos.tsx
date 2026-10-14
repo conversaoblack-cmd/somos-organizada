@@ -314,7 +314,7 @@ function CartaoEvento({ e, sede, para, editar, passado }: { e: ComId<EventoAdm>;
         {/* Divulgar direto da lista: só evento publicado (rascunho e em aprovação não abrem para o público) */}
         {e.status === "publicado" && (
           <a
-            href={linkWhatsappEvento(e, linkEvento(torcida.slug, e))}
+            href={linkWhatsappEvento(e, linkEvento(torcida, e))}
             target="_blank"
             rel="noreferrer"
             aria-label="Divulgar no WhatsApp"
@@ -840,7 +840,7 @@ export function DetalheEvento() {
       </Vazio>
     );
 
-  const linkPublico = linkEvento(torcida.slug, e);
+  const linkPublico = linkEvento(torcida, e);
   const n = numeros.dados;
   const podeExcluir = e.vendidos === 0 && e.reservados === 0;
   const refEvento = doc(db, `torcidas/${tid}/eventos/${e.id}`);

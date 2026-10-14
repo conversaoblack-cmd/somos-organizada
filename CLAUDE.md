@@ -78,6 +78,15 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   Organizada é a operadora). Textos em `web/src/modulos/legal/conteudo.tsx`; data e CNPJ em `legal/versao.ts`. Mudou regra
   citada nos textos (taxa, carência, mensalidade, ingresso): mude o texto e a data. O cadastro grava o aceite
   (`aceiteTermos.versao`); a aprovação grava `identificacao` (razão social, CNPJ, cidade) pública na torcida.
+- Domínio próprio da torcida (não é autoatendimento; a diretoria pede ao comercial em Domínio): a equipe liga em Torcidas →
+  torcida → Domínio próprio (`api/dominios.ts`: `configurarDominio`, `consultarDominio`, `removerDominio`). Vitrine = domínio
+  raiz (site público; `www.` redireciona) e painel = subdomínio. Dados: `dominios/{host}` (público, só leitura: `tid`, `slug`,
+  `tipo`, `status`, `ativos`), `torcidas/{tid}/privado/dominio` (registros DNS, histórico) e `torcidas/{tid}.dominio` (no ar;
+  só servidor). Provedor trocável (`util/provedorDominio.ts`: Firebase Hosting `customDomains`; no emulador, falso, ativado por
+  `_emulador/dominio-{host}`). Exige `roles/firebasehosting.admin` na conta de serviço das functions (`docs/IMPLANTACAO.md`).
+  No site, `main.tsx` acha a torcida pelo endereço e o `unstable_HistoryRouter` mostra caminhos curtos (`lib/dominioProprio.ts`,
+  `lib/historicoProprio.ts`); a página inicial estática manda domínio desconhecido para `/app.html`. Links de e-mail: `urlDaTorcida`
+  (`util/urls.ts`); no site: `urlTorcida` (`lib/hosts.ts`). Endereço padrão continua valendo sempre.
 - "Esqueci minha senha" (todas as contas) sai pelo nosso e-mail com link para `/redefinir-senha` (`api/senha.ts`);
   o e-mail do Firebase é só reserva. Login da equipe sugere a torcida certa quando o endereço vem errado (`sugerirTorcidas`).
 - Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável

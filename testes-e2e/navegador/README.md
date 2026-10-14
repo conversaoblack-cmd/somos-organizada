@@ -26,6 +26,7 @@ Cada fluxo roda em 4 combinações: modo **normal** e **chrome-novo** (os métod
 | 4 | Torcedor não sócio: link do evento → 2 ingressos no Pix (cria a conta) → Pix pago → ingressos com QR no pedido e em `/brasil/conta` → e-mail registrado (`sem_provedor`) → link do e-mail abre a conta com CPF e senha |
 | 5 | O mesmo torcedor vira sócio no Pix → carteirinha com QR e benefícios → sai → entra pelo site com CPF + senha → carteirinha e ingressos → "Esqueci minha senha" pelo CPF → senha nova |
 | 6 | Portaria: código → Liberado; mesmo ingresso pelo QR → Já utilizado; código inexistente e QR forjado → recusados; sem internet → Sem conexão (nunca Inválido) |
+| D | Domínio próprio: `vitrine.test` e `painel.vitrine.test` (o Chromium resolve `*.test` para 127.0.0.1) ligados à `brasil` direto no emulador; raiz da vitrine mostra a torcida em "/", link curto do evento, link antigo `/brasil/...` vira o curto, `/admin` vai para o painel, raiz do painel é o login, endereço não ligado explica |
 | 7a/7b | **Pendente** (`todo`): sem internet, `/brasil/conta`, `/brasil/socio` e `/brasil/socio/ingressos` recarregados mostram o QR. Roda sempre e aparece no resumo; não reprova a suíte. Com `EXIGIR_SEM_INTERNET=1` passa a reprovar |
 
 **Reprova na hora:** qualquer `pageerror`; qualquer `console.error` fora da lista de esperados (cada exceção

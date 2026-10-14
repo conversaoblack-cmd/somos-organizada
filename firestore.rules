@@ -38,9 +38,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Domínio próprio → torcida (o site descobre a torcida pelo endereço). Público só por documento;
+    // a lista é da equipe. Gravado só pelo servidor (api/dominios.ts); sem segredos.
+    match /dominios/{host} {
+      allow get: if true;
+      allow list: if plataforma();
+      allow write: if false;
+    }
+
     match /torcidas/{tid} {
       allow read: if true; // página pública (nome, tema, chave pública Pagar.me, status)
-      // Diretoria edita só aparência, textos, contato e regras de sócio. Status, taxa e pagamentos: servidor.
+      // Diretoria edita só aparência, textos, contato e regras de sócio. Status, taxa, pagamentos e domínio: servidor.
       allow update: if diretoria(tid)
         && apenas(['tema', 'textos', 'contato', 'aprovacaoManualSocio', 'destinoMensalidade', 'modulos'])
         && (!('tema' in request.resource.data) || (

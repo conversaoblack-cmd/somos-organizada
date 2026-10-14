@@ -137,7 +137,7 @@ export const TOURS: Record<string, PassoTour[]> = {
     { alvo: "portaria-link", titulo: "Link do leitor", texto: "Copie ou mande no WhatsApp para a equipe. A diretoria também pode abrir o leitor por aqui." },
     { alvo: "lista-porteiros", titulo: "Equipe", texto: "Quem já foi convidado. Se alguém não achou o e-mail, toque em reenviar." },
   ],
-  "admin-dominio": [{ alvo: "dominio", titulo: "Endereço do site", texto: "Este é o endereço da sua página. Domínio próprio chega em breve." }],
+  "admin-dominio": [{ alvo: "dominio", titulo: "Endereço do site", texto: "Este é o endereço da sua página. Quer um domínio só da torcida? Fale com o comercial pelo botão abaixo." }],
 
   // ── Subsede ──────────────────────────────────────────
   "subsede-visao-geral": [

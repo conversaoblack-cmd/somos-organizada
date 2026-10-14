@@ -101,7 +101,7 @@ function ConteudoEvento({ evento, sede }: { evento: ComId<Evento>; sede?: Sede }
   const vendaEncerrada = !!evento.vendaAte && evento.vendaAte.toMillis() < Date.now();
   // Barra fixa: o preço que quem chega pelo link vai pagar (público); o de sócio aparece à parte, como sócio
   const socioPagaMenos = moduloAtivo(torcida, "socios") && evento.valorSocio < evento.valorPublico;
-  const link = linkEvento(torcida.slug, evento);
+  const link = linkEvento(torcida, evento);
 
   // Barra fixa de compra no celular, escondida quando o formulário já está visível
   const compra = useRef<HTMLElement>(null);

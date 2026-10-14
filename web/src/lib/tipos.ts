@@ -34,6 +34,8 @@ export interface Torcida {
   contato?: { whatsapp?: string; email?: string; instagram?: string };
   /** Quem responde pelos dados na página da torcida (Termos e Política). Gravado pelo servidor; só dados públicos. */
   identificacao?: { razaoSocial?: string; cnpj?: string; cidade: string; uf: string };
+  /** Domínio próprio no ar (gravado só pelo servidor, ligado pela equipe). Sem ele, vale o endereço padrão. */
+  dominio?: { vitrine?: string; painel?: string };
   pagamentos: {
     configurado: boolean;
     ambiente?: "teste" | "producao" | "demo";

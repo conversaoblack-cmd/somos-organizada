@@ -25,6 +25,7 @@ import * as convite from "./convite";
 import * as senha from "./senha";
 import * as verificacaoVideo from "./verificacaoVideo";
 import * as suporte from "./suporte";
+import * as dominios from "./dominios";
 
 type Acao = { run: (req: CallableRequest<unknown>) => unknown };
 
@@ -79,6 +80,9 @@ export const ACOES: Record<string, Acao> = {
   registrarVideoVerificacao: verificacaoVideo.registrarVideoVerificacao,
   pedirNovoVideo: verificacaoVideo.pedirNovoVideo,
   avisarSuporte: suporte.avisarSuporte,
+  configurarDominio: dominios.configurarDominio,
+  consultarDominio: dominios.consultarDominio,
+  removerDominio: dominios.removerDominio,
 } as unknown as Record<string, Acao>;
 
 export const api = onCall(

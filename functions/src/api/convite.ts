@@ -7,7 +7,8 @@
 import { createHash } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
-import { ESCALA_PUBLICA, URL_APP } from "../config";
+import { ESCALA_PUBLICA } from "../config";
+import { origemDaTorcida, urlDaTorcida } from "../util/urls";
 import { auth, db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { tokenAleatorio } from "../util/cripto";
 import { texto } from "../util/validacao";
@@ -47,7 +48,7 @@ export async function enviarConvite(a: {
   const quemTexto = quem ? `${esc(quem)}, da diretoria da ${esc(torcida.nome)},` : `A diretoria da ${esc(torcida.nome)}`;
   const funcao = `${PAPEL_TEXTO[a.papel]}${a.papel === "subsede" && sede ? ` <strong>${esc(sede)}</strong>` : ""}`;
   const primeiro = a.nome.trim().split(/\s+/)[0] ?? "";
-  const painel = `${URL_APP.value()}/${torcida.slug}/admin`;
+  const painel = urlDaTorcida(torcida, "/admin"); // domínio próprio do painel, se estiver no ar
 
   let url = painel;
   if (a.precisaSenha) {
@@ -72,7 +73,7 @@ export async function enviarConvite(a: {
       expiraEm: Timestamp.fromMillis(Date.now() + VALIDADE_MS),
       usado: false,
     });
-    url = `${URL_APP.value()}/convite?c=${encodeURIComponent(token)}`;
+    url = `${origemDaTorcida(torcida, "painel")}/convite?c=${encodeURIComponent(token)}`;
     // Só no emulador: os testes leem o link daqui (em produção ele existe apenas no e-mail do convidado)
     if (process.env.FUNCTIONS_EMULATOR === "true") await db.doc(`_emulador/convite-${a.uid}`).set({ url, token });
   }

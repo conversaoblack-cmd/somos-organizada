@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
+import { caminhoInternoAtual } from "@/lib/hosts";
 import { enviarConfirmacaoEmail, enviarRedefinicaoSenha } from "@/lib/emailsConta";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -93,7 +94,7 @@ export function Login({
     try {
       if (criando) {
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), senha);
-        await enviarConfirmacaoEmail(cred.user, location.href).catch(() => undefined);
+        await enviarConfirmacaoEmail(cred.user, `${location.origin}${caminhoInternoAtual()}${location.search}`).catch(() => undefined);
         return;
       }
       await signInWithEmailAndPassword(auth, email.trim(), senha);
@@ -124,7 +125,7 @@ export function Login({
     if (!emailValido(email)) return setErro(usaCpf ? "Digite seu CPF ou e-mail acima para receber o link." : "Digite seu e-mail acima para receber o link.");
     setEnviandoLink(true);
     try {
-      await enviarRedefinicaoSenha(email.trim(), `${location.origin}${location.pathname}`, tid);
+      await enviarRedefinicaoSenha(email.trim(), `${location.origin}${caminhoInternoAtual()}`, tid);
       setAviso("Enviamos um link para redefinir sua senha. Confira também o spam.");
     } catch (e) {
       // Falha de rede ou excesso de tentativas é erro de verdade; e-mail sem conta segue com a mesma resposta (não revelamos quem tem conta)

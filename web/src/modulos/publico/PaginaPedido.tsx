@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { urlTorcida } from "@/lib/hosts";
 import { Link, useParams } from "react-router";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -322,7 +323,7 @@ function IngressosEmitidos({ pedido }: { pedido: Pedido & { id: string } }) {
     };
   }, [tid, pedido.ingressoIds, tentativa]);
 
-  const link = `${location.origin}/${torcida.slug}/ingressos/${pedido.id}?k=${pedido.chaveAcesso}`;
+  const link = urlTorcida(torcida, `/ingressos/${pedido.id}?k=${pedido.chaveAcesso}`);
   const texto = `Meus ingressos para ${pedido.eventoNome} (${torcida.nome}): ${link}`;
 
   return (

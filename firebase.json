@@ -75,6 +75,20 @@
         "destination": "/app.html"
       },
       {
+        "source": "/e/*",
+        "function": {
+          "functionId": "previaLink",
+          "region": "southamerica-east1"
+        }
+      },
+      {
+        "source": "/evento/*",
+        "function": {
+          "functionId": "previaLink",
+          "region": "southamerica-east1"
+        }
+      },
+      {
         "source": "/*",
         "function": {
           "functionId": "previaLink",

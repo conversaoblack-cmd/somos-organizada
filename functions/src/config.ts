@@ -13,12 +13,15 @@ export const EMAIL_API_KEY = defineSecret("EMAIL_API_KEY");
 
 /** Endereço público do app (usado em links e na URL de webhook mostrada às torcidas). */
 export const URL_APP = defineString("URL_APP", { default: "https://somosorganizada.com.br" });
-/** E-mails (separados por vírgula) que podem reivindicar acesso ao painel da plataforma. */
 /** Remetente dos e-mails (domínio verificado no Brevo/Resend). */
 export const EMAIL_REMETENTE = defineString("EMAIL_REMETENTE", { default: "Somos Organizada <nao-responda@somosorganizada.com.br>" });
 /** Chave pública do app Web: usada só para conferir a senha no login por CPF. */
 export const WEB_API_KEY = defineString("WEB_API_KEY", { default: "" });
+/** E-mails (separados por vírgula) que podem reivindicar acesso ao painel da plataforma. */
 export const PLATAFORMA_EMAILS = defineString("PLATAFORMA_EMAILS", { default: "conversaoblack@gmail.com" });
+
+/** Site do Firebase Hosting que recebe os domínios próprios das torcidas. Vazio = site padrão (id do projeto). */
+export const DOMINIO_SITE_ID = defineString("DOMINIO_SITE_ID", { default: "" });
 
 // Cota de CPU por região do Cloud Run = soma de (vCPU × máx. instâncias) de todas as funções, e projeto
 // novo tem cota baixa. Cada instância (1 vCPU) atende 80 pedidos ao mesmo tempo (o trabalho é quase todo

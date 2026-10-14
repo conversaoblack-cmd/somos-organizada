@@ -8,7 +8,8 @@
  *   Sem rede, com erro do servidor ou demorando, devolve o app.html guardado DESTA versão, que só aponta para
  *   arquivos guardados junto com ele.
  * - "/" (página inicial estática) e arquivos abertos direto: o navegador busca normalmente, sem passar por aqui.
- *   O service worker não é registrado na página inicial.
+ *   O service worker não é registrado na página inicial. Exceção: num domínio próprio de torcida o "/" é o site
+ *   da torcida e é tratado como o resto do sistema (responde o app.html).
  * - /assets/* (nome com hash, o conteúdo nunca muda): cache primeiro; o que vier da rede fica guardado.
  * - Nada de outro endereço (Firebase, Google APIs, Pagar.me, functions) passa por aqui: nenhuma resposta de API,
  *   dado pessoal ou QR fica no cache do service worker. O QR guardado no aparelho fica com a própria tela
@@ -20,6 +21,8 @@
 const VERSAO = "__VERSAO__";
 const ENTRADA = "__ENTRADA__";
 const PRECACHE = __PRECACHE__;
+const HOSTS_PLATAFORMA = __HOSTS_PLATAFORMA__;
+const HOST_TECNICO = __HOST_TECNICO__;
 
 const PREFIXO = "so-app-";
 const CACHE = PREFIXO + VERSAO;
@@ -28,6 +31,11 @@ const ESPERA_REDE_MS = 3000;
 const FIXOS = new Set(PRECACHE.filter((url) => !url.startsWith("/assets/")));
 
 const ehHtml = (r) => (r.headers.get("content-type") || "").includes("text/html");
+
+// Domínio próprio de torcida (ex.: furia.com.br): lá o "/" é o site da torcida, não a página inicial estática.
+// O service worker responde o "/" com o app (rede primeiro, guardado sem internet), como as outras páginas do sistema.
+const HOST = self.location.hostname.toLowerCase();
+const DOMINIO_PROPRIO = !HOST_TECNICO.test(HOST) && HOSTS_PLATAFORMA.indexOf(HOST.replace(/^www\./, "")) < 0;
 
 self.addEventListener("install", (evento) => {
   evento.waitUntil(
@@ -79,6 +87,10 @@ self.addEventListener("fetch", (evento) => {
   if (url.origin !== self.location.origin) return; // Firebase, Google APIs, Pagar.me, functions: direto na rede
   const caminho = url.pathname;
   if (req.mode === "navigate") {
+    if (DOMINIO_PROPRIO && (caminho === "/" || caminho === "/app.html")) {
+      evento.respondWith(navegar(req, "/app.html"));
+      return;
+    }
     const doSistema = caminho !== "/" && !caminho.startsWith("/__/") && !caminho.startsWith("/api/") && !/\.[a-z0-9]+$/i.test(caminho);
     if (doSistema) evento.respondWith(navegar(req));
     return;
@@ -87,11 +99,12 @@ self.addEventListener("fetch", (evento) => {
   else if (FIXOS.has(caminho)) evento.respondWith(caches.match(req, { ignoreVary: true }).then((r) => r || fetch(req)));
 });
 
-async function navegar(req) {
+async function navegar(req, outroEndereco) {
   // "no-cache": confere com o servidor (304 se nada mudou) em vez de usar o app.html antigo do cache do navegador
   let pedido = req;
   try {
-    pedido = new Request(req, { cache: "no-cache" });
+    // outroEndereco: no domínio próprio, o "/" busca o app.html (e não a página inicial estática)
+    pedido = outroEndereco ? new Request(outroEndereco, { cache: "no-cache", credentials: "same-origin" }) : new Request(req, { cache: "no-cache" });
   } catch {
     /* navegador que não deixa copiar o pedido de navegação: vai como veio */
   }

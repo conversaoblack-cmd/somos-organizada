@@ -8,6 +8,13 @@ import { coresCompat } from "./plugins/coresCompat";
 const RAIZ = new URL(".", import.meta.url).pathname;
 const ALIAS = { "@": new URL("./src", import.meta.url).pathname };
 
+/** Endereços da plataforma (o resto pode ser domínio próprio de torcida; ver src/lib/dominioProprio.ts). */
+function hostsConhecidos(env: Record<string, string>): string[] {
+  return [...new Set([env.VITE_HOST_PRINCIPAL, env.VITE_HOST_PLATAFORMA, "somosorganizada.com.br"].map((h) => (h ?? "").trim().toLowerCase()).filter(Boolean))];
+}
+/** Endereço técnico (computador local, IP, Firebase): nunca é domínio de torcida. Mesma regra de hostDaPlataforma(). */
+const REGEX_HOST_TECNICO = String.raw`/^(localhost|[\d.]+|\[.*\])$|\.(web\.app|firebaseapp\.com|localhost)$/`;
+
 /**
  * Dois HTMLs:
  * - index.html: a página inicial (somosorganizada.com.br/), gerada como HTML estático no build. Abre na hora, sem o sistema.
@@ -28,11 +35,12 @@ function paginaInicial(modo: string): Plugin {
   async function gerar(html: string, server: ViteDevServer) {
     const { render } = (await server.ssrLoadModule("/src/landing/render.tsx")) as typeof import("./src/landing/render");
     const { corpo, dados } = render({ slugDemo: env.VITE_SLUG_DEMO?.trim() || undefined });
-    const host = env.VITE_HOST_PLATAFORMA?.trim().toLowerCase();
-    // No subdomínio da plataforma o "/" é o painel da equipe: vai para o sistema antes de desenhar a página
-    const redirecionar = host
-      ? `<script>if(location.hostname===${JSON.stringify(host)})location.replace("/plataforma"+location.search+location.hash)</script>`
-      : "";
+    const host = env.VITE_HOST_PLATAFORMA?.trim().toLowerCase() ?? "";
+    // Antes de desenhar a página (script mínimo, sem Firebase nem React):
+    // - no subdomínio da plataforma o "/" é o painel da equipe: vai para o sistema (/plataforma);
+    // - num domínio próprio de torcida (qualquer endereço que não é da plataforma) o "/" é o site da torcida: abre o
+    //   sistema (/app.html), que descobre a torcida pelo endereço e mostra "/" de novo na barra (lib/historicoProprio.ts).
+    const redirecionar = `<script>(function(h,l){var q=l.search+l.hash;if(${JSON.stringify(host)}&&h===${JSON.stringify(host)})return l.replace("/plataforma"+q);if(!${REGEX_HOST_TECNICO}.test(h)&&${JSON.stringify(hostsConhecidos(env))}.indexOf(h.replace(/^www\./,""))<0)l.replace("/app.html"+q)})(location.hostname,location)</script>`;
     return html
       .replace("<!--redirecionar-plataforma-->", redirecionar)
       .replace("<!--dados-estruturados-->", `<script type="application/ld+json">${dados}</script>`)
@@ -90,7 +98,8 @@ const ARQUIVOS_FIXOS = ["/fontes/archivo.woff2", "/fontes/archivo-black.woff2", 
  * quando é aberto. A versão do cache é o hash dessa lista e do app.html: cada implantação tem o seu cache e
  * o app.html guardado nunca aponta para arquivos de outra versão. A página inicial ("/") fica de fora.
  */
-function serviceWorker(): Plugin {
+function serviceWorker(modo: string): Plugin {
+  const env = loadEnv(modo, RAIZ);
   return {
     name: "service-worker",
     apply: "build",
@@ -123,6 +132,8 @@ function serviceWorker(): Plugin {
           'const VERSAO = "__VERSAO__";': `const VERSAO = ${JSON.stringify(versao)};`,
           'const ENTRADA = "__ENTRADA__";': `const ENTRADA = ${JSON.stringify(`/${entrada.fileName}`)};`,
           "const PRECACHE = __PRECACHE__;": `const PRECACHE = ${JSON.stringify(precache)};`,
+          "const HOSTS_PLATAFORMA = __HOSTS_PLATAFORMA__;": `const HOSTS_PLATAFORMA = ${JSON.stringify(hostsConhecidos(env))};`,
+          "const HOST_TECNICO = __HOST_TECNICO__;": `const HOST_TECNICO = ${REGEX_HOST_TECNICO};`,
         };
         let fonte = readFileSync(new URL("./scripts/sw-modelo.js", import.meta.url), "utf8");
         for (const [de, para] of Object.entries(valores)) {
@@ -136,9 +147,12 @@ function serviceWorker(): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), tailwind(), paginaInicial(mode), coresCompat(), serviceWorker()],
+  plugins: [react(), tailwind(), paginaInicial(mode), coresCompat(), serviceWorker(mode)],
   resolve: { alias: ALIAS },
-  server: { port: 5173, host: "127.0.0.1" },
+  // ".test": a suíte de navegador abre o app em domínios de teste (vitrine.test, painel.vitrine.test → 127.0.0.1)
+  // para conferir o domínio próprio das torcidas; o Vite recusa endereço desconhecido sem isto.
+  server: { port: 5173, host: "127.0.0.1", allowedHosts: [".test"] },
+  preview: { allowedHosts: [".test"] },
   build: {
     // Celulares que ainda existem na arquibancada: iPhone preso no iOS 15 (6s/7/SE) e Android com Chrome antigo.
     // O padrão do Vite 7 é Safari 16/Chrome 107: código novo passaria sem conversão e quebraria só nesses aparelhos.

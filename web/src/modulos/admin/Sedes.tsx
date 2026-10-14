@@ -67,7 +67,7 @@ export default function Sedes() {
   async function reenviar(m: ComId<Membro>) {
     setReenviando(m.id);
     try {
-      setResultado(await enviarConvite({ tid, slug: torcida.slug, nome: m.nome || m.email, email: m.email, papel: m.papel, sedeId: m.sedeId }));
+      setResultado(await enviarConvite({ tid, slug: torcida.slug, dominio: torcida.dominio, nome: m.nome || m.email, email: m.email, papel: m.papel, sedeId: m.sedeId }));
     } catch (e) {
       avisar(mensagemDeErro(e), "erro");
     } finally {

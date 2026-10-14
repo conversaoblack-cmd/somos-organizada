@@ -1080,3 +1080,93 @@ test("19. compra repetida não cobra duas vezes; sócio grátis sai sem cobranç
   const sedesComRecebedor = (await aDb.collection(`torcidas/${tid}/sedes`).get()).docs.filter((x) => x.get("recebedor"));
   assert.equal(sedesComRecebedor.length, 0);
 });
+
+test("20. domínio próprio: só a equipe liga; um endereço por torcida; DNS ok → no ar, links no domínio; remover desliga", async () => {
+  const plat = ctx.plat;
+  const tid = ctx.tid;
+  const VITRINE = "brasil-demo.com.br";
+  const PAINEL = "painel.brasil-demo.com.br";
+
+  // só a equipe
+  await assert.rejects(ctx.dir.chamar("configurarDominio", { tid, vitrine: VITRINE }), /restrito à equipe/);
+  await assert.rejects(ctx.dir.chamar("consultarDominio", { tid }), /restrito à equipe/);
+  await assert.rejects(ctx.dir.chamar("removerDominio", { tid, host: VITRINE }), /restrito à equipe/);
+
+  // endereços inválidos
+  await assert.rejects(plat.chamar("configurarDominio", { tid, vitrine: "painel.brasil-demo.com.br" }), /raiz/);
+  await assert.rejects(plat.chamar("configurarDominio", { tid, painel: VITRINE }), /subdomínio/);
+  await assert.rejects(plat.chamar("configurarDominio", { tid, vitrine: "somosorganizada.com.br" }), /plataforma/);
+  await assert.rejects(plat.chamar("configurarDominio", { tid, vitrine: "1.2.3.4" }), /IP/);
+  await assert.rejects(plat.chamar("configurarDominio", { tid, vitrine: "brasil-demo.com.br:8080" }), /porta/);
+  await assert.rejects(plat.chamar("configurarDominio", { tid }), /Informe/);
+
+  // liga vitrine (+ www) e painel: aguardando DNS, com os registros para mandar à torcida
+  const r = await plat.chamar("configurarDominio", { tid, vitrine: "https://Brasil-Demo.com.br/", painel: PAINEL });
+  assert.deepEqual(r.hosts.map((h) => [h.host, h.tipo, h.estado]), [
+    [VITRINE, "vitrine", "pendente_dns"],
+    [`www.${VITRINE}`, "www", "pendente_dns"],
+    [PAINEL, "painel", "pendente_dns"],
+  ]);
+  assert.ok(r.hosts[0].registros.some((x) => x.tipo === "A" && x.valor === "199.36.158.100"));
+  assert.ok(r.hosts[2].registros.some((x) => x.tipo === "CNAME"));
+  assert.equal(r.dominio, null);
+  // de novo, igual: idempotente
+  assert.equal((await plat.chamar("configurarDominio", { tid, vitrine: VITRINE })).hosts.length, 3);
+
+  // documento público: qualquer um lê um endereço (o site descobre a torcida), ninguém lista nem grava
+  const anon = navegador("anonimo-dominio");
+  await signInAnonymously(anon.auth);
+  const pub = (await getDoc(doc(anon.db, `dominios/${VITRINE}`))).data();
+  assert.deepEqual({ tid: pub.tid, slug: pub.slug, tipo: pub.tipo, status: pub.status }, { tid, slug: "brasil-demo", tipo: "vitrine", status: "pendente_dns" });
+  assert.equal(JSON.stringify(pub).includes("registros"), false);
+  await negado(getDocs(collection(anon.db, "dominios")));
+  await negado(setDoc(doc(anon.db, "dominios/golpe.com.br"), { tid, slug: "brasil-demo", tipo: "vitrine" }));
+  assert.equal((await getDocs(collection(plat.db, "dominios"))).size >= 3, true);
+  // a diretoria não grava o domínio da torcida pelo navegador
+  await negado(updateDoc(doc(ctx.dir.db, `torcidas/${tid}`), { dominio: { vitrine: "golpe.com.br" } }));
+
+  // o mesmo endereço não vai para outra torcida; trocar exige remover antes
+  const outra = await plat.chamar("criarTorcida", { nome: "Outra do Domínio", slug: "outra-dominio", diretor: { nome: "Diretor Outra", email: "outra-dominio@brasil.test" } });
+  await assert.rejects(plat.chamar("configurarDominio", { tid: outra.torcidaId, vitrine: VITRINE }), /outra torcida/);
+  await assert.rejects(plat.chamar("configurarDominio", { tid: outra.torcidaId, painel: `www.${VITRINE}` }), /www/);
+  await assert.rejects(plat.chamar("configurarDominio", { tid: outra.torcidaId, painel: PAINEL }), /outra torcida/);
+  await assert.rejects(plat.chamar("configurarDominio", { tid, vitrine: "outro-brasil.com.br" }), /Remova/);
+
+  // DNS feito (provedor do emulador): consultar marca "no ar" e publica torcida.dominio
+  await aDb.doc(`_emulador/dominio-${VITRINE}`).set({ ativar: true }, { merge: true });
+  await aDb.doc(`_emulador/dominio-${PAINEL}`).set({ ativar: true }, { merge: true });
+  const c = await plat.chamar("consultarDominio", { tid });
+  assert.deepEqual(c.hosts.map((h) => h.estado), ["ativo", "pendente_dns", "ativo"]);
+  assert.deepEqual(c.dominio, { vitrine: VITRINE, painel: PAINEL });
+  assert.deepEqual((await aDb.doc(`torcidas/${tid}`).get()).get("dominio"), { vitrine: VITRINE, painel: PAINEL });
+  assert.deepEqual((await aDb.doc(`dominios/${PAINEL}`).get()).get("ativos"), { vitrine: VITRINE, painel: PAINEL });
+  // a diretoria foi avisada ("está no ar"), uma vez por endereço
+  const avisos = await aDb.collection(`torcidas/${tid}/emails`).where("tipo", "==", "dominio_ativo").get();
+  assert.ok(avisos.size >= 2);
+  await plat.chamar("consultarDominio", { tid });
+  assert.equal((await aDb.collection(`torcidas/${tid}/emails`).where("tipo", "==", "dominio_ativo").get()).size, avisos.size);
+
+  // links de e-mail usam o domínio próprio: convite para o painel abre no painel.<domínio>
+  await ctx.dir.chamar("convidarMembro", { tid, email: "convidado-dominio@brasil.test", nome: "Convidado Domínio", papel: "diretoria" });
+  const convidado = await aAuth.getUserByEmail("convidado-dominio@brasil.test");
+  const convite = (await aDb.doc(`_emulador/convite-${convidado.uid}`).get()).data();
+  assert.match(convite.url, new RegExp(`^https://${PAINEL.replace(/\./g, "\\.")}/convite\\?c=`));
+
+  // remover a vitrine leva o www junto e tira do torcida.dominio; o painel continua
+  const semVitrine = await plat.chamar("removerDominio", { tid, host: VITRINE });
+  assert.deepEqual(semVitrine.hosts.map((h) => h.host), [PAINEL]);
+  assert.deepEqual(semVitrine.dominio, { painel: PAINEL });
+  assert.equal((await aDb.doc(`dominios/${VITRINE}`).get()).exists, false);
+  assert.equal((await aDb.doc(`dominios/www.${VITRINE}`).get()).exists, false);
+  assert.equal((await aDb.doc(`_emulador/dominio-${VITRINE}`).get()).exists, false);
+  assert.deepEqual((await aDb.doc(`dominios/${PAINEL}`).get()).get("ativos"), { painel: PAINEL });
+  const nada = await plat.chamar("removerDominio", { tid, host: PAINEL });
+  assert.equal(nada.hosts.length, 0);
+  assert.equal(nada.dominio, null);
+  assert.equal((await aDb.doc(`torcidas/${tid}`).get()).get("dominio"), undefined);
+  await assert.rejects(plat.chamar("removerDominio", { tid, host: PAINEL }), /não está ligado/);
+  // liberado: agora outra torcida pode usar o endereço
+  const daOutra = await plat.chamar("configurarDominio", { tid: outra.torcidaId, vitrine: VITRINE });
+  assert.equal(daOutra.hosts[0].host, VITRINE);
+  await plat.chamar("removerDominio", { tid: outra.torcidaId, host: VITRINE });
+});

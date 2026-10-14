@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { urlPadrao } from "@/lib/hosts";
 import { Link } from "react-router";
 import { collection, query, where, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -130,7 +131,7 @@ export function RodapeTorcida() {
             </Link>
           </nav>
           <p className="py-2 sm:py-0">
-            Tecnologia <a href="/" className="font-semibold text-texto-2 hover:text-texto">Somos Organizada</a> · gestão profissional para torcidas organizadas
+            Tecnologia <a href={urlPadrao("/")} className="font-semibold text-texto-2 hover:text-texto">Somos Organizada</a> · gestão profissional para torcidas organizadas
           </p>
         </div>
       </div>

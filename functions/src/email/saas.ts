@@ -10,7 +10,7 @@
  */
 import { createHash } from "node:crypto";
 import { logger } from "firebase-functions/v2";
-import { URL_APP } from "../config";
+import { urlDaTorcida } from "../util/urls";
 import { refs } from "../util/firebase";
 import type { Torcida } from "../dominio/tipos";
 import { enviarUmaVez } from "./enviar";
@@ -47,7 +47,7 @@ export async function avisarFaturaSaas(tid: string, faturaId: string, tipo: Avis
     const torcida = tSnap.data() as Torcida | undefined;
     const f = fSnap.data() as FaturaSaas | undefined;
     if (!torcida || !f) return;
-    const painel = `${URL_APP.value().replace(/\/+$/, "")}/${torcida.slug}/admin/plano`;
+    const painel = urlDaTorcida(torcida, "/admin/plano");
     const venc = f.vencimento.toDate();
     const valor = moeda(f.valor);
     const pix = f.pixCopiaECola

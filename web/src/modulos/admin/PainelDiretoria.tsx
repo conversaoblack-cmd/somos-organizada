@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { urlTorcida } from "@/lib/hosts";
 import { Link, Navigate, Route, Routes, useLocation } from "react-router";
 import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
@@ -249,7 +250,7 @@ function PainelLogado({ uid, membro }: { uid: string; membro: ContextoPainel["me
             <ContadorFatura />
             <BotaoPassoAPasso className="max-sm:h-11" />
             <a
-              href={`/${torcida.slug}`}
+              href={urlTorcida(torcida)}
               target="_blank"
               rel="noreferrer"
               className="hidden lg:inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2"

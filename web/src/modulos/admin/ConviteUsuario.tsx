@@ -5,6 +5,7 @@
  * (anti-fraude: ninguém da diretoria consegue entrar como responsável da subsede e trocar a conta de recebimento dele).
  */
 import { useEffect, useState } from "react";
+import { urlTorcida } from "@/lib/hosts";
 import { enviarRedefinicaoSenha } from "@/lib/emailsConta";
 import { api, mensagemDeErro } from "@/lib/api";
 import { emailValido } from "@/lib/formatos";
@@ -28,14 +29,23 @@ export const DESCRICAO_PAPEL: Record<Papel, string> = {
   portaria: "Só o leitor de ingressos na entrada dos eventos.",
 };
 
-export async function enviarConvite(args: { tid: string; slug: string; nome: string; email: string; papel: Papel; sedeId?: string }): Promise<Convite> {
+export async function enviarConvite(args: {
+  tid: string;
+  slug: string;
+  /** domínio próprio no ar (o link do painel sai nele) */
+  dominio?: { vitrine?: string; painel?: string };
+  nome: string;
+  email: string;
+  papel: Papel;
+  sedeId?: string;
+}): Promise<Convite> {
   const { tid, slug, nome, email, papel, sedeId } = args;
   const r = await api.convidarMembro({ tid, nome, email, papel, ...(papel !== "diretoria" && sedeId ? { sedeId } : {}) });
-  const painel = `${location.origin}/${slug}/admin`;
+  const painel = urlTorcida({ slug, dominio: args.dominio }, "/admin");
   const precisaSenha = r.contaNova || !!r.nuncaEntrou;
   let emailEnviado = !!r.emailEnviado;
   // Servidor sem provedor de e-mail (ou falhou): cai no e-mail padrão do Firebase, só para quem ainda não tem senha
-  if (!emailEnviado && precisaSenha) emailEnviado = await enviarRedefinicaoSenha(email, painel).then(() => true).catch(() => false);
+  if (!emailEnviado && precisaSenha) emailEnviado = await enviarRedefinicaoSenha(email, `/${slug}/admin`).then(() => true).catch(() => false);
   return { nome, email, painel, contaNova: precisaSenha, emailEnviado };
 }
 
@@ -121,7 +131,7 @@ export function ModalConvite({
     if (papel === "subsede" && !sedeId) return setErro("Escolha a subsede deste usuário.");
     setEnviando(true);
     try {
-      sucesso(await enviarConvite({ tid, slug: torcida.slug, nome: nome.trim(), email: email.trim().toLowerCase(), papel, sedeId }));
+      sucesso(await enviarConvite({ tid, slug: torcida.slug, dominio: torcida.dominio, nome: nome.trim(), email: email.trim().toLowerCase(), papel, sedeId }));
       avisar("Usuário convidado.", "sucesso");
       fechar();
     } catch (e) {

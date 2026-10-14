@@ -45,7 +45,14 @@ const VIACEP = {
 
 export async function abrirNavegador() {
   const executablePath = process.env.CHROMIUM_PATH || undefined;
-  return chromium.launch({ executablePath, args: ["--use-fake-device-for-media-stream"] });
+  // *.test → 127.0.0.1: o fluxo D abre o site em "domínios próprios" de teste (vitrine.test, painel.vitrine.test),
+  // tratados como https (service worker liga como no domínio real).
+  const porta = new URL(BASE).port;
+  const seguros = ["vitrine.test", "painel.vitrine.test"].map((h) => `http://${h}${porta ? `:${porta}` : ""}`).join(",");
+  return chromium.launch({
+    executablePath,
+    args: ["--use-fake-device-for-media-stream", "--host-resolver-rules=MAP *.test 127.0.0.1", `--unsafely-treat-insecure-origin-as-secure=${seguros}`],
+  });
 }
 
 /**
@@ -329,6 +336,7 @@ function paraValor(v) {
   if (typeof v === "boolean") return { booleanValue: v };
   if (typeof v === "number") return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
   if (v instanceof Date) return { timestampValue: v.toISOString() };
+  if (typeof v === "object") return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, paraValor(x)])) } };
   throw new Error("tipo não suportado");
 }
 
@@ -364,6 +372,11 @@ export async function fsAtualizar(caminho, dados) {
     body: JSON.stringify({ fields: Object.fromEntries(Object.entries(dados).map(([k, v]) => [k, paraValor(v)])) }),
   });
   if (!r.ok) throw new Error(`Atualizar ${caminho}: ${r.status} ${await r.text()}`);
+}
+
+export async function fsApagar(caminho) {
+  const r = await fetch(`${FIRESTORE}/${caminho}`, { method: "DELETE", headers: DONO });
+  if (!r.ok && r.status !== 404) throw new Error(`Apagar ${caminho}: ${r.status}`);
 }
 
 export async function tidDoSlug(slug) {

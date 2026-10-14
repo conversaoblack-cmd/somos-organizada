@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { urlTorcida } from "@/lib/hosts";
 import { Link } from "react-router";
 import { collection, limit, orderBy, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -224,7 +225,7 @@ function DetalhePedido({ p, fechar }: { p: ComId<PedidoPg> | null; fechar: () =>
   const avisar = useToast();
   const [simulando, setSimulando] = useState(false);
   if (!p) return <Gaveta aberto={false} fechar={fechar}>{null}</Gaveta>;
-  const linkIngressos = p.chaveAcesso ? `${location.origin}/${torcida.slug}/ingressos/${p.id}?k=${p.chaveAcesso}` : null;
+  const linkIngressos = p.chaveAcesso ? urlTorcida(torcida, `/ingressos/${p.id}?k=${p.chaveAcesso}`) : null;
   const tel = soDigitos(p.comprador?.telefone ?? "");
   return (
     <Gaveta aberto={!!p} fechar={fechar} titulo={p.tipo === "ingresso" ? "Pedido de ingresso" : "Pedido de sócio"}>

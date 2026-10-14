@@ -1,7 +1,8 @@
 /**
  * Prévia dos links das torcidas no WhatsApp, Instagram e Facebook.
  * Esses apps não rodam JavaScript: leem só as tags <meta> do HTML. O Hosting manda para cá
- * /{torcida}, /{torcida}/e/{codigo} e /{torcida}/evento/{id}. Esta function devolve o mesmo app.html do site
+ * /{torcida}, /{torcida}/e/{codigo} e /{torcida}/evento/{id} (e, no domínio próprio da torcida, /e/{codigo} e
+ * /evento/{id}). Esta function devolve o mesmo app.html do site
  * com título, descrição e imagem daquela torcida ou daquele evento. O navegador abre o site normalmente.
  * A resposta fica 5 minutos no cache do Hosting, então só a primeira pessoa de um grupo espera a function.
  */
@@ -73,7 +74,42 @@ async function appHtml(): Promise<string> {
   return r.text();
 }
 
-async function metaDoCaminho(caminho: string): Promise<Meta | null> {
+/** Host pedido pelo navegador (o Hosting repassa em X-Forwarded-Host), sem porta. */
+export function hostDoPedido(cabecalhos: { get(nome: string): string | undefined }): string {
+  const bruto = cabecalhos.get("x-forwarded-host") || cabecalhos.get("host") || "";
+  return bruto.split(",")[0]!.trim().toLowerCase().replace(/:\d+$/, "");
+}
+
+/**
+ * Domínio próprio (vitrine): "/", "/e/{codigo}" e "/evento/{id}" viram os caminhos internos da torcida
+ * (/{torcida}, /{torcida}/e/{codigo}...). Endereço padrão e hosts desconhecidos seguem como estão.
+ */
+/** Pode ser domínio próprio de torcida? (não é o endereço padrão, nem endereço do Firebase/Google, nem IP) */
+export function talvezDominioProprio(host: string, principal: string): boolean {
+  if (!host || host === principal || host === `www.${principal}`) return false;
+  if (/(^|\.)(web\.app|firebaseapp\.com|run\.app|cloudfunctions\.net|localhost)$/.test(host) || /^[\d.]+$/.test(host)) return false;
+  return /^[a-z0-9.-]{3,253}$/.test(host);
+}
+
+function hostPrincipal(): string {
+  try {
+    return new URL(URL_APP.value()).hostname;
+  } catch {
+    return "";
+  }
+}
+
+async function caminhoInterno(host: string, caminho: string): Promise<{ caminho: string; url: string }> {
+  const padrao = { caminho, url: `${URL_APP.value()}${caminho}` };
+  if (!talvezDominioProprio(host, hostPrincipal())) return padrao;
+  const d = (await db.doc(`dominios/${host}`).get()).data() as { slug?: string; tipo?: string } | undefined;
+  if (!d?.slug || d.tipo === "painel") return padrao;
+  const resto = caminho === "/" ? "" : caminho.replace(/\/$/, "");
+  return { caminho: `/${d.slug}${resto}`, url: `https://${host}${caminho}` };
+}
+
+async function metaDoCaminho(caminhoPedido: string, host = ""): Promise<Meta | null> {
+  const { caminho, url } = await caminhoInterno(host, caminhoPedido);
   const m = /^\/([a-z0-9-]{3,40})(?:\/(?:e\/([a-z0-9]{6})|evento\/([A-Za-z0-9]{10,40})))?\/?$/i.exec(caminho);
   if (!m) return null;
   const [, slug, codigo, eventoId] = m;
@@ -81,7 +117,6 @@ async function metaDoCaminho(caminho: string): Promise<Meta | null> {
   if (!tid) return null;
   const t = (await refs.torcida(tid).get()).data() as Torcida | undefined;
   if (!t) return null;
-  const url = `${URL_APP.value()}${caminho}`;
   let e: Evento | undefined;
   if (codigo) {
     const q = await db.collection(`torcidas/${tid}/eventos`).where("codigo", "==", codigo.toLowerCase()).where("status", "in", ["publicado", "encerrado"]).limit(1).get();
@@ -103,14 +138,18 @@ export const previaLink = onRequest({ memory: "256MiB", timeoutSeconds: 20, ...E
     return;
   }
   let meta: Meta | null = null;
+  const host = hostDoPedido(req);
   try {
-    meta = await metaDoCaminho(req.path);
+    meta = await metaDoCaminho(req.path, host);
   } catch (e) {
     logger.warn("previa: sem dados da torcida/evento", e);
   }
+  // CDN guarda 1 min (o navegador sempre confere). Domínio próprio e os caminhos curtos dele (/e/..., /evento/...)
+  // não ficam no cache compartilhado: a mesma URL em outro domínio não pode receber a prévia de outra torcida.
+  const cacheCdn = !talvezDominioProprio(host, hostPrincipal()) && !/^\/(e|evento)\//.test(req.path);
   res
     .status(200)
     .set("Content-Type", "text/html; charset=utf-8")
-    .set("Cache-Control", "public, max-age=0, s-maxage=60") // CDN guarda 1 min; o navegador sempre confere
+    .set("Cache-Control", cacheCdn ? "public, max-age=0, s-maxage=60" : "no-cache")
     .send(meta ? montarPrevia(html, meta) : html);
 });
