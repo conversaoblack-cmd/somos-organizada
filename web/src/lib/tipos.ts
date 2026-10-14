@@ -288,6 +288,8 @@ export interface Faq {
   palavrasChave?: string[];
   publico?: "torcedor" | "diretoria" | "todos";
   ordem?: number;
+  /** Página do painel para onde o robô oferece levar (id de DESTINOS_PAINEL em componentes/suporte/destinos.ts). */
+  destino?: string;
 }
 
 /** Planos da mensalidade Somos Organizada (todos com todos os recursos; muda só o tamanho). */

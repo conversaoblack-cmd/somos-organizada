@@ -5,7 +5,7 @@
  */
 import { usePassoAPasso, type PassoTour } from "@/componentes/tutorial";
 import { usePainel } from "./contexto";
-import type { Papel } from "@/lib/tipos";
+import { idTour } from "./idTour";
 
 const ajuda: PassoTour = {
   alvo: "botao-passo-a-passo",
@@ -201,11 +201,7 @@ export const TOURS: Record<string, PassoTour[]> = {
   ],
 };
 
-/** id do tour da página para o papel do usuário (ex.: "eventos" → admin-eventos ou subsede-eventos). */
-export function idTour(pagina: string, papel: Papel): string {
-  const prefixo = papel === "diretoria" ? "admin" : papel === "subsede" ? "subsede" : "portaria";
-  return `${prefixo}-${pagina}`;
-}
+export { idTour };
 
 export const SEM_PASSOS: PassoTour[] = [];
 export const passosDe = (id: string): PassoTour[] => TOURS[id] ?? SEM_PASSOS;

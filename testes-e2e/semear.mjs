@@ -64,7 +64,7 @@ const { torcidaId: tid } = await p.chamar("criarTorcida", {
 });
 await p.chamar("atualizarTorcidaPlataforma", { tid, status: "ativa" });
 
-// FAQ da plataforma
+// FAQ da plataforma (5º item: destino no painel, botão "Me leva até lá" do robô; ids em web/src/componentes/suporte/destinos.ts)
 const faqs = [
   ["Como recebo meu ingresso?", "Assim que o pagamento é confirmado, seus ingressos aparecem na tela com QR Code e você recebe um link para acessá-los de qualquer aparelho. Guarde o link ou tire um print do QR.", ["ingresso", "receber", "qr", "link"], "torcedor"],
   ["O ingresso pode ser transferido?", "Não. Cada ingresso é nominal e intransferível: o nome e o CPF do titular são conferidos na entrada.", ["transferir", "nome", "cpf", "outra pessoa"], "torcedor"],
@@ -72,13 +72,13 @@ const faqs = [
   ["Por que existe uma taxa de serviço?", "A taxa de 10% vai para o caixa da torcida e mantém a estrutura: sedes, eventos e ações. O valor do ingresso cobre só o custo do evento.", ["taxa", "10%", "serviço"], "torcedor"],
   ["Sou sócio, como pago menos no ingresso?", "Entre na sua conta de sócio antes de comprar. Com a mensalidade em dia, o ingresso no seu nome sai com o preço de sócio.", ["sócio", "desconto", "preço"], "torcedor"],
   ["Como cancelo minha associação?", "Na sua conta de sócio, em Assinatura, toque em Cancelar renovação. Você continua sócio até o fim do período já pago.", ["cancelar", "associação", "assinatura"], "torcedor"],
-  ["Onde encontro as chaves da Pagar.me?", "No painel da Pagar.me: Configurações → Chaves. Copie a chave secreta (sk_) e a pública (pk_). Use as de teste para experimentar e as de produção para vender de verdade.", ["pagarme", "chave", "sk", "pk", "api"], "diretoria"],
-  ["Como configuro o webhook?", "Na Pagar.me, vá em Configurações → Webhooks → Criar webhook, cole a URL que aparece no seu painel (Pagamentos) e marque os eventos de pedido, cobrança, fatura e assinatura.", ["webhook", "pagarme", "configurar"], "diretoria"],
-  ["Como repasso o dinheiro para a subsede?", "Em Financeiro você vê quanto cada subsede tem a receber (ingressos dos eventos dela e mensalidades dos sócios dela). Faça a transferência e registre o repasse para manter o saldo em dia.", ["repasse", "subsede", "financeiro"], "diretoria"],
+  ["Onde encontro as chaves da Pagar.me?", "No painel da Pagar.me: Configurações → Chaves. Copie a chave secreta (sk_) e a pública (pk_). Use as de teste para experimentar e as de produção para vender de verdade.", ["pagarme", "chave", "sk", "pk", "api"], "diretoria", "pagamentos"],
+  ["Como configuro o webhook?", "Na Pagar.me, vá em Configurações → Webhooks → Criar webhook, cole a URL que aparece no seu painel (Pagamentos) e marque os eventos de pedido, cobrança, fatura e assinatura.", ["webhook", "pagarme", "configurar"], "diretoria", "pagamentos"],
+  ["Como repasso o dinheiro para a subsede?", "Em Financeiro você vê quanto cada subsede tem a receber (ingressos dos eventos dela e mensalidades dos sócios dela). Faça a transferência e registre o repasse para manter o saldo em dia.", ["repasse", "subsede", "financeiro"], "diretoria", "financeiro"],
   ["O cartão do torcedor foi recusado. O que fazer?", "A recusa vem do banco emissor. Peça para conferir os dados, o limite ou usar Pix. O motivo aparece na tela de pedidos do painel.", ["recusado", "cartão", "negado"], "todos"],
 ];
-for (const [i, [pergunta, resposta, palavrasChave, publico]] of faqs.entries()) {
-  await aDb.collection("faq").add({ pergunta, resposta, palavrasChave, publico, ordem: i });
+for (const [i, [pergunta, resposta, palavrasChave, publico, destino]] of faqs.entries()) {
+  await aDb.collection("faq").add({ pergunta, resposta, palavrasChave, publico, ordem: i, ...(destino ? { destino } : {}) });
 }
 
 // ── Diretoria configura tudo ───────────────────────────────

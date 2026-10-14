@@ -294,6 +294,8 @@ export const api = {
   conferirPixFatura: chamar<{ tid: string }, { atualizadas: number }>("conferirPixFatura"),
   registrarNotificacao: chamar<{ token: string; aparelho?: string }, { ok: boolean }>("registrarNotificacao"),
   testarNotificacao: chamar<Record<string, never>, { enviadas: number }>("testarNotificacao"),
+  /** Avisa a equipe no celular que chegou mensagem nova no chamado (o servidor confere que o chamado é seu). */
+  avisarSuporte: chamar<{ chamadoId: string }, { avisado: boolean }>("avisarSuporte"),
 
   // ── Cadastro de torcida (página principal) ───────────
   entrarComCpf: chamar<{ cpf: string; senha: string }, { email: string }>("entrarComCpf"),

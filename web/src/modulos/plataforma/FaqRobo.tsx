@@ -23,6 +23,7 @@ import {
   useToast,
 } from "@/ui";
 import { buscarFaq, FAQ_EMBUTIDAS, PONTUACAO_MINIMA, type PublicoFaq } from "@/componentes/suporte/faqBusca";
+import { DESTINOS_PAINEL, destinoPorId } from "@/componentes/suporte/destinos";
 
 const ROTULO_PUBLICO: Record<NonNullable<Faq["publico"]>, string> = { torcedor: "Torcedor", diretoria: "Diretoria", todos: "Todos" };
 
@@ -100,6 +101,11 @@ export default function FaqRobo() {
                           </Selo>
                         </div>
                         <p className="text-sm text-texto-2 mt-1.5 whitespace-pre-line">{f.resposta}</p>
+                        {destinoPorId(f.destino) && (
+                          <p className="text-xs text-texto-3 mt-2 inline-flex items-center gap-1">
+                            <Icone nome="setaDireita" className="size-3.5" /> Leva ao painel: {destinoPorId(f.destino)!.rotulo}
+                          </p>
+                        )}
                         {!!f.palavrasChave?.length && (
                           <div className="flex flex-wrap gap-1.5 mt-3">
                             {f.palavrasChave.map((p) => (
@@ -218,6 +224,7 @@ function EditorFaq({ faq, proximaOrdem, fechar }: { faq: ComId<Faq> | "nova" | n
   const [chaves, setChaves] = useState((atual?.palavrasChave ?? []).join(", "));
   const [publico, setPublico] = useState<NonNullable<Faq["publico"]>>(atual?.publico ?? "todos");
   const [ordem, setOrdem] = useState(String(atual?.ordem ?? proximaOrdem));
+  const [destino, setDestino] = useState(destinoPorId(atual?.destino)?.id ?? "");
   const [tentou, setTentou] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const avisar = useToast();
@@ -237,6 +244,8 @@ function EditorFaq({ faq, proximaOrdem, fechar }: { faq: ComId<Faq> | "nova" | n
       palavrasChave: [...new Set(chaves.split(/[,;\n]/).map((c) => c.trim().toLowerCase()).filter(Boolean))].slice(0, 30),
       publico,
       ordem: Number.parseInt(ordem, 10) || 0,
+      // sem destino o campo não é gravado (setDoc substitui o documento inteiro: escolher "Nenhum" remove)
+      ...(destino && publico !== "torcedor" ? { destino } : {}),
     };
     setSalvando(true);
     try {
@@ -279,6 +288,21 @@ function EditorFaq({ faq, proximaOrdem, fechar }: { faq: ComId<Faq> | "nova" | n
           </Selecao>
           <Campo rotulo="Ordem" inputMode="numeric" value={ordem} onChange={(v) => setOrdem(v.replace(/[^\d]/g, "").slice(0, 4))} dica="Menor aparece primeiro" />
         </div>
+        {publico !== "torcedor" && (
+          <Selecao
+            rotulo="Levar ao painel"
+            value={destino}
+            onChange={(e) => setDestino(e.target.value)}
+            dica="Para diretoria e subsede: depois da resposta, o robô mostra “Me leva até lá” e abre a página com o passo a passo. A subsede só vê o botão nas páginas que ela acessa."
+          >
+            <option value="">Nenhum</option>
+            {DESTINOS_PAINEL.map((d) => (
+              <option key={d.id} value={d.id}>
+                {`${d.rotulo}${d.papeis.length === 1 ? (d.papeis[0] === "diretoria" ? " (só diretoria)" : " (só subsede)") : ""}`}
+              </option>
+            ))}
+          </Selecao>
+        )}
       </form>
     </Gaveta>
   );

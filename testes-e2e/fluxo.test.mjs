@@ -977,6 +977,12 @@ test("13. Storage: sócio envia a própria foto; estranhos são barrados", async
   await negado(addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), { autor: "usuario", texto: "oi", nome: "Sócio", criadoEm: serverTimestamp(), extra: 1 }));
   await updateDoc(doc(ctx.socio.db, "suporte", ch.id), { status: "aberto", atualizadoEm: serverTimestamp(), naoLidasPlataforma: increment(1) });
   await negado(updateDoc(doc(ctx.socio.db, "suporte", ch.id), { status: "aberto", atualizadoEm: serverTimestamp(), naoLidasPlataforma: 0 }));
+  // avisarSuporte: o dono do chamado avisa a equipe (1 aviso por chamado a cada 10 min); outra conta, sessão anônima e chamado inexistente, não
+  assert.deepEqual(await ctx.socio.chamar("avisarSuporte", { chamadoId: ch.id }), { avisado: true });
+  assert.ok((await aDb.doc(`plataforma/notificacoes/ultimos/suporte-${ch.id}`).get()).exists, "aviso do suporte registrado");
+  await assert.rejects(ctx.dir.chamar("avisarSuporte", { chamadoId: ch.id }), /não é seu|permission/i);
+  await assert.rejects(ctx.torcedor.chamar("avisarSuporte", { chamadoId: ch.id }), /login|unauthenticated/i);
+  await assert.rejects(ctx.socio.chamar("avisarSuporte", { chamadoId: "nao-existe" }), /não encontrado|not-found/i);
   // Regras que consultam o Firestore (diretoria enviando banner/logo) dependem do acesso
   // cruzado Storage→Firestore do emulador, que não funciona em todo ambiente (ex.: sem IPv6).
   // Rode com STORAGE_CRUZADO=1 onde funcionar; em produção é validado no primeiro upload.

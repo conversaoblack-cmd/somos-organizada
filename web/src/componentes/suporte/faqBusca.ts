@@ -26,7 +26,7 @@ export function normalizar(s: string): string {
 }
 
 /** Plural simples → singular ("ingressos" → "ingresso"). */
-const radical = (t: string) => (t.length > 4 && t.endsWith("s") ? t.slice(0, -1) : t);
+export const radical = (t: string) => (t.length > 4 && t.endsWith("s") ? t.slice(0, -1) : t);
 
 export function tokens(s: string): string[] {
   return normalizar(s)
@@ -42,7 +42,7 @@ function prefixoComum(a: string, b: string) {
 }
 
 /** "recebo" ≈ "receber", "transferir" ≈ "transferido", "pix" = "pix". */
-function parecidas(a: string, b: string): boolean {
+export function parecidas(a: string, b: string): boolean {
   if (a === b) return true;
   const menor = Math.min(a.length, b.length);
   if (menor >= 4 && (a.startsWith(b) || b.startsWith(a))) return true;
@@ -158,5 +158,6 @@ export const FAQ_EMBUTIDAS: ComId<Faq>[] = [
     palavrasChave: ["pagarme", "webhook", "chave", "configurar"],
     publico: "diretoria",
     ordem: 5,
+    destino: "pagamentos",
   },
 ];

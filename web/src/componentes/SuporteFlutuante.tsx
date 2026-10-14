@@ -5,7 +5,7 @@
  *  - "Meus chamados" com a conversa em tempo real.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import {
   addDoc,
   collection,
@@ -20,14 +20,15 @@ import {
   where,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { mensagemDeErro } from "@/lib/api";
+import { api, mensagemDeErro } from "@/lib/api";
 import { diagnosticoDoNavegador } from "@/lib/erros";
 import { hora, paraData, relativo } from "@/lib/formatos";
 import type { Chamado, ComId, Faq, MensagemSuporte } from "@/lib/tipos";
 import { useColecao, useUsuario } from "@/hooks/dados";
-import { useTorcida } from "@/hooks/torcida";
+import { useMembro, useTorcida } from "@/hooks/torcida";
 import { Botao, BotaoIcone, cx, Girando, Icone, Selo, type Tom } from "@/ui";
 import { buscarFaq, FAQ_EMBUTIDAS, faqParaPublico, type PublicoFaq } from "./suporte/faqBusca";
+import { buscarDestino, destinoPermitido, destinoPorId, linkDestino, type DestinoPainel, type PapelPainel } from "./suporte/destinos";
 
 type Tela = "assistente" | "novo" | "chamados" | "conversa";
 
@@ -38,6 +39,13 @@ interface MsgRobo {
   faqId?: string;
   semResposta?: boolean;
   avaliado?: boolean;
+  /** Página do painel para onde o robô oferece levar (só diretoria/subsede dentro de /{slug}/admin). */
+  destino?: DestinoPainel;
+}
+
+/** Avisa a equipe no celular (servidor confere que o chamado é seu). Sem esperar e sem erro na tela: o chamado já foi gravado. */
+function avisarEquipe(chamadoId: string) {
+  api.avisarSuporte({ chamadoId }).catch(() => undefined);
 }
 
 const ROTULO_STATUS: Record<Chamado["status"], string> = { aberto: "Aguardando equipe", respondido: "Respondido", resolvido: "Resolvido" };
@@ -120,6 +128,10 @@ export default function SuporteFlutuante() {
   const diretoria = /\/admin(\/|$)/.test(pathname);
   const publico: PublicoFaq = diretoria ? "diretoria" : "torcedor";
   const logado = !!usuario && !usuario.isAnonymous && !!usuario.email;
+  // "Me leva até lá" só para quem é do painel (diretoria ou subsede), nunca para o torcedor nas páginas públicas
+  const { membro } = useMembro(diretoria ? tid : null);
+  const papelPainel: PapelPainel | null = diretoria && (membro?.papel === "diretoria" || membro?.papel === "subsede") ? membro.papel : null;
+  const navegar = useNavigate();
 
   const [aberto, setAberto] = useState(false);
   const [tela, setTela] = useState<Tela>("assistente");
@@ -247,7 +259,17 @@ export default function SuporteFlutuante() {
             </header>
 
             {tela === "assistente" && (
-              <Assistente nomeTorcida={torcida.nome} publico={publico} falarComEquipe={() => setTela("novo")} />
+              <Assistente
+                nomeTorcida={torcida.nome}
+                publico={publico}
+                papelPainel={papelPainel}
+                falarComEquipe={() => setTela("novo")}
+                levar={(d) => {
+                  if (!papelPainel) return;
+                  setAberto(false);
+                  navegar(linkDestino(d, torcida.slug, papelPainel, { publicada: !!torcida.publicada }));
+                }}
+              />
             )}
             {tela === "novo" && (
               <NovoChamado
@@ -279,7 +301,20 @@ export default function SuporteFlutuante() {
 }
 
 // ── Assistente (FAQ) ──────────────────────────────────────────────
-function Assistente({ nomeTorcida, publico, falarComEquipe }: { nomeTorcida: string; publico: PublicoFaq; falarComEquipe: () => void }) {
+function Assistente({
+  nomeTorcida,
+  publico,
+  papelPainel,
+  falarComEquipe,
+  levar,
+}: {
+  nomeTorcida: string;
+  publico: PublicoFaq;
+  /** diretoria/subsede logada no painel: o robô pode levar até a página certa */
+  papelPainel: PapelPainel | null;
+  falarComEquipe: () => void;
+  levar: (d: DestinoPainel) => void;
+}) {
   const [faqs, setFaqs] = useState<ComId<Faq>[] | null>(null);
   const [msgs, setMsgs] = useState<MsgRobo[]>([]);
   const [pergunta, setPergunta] = useState("");
@@ -312,18 +347,26 @@ function Assistente({ nomeTorcida, publico, falarComEquipe }: { nomeTorcida: str
     const t = texto.trim();
     if (!t || !faqs) return;
     const [melhor] = buscarFaq(faqs, t, publico);
+    // Destino: o da FAQ respondida; sem ele, o que o texto pede (só páginas que o papel enxerga)
+    let destino: DestinoPainel | undefined;
+    if (papelPainel) {
+      const daFaq = destinoPorId(melhor?.faq.destino);
+      destino = (destinoPermitido(daFaq, papelPainel) ? daFaq : buscarDestino(t, papelPainel)) ?? undefined;
+    }
     const id = Date.now();
     setMsgs((m) => [
       ...m,
       { id, de: "voce", texto: t },
       melhor
-        ? { id: id + 1, de: "robo", texto: melhor.faq.resposta, faqId: melhor.faq.id }
-        : {
-            id: id + 1,
-            de: "robo",
-            texto: "Não encontrei uma resposta pronta para isso. Quer falar com a nossa equipe? A gente responde por aqui mesmo.",
-            semResposta: true,
-          },
+        ? { id: id + 1, de: "robo", texto: melhor.faq.resposta, faqId: melhor.faq.id, destino }
+        : destino
+          ? { id: id + 1, de: "robo", texto: `Acho que você procura: ${destino.rotulo}. Te levo até lá e mostro o passo a passo da página.`, destino, semResposta: true }
+          : {
+              id: id + 1,
+              de: "robo",
+              texto: "Não encontrei uma resposta pronta para isso. Quer falar com a nossa equipe? A gente responde por aqui mesmo.",
+              semResposta: true,
+            },
     ]);
     setPergunta("");
   }
@@ -378,6 +421,13 @@ function Assistente({ nomeTorcida, publico, falarComEquipe }: { nomeTorcida: str
           ) : (
             <div key={m.id} className="space-y-2">
               <BalaoRobo>{m.texto}</BalaoRobo>
+              {m.destino && (
+                <div className="pl-9">
+                  <Botao tamanho="sm" iconeDireita="setaDireita" onClick={() => m.destino && levar(m.destino)} data-destino-robo={m.destino.id}>
+                    Me leva até lá: {m.destino.rotulo}
+                  </Botao>
+                </div>
+              )}
               {m.faqId && !m.avaliado && (
                 <div className="flex flex-wrap items-center gap-2 pl-9">
                   <span className="text-xs text-texto-3">Isso resolveu?</span>
@@ -391,7 +441,7 @@ function Assistente({ nomeTorcida, publico, falarComEquipe }: { nomeTorcida: str
               )}
               {m.semResposta && !m.avaliado && (
                 <div className="pl-9">
-                  <Botao tamanho="sm" icone="chat" onClick={falarComEquipe}>
+                  <Botao tamanho="sm" icone="chat" variante={m.destino ? "contorno" : undefined} onClick={falarComEquipe}>
                     Falar com a equipe
                   </Botao>
                 </div>
@@ -528,6 +578,7 @@ function NovoChamado({
         atualizadoEm: serverTimestamp(),
       });
       await addDoc(collection(db, `suporte/${ref.id}/mensagens`), { autor: "usuario", texto: t.slice(0, 4000), nome, criadoEm: serverTimestamp() });
+      avisarEquipe(ref.id);
       aoCriar(ref.id);
     } catch (err) {
       setErro(mensagemDeErro(err));
@@ -680,6 +731,7 @@ function ConversaUsuario({ chamado, chamadoId, aoVer }: { chamado: ComId<Chamado
         criadoEm: serverTimestamp(),
       });
       await updateDoc(doc(db, "suporte", chamadoId), { status: "aberto", atualizadoEm: serverTimestamp(), naoLidasPlataforma: increment(1) });
+      avisarEquipe(chamadoId);
       setTexto("");
     } catch (err) {
       setErro(mensagemDeErro(err));
