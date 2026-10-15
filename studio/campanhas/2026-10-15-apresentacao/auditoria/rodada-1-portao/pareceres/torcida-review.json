@@ -1,0 +1,70 @@
+{
+  "avaliador": "torcida-review",
+  "veredito": "APROVA",
+  "condicoes_da_rodada_0": {
+    "1_vermelho_sem_cintilacao": "CUMPRIDA. sf-1-gancho (frame 60): placas vermelhas nítidas, #EF4444 sem laranja, brilho curto, sem partícula nem fumaça. Folha (frames 216-335): os mesmos vermelhos em 0,0 e 0,5 s, apagados pela onda da virada. Como a amostragem de 0,5 s não exclui cintilação mais rápida, conferi no código: mosaico.ts:41 e :46 usam {virada: 4} sem 'pisca' (Arquibancada3D só cintila com pisca: true).",
+    "2_liberado_45": "CUMPRIDA. sf-extra-liberado (frame 585): celular de y~608 a y~1392 = ~784 px = ~41% de 1920; atrás, só mosaico azul, amarelo e branco; nenhum verde fora da tela. Apresentacao.tsx:100 põe a tela LIBERADO de 54 a 108 da cena (558-612, 1,8 s).",
+    "3_licencas": "CUMPRIDA JÁ, não pendente (contesto o fato informado): audio/LICENCAS.md já tem as linhas da trilha (trilha.wav, síntese do estúdio, autoral, uso comercial sim, lida em 15/10/2026) e dos SFX, com a nota de que a levada não reproduz toque de bateria real. Só vale a ressalva: se a trilha for regerada com outra partitura antes do render de entrega, a linha precisa ser atualizada."
+  },
+  "evidencias_usadas": [
+    "campanhas/2026-10-15-apresentacao/auditoria/rodada-1-portao/pacote.md",
+    "campanhas/2026-10-15-apresentacao/03-roteiro.md (seções 1, 6 e 7)",
+    "04-portao-visual/styleframes.png",
+    "04-portao-visual/sf-1-gancho.png",
+    "04-portao-visual/sf-3-portaria.png",
+    "04-portao-visual/sf-extra-liberado.png",
+    "04-portao-visual/sf-extra-socio.png",
+    "04-portao-visual/evidencias-previa/folha.png",
+    "04-portao-visual/evidencias-previa/onda.png",
+    "audio/LICENCAS.md",
+    "src/composicoes/apresentacao/mosaico.ts (linhas 1-60: para confirmar a ausência de cintilação, que a folha a 0,5 s não mostra)",
+    "grep 'pisca' em src/ (Arquibancada3D.tsx:16 e :138-140; EstudoArquibancada.tsx:35)",
+    "grep em src/composicoes/apresentacao/Apresentacao.tsx (tempo da tela LIBERADO e frase da cena 8)"
+  ],
+  "notas": {"fidelidade": 9.0, "objetivo": 8.5},
+  "justificativa": {
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "As três condições da rodada 0 estão cumpridas. A marca fica em azul, amarelo e branco; o verde só aparece dentro de tela do produto (LIBERADO a ~41% da altura por 1,8 s, barra de validade do 'Você está em dia'). O rótulo 'Torcida Brasil · dados de demonstração' aparece junto da assinatura em todas as cenas de produto. Não há clube, escudo, cântico ou pessoa real. Trilha e SFX são autorais e estão registrados.",
+      "por_que_nao_e_10": "Restam detalhes de baixa gravidade: a linha 1 da tabela do roteiro e o comentário em mosaico.ts:38 ainda dizem 'piscando'; EstudoArquibancada.tsx ainda usa pisca: true (risco de voltar num corte derivado). Também não há styleframe das cenas 6 e 8 para confirmar que saíram 'Banco · Itaú', o titular e o card 'Caixa da diretoria'."
+    },
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "A peça agora fala com a diretoria sem tom de 'gente de fora'. 'QR REPETIDO BARRADO' põe a barreira no código repetido, não numa pessoa. 'CONTAS ABERTAS NA PLANILHA' troca a ordem ('preste contas') pela transparência. A carteirinha traz a cultura da arquibancada sem caricatura ('Prioridade nas caravanas', 'Voto nas assembleias'). O gancho em vermelho fixo lê como placar de problema, não como sinalizador.",
+      "por_que_nao_e_10": "Para um tesoureiro, 'contas abertas' pode soar como 'contas em aberto' (pendências não pagas), o contrário do que a cena quer dizer. A placa que falta na grade (a 'da sua torcida') aparece na virada como um buraco escuro; se não for entendida, o mosaico final vira só o logotipo da empresa sobre a arquibancada.",
+      "metrica_que_confirma": "Retenção nos 3 s e taxa de pulo (gancho vermelho fixo); retenção média e compartilhamentos/salvamentos (a diretoria reconhece a linguagem como dela); cadastros de torcida nos 7 dias seguintes. Derruba a nota: retenção média abaixo de 40% com pulo alto nos 3 s e nenhum cadastro no período."
+    }
+  },
+  "pontos_fortes": [
+    "O vermelho do problema virou estado fixo (degrau de 4 frames, sem pisca): leitura geométrica de placar, sem semelhança com sinalizador.",
+    "LIBERADO contido (~41% da altura, 558-612) e cercado pelo mosaico da marca; nenhum verde de marca.",
+    "'QR REPETIDO BARRADO' tira a culpa da pessoa e continua verdadeira (o diretor estava certo ao recusar 'O PRINT NÃO ENTRA', que eu sugeri e é falso: o print de ingresso ainda não usado entra uma vez).",
+    "'CONTAS ABERTAS NA PLANILHA' respeita a diretoria como quem presta contas por escolha, não por ordem.",
+    "A tela de sócio mostra benefícios da cultura da torcida ('Prioridade nas caravanas', 'Voto nas assembleias').",
+    "Trilha autoral registrada, com declaração explícita de que não copia toque de bateria real."
+  ],
+  "problemas": [
+    {
+      "descricao": "'CONTAS ABERTAS' pode ser lido como 'contas em aberto' (dívida pendente) por quem cuida do caixa.",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "Apresentacao.tsx:134, cena 8 (frase entre 6 e 98 da cena, ~1098-1190); 03-roteiro.md seção 7",
+      "correcao": "Opcional: 'A TORCIDA ↵ CONFERE NA **PLANILHA**{azul}' (5 palavras, 2,0 s; cabe nos 92 frames da frase). Se mantiver, a voz 'Caixa e vendas prontos para mostrar' desfaz a ambiguidade; conferir no take."
+    },
+    {
+      "descricao": "A documentação ainda descreve o gancho como 'vermelho piscando' (tabela do roteiro, linha 1, e SFX 'cada placa vermelha que pisca'; comentário em mosaico.ts:38). EstudoArquibancada.tsx:35 mantém pisca: true.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "03-roteiro.md linha 26; src/composicoes/apresentacao/mosaico.ts:38; EstudoArquibancada.tsx:35",
+      "correcao": "Trocar 'piscando' por 'acendem em degrau e ficam' no roteiro e no comentário; no EstudoArquibancada.tsx:35, tirar pisca: true ou marcar o estudo como 'não usar em peça'."
+    }
+  ],
+  "riscos": [
+    "Cenas 6 e 8 não têm styleframe: na rodada final eu confiro se recebimentos-2 saiu sem titular e sem 'Banco 341 · Itaú', e se a cena 8 saiu sem 'Caixa da diretoria', 'Registrar repasse' e 'A repassar'.",
+    "Placa que falta na grade (frame 252 em diante) pode ser lida como defeito e não como 'a sua torcida' até o toque do CTA (~1262). Se a retenção cair antes do fim, o mosaico final vira só logotipo de empresa sobre a arquibancada.",
+    "Licença comercial da voz ElevenLabs ainda 'a definir' em LICENCAS.md (plano contratado). Não é trilha, mas precisa estar lá antes da entrega.",
+    "Se a trilha for regerada com outra partitura, a linha de LICENCAS.md fica desatualizada."
+  ],
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

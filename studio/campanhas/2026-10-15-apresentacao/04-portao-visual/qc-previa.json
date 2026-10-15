@@ -1,5 +1,5 @@
 {
-  "gerado": "2026-10-15T16:42:25.545Z",
+  "gerado": "2026-10-15T17:07:41.842Z",
   "alvo": {
     "lufs": -14,
     "toleranciaLufs": 1,
@@ -11,8 +11,8 @@
   "formato": "vertical",
   "medidas": {
     "arquivo": "campanhas/2026-10-15-apresentacao/04-portao-visual/previa-virada.mp4",
-    "bytes": 5305431,
-    "duracao": 4.011,
+    "bytes": 5299702,
+    "duracao": 4.053,
     "largura": 1080,
     "altura": 1920,
     "fps": 30,
@@ -21,16 +21,23 @@
     "espacoDeCor": "bt709",
     "primarias": "bt709",
     "transferencia": "bt709",
-    "bitrateVideo": 10277614,
-    "deriva": 0.011,
-    "integradoLufs": -14.3,
+    "bitrateVideo": 10177858,
+    "deriva": 0.02,
+    "integradoLufs": -12.2,
     "faixaLu": 1,
-    "truePeakDbtp": -1.2,
-    "volumeMedioDb": -16.8,
+    "truePeakDbtp": -1.4,
+    "volumeMedioDb": -13,
     "segmentosPretos": [],
     "congelados": []
   },
-  "problemas": [],
-  "nota": 10,
+  "problemas": [
+    {
+      "gravidade": "alta",
+      "criterio": "tecnica",
+      "descricao": "loudness -12.2 LUFS, alvo -14 ± 1",
+      "evidencia": "ebur128"
+    }
+  ],
+  "nota": 8,
   "falhaCritica": false
 }

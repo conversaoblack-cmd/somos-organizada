@@ -17,7 +17,7 @@ export const RecorteApp: React.FC<{
   /** largura em px na tela do vídeo; a altura sai da proporção da região */
   largura: number;
   raio?: number;
-  degrade?: {topo?: boolean; base?: boolean; px?: number};
+  degrade?: {topo?: boolean; base?: boolean; direita?: boolean; px?: number};
   style?: React.CSSProperties;
 }> = ({src, larguraReal, alturaReal, regiao, largura, raio = 0, degrade, style}) => {
   const k = largura / regiao.w;
@@ -39,7 +39,12 @@ export const RecorteApp: React.FC<{
     degrade?.topo ? `transparent 0%, black ${px * 100}%` : 'black 0%',
     degrade?.base ? `black ${100 - px * 100}%, transparent 100%` : 'black 100%',
   ].join(', ');
-  const mascara = degrade?.topo || degrade?.base ? `linear-gradient(to bottom, ${paradas})` : undefined;
+  const vertical = degrade?.topo || degrade?.base ? `linear-gradient(to bottom, ${paradas})` : null;
+  const pxH = (degrade?.px ?? 60) / Math.max(1, largura);
+  const horizontal = degrade?.direita ? `linear-gradient(to right, black ${100 - pxH * 100}%, transparent 100%)` : null;
+  // as duas saídas juntas: interseção das máscaras
+  const mascara = [vertical, horizontal].filter(Boolean).join(', ') || undefined;
+  const composicao = vertical && horizontal ? 'intersect' : undefined;
   return (
     <div
       style={{
@@ -50,6 +55,8 @@ export const RecorteApp: React.FC<{
         borderRadius: raio,
         maskImage: mascara,
         WebkitMaskImage: mascara,
+        maskComposite: composicao,
+        WebkitMaskComposite: composicao ? 'source-in' : undefined,
         ...style,
       }}
     >

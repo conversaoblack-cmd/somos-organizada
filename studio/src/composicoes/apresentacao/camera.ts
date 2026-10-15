@@ -17,8 +17,11 @@ const CHAVES: Chave[] = [
   [684, [0.8, 1.8, 18], [0, 8.8, -7]],
   [828, [0, 2.2, 16.5], [0, 9.4, -7]], // taxa: aproxima (confidência)
   [972, [0, 1.4, 19.5], [0, 8.4, -7]], // evento: o mosaico enche: abre
-  [1188, [0, -1.5, 30], [0, 1.2, -7]], // CTA: recua e abaixa o olhar: a grade sobe e abre espaço para o texto
-  [1350, [0, -1.3, 29], [0, 1.3, -7]],
+  [1150, [0, 1.6, 19], [0, 8.5, -7]],
+  // CTA: desce abaixo da primeira fileira e avança olhando para cima. Calculado por projeção (fov 56): grade entre
+  // y 280 e 620, fileira da frente perto de y 1300, texto por cima das fileiras de baixo.
+  [1200, [0, 0, 5.3], [0, 6, -7]],
+  [1350, [0, 0, 4.5], [0, 6, -7]],
 ];
 
 export function cameraNoFrame(frame: number): CameraPalco {

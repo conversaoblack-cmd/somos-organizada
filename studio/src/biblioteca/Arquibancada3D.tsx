@@ -218,12 +218,13 @@ export const CameraNoFrame: React.FC<{posicao: [number, number, number]; alvo: [
  * Estrutura do estádio em volta do mosaico: cobertura (silhueta no alto) e torres de refletores com a matriz de
  * lâmpadas. Lê como "arquibancada à noite" e dá o 1º plano de profundidade.
  */
-export const Estadio: React.FC<{largura: number; alturaCobertura: number; fundoZ: number; brilhoRefletores?: number; torresX?: number}> = ({
+export const Estadio: React.FC<{largura: number; alturaCobertura: number; fundoZ: number; brilhoRefletores?: number; torresX?: number; alturaLampadas?: number}> = ({
   largura,
   alturaCobertura,
   fundoZ,
   brilhoRefletores = 1,
   torresX,
+  alturaLampadas = 4.6,
 }) => {
   const tex = useMemo(() => texturaHalo(), []);
   const tx = torresX ?? largura / 2 + 3;
@@ -238,25 +239,31 @@ export const Estadio: React.FC<{largura: number; alturaCobertura: number; fundoZ
         <boxGeometry args={[largura + 10, 0.5, 9]} />
         <meshStandardMaterial color="#05070C" roughness={1} />
       </mesh>
-      {/* borda iluminada da cobertura (linha fina de luz) */}
-      <mesh position={[0, alturaCobertura - 0.6, fundoZ + 3.4]}>
-        <boxGeometry args={[largura + 10, 0.06, 0.06]} />
-        <meshBasicMaterial color="#9FB4FF" toneMapped={false} />
+      {/* marquise com volume: frente da laje + fileira de luminárias embaixo (não uma linha de interface) */}
+      <mesh position={[0, alturaCobertura - 0.45, fundoZ + 3.3]}>
+        <boxGeometry args={[largura + 10, 0.9, 0.5]} />
+        <meshStandardMaterial color="#0B0E16" roughness={0.8} />
       </mesh>
+      {Array.from({length: 18}, (_, i) => (
+        <mesh key={i} position={[(i - 8.5) * ((largura + 6) / 18), alturaCobertura - 0.92, fundoZ + 3.0]} rotation={[Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[0.7, 0.18]} />
+          <meshBasicMaterial color={new THREE.Color(0.85, 0.9, 1).multiplyScalar(1.3 * brilhoRefletores)} toneMapped={false} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
       {torres.map(([x, z], i) => (
         <group key={i} position={[x, 0, z]}>
-          <mesh position={[0, alturaCobertura / 2 + 2, 0]}>
-            <boxGeometry args={[0.35, alturaCobertura + 6, 0.35]} />
+          <mesh position={[0, (alturaCobertura + alturaLampadas) / 2, 0]}>
+            <boxGeometry args={[0.35, alturaCobertura + alturaLampadas + 1.4, 0.35]} />
             <meshStandardMaterial color="#0A0D14" />
           </mesh>
           {/* matriz de lâmpadas 4×3 */}
           {Array.from({length: 12}, (_, k) => (
-            <mesh key={k} position={[((k % 4) - 1.5) * 0.7, alturaCobertura + 4.6 + Math.floor(k / 4) * 0.7, 0.3]}>
+            <mesh key={k} position={[((k % 4) - 1.5) * 0.7, alturaCobertura + alturaLampadas + Math.floor(k / 4) * 0.7, 0.3]}>
               <planeGeometry args={[0.55, 0.55]} />
               <meshBasicMaterial color={new THREE.Color(1, 1, 1).multiplyScalar(1.4 * brilhoRefletores)} toneMapped={false} />
             </mesh>
           ))}
-          <sprite position={[0, alturaCobertura + 5.3, 0.5]} scale={[9, 9, 1]}>
+          <sprite position={[0, alturaCobertura + alturaLampadas + 0.7, 0.5]} scale={[9, 9, 1]}>
             <spriteMaterial map={tex} color={new THREE.Color(0.85, 0.9, 1).multiplyScalar(0.9 * brilhoRefletores)} transparent blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
           </sprite>
         </group>

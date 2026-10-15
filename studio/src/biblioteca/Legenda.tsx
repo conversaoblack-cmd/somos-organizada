@@ -35,10 +35,11 @@ export function janelasDosBlocos(blocos: BlocoLegenda[], velocidade = 1) {
   });
 }
 
-export const Legenda: React.FC<{blocos: BlocoLegenda[]; velocidade?: number; tamanho?: number}> = ({
+export const Legenda: React.FC<{blocos: BlocoLegenda[]; velocidade?: number; tamanho?: number; opacidadeFaixa?: number}> = ({
   blocos,
   velocidade = 1,
-  tamanho = 60,
+  tamanho = 56,
+  opacidadeFaixa = 0.94,
 }) => {
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
@@ -66,7 +67,7 @@ export const Legenda: React.FC<{blocos: BlocoLegenda[]; velocidade?: number; tam
         transform: `translateY(${(1 - entrada) * 14 * k}px)`,
       }}
     >
-      <FaixaTexto style={{textAlign: 'center', maxWidth: area.w}}>
+      <FaixaTexto opacidade={opacidadeFaixa} style={{textAlign: 'center', maxWidth: area.w, backgroundColor: `rgba(15, 19, 27, ${opacidadeFaixa})`}}>
         <span style={{fontFamily: FONTE.corpo, fontWeight: 800, fontSize: tamanho * k, lineHeight: 1.18, color: COR.texto}}>
           {bloco.palavras.map((p, j) => {
             const dita = ms >= p.startMs && ms < Math.max(p.endMs, p.startMs + 120);

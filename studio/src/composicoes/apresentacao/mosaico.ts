@@ -27,7 +27,15 @@ export const PLACA_QUE_FALTA = (() => {
 export const FRAME_ULTIMA_PLACA = 1262;
 
 export function linhaDoTempoPlaca(c: number, l: number): EstadoPlaca[] {
-  if (c === PLACA_QUE_FALTA.c && l === PLACA_QUE_FALTA.l) return [{cor: '#F1F4FA', de: FRAME_ULTIMA_PLACA, virada: 12}];
+  // a grade nasce COMPLETA na virada; a placa só se apaga no CTA e acende no toque (a torcida de quem assiste)
+  if (c === PLACA_QUE_FALTA.c && l === PLACA_QUE_FALTA.l) {
+    const v0 = l / (L - 1);
+    return [
+      {cor: '#F1F4FA', de: VIRADA + v0 * 14 + Math.abs(c / (C - 1) - 0.5) * 6 + 6},
+      {cor: '#151B2B', de: 1192, virada: 6},
+      {cor: '#F1F4FA', de: FRAME_ULTIMA_PLACA, virada: 12},
+    ];
+  }
   const r = random(`peca-${c}-${l}`);
   const r2 = random(`peca2-${c}-${l}`);
   const estados: EstadoPlaca[] = [];
@@ -35,7 +43,7 @@ export function linhaDoTempoPlaca(c: number, l: number): EstadoPlaca[] {
   const u = c / (C - 1);
   const v = l / (L - 1);
 
-  // GANCHO (0–108): ~8% das placas vermelhas piscando (o que não entrou)
+  // GANCHO (0–108): ~8% das placas em vermelho (o que não entrou)
   const vermelhaGancho = r < 0.08 && !grade;
   // acendem em degrau ao longo do gancho e FICAM acesas (sem cintilar: vermelho piscando no escuro lê como sinalizador)
   if (vermelhaGancho) estados.push({cor: COR.perigo, de: (r / 0.08) * 90 - 10, virada: 4});
@@ -59,6 +67,16 @@ export function linhaDoTempoPlaca(c: number, l: number): EstadoPlaca[] {
 
   // INGRESSO (504–684): acentos azuis (ação)
   if (!grade && r >= 0.3 && r < 0.42) estados.push({cor: COR.azul, de: 512 + r2 * 120});
+
+  // QR BARRADO (612–684): perto da base, placas em vermelho (degrau, sem piscar); o resto rebaixa (≤ 30%);
+  // em 690 tudo volta ao que era
+  if (!grade) {
+    const perto = v < 0.2 && Math.abs(u - 0.5) < 0.18;
+    const antes = [...estados].reverse().find((e) => e.de < 612);
+    if (perto && r2 < 0.45) estados.push({cor: COR.perigo, de: 612 + Math.abs(u - 0.5) * 20 + v * 10, virada: 4});
+    else if (antes && antes.cor !== APAGADA_AZUL) estados.push({cor: '#1A1E2A', de: 612 + v * 8, virada: 6});
+    if ((perto && r2 < 0.45) || antes) estados.push({cor: antes ? antes.cor : APAGADA_AZUL, de: 688 + v * 10, virada: 6});
+  }
 
   // DINHEIRO (684–828): grupos laterais (as subsedes) acendem em amarelo
   const subsede = (u < 0.18 || u > 0.82) && v > 0.15 && v < 0.85;

@@ -10,25 +10,14 @@ import legendaJson from './legenda.json';
 import {CENAS} from './roteiro';
 import {useCurrentFrame, interpolate} from 'remotion';
 import {ENTRADA} from '../../lib/movimento';
-import {CenaCelular, type ChaveCelular} from './CenaCelular';
+import {ProvaCard} from './ProvaCard';
+import {PROVAS} from './provas';
 import {CenaCta} from './CenaCta';
 import {Assinatura, Clarao, FaixaLeitura, Placar, RotuloDemo} from './Sobreposicoes';
 import {Audio} from '@remotion/media';
 import {staticFile} from 'remotion';
 
 const dur = (c: keyof typeof CENAS) => CENAS[c].ate - CENAS[c].de;
-/**
- * Grade das cenas com celular (px a 1080): assinatura 270 · rótulo 314 · frase 360–560 · celular centrado em ~1000 ·
- * legenda na faixa baixa. 1 unidade 3D = 298,6 px (câmera da Frente: fov 30, distância 12).
- * Push-in: para levar à altura Y px o ponto da tela que fica na fração f (de cima) da captura, com escala e:
- *   pos.y = (960 − Y)/298,6 − (0,5 − f) · 4,025 · e  →  `alvo(f, e, Y)`.
- */
-const alvo = (f: number, e: number, y = 980) => (960 - y) / 298.6 - (0.5 - f) * 4.025 * e;
-const BASE: ChaveCelular = {f: 0, pos: [0, -0.13, 0], rot: [-0.05, -0.2, 0.03], esc: 0.62};
-const deriva = (ate: number, extra: Partial<ChaveCelular> = {}): ChaveCelular[] => [
-  BASE,
-  {...BASE, f: ate, rot: [-0.04, 0.12, 0.02], ...extra},
-];
 const TOPO_FRASE = 360;
 
 carregarFontes();
@@ -82,56 +71,56 @@ export const Apresentacao: React.FC<{audio?: 'previa' | 'final' | 'nenhum'}> = (
       <Sequence from={CENAS.virada.de} durationInFrames={CENAS.virada.ate - CENAS.virada.de} premountFor={fps} name="3 virada">
         <NomeDaMarca />
       </Sequence>
-      {/* 4 · SÓCIO */}
+      {/* 4 · SÓCIO: a prova sobe da carteirinha */}
       <Sequence from={CENAS.socio.de} durationInFrames={dur('socio')} premountFor={fps} name="4 socio">
-        <CenaCelular
-          duracao={dur('socio')}
-          telas={[[0, 'carteirinha-frente.png'], [54, 'carteirinha-em-dia.png']]}
-          chaves={[BASE, {...BASE, f: 54, rot: [-0.04, -0.05, 0.02]}, {f: 108, pos: [0, alvo(0.63, 0.9), 0.4], rot: [-0.03, 0.02, 0], esc: 0.9}, {f: 144, pos: [0, alvo(0.63, 0.92), 0.45], rot: [-0.03, 0.06, 0], esc: 0.92}]}
-        />
         <FaixaLeitura />
         <FraseImpacto entrada={4} saida={134} topo={TOPO_FRASE} tamanho={72} linhas={['Mensalidade que', 'se **cobra sozinha**{amarelo}']} />
+        <ProvaCard prova={PROVAS.socio} cor={COR.azul} entrada={40} saida={134} />
         <RotuloDemo />
       </Sequence>
-      {/* 5 · INGRESSO + PORTARIA */}
-      <Sequence from={CENAS.ingresso.de} durationInFrames={dur('ingresso')} premountFor={fps} name="5 ingresso e portaria">
-        <CenaCelular
-          duracao={dur('ingresso')}
-          telas={[[0, 'ingresso-qr.png'], [54, 'portaria-liberado-rafael.png'], [108, 'portaria-ja-utilizado-rafael.png']]}
-          chaves={deriva(dur('ingresso'))}
-        />
-        <Clarao em={54} />
+      {/* 5 · INGRESSO + PORTARIA (cortes secos na batida) */}
+      <Sequence from={CENAS.ingresso.de} durationInFrames={54} premountFor={fps} name="5a ingresso">
+        <ProvaCard prova={PROVAS.ingresso} cor={COR.azul} entrada={8} />
+        <RotuloDemo />
+      </Sequence>
+      <Sequence from={CENAS.ingresso.de + 54} durationInFrames={54} premountFor={fps} name="5b liberado">
+        <ProvaCard prova={PROVAS.liberado} cor="#F1F4FA" entrada={0} />
+        <Clarao em={0} />
+        <RotuloDemo />
+      </Sequence>
+      <Sequence from={CENAS.ingresso.de + 108} durationInFrames={72} premountFor={fps} name="5c barrado">
         <FaixaLeitura />
-        <FraseImpacto entrada={114} saida={170} topo={TOPO_FRASE} tamanho={84} linhas={['QR repetido', '**barrado**{perigo}']} />
+        <ProvaCard prova={PROVAS.barrado} cor={COR.perigo} entrada={0} saida={62} />
+        <FraseImpacto entrada={6} saida={62} topo={TOPO_FRASE} tamanho={80} linhas={['QR repetido', '**barrado**{perigo}']} />
         <RotuloDemo />
       </Sequence>
       {/* 6 · DINHEIRO */}
       <Sequence from={CENAS.dinheiro.de} durationInFrames={dur('dinheiro')} premountFor={fps} name="6 dinheiro">
-        <CenaCelular duracao={dur('dinheiro')} telas={[[0, 'recebimentos-2.png']]} chaves={[BASE, {f: 72, pos: [0, alvo(0.33, 0.85), 0.4], rot: [-0.03, -0.04, 0], esc: 0.85}, {f: 144, pos: [0, alvo(0.33, 0.87), 0.45], rot: [-0.03, 0.04, 0], esc: 0.87}]} />
         <FaixaLeitura />
         <FraseImpacto entrada={18} saida={134} topo={TOPO_FRASE} tamanho={72} linhas={['Direto na', '**conta da torcida**{amarelo}']} />
+        <ProvaCard prova={PROVAS.dinheiro} cor={COR.amarelo} entrada={24} saida={134} />
         <RotuloDemo />
       </Sequence>
       {/* 7a · TAXA (insight; bateria em breakdown) */}
       <Sequence from={CENAS.taxa.de} durationInFrames={dur('taxa')} premountFor={fps} name="7a taxa">
-        <CenaCelular duracao={dur('taxa')} telas={[[0, 'compra-1.png']]} chaves={[BASE, {f: 24, pos: [0, alvo(0.92, 0.85, 1040), 0.4], rot: [-0.02, 0, 0], esc: 0.85}, {f: 144, pos: [0, alvo(0.92, 0.87, 1040), 0.45], rot: [-0.02, 0.03, 0], esc: 0.87}]} saida={134} />
-        <FaixaLeitura altura={820} />
-        <Placar de={18} ate={30} inicio={0} fim={10} sufixo="%" topo={350} tamanho={230} />
-        <FraseImpacto entrada={34} saida={134} topo={590} alinhamento="center" tamanho={80} linhas={['vira **caixa**{amarelo}']} />
+        <FaixaLeitura />
+        <Placar de={18} ate={30} inicio={0} fim={10} sufixo="%" topo={338} tamanho={150} />
+        <FraseImpacto entrada={30} saida={134} topo={486} alinhamento="center" tamanho={72} linhas={['vira **caixa**{amarelo}']} />
+        <ProvaCard prova={PROVAS.taxa} cor={COR.amarelo} entrada={20} saida={134} />
         <RotuloDemo />
       </Sequence>
       {/* 7b · EVENTO: o ingresso só paga o evento */}
       <Sequence from={CENAS.evento.de} durationInFrames={dur('evento')} premountFor={fps} name="7b evento">
-        <CenaCelular duracao={dur('evento')} telas={[[0, 'evento.png']]} chaves={[BASE, {f: 30, pos: [0, alvo(0.6, 0.85), 0.4], rot: [-0.03, -0.04, 0], esc: 0.85}, {f: 108, pos: [0, alvo(0.6, 0.87), 0.45], rot: [-0.03, 0.04, 0], esc: 0.87}]} />
         <FaixaLeitura />
         <FraseImpacto entrada={6} saida={98} topo={TOPO_FRASE} tamanho={72} linhas={['A diretoria', '**decide o preço**{azul}']} />
+        <ProvaCard prova={PROVAS.evento} cor={COR.amarelo} entrada={14} saida={98} />
         <RotuloDemo />
       </Sequence>
       {/* 8 · PROVA: planilha */}
       <Sequence from={CENAS.prova.de} durationInFrames={dur('prova')} premountFor={fps} name="8 prova">
-        <CenaCelular duracao={dur('prova')} telas={[[0, 'financeiro-planilha.png']]} chaves={[BASE, {f: 40, pos: [0, alvo(0.43, 0.9), 0.4], rot: [-0.02, 0, 0], esc: 0.9}, {f: 108, pos: [0, alvo(0.43, 0.92), 0.45], rot: [-0.02, 0.02, 0], esc: 0.92}]} />
         <FaixaLeitura />
         <FraseImpacto entrada={6} saida={98} topo={TOPO_FRASE} tamanho={72} linhas={['Contas abertas', 'na **planilha**{azul}']} />
+        <ProvaCard prova={PROVAS.planilha} cor={COR.azul} entrada={14} saida={98} />
         <RotuloDemo />
       </Sequence>
       {/* 9 · CTA */}

@@ -1,0 +1,171 @@
+{
+  "avaliador": "motion-review",
+  "veredito": "VETA",
+  "condicao_ou_correcao": "O veto não é ao território. O mosaico-arquibancada, o logo 2×2 formado pelas placas e a luz semântica (vermelho → azul/amarelo) PASSAM. O veto é à gramática das cenas de produto (cenas 4 a 8, cerca de 60% da peça), que hoje é o que o próprio 02-direcao-de-arte.md chama de 'o que derruba esta direção': um celular plano e grande sobre um desfoque de pixels, com três camadas de texto empilhadas e colidindo. Para derrubar o veto: reapresentar os styleframes dos frames 480, 640, 720 e 900 com (1) layout em 3 andares sem sobreposição: assinatura em y 270–335, frase de impacto em y 350–570, aparelho ou recorte em y 590–1080, legenda em y 1095–1250; (2) prova sempre por recorte (RecorteApp) com a linha-chave ≥ 44 px, e o celular inteiro só como plano de estabelecimento, com no máximo 490 px de altura e nunca atrás de texto; (3) o celular dentro do estádio: luz de recorte na cor semântica e a luz espalhando nas placas vizinhas; (4) o mosaico ainda lido como arquibancada atrás do celular (desfoque menor, fileiras e perspectiva visíveis), e não como painel de LED.",
+  "evidencias_usadas": [
+    "auditoria/rodada-1-portao/pacote.md",
+    "04-portao-visual/styleframes.png",
+    "04-portao-visual/styleframes-zona.png",
+    "04-portao-visual/sf-1-gancho.png",
+    "04-portao-visual/sf-1-gancho-zona.png",
+    "04-portao-visual/sf-2-virada.png",
+    "04-portao-visual/sf-2-virada-zona.png",
+    "04-portao-visual/sf-3-portaria.png",
+    "04-portao-visual/sf-3-portaria-zona.png",
+    "04-portao-visual/sf-4-taxa.png",
+    "04-portao-visual/sf-4-taxa-zona.png",
+    "04-portao-visual/sf-5-cta.png",
+    "04-portao-visual/sf-5-cta-zona.png",
+    "04-portao-visual/sf-extra-liberado.png",
+    "04-portao-visual/sf-extra-socio.png",
+    "04-portao-visual/evidencias-previa/folha.png",
+    "04-portao-visual/evidencias-previa/folha-zona.png",
+    "04-portao-visual/evidencias-previa/frames/t001.0.png",
+    "04-portao-visual/evidencias-previa/frames/t001.5.png",
+    "04-portao-visual/evidencias-previa/onda.png",
+    "04-portao-visual/evidencias-previa/evidencias.json",
+    "auditoria/rodada-1-portao/qc.json",
+    "02-direcao-de-arte.md",
+    "03-roteiro.md",
+    "studio/marca/marca.md",
+    "studio/marca/linguagem-visual.md",
+    "studio/marca/logos/icone.svg (só para conferir a ordem das cores do 2×2)",
+    "studio/auditoria/rubrica.md"
+  ],
+  "notas": {
+    "gancho": 7.5,
+    "visual": 6.0,
+    "fidelidade": 7.0,
+    "tecnica": 7.0
+  },
+  "justificativa": {
+    "gancho": {
+      "natureza": "hipotese",
+      "texto": "sf-1 (frame 60): pergunta concreta em Archivo Black (~96 px), branca, com 'NÃO ENTROU' em vermelho #EF4444, dentro da zona (x 125–880, y 280–635), cheia desde o frame 0 segundo o roteiro. A semântica de cor funciona: o vermelho do texto rima com as placas vermelhas. Um único foco: o texto.",
+      "por_que_nao_e_10": "A imagem em si é quase toda preta: placas escuras e um punhado de vermelhos espalhados. Sem o texto, o quadro não para o polegar, e em miniatura a arquibancada mal se lê. A frase tem 7 palavras (orçamento de 2,6 s), então em 0–1,5 s o espectador lê cerca de 4. A faixa preta dura com a linha lavanda em y 222 dá cara de tela de interface ao topo. Não vi os frames de 0,5 s e 1,0 s da peça (a prévia cobre 216–335); julguei pela composição do frame 60.",
+      "metrica_que_confirma": "taxa de pulo e retenção nos 3 s: retenção em 3 s abaixo da média do perfil derruba a nota; acima, confirma."
+    },
+    "visual": {
+      "natureza": "execucao",
+      "texto": "Resposta ao portão: é linguagem própria nas cenas só de mosaico (sf-1 gancho, sf-2 virada, sf-5 CTA, prévia 1,5–3,5 s). O logo 2×2 nasce das placas da arquibancada, e nenhuma outra marca usaria isso. Nas cenas de produto (sf-3 frame 640, sf-4 frame 900, extra frame 480, extra frame 585) é animação genérica de interface: um celular plano e grande sobre um desfoque de pixels que parece painel de LED e não arquibancada, sem nenhuma troca de luz entre o celular e o mosaico (sem recorte azul ou vermelho, sem feixes, sem brilho nas placas) e com o texto colidindo. São 6 das 9 cenas.",
+      "por_que_nao_e_10": "A direção não foi aprovada neste portão (teto de 7,0). Nas cenas de produto, a peça poderia ser de outra marca. Há colisões de texto (sf-4, extra 480), a legenda deixa ver o texto de trás e há vazios de composição (sf-5 com y 1035–1920 vazio)."
+    },
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "Paleta certa: azul #2E6BFF e amarelo #FFCC00, Archivo Black nos títulos, Archivo 800 na legenda, logo 2×2 na ordem do icone.svg (azul, amarelo / amarelo, branco), assinatura discreta nas cenas de produto, rótulo 'Torcida Brasil · dados de demonstração' presente. O verde fica só dentro da tela do LIBERADO, com o celular a 40,6% da altura (≤ 45%).",
+      "por_que_nao_e_10": "O logo da virada (frame 320) tem um buraco no quadrante branco (~x 735, y 885), que se lê como defeito. O JÁ UTILIZADO é âmbar e se confunde com o amarelo de 'o que entra', sem a luz vermelha pedida na direção de arte. No frame 480 aparece o preço do plano ('R$ 11,00 por mês'), contra a decisão 'sem o card de preço do plano'. A caixa translúcida da legenda fica esverdeada sobre o LIBERADO (frame 585). A linha legal do CTA está em ~34 px."
+    },
+    "tecnica": {
+      "natureza": "execucao",
+      "texto": "QC da prévia 10/10: −14,3 LUFS, TP −1,2 dBTP, 1080×1920, 30 fps, sem tela preta nem congelamento. A prévia tem push-in contínuo de 2,0 a 3,5 s (nada parado ≥ 1 s) e as placas viram em onda com variação (t1.5).",
+      "por_que_nao_e_10": "Há falhas de composição: a caixa da legenda deixa ver o texto da interface atrás (frame 480: 'R$ 11,00', 'Sócio Mensal', 'de serviço'; frame 640: 'Código BCXU-9UAJ' cortado). No frame 900, a interface esmaecida fica sob a assinatura, sob o '10%' e sob o 'VIRA CAIXA'. O topo do celular sai da zona (y ≈ 45, sob a interface do Reels). Na onda, não vejo transiente no frame 252 (x ≈ 359 px), e o maior ataque cai em ~270 (x ≈ 540 px). A prévia cobre só 4 s, então não deu para julgar o easing com passo de 0,5 s."
+    }
+  },
+  "pontos_fortes": [
+    "Território proprietário de verdade: o 2×2 da marca formado pelas placas da arquibancada (sf-2 frame 320, sf-5 frame 1320). Passa no 'poderia ser de outra marca?' nas cenas de mosaico.",
+    "A semântica de cor vira luz: placas vermelhas no problema (sf-1, t0.0) e azul/amarelo depois da virada (t1.5–3.5); a cor carrega a narrativa sem texto.",
+    "Virada com placas virando em onda e variação por semente (t1.5, frame 261), seguida de push-in contínuo (t2.0 → t3.5): revela por acúmulo, como a direção de arte pede.",
+    "Tipografia de cena correta no gancho, na virada e no 10% (Archivo Black grande, palavra-chave na cor semântica), dentro da zona essencial.",
+    "Assinatura discreta (grade + 'SOMOS ORGANIZADA', ~34 px) nas cenas de produto, como decidido na rodada 0.",
+    "O logo 2×2 continua desfocado no fundo das cenas de produto (sf-3, sf-4, extra 585), o que dá continuidade de território.",
+    "LIBERADO com o celular a 40,6% da altura (y 610–1390) e verde só dentro da tela.",
+    "QC técnico da prévia limpo (−14,3 LUFS, −1,2 dBTP)."
+  ],
+  "problemas": [
+    {
+      "descricao": "ESTRUTURAL. As cenas de produto caem em 'animação de interface': celular plano e grande na frente de um desfoque de pixels (o mosaico vira painel de LED e deixa de ser arquibancada), sem nenhuma interação de luz entre o celular e o mosaico. O recorte azul, a luz vermelha no barrado e os feixes amarelos previstos no 02-direcao-de-arte.md não aparecem.",
+      "gravidade": "alta",
+      "criterio": "visual",
+      "evidencia": "sf-3 (frame 640), sf-4 (frame 900), sf-extra-socio (frame 480), sf-extra-liberado (frame 585)",
+      "correcao": "Frames 360–1188: reduzir o desfoque do mosaico de fundo para que as fileiras e a curva da arquibancada continuem visíveis (desfoque máximo de ~1/3 do atual). Aplicar luz de recorte de 6–10 px na borda do celular, na cor da cena (azul #2E6BFF no sócio e no ingresso, vermelho #EF4444 em 612–684, amarelo #FFCC00 em 684–1080), espalhando para as placas a até ~200 px do aparelho. Cada cena de produto precisa de uma ligação física celular → placas (feixe, onda que sai do aparelho). Reapresentar os styleframes dos frames 480, 640, 720 e 900 no portão."
+    },
+    {
+      "descricao": "ESTRUTURAL (layout). Não há andares definidos: celular gigante (frame 900: y ≈ 45–1130, 57% da altura; frame 480: y 255–1420, 61%) atrás da frase de impacto e da legenda. A interface esmaecida fica legível sob 'SOMOS ORGANIZADA', '10%' e 'VIRA CAIXA' (texto sobre texto), e a legenda cobre a linha 'Total R$ 165,00', que é justamente a prova da cena 7a.",
+      "gravidade": "alta",
+      "criterio": "visual",
+      "evidencia": "sf-4 frame 900 (ghost 'Chama Galera', 'Comprar ingresso', 'Ônibus saindo da Sede Central' sob o título; 'Total' cortado em y 1097); sf-extra-socio frame 480 (abas e 'TORCIDA BRASIL' sob o título)",
+      "correcao": "Grade fixa para as cenas de produto: assinatura y 270–335; frase y 350–570; aparelho/recorte y 590–1080; legenda y 1095–1250. Nenhum pixel de interface com opacidade > 0 sob a frase ou a legenda. Prova por RecorteApp: no frame 900, recortar só 'Taxa de serviço (10%) · R$ 15,00' e 'Total · R$ 165,00' em largura de até 840 px (x 120–960), com texto ≥ 44 px, em y 600–800."
+    },
+    {
+      "descricao": "A caixa da legenda é translúcida e deixa ver o texto da interface atrás: 'R$ 11,00', 'por mês', 'Sócio Mensal' e 'de serviço' aparecem sob 'No Pix, com lembrete.'; a legenda quebra em 3 linhas e 'lembrete.' encosta na borda da caixa.",
+      "gravidade": "alta",
+      "criterio": "tecnica",
+      "evidencia": "sf-extra-socio frame 480 (y 1030–1250); sf-3 frame 640 ('Código BCXU-9UAJ' cortado em y 1097)",
+      "correcao": "Legenda.tsx: fundo sólido #0F131B com opacidade ≥ 0,92 (ou o celular fora da faixa y 1095–1250); máximo de 2 linhas por bloco ('No cartão, todo mês. ↵ No Pix, com lembrete.' em 56 px, se precisar caber em 660 px)."
+    },
+    {
+      "descricao": "O JÁ UTILIZADO é âmbar na tela do produto, cercado de placas amarelas, e o celular não tem luz vermelha. O problema se lê na família do amarelo ('o que entra'). Há 3 focos no mesmo quadro: BARRADO, JÁ UTILIZADO e a legenda.",
+      "gravidade": "media",
+      "criterio": "fidelidade",
+      "evidencia": "sf-3 frame 640",
+      "correcao": "Frames 612–684: luz de recorte vermelha #EF4444 no aparelho e placas próximas em vermelho (degrau de 4 frames, sem piscar); placas amarelas atrás do celular com brilho ≤ 30% nesse trecho; frase de impacto entrando no 618 e legenda do 2º bloco sem caixa sobre a tela."
+    },
+    {
+      "descricao": "O preço do plano ('R$ 11,00 por mês', 'Sócio Mensal') aparece, contra a decisão da rodada 0 ('push-in em Você está em dia, sem o card de preço do plano'). Também não há push-in: 'Você está em dia' fica em ~26 px no frame 480.",
+      "gravidade": "media",
+      "criterio": "fidelidade",
+      "evidencia": "sf-extra-socio frame 480 (x 330–755, y 1140–1215)",
+      "correcao": "Frames 396–468: push-in até o card 'Você está em dia' ocupar ≥ 660 px de largura (texto ≥ 44 px); máscara que corta o card de preço em todos os frames da cena 4."
+    },
+    {
+      "descricao": "O logo da virada aparece com um buraco no quadrante branco (uma placa apagada no centro), o que se lê como defeito no momento em que o nome da marca entra. O roteiro reserva a 'placa que falta' para o CTA (1188–1260).",
+      "gravidade": "media",
+      "criterio": "fidelidade",
+      "evidencia": "sf-2 frame 320 (~x 735, y 885); prévia t1.5–t3.5",
+      "correcao": "Frames 252–1188: quadrante branco completo. A placa apagada aparece só em 1188–1260 e acende no toque (~1260)."
+    },
+    {
+      "descricao": "CTA: a metade de baixo do quadro está vazia (y 1035–1920, #070A12 chapado; a arquibancada termina numa borda reta), com três eixos de alinhamento (título à esquerda em x 120, grade centrada em ~520, URL e linha legal centradas em 450). O título 'CADASTRE SUA TORCIDA' tem ~62 px (a direção de arte pede 96–140), e o CTA aparece duplicado no título e no botão 'Cadastrar minha torcida'.",
+      "gravidade": "media",
+      "criterio": "visual",
+      "evidencia": "sf-5 frame 1320",
+      "correcao": "Frames 1188–1350: câmera mais baixa ou inclinada para o mosaico preencher até y 1920 (luz cheia, como pede a direção de arte); um eixo só (centro em x 450 na zona baixa, ou tudo alinhado à esquerda em x 120); um CTA só: botão azul 'Cadastre sua torcida', com 'SOMOS ORGANIZADA' em Archivo Black ≥ 96 px acima da grade ou abaixo dela."
+    },
+    {
+      "descricao": "A linha legal do CTA está em ~34 px, abaixo dos 44 px. 'Mensalidade fixa, sem % das vendas' virou argumento essencial na rodada 0 e encosta nas bordas da zona (x 121 e 778).",
+      "gravidade": "media",
+      "criterio": "visual",
+      "evidencia": "sf-5 frame 1320 (y 1065–1185)",
+      "correcao": "Separar em 2 linhas de ≥ 44 px: 'Mensalidade fixa, sem % das vendas.' em amarelo e 'Só paga depois de publicar o site.' em #F1F4FA. 'Teste grátis em modo demonstração' vai para o texto do post ou para uma 3ª linha de ≥ 36 px em #A1A5AC, com margem de 20 px dentro de x 120–780."
+    },
+    {
+      "descricao": "O topo das cenas de mosaico tem uma faixa preta chapada sob uma linha lavanda reta e nítida, de borda a borda. Lê-se como divisor de interface e não como marquise. Os refletores aparecem cortados nos cantos, como grades brancas pela metade.",
+      "gravidade": "baixa",
+      "criterio": "visual",
+      "evidencia": "sf-1 frame 60 (linha em y 222, faixa até y 355); sf-2 frame 320 (y 265–380; refletores em x 0–45 e 1035–1080); sf-5 frame 1320 (linha em y 8)",
+      "correcao": "Trocar a linha de 1 px por uma marquise com volume (gradiente de #070A12 a transparente em ~120 px, ou estrutura com as torres de refletor inteiras dentro do quadro em x ≥ 60 e x ≤ 1020)."
+    },
+    {
+      "descricao": "No frame 900 não aparece o anel ou destaque amarelo na linha 'Taxa de serviço (10%)' previsto para 852–906, e a linha está em ~20 px. A prova da cena 7a fica sem foco.",
+      "gravidade": "media",
+      "criterio": "visual",
+      "evidencia": "sf-4 frame 900 (y 1030–1055)",
+      "correcao": "Frames 852–906 (≥ 1,8 s): destaque com recorte arredondado (não sombra quadrada) na linha da taxa, já no recorte ampliado (≥ 44 px), saindo junto com o fim do gesto, sem sobrar."
+    },
+    {
+      "descricao": "Cue da virada: não vejo transiente no frame 252 (onda x ≈ 359 px de 1200); o maior ataque está em ~270 (x ≈ 540) e depois em ~306 e ~324. Ou a bateria completa entra 1 tempo depois da virada, ou o surdo e o estalo do 252 estão baixos. O leito antes da virada (216–234) está em ~55% da amplitude: o 'silêncio tenso' não respira e o contraste da virada fica pequeno.",
+      "gravidade": "baixa",
+      "criterio": "tecnica",
+      "evidencia": "onda.png (x 0–545); frames t001.0 e t001.5",
+      "correcao": "Conferir na timeline: surdo e estalo de virada no frame 252 com ataque visível; leito de 108–234 cerca de 8–10 dB abaixo do nível pós-virada (só surdo abafado e ar de estádio), mantendo −14 LUFS integrado."
+    },
+    {
+      "descricao": "A caixa translúcida da legenda sobre o LIBERADO fica esverdeada: verde perto de virar cor de legenda.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "sf-extra-liberado frame 585 (y 1095–1250)",
+      "correcao": "A mesma correção da caixa sólida (#0F131B, opacidade ≥ 0,92) ou o celular acima de y 1080 em 558–612."
+    }
+  ],
+  "riscos": [
+    "Polir a gramática atual das cenas de produto antes de redefini-la gasta a rodada inteira e chega a uma peça 'boa de interface', que não passa de 7–8 em visual.",
+    "Render 3D por software: ao aumentar a nitidez do mosaico atrás do celular, conferir aliasing e serrilhado nas placas em movimento.",
+    "Com o celular menor (≤ 490 px), a tela inteira fica ilegível; a cena depende de o recorte ampliado ser fiel (sem esticar e sem cortar ícone ou tooltip).",
+    "Verde do LIBERADO: mesmo a 40% da altura, se a luz de recorte for verde ou as placas refletirem verde, vira cor de marca. A luz do aparelho nesse trecho deve ser branca (flash curto), nunca verde.",
+    "A interface do Reels cobre y < 270 e o trilho de ícones x > 780 abaixo de y 840; o celular do frame 900 começa em y ≈ 45.",
+    "Os frames de 0,5 s e 1,0 s do gancho real ainda não foram vistos; a nota de gancho fica pendente até a montagem."
+  ],
+  "argumento_contra_meu_veredito": "O território, que é o que um portão de direção julga, está claramente aprovado e é proprietário. Os defeitos das cenas de produto são de composição (escala, máscara, opacidade da legenda, luz de recorte), e o 02-direcao-de-arte.md já prescreve exatamente as correções (push-in, recorte azul ou vermelho, feixes, celular ≤ 45%). Os styleframes só não as executaram. O pacote avisa que é a v1 de layout. Vetar custa uma rodada por coisas que um APROVA COM CONDIÇÃO resolveria no polimento. Mantenho o veto porque o critério de derrubada escrito na própria direção ('cartões flutuando sobre fundo escuro') descreve 4 dos 7 quadros apresentados, que cobrem cerca de 60% da duração; sem ver essa gramática resolvida em styleframe, aprovar seria apostar.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

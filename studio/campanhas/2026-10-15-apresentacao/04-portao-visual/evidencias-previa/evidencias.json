@@ -1,10 +1,10 @@
 {
   "video": "campanhas/2026-10-15-apresentacao/04-portao-visual/previa-virada.mp4",
-  "duracao": 4.011,
+  "duracao": 4.053,
   "fps": 30,
-  "passo": 0.5,
-  "largura": 270,
-  "escala": 0.25,
+  "passo": 0.25,
+  "largura": 540,
+  "escala": 0.5,
   "formato": "vertical",
   "zona": {
     "superior": [
@@ -26,32 +26,64 @@
       "arquivo": "frames/t000.0.png"
     },
     {
+      "t": 0.25,
+      "arquivo": "frames/t000.3.png"
+    },
+    {
       "t": 0.5,
       "arquivo": "frames/t000.5.png"
+    },
+    {
+      "t": 0.75,
+      "arquivo": "frames/t000.8.png"
     },
     {
       "t": 1,
       "arquivo": "frames/t001.0.png"
     },
     {
+      "t": 1.25,
+      "arquivo": "frames/t001.3.png"
+    },
+    {
       "t": 1.5,
       "arquivo": "frames/t001.5.png"
+    },
+    {
+      "t": 1.75,
+      "arquivo": "frames/t001.8.png"
     },
     {
       "t": 2,
       "arquivo": "frames/t002.0.png"
     },
     {
+      "t": 2.25,
+      "arquivo": "frames/t002.3.png"
+    },
+    {
       "t": 2.5,
       "arquivo": "frames/t002.5.png"
+    },
+    {
+      "t": 2.75,
+      "arquivo": "frames/t002.8.png"
     },
     {
       "t": 3,
       "arquivo": "frames/t003.0.png"
     },
     {
+      "t": 3.25,
+      "arquivo": "frames/t003.3.png"
+    },
+    {
       "t": 3.5,
       "arquivo": "frames/t003.5.png"
+    },
+    {
+      "t": 3.75,
+      "arquivo": "frames/t003.8.png"
     }
   ],
   "folha": "folha.png",

@@ -86,3 +86,27 @@ cena no roteiro (`03-roteiro.md`) e conferido no QC pela régua do `Legenda.tsx`
 
 Se os styleframes parecerem "animação de interface" (cartões flutuando sobre fundo escuro) ou se o mosaico não for lido
 como arquibancada, a direção é refeita antes de polir qualquer execução.
+
+## v2 das cenas de produto (portão visual, rodada 1: veto da motion-review)
+
+**Diagnóstico aceito:** nas cenas 4 a 8, o celular grande e plano na frente de um mosaico desfocado virou "animação de
+interface". Sem luz trocada entre aparelho e arquibancada, com texto de interface vazando sob a frase e a legenda.
+
+**Nova imagem das cenas de produto:** *o celular é mais uma placa erguida na arquibancada; a luz dele acende as placas em
+volta, e a prova sobe da tela como um cartaz legível.*
+
+- **Celular dentro do 3D** (mesma cena da arquibancada), pequeno, na base do quadro, de frente para a câmera, com luz
+  própria na cor semântica da cena (azul na ação, amarelo no que entra, vermelho no barrado) que **espalha nas placas**
+  próximas. Fundo com desfoque mínimo (fileiras e curva sempre legíveis); profundidade pela névoa.
+- **A prova sobe da tela:** o elemento exato da tela real (recorte em pixels reais, cartão inteiro, texto ≥ 44 px) entra
+  num andar fixo, ligado ao aparelho por um feixe de luz vertical na cor da cena.
+- **Andares fixos (px a 1080):** assinatura 270–335 · frase 350–570 · prova 590–1080 · legenda 1095–1250 (caixa sólida
+  #0F131B ≥ 0,92, máx. 2 linhas) · celular abaixo da legenda (contexto, fora da zona essencial).
+- **Barrado (612–684):** recorte vermelho, placas próximas em vermelho em degrau (sem piscar), amarelos ao fundo ≤ 30%.
+- **Taxa (852–906):** foco com recorte arredondado na linha "Taxa de serviço (10%)" do recorte ampliado.
+- **Virada:** a grade nasce **completa**; a placa que falta só se apaga no CTA (1188) e acende no toque (~1262).
+- **CTA:** a arquibancada preenche o quadro até embaixo; um eixo só; um CTA só (botão com o rótulo real do site
+  "Cadastrar minha torcida"; a voz convida "Cadastre sua torcida"); "SOMOS ORGANIZADA" ≥ 96 px; linhas ≥ 44 px
+  ("Mensalidade fixa, sem % das vendas." em amarelo; "Só paga depois de publicar o site." em branco).
+- **Estrutura:** marquise com volume (não linha de 1 px); torres de refletor inteiras dentro do quadro.
+- **Som:** leito de 108–234 cerca de 8–10 dB abaixo do pós-virada; ataque claro no 252 (surdo grande + estalo).

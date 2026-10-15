@@ -34,7 +34,7 @@ export const RotuloDemo: React.FC = () => {
 };
 
 /** Faixa de leitura: degradê escuro atrás da assinatura e da frase de impacto quando há celular na cena. */
-export const FaixaLeitura: React.FC<{altura?: number}> = ({altura = 760}) => {
+export const FaixaLeitura: React.FC<{altura?: number; forca?: number}> = ({altura = 640, forca = 0.72}) => {
   const {width} = useVideoConfig();
   const k = escala(width);
   return (
@@ -46,7 +46,7 @@ export const FaixaLeitura: React.FC<{altura?: number}> = ({altura = 760}) => {
         width,
         height: altura * k,
         backgroundColor: 'rgba(7,10,18,0)',
-        backgroundImage: 'linear-gradient(to bottom, rgba(7,10,18,0.92) 0%, rgba(7,10,18,0.85) 55%, rgba(7,10,18,0) 100%)',
+        backgroundImage: `linear-gradient(to bottom, rgba(7,10,18,${forca}) 0%, rgba(7,10,18,${forca * 0.85}) 60%, rgba(7,10,18,0) 100%)`,
       }}
     />
   );

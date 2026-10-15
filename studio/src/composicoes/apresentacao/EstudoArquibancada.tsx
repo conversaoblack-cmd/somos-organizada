@@ -31,7 +31,7 @@ export const EstudoArquibancada: React.FC = () => {
   const placas = useCallback((c: number, l: number): EstadoPlaca[] => {
     const r = random(`p-${c}-${l}`);
     const estados: EstadoPlaca[] = [];
-    // problema: algumas placas vermelhas piscando no começo
+    // estudo antigo (NÃO usar em peça: a peça não cintila; ver mosaico.ts)
     if (r < 0.08) estados.push({cor: COR.perigo, de: 5 + r * 60, pisca: true});
     const g = corDaGrade(c, l);
     const dist = Math.hypot(c - C / 2, l - L / 2) / Math.hypot(C / 2, L / 2);
