@@ -1,0 +1,21 @@
+# Estúdio de motion: só código, roteiros, pareceres, folhas leves e styleframes aprovados vão para o Git.
+# MP4 final vai para o Google Drive ("Somos Organizada · Motion"); ver docs/instalacao.md.
+node_modules/
+out/
+campanhas/**/render/*.mp4
+campanhas/**/evidencias*/frames/
+public/audio/*.wav
+public/audio/**/*.wav
+modelos/
+.env
+*.local
+# intermediários do pipeline de áudio
+audio/**/.tmp/
+audio/**/.tmp-mix/
+audio/**/take/.guia/
+audio/**/falas/
+audio/**/take/take-guia.wav
+# capturas: o vídeo bruto da gravação é refeito pelo gravar-produto.mjs; ficam só os PNG usados na peça
+assets/**/gravacao.mp4
+assets/**/.video/
+assets/**/erro-passo-*.png

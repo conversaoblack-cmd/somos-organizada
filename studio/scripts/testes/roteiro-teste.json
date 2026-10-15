@@ -1,0 +1,16 @@
+{
+  "_comentario": "Roteiro do teste de captura (seção 9): painel da diretoria (pulando o tour do 1º acesso) e site público da torcida de demonstração.",
+  "base": "http://127.0.0.1:5173",
+  "conta": "diretoria@brasil.test",
+  "entrarEm": "/brasil/admin",
+  "passos": [
+    {"acao": "tocar", "nome": "pular-tour", "texto": "Pular", "exato": true, "opcional": true},
+    {"acao": "esperar", "texto": "Visão geral"},
+    {"acao": "pausa", "ms": 800},
+    {"acao": "print", "nome": "painel"},
+    {"acao": "tocar", "nome": "novo-evento", "texto": "Novo evento", "exato": true, "soMarcar": true},
+    {"acao": "abrir", "url": "/brasil", "ms": 1500},
+    {"acao": "print", "nome": "site-torcida"},
+    {"acao": "tocar", "nome": "evento-caravana", "texto": "Caravana para a Final", "soMarcar": true}
+  ]
+}

@@ -101,6 +101,8 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   comece pela `somos-organizada-ux`: ela diz qual usar e quais regras do projeto vencem as de terceiros.
 - Estrutura: `functions/` (back-end), `web/` (front-end), `firestore.rules`, `storage.rules`, `scripts/`
   (implantar e verificar), `testes-e2e/` (emuladores + Pagar.me simulada), `docs/IMPLANTACAO.md` (guia completo).
+- `studio/`: estúdio de vídeo (motion) da marca, isolado do produto (não entra no build nem na implantação); sessões do
+  produto não mexem nele. Ver `studio/docs/instalacao.md`.
 - Arquivos locais que **não** vão para o Git e são recriados pelo `implantar.sh`: `functions/.env` e
   `web/.env.production.local`. A cópia de segurança das chaves fica em `~/.somos-organizada/<projeto>`,
   só na máquina onde foram criadas.

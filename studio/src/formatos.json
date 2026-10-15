@@ -1,0 +1,7 @@
+{
+  "_comentario": "Fonte única dos formatos e da zona essencial (lida por src/formatos.ts e pelos scripts). Coordenadas x1,y1,x2,y2 em px. 9:16 conservador (seção 6.4): conferir com print atual do Instagram antes de publicar.",
+  "vertical": {"rotulo": "9:16 (Reels, TikTok, Shorts)", "width": 1080, "height": 1920, "superior": [120, 270, 960, 840], "inferior": [120, 840, 780, 1250]},
+  "retrato": {"rotulo": "4:5 (feed)", "width": 1080, "height": 1350, "superior": [90, 110, 990, 700], "inferior": [90, 700, 990, 1240]},
+  "quadrado": {"rotulo": "1:1", "width": 1080, "height": 1080, "superior": [90, 90, 990, 540], "inferior": [90, 540, 990, 990]},
+  "paisagem": {"rotulo": "16:9 (YouTube)", "width": 1920, "height": 1080, "superior": [160, 90, 1760, 540], "inferior": [160, 540, 1760, 950]}
+}

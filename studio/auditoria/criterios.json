@@ -1,0 +1,19 @@
+{
+  "_comentario": "Fonte única da rubrica (seção 7.2) e da competência de cada cadeira (seção 7.1). Lida por auditoria/pontuar.mjs. Mudou aqui, mude auditoria/rubrica.md.",
+  "pesos": {"objetivo": 0.20, "clareza": 0.15, "gancho": 0.15, "visual": 0.15, "fidelidade": 0.15, "cta": 0.10, "tecnica": 0.10},
+  "natureza": {"objetivo": "hipotese", "clareza": "execucao", "gancho": "hipotese", "visual": "execucao", "fidelidade": "execucao", "cta": "hipotese", "tecnica": "execucao"},
+  "grupos": {"execucao": ["clareza", "visual", "fidelidade", "tecnica"], "previsao_de_conteudo": ["objetivo", "gancho", "cta"]},
+  "competencias": {
+    "roteirista": ["gancho", "clareza"],
+    "motion-review": ["gancho", "visual", "fidelidade", "tecnica"],
+    "marketing-review": ["objetivo", "clareza", "gancho", "fidelidade", "cta"],
+    "produto-review": ["clareza", "fidelidade", "cta"],
+    "estrategia-review": ["objetivo"],
+    "torcida-review": ["fidelidade", "objetivo"],
+    "qc": ["tecnica"]
+  },
+  "meta": 9.0,
+  "cobertura_minima": 0.8,
+  "vereditos": ["APROVA", "APROVA COM CONDIÇÃO", "VETA"],
+  "gravidades": ["critica", "alta", "media", "baixa", "cosmetica"]
+}

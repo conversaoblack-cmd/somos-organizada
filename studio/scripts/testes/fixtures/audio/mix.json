@@ -1,0 +1,7 @@
+{
+  "_comentario": "Mix de TESTE: trilha sintética gerada pelo próprio teste (sem licença de terceiros envolvida).",
+  "trilha": {"arquivo": "audio/_teste/trilha-sintetica.wav", "ganhoDb": -4, "inicioS": 0, "fadeInS": 0.2, "fadeOutS": 1.0},
+  "sfx": [{"arquivo": "audio/_teste/toque.wav", "frame": 230, "ganhoDb": -6}],
+  "ducking": {"profundidadeDb": -12, "ataqueMs": 80, "preRolagemMs": 120, "releaseMs": 350, "vaoMinimoS": 0.7, "regioes": [{"deFrame": 0, "ateFrame": 60, "profundidadeDb": -8}]},
+  "alvo": {"lufs": -14, "truePeakDbtp": -1}
+}

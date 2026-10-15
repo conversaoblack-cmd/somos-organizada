@@ -1,0 +1,15 @@
+{
+  "data": "2026-10-15T14:37:37.010Z",
+  "plataforma": "linux-x64",
+  "renderTesteKitSegundos": [
+    51.075,
+    50.706
+  ],
+  "framemd5Identico": false,
+  "psnrMinimoDb": 74.98,
+  "quadrosDiferentes": 46,
+  "veredito": "RUÍDO DE RASTER",
+  "mp4IdenticoByteAByte": false,
+  "still3dSegundos": 5.877,
+  "video3d60QuadrosSegundos": 32.075
+}

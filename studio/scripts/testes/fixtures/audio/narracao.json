@@ -1,0 +1,12 @@
+{
+  "_comentario": "Narração de TESTE do pipeline (não é peça). texto = o que a voz lê (números por extenso); legenda = o que aparece.",
+  "fps": 30,
+  "duracaoFrames": 360,
+  "velocidade": 1.1,
+  "voz": {"id": null, "modelo": "eleven_multilingual_v2"},
+  "falas": [
+    {"id": "gancho", "frame": 0, "faixa": "alta", "texto": "Quanto da mensalidade da sua torcida não entrou este mês?", "legenda": "Quanto da **mensalidade**{amarelo} ↵ da sua torcida / não entrou este mês?"},
+    {"id": "problema", "frame": 120, "texto": "Comprovante no grupo, caderno e print na porta do ônibus.", "legenda": "Comprovante no grupo, caderno / e **print**{perigo} na porta do ônibus."},
+    {"id": "virada", "frame": 240, "tempo": 1.0, "texto": "Com a Somos Organizada, a mensalidade se cobra sozinha.", "legenda": "Com a Somos Organizada, / a mensalidade ↵ **se cobra sozinha**{amarelo}."}
+  ]
+}
