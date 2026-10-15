@@ -48,6 +48,12 @@ else
 fi
 
 titulo "3. Functions em produção"
+# Biblioteca nova no package.json (ex.: web-push) depois de um git pull: instala antes de ler as functions, senão o
+# require falha com "Cannot find module" e parece problema de produção. Só mexe na pasta local node_modules.
+if [ ! -f functions/node_modules/.package-lock.json ] || [ functions/package-lock.json -nt functions/node_modules/.package-lock.json ]; then
+  echo "  instalando as dependências novas das functions..."
+  npm --prefix functions install --no-audit --no-fund >/dev/null 2>&1 || ruim "npm install das functions falhou (rode: npm --prefix functions install)"
+fi
 npm --prefix functions run build >/dev/null 2>&1 || true  # sempre do código atual (lib antiga enganaria a lista)
 if [ -f functions/lib/index.js ]; then
   node -e '
