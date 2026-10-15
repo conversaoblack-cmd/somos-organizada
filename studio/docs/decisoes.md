@@ -68,3 +68,11 @@ direção de arte das cenas de produto foi refeita (v2) e está na rodada 2 (1ª
 - Medir região de captura em pixel (script), nunca pela imagem exibida no chat: ela vem reduzida e o erro passou de 30 px.
 - Sobre `git pull`: usar `git pull --no-rebase` (ou `--rebase=merges`) nesta branch; rebase linear desfazia merges.
 - O QC num trecho curto acusa loudness fora do alvo quando o trecho é só a parte cheia; vale a medida da mix inteira.
+
+**Resultado do portão (rodada 2):** motion-review derrubou o veto (APROVA COM CONDIÇÃO; gancho 7,5, visual 8,0,
+fidelidade 7,5, técnica 7,5) e torcida-review APROVA COM CONDIÇÃO (fidelidade 9,0, objetivo 8,0). Aplicado antes de
+mandar ao dono: frase da cena 2 "A torcida cresceu, o caderno não." (a falha é da ferramenta, não da torcida); barrado
+com a grade a 30% e anel vermelho; celular e feixe no eixo x 450; sócio inteiro; foco da taxa mais leve. Fica para a
+produção: torres cortadas no gancho, eixo único na cena da taxa, luz de borda do celular mais forte, "mensalidade" com
+dois sentidos (opção "Plano mensal fixo"), prévias do produto e do mergulho do CTA em movimento. A "queda" de áudio em
+211–216 é o vão entre batidas do surdo de tensão, não emenda. Mix inteira: −14,1 LUFS, −1,3 dBTP.
