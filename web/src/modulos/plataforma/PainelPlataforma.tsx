@@ -83,8 +83,11 @@ export default function PainelPlataforma() {
   if (u === undefined) return <TelaCarregando />;
   if (!u || u.isAnonymous) {
     return (
-      <div className="min-h-dvh grid place-items-center px-4 py-10 grade-fundo">
-        <div className="w-full max-w-md flex flex-col items-center gap-6">
+      // Celular: cartão no alto (centralizado, o iPhone rola a página a cada abre e fecha do teclado e do Face ID e o
+      // login "treme"). O quadriculado fica numa camada própria: a máscara dele não envolve o formulário.
+      <div className="relative min-h-dvh grid items-start justify-items-center sm:items-center px-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-10 sm:py-10">
+        <div className="absolute inset-0 grade-fundo pointer-events-none" aria-hidden="true" />
+        <div className="relative w-full max-w-md mx-auto flex flex-col items-center gap-6">
           <MarcaSomos />
           <Login titulo="Somos Organizada · Plataforma" subtitulo="Acesso restrito à equipe interna." permitirCadastro />
         </div>

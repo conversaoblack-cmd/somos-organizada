@@ -300,7 +300,7 @@ function Painel({ tentarDeNovo }: { tentarDeNovo: () => void }) {
     conteudo = <Carregando texto="Abrindo sua área de sócio…" className="py-32" />;
   } else if (!logado) {
     conteudo = (
-      <div className="min-h-[calc(100dvh-4rem)] grid place-items-center py-10">
+      <div className="min-h-[calc(100dvh-4rem)] grid items-start justify-items-center sm:items-center pt-6 pb-10 sm:py-10">
         <div className="w-full flex flex-col items-center">
           <div className="mb-6 flex items-center gap-2 text-sm text-texto-2">
             <Icone nome="escudo" className="size-5 text-primaria-texto" /> Carteirinha, ingressos e mensalidade num só lugar

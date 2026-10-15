@@ -35,7 +35,8 @@ import { iniciaisTorcida, SemConexao } from "../publico/comum";
 import { modoApp } from "@/lib/notificacoes";
 
 function Centro({ children }: { children: ReactNode }) {
-  return <div className="min-h-dvh grid place-items-center px-4 py-10">{children}</div>;
+  // Celular: no alto, não no meio (o teclado e o Face ID abrindo e fechando faziam o iPhone rolar e o login tremer)
+  return <div className="min-h-dvh grid items-start justify-items-center sm:items-center px-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-10 sm:py-10">{children}</div>;
 }
 
 export default function PainelDiretoria() {

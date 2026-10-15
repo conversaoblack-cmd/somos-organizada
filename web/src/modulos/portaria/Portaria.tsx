@@ -852,7 +852,7 @@ export default function Portaria() {
     conteudo = (
       <>
         <Cabecalho titulo="Portaria" subtitulo={torcida.nome} />
-        <div className="min-h-[calc(100dvh-4rem)] grid place-items-center px-4 py-10">
+        <div className="min-h-[calc(100dvh-4rem)] grid items-start justify-items-center sm:items-center px-4 pt-6 pb-10 sm:py-10">
           <Login titulo="Portaria" subtitulo={`Entre com a conta da equipe da ${torcida.nome} para ler os ingressos.`} />
         </div>
       </>
