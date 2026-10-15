@@ -10,7 +10,7 @@ Rodadas de correção usadas: 1 de 2 (a do portão). Depois desta, resta 1.
    usando: a portaria com o leitor de QR e o QR dando "já utilizado"; o painel da diretoria, a pessoa abrindo o menu e
    criando o evento. Feito com **gravações do produto real** (build de produção apontado para os emuladores):
    - cena 5 (504–684): a câmera do leitor da portaria vê o celular do torcedor com o QR real → "Conferindo…" →
-     **LIBERADO** (561) → o mesmo QR de novo → **JÁ UTILIZADO** (612, com as placas vermelhas);
+     **LIBERADO** (531; o celular entra na câmera ~0,4 s antes) → o mesmo QR de novo → **JÁ UTILIZADO** (612, com as placas vermelhas);
    - cena 7a (828–972): a diretoria digita o valor do público e o próprio sistema mostra "Torcedor paga R$ 143,00 (inclui
      10% de taxa)" (com "10%" e "vira caixa" agora no eixo x 120);
    - cena 7b (972–1080): menu aberto → "Novo evento" sendo preenchido → "Publicar evento" → "Evento publicado! Já está na

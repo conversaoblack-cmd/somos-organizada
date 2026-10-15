@@ -36,7 +36,7 @@ export const DIRETORIA = 'diretoria-evento.webm';
 const LIBERADO_S = 9.63;
 const JA_UTILIZADO_S = 26.27;
 /** quadro (da cena do ingresso) em que cada resultado aparece: casa com o SFX e com as placas vermelhas (612) */
-export const NA_CENA = {liberado: 57, jaUtilizado: 108};
+export const NA_CENA = {liberado: 27, jaUtilizado: 108}; // o celular entra na câmera ~0,4 s antes de cada resultado
 
 const CAMERA: Regiao = {x: 45, y: 1130, w: 1080, h: 871}; // o quadro da câmera, onde o celular do torcedor entra
 const RESULTADO_LIBERADO: Regiao = {x: 0, y: 560, w: 1170, h: 943}; // ícone, LIBERADO e o cartão do Rafael
