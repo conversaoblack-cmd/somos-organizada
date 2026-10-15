@@ -14,7 +14,6 @@ import { refsSaas } from "./saas";
 import { MARCA_PLATAFORMA } from "./verificacao";
 import { enviarAgora } from "../email/enviar";
 import { esc, montar } from "../email/modelos";
-import type { Torcida } from "../dominio/tipos";
 
 const refSolicitacao = (id: string) => db.doc(`solicitacoes/${id}`);
 
@@ -150,9 +149,9 @@ export const avaliarSolicitacao = onCall(async (req) => {
   return { status: "aprovada", torcidaId: r.torcidaId, slug: r.slug };
 });
 
-/** E-mail ao responsável com o resultado da análise (nas cores escolhidas no cadastro). */
+/** E-mail ao responsável com o resultado da análise (é a Somos Organizada falando: a nossa logo e o nosso nome). */
 async function avisarResultado(sol: FirebaseFirestore.DocumentData, resultado: "aprovada" | "recusada", extra: { slug?: string; motivo?: string }) {
-  const marca = { ...MARCA_PLATAFORMA, nome: sol.nomeTorcida, tema: { ...MARCA_PLATAFORMA.tema, ...(sol.tema ?? {}) } } as Torcida;
+  const marca = MARCA_PLATAFORMA;
   const primeiro = String(sol.responsavel?.nome ?? "").trim().split(/\s+/)[0] ?? "";
   const m =
     resultado === "aprovada"

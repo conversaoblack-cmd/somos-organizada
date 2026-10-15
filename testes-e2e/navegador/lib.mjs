@@ -51,7 +51,7 @@ export async function abrirNavegador() {
   const seguros = ["vitrine.test", "painel.vitrine.test"].map((h) => `http://${h}${porta ? `:${porta}` : ""}`).join(",");
   return chromium.launch({
     executablePath,
-    args: ["--use-fake-device-for-media-stream", "--host-resolver-rules=MAP *.test 127.0.0.1", `--unsafely-treat-insecure-origin-as-secure=${seguros}`],
+    args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", "--host-resolver-rules=MAP *.test 127.0.0.1", `--unsafely-treat-insecure-origin-as-secure=${seguros}`],
   });
 }
 
@@ -228,6 +228,20 @@ export async function conferir(ap, page, passo, { torcedor = false } = {}) {
         .map((el) => `${el.tagName.toLowerCase()} "${el.getAttribute("aria-label") || el.name || el.placeholder || el.id}" (${getComputedStyle(el).fontSize})`),
     );
     if (pequenos.length) throw new Error(`[${ap.rotulo}] ${passo}: campo com fonte < 16px (zoom no iPhone) em ${page.url()}\n  ${pequenos.slice(0, 5).join("\n  ")}`);
+    // Campo mais largo que a janela/painel (ex.: data e hora do iPhone): a janela "anda" para o lado ao arrastar
+    const largos = await page.evaluate(() => {
+      const ruins = [];
+      for (const d of document.querySelectorAll('[role="dialog"]')) {
+        const db = d.getBoundingClientRect();
+        if (!db.width) continue;
+        for (const el of d.querySelectorAll("input, select, textarea, button")) {
+          const r = el.getBoundingClientRect();
+          if (r.width > 0 && r.right > db.right + 1) ruins.push(`${el.tagName.toLowerCase()} "${el.getAttribute("aria-label") || el.name || el.id || (el.textContent ?? "").trim().slice(0, 30)}" passa ${Math.round(r.right - db.right)}px de "${d.getAttribute("aria-label") || "janela"}"`);
+        }
+      }
+      return ruins;
+    });
+    if (largos.length) throw new Error(`[${ap.rotulo}] ${passo}: campo mais largo que a janela em ${page.url()}\n  ${largos.slice(0, 5).join("\n  ")}`);
   }
 }
 

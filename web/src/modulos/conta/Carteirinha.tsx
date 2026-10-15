@@ -364,7 +364,7 @@ function TelaCheia({
     };
   }, []);
   return createPortal(
-    <div className="fixed inset-0 z-[70] bg-white text-neutral-900 flex flex-col animate-surgir" role="dialog" aria-modal="true" aria-label="Carteirinha em tela cheia">
+    <div className="fixed inset-0 z-[70] bg-white text-neutral-900 flex flex-col animate-surgir pt-[var(--topo-seguro)] touch-pan-y" role="dialog" aria-modal="true" aria-label="Carteirinha em tela cheia">
       <div className="h-2 shrink-0" style={{ background: "linear-gradient(90deg, var(--color-primaria), var(--color-secundaria))" }} />
       <div className="flex items-center justify-between gap-3 px-5 pt-4">
         <div className="flex items-center gap-2.5 min-w-0">

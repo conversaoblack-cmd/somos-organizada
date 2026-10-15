@@ -19,10 +19,9 @@ import { db, FieldValue } from "../util/firebase";
 import { exigirLogin, exigirPlataforma } from "../dominio/permissoes";
 import { texto } from "../util/validacao";
 import { enviarAgora } from "../email/enviar";
-import { esc, montar } from "../email/modelos";
+import { esc, montar, semLink } from "../email/modelos";
 import { MARCA_PLATAFORMA } from "./verificacao";
 import { alertarEquipe } from "./alertas";
-import type { Torcida } from "../dominio/tipos";
 
 export const VIDEO_MAX_BYTES = 500 * 1024 * 1024;
 
@@ -36,11 +35,6 @@ export const ROTEIRO_VIDEO = [
   "Se tiver, mostre o estatuto, a ata da eleição da diretoria e o cartão do CNPJ.",
   "Termine dizendo: “Eu, (nome), declaro que as informações são verdadeiras e que represento a (torcida)”.",
 ];
-
-/** Nome e cores escolhidos no cadastro: o e-mail já sai com a cara da torcida. */
-export function marcaDaSolicitacao(sol: FirebaseFirestore.DocumentData): Torcida {
-  return { ...MARCA_PLATAFORMA, nome: sol.nomeTorcida ?? MARCA_PLATAFORMA.nome, tema: { ...MARCA_PLATAFORMA.tema, ...(sol.tema ?? {}) } } as Torcida;
-}
 
 /** Cadastro em análise desta conta (o vídeo só existe para ele). */
 async function minhaSolicitacao(uid: string) {
@@ -84,7 +78,7 @@ export const registrarVideoVerificacao = onCall(async (req) => {
     return s;
   });
 
-  const m = montar(marcaDaSolicitacao(sol), "Recebemos o vídeo: o cadastro está em análise", { email: sol.email, nome: sol.responsavel?.nome }, {
+  const m = montar(MARCA_PLATAFORMA, "Recebemos o vídeo: o cadastro está em análise", { email: sol.email, nome: sol.responsavel?.nome }, {
     selo: "Cadastro em análise",
     titulo: "Recebemos o seu vídeo",
     paragrafos: [
@@ -93,7 +87,7 @@ export const registrarVideoVerificacao = onCall(async (req) => {
     ],
     detalhes: [
       ["Torcida", esc(sol.nomeTorcida)],
-      ["Endereço reservado", `somosorganizada.com.br/${esc(sol.slug)}`],
+      ["Endereço reservado", semLink(`somosorganizada.com.br/${sol.slug}`)],
     ],
     botao: { texto: "Ver meu cadastro", url: `${URL_APP.value()}/cadastro` },
     rodape: "O vídeo fica guardado com acesso restrito, só como prova de quem fez o cadastro (prevenção à fraude). Ele não é publicado nem compartilhado.",
@@ -120,7 +114,7 @@ export const pedirNovoVideo = onCall(async (req) => {
     "verificacao.pedidoPor": quem,
     "verificacao.pedidoEm": FieldValue.serverTimestamp(),
   });
-  const m = montar(marcaDaSolicitacao(sol), "Precisamos de um novo vídeo para o cadastro", { email: sol.email, nome: sol.responsavel?.nome }, {
+  const m = montar(MARCA_PLATAFORMA, "Precisamos de um novo vídeo para o cadastro", { email: sol.email, nome: sol.responsavel?.nome }, {
     selo: "Vídeo de verificação",
     titulo: "Falta pouco: grave o vídeo de novo",
     paragrafos: [`A equipe assistiu ao vídeo e pediu um ajuste: <strong>${esc(motivo)}</strong>`, "O resto do cadastro continua salvo. É só gravar e enviar o novo vídeo."],

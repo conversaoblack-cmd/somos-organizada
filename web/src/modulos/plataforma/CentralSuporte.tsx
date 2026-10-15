@@ -1,13 +1,14 @@
 import { rp } from "@/lib/hosts";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { addDoc, collection, doc, limit, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
+import { addDoc, collection, deleteField, doc, limit, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { mensagemDeErro } from "@/lib/api";
 import { dataHora, hora, relativo } from "@/lib/formatos";
 import { useColecao } from "@/hooks/dados";
 import type { Chamado, ComId, MensagemSuporte } from "@/lib/tipos";
 import { Avatar, Botao, BotaoIcone, Cartao, Carregando, cx, Gaveta, Icone, Selecao, Selo, Vazio, useToast, type Tom } from "@/ui";
+import { AnexosDaMensagem, BarraGravando, BotaoAnexar, enviarAnexos, ListaPendentes, podeGravar, useAnexos, useGravador } from "@/componentes/suporte/anexos";
 
 type Filtro = "todos" | Chamado["status"];
 
@@ -172,11 +173,32 @@ function Conversa({ chamado, voltar }: { chamado: ComId<Chamado>; voltar: () => 
   const fim = useRef<HTMLDivElement>(null);
   const campo = useRef<HTMLTextAreaElement>(null);
   const avisar = useToast();
+  const anexos = useAnexos();
+  const gravador = useGravador((p) => anexos.incluir([p]));
 
-  // marca como lido pela equipe
+  // Lido pela equipe: zera o contador e grava "visto" (quem abriu o chamado vê "Vista pela equipe").
+  // Com a aba na frente, renova a presença a cada minuto ("A equipe está lendo esta conversa agora").
   useEffect(() => {
-    if (chamado.naoLidasPlataforma) updateDoc(doc(db, "suporte", chamado.id), { naoLidasPlataforma: 0 }).catch(() => undefined);
-  }, [chamado.id, chamado.naoLidasPlataforma]);
+    const ref = doc(db, "suporte", chamado.id);
+    const marcar = () => {
+      if (document.visibilityState !== "visible") return;
+      updateDoc(ref, { naoLidasPlataforma: 0, vistoPlataformaEm: serverTimestamp(), presencaPlataformaEm: serverTimestamp() }).catch(() => undefined);
+    };
+    marcar();
+    const t = window.setInterval(marcar, 60_000);
+    document.addEventListener("visibilitychange", marcar);
+    return () => {
+      window.clearInterval(t);
+      document.removeEventListener("visibilitychange", marcar);
+    };
+  }, [chamado.id, chamado.naoLidasPlataforma, msgs.dados.length]);
+  // saiu da conversa: some o "está lendo agora"
+  useEffect(() => {
+    const ref = doc(db, "suporte", chamado.id);
+    return () => {
+      updateDoc(ref, { presencaPlataformaEm: deleteField() }).catch(() => undefined);
+    };
+  }, [chamado.id]);
 
   useEffect(() => {
     fim.current?.scrollIntoView({ block: "end" });
@@ -185,17 +207,21 @@ function Conversa({ chamado, voltar }: { chamado: ComId<Chamado>; voltar: () => 
   async function responder(e?: FormEvent) {
     e?.preventDefault();
     const t = texto.trim();
-    if (!t) return;
+    if (!t && !anexos.pendentes.length) return;
     setEnviando(true);
     try {
+      // anexo da equipe vai para a pasta do dono do chamado (é ele quem precisa abrir)
+      const enviados = anexos.pendentes.length ? await enviarAnexos(chamado.uid, chamado.id, anexos.pendentes) : [];
       await addDoc(collection(db, `suporte/${chamado.id}/mensagens`), {
         autor: "plataforma",
         texto: t.slice(0, 4000),
         nome: auth.currentUser?.displayName || "Equipe Somos Organizada",
+        ...(enviados.length ? { anexos: enviados } : {}),
         criadoEm: serverTimestamp(),
       });
       await updateDoc(doc(db, "suporte", chamado.id), { status: "respondido", atualizadoEm: serverTimestamp(), naoLidasPlataforma: 0 });
       setTexto("");
+      anexos.esvaziar();
     } catch (err) {
       avisar(mensagemDeErro(err), "erro");
     } finally {
@@ -270,6 +296,7 @@ function Conversa({ chamado, voltar }: { chamado: ComId<Chamado>; voltar: () => 
                   )}
                 >
                   <p className={cx("text-[11px] font-semibold mb-0.5", nosso ? "opacity-80" : "text-texto-3")}>{m.nome || (nosso ? "Equipe" : chamado.nome)}</p>
+                  <AnexosDaMensagem anexos={m.anexos} meu={nosso} />
                   {m.texto}
                   <p className={cx("text-[10px] mt-1 text-right", nosso ? "opacity-70" : "text-texto-3")}>{m.criadoEm ? hora(m.criadoEm) : "enviando…"}</p>
                 </div>
@@ -295,12 +322,19 @@ function Conversa({ chamado, voltar }: { chamado: ComId<Chamado>; voltar: () => 
               ))}
             </div>
           )}
-          <div className="flex items-end gap-2">
+          <ListaPendentes pendentes={anexos.pendentes} remover={anexos.remover} />
+          {(anexos.erro || gravador.erro) && <p className="text-xs text-perigo">{anexos.erro || gravador.erro}</p>}
+          <div className="flex items-end gap-1.5">
             <BotaoIcone icone="raio" rotulo="Respostas rápidas" onClick={() => setRapidas((v) => !v)} className={cx(rapidas && "text-primaria-texto")} />
+            <BotaoAnexar aoEscolher={anexos.adicionar} desativado={gravador.gravando || enviando} />
+            {gravador.gravando ? (
+              <BarraGravando segundos={gravador.segundos} parar={gravador.parar} cancelar={gravador.cancelar} />
+            ) : (
             <textarea
               ref={campo}
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
+              onPaste={anexos.colar}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) void responder();
               }}
@@ -308,9 +342,13 @@ function Conversa({ chamado, voltar }: { chamado: ComId<Chamado>; voltar: () => 
               maxLength={4000}
               placeholder="Escreva a resposta… (Ctrl+Enter envia)"
               aria-label="Resposta"
-              className="flex-1 min-h-11 max-h-40 resize-y rounded-2xl bg-superficie-2 border border-linha px-4 py-2.5 text-sm outline-none focus:border-primaria"
+              className="flex-1 min-w-0 min-h-11 max-h-40 resize-y rounded-2xl bg-superficie-2 border border-linha px-4 py-2.5 text-sm outline-none focus:border-primaria"
             />
-            <Botao type="submit" icone="enviar" carregando={enviando} disabled={!texto.trim()} aria-label="Enviar resposta">
+            )}
+            {!gravador.gravando && podeGravar() && (
+              <BotaoIcone icone="microfone" rotulo="Gravar áudio" onClick={() => void gravador.iniciar()} data-gravar />
+            )}
+            <Botao type="submit" icone="enviar" carregando={enviando} disabled={(!texto.trim() && !anexos.pendentes.length) || gravador.gravando} aria-label="Enviar resposta">
               <span className="hidden sm:inline">Enviar</span>
             </Botao>
           </div>

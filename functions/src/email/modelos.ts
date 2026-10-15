@@ -1,9 +1,16 @@
 /**
- * Modelos de e-mail com a cara da torcida (cor principal, escudo e nome).
- * Regra: nenhum e-mail leva ingresso ou QR Code. Todos levam a pessoa para a conta dela, onde o ingresso está.
+ * Modelos de e-mail com a cara de quem fala:
+ *  - torcida (sócio, comprador, porteiro, subsede): cor principal, escudo e nome da torcida;
+ *  - Somos Organizada (diretoria: fatura, cadastro, domínio): a nossa logo e o nosso nome (MARCA_PLATAFORMA).
+ * Regras do dono:
+ *  - nenhum e-mail leva ingresso ou QR de entrada: leva a pessoa para a conta dela, onde o ingresso está;
+ *  - o que é para clicar ou copiar é botão, nunca endereço ou código em texto (não passa credibilidade).
+ *    O Pix vai com o QR Code em imagem e o botão "Copiar código Pix" (e-mail não roda código: o botão abre
+ *    /pix, que copia com um toque). Endereço citado no texto não vira link (semLink).
  * HTML em tabelas e estilos inline: é o que funciona no Gmail, Outlook e apps de celular.
  */
 import type { Torcida } from "../dominio/tipos";
+import { URL_APP } from "../config";
 import type { Mensagem } from "./enviar";
 
 const FUSO = "America/Sao_Paulo";
@@ -20,6 +27,15 @@ export function dataHora(d: Date): string {
   return `${data.charAt(0).toUpperCase()}${data.slice(1)}, às ${hora}`;
 }
 export const dataCurta = (d: Date) => d.toLocaleDateString("pt-BR", { timeZone: FUSO, day: "2-digit", month: "2-digit", year: "numeric" });
+
+/**
+ * Endereço citado no texto (ex.: somosorganizada.com.br/furia): o Gmail e o iPhone transformam em link azul
+ * sozinhos. Um espaço invisível antes de cada ponto impede, e o texto continua igual na tela.
+ */
+export const semLink = (s: unknown) => esc(s).replace(/\./g, "&#8203;.");
+
+// Imagens e botões precisam de endereço completo (e-mail não tem "site atual"); sem URL_APP, o endereço oficial
+const origem = () => (URL_APP.value() || "https://somosorganizada.com.br").replace(/\/+$/, "");
 
 const primeiroNome = (nome: string) => nome.trim().split(/\s+/)[0] ?? "";
 
@@ -53,6 +69,8 @@ interface Bloco {
   /** lista com marcadores (ex.: titulares), já escapada */
   lista?: { titulo: string; itens: string[] };
   botao: { texto: string; url: string };
+  /** Pix para pagar: QR Code em imagem + botão "Copiar código Pix" (nunca o código em texto) */
+  pix?: { codigo: string };
   /** aviso em destaque abaixo do botão */
   nota?: string;
   /** texto pequeno de rodapé específico do e-mail */
@@ -66,8 +84,10 @@ export function montar(torcida: Torcida, assunto: string, para: Mensagem["para"]
   const corTexto = sobre(cor);
   const corDestaque = corParaTexto(cor);
   const nome = esc(torcida.nome);
-  const escudo = torcida.tema?.logoUrl
-    ? `<img src="${esc(torcida.tema.logoUrl)}" width="56" height="56" alt="${nome}" style="display:block;width:56px;height:56px;border-radius:14px;object-fit:contain;background:#ffffff;border:0;">`
+  // Somos Organizada: a nossa logo (PNG; e-mail não mostra SVG)
+  const logo = torcida.tema?.logoUrl || ((torcida as { plataforma?: boolean }).plataforma ? `${origem()}/icone-192.png` : "");
+  const escudo = logo
+    ? `<img src="${esc(logo)}" width="56" height="56" alt="${nome}" style="display:block;width:56px;height:56px;border-radius:14px;object-fit:contain;background:#ffffff;border:0;">`
     : `<div style="width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.18);color:${corTexto};font:800 22px/56px Arial,Helvetica,sans-serif;text-align:center;">${esc(torcida.nome.trim().charAt(0).toUpperCase())}</div>`;
 
   const detalhes = b.detalhes?.length
@@ -83,6 +103,16 @@ export function montar(torcida: Torcida, assunto: string, para: Mensagem["para"]
   const lista = b.lista
     ? `<p style="margin:22px 0 8px;font:700 13px/1.4 Arial,Helvetica,sans-serif;color:#6b6b76;text-transform:uppercase;letter-spacing:.08em;">${b.lista.titulo}</p>
        ${b.lista.itens.map((i) => `<p style="margin:0 0 6px;font:500 15px/1.5 Arial,Helvetica,sans-serif;color:#17171c;"><span style="color:${corDestaque};font-weight:800;">●</span>&nbsp; ${i}</p>`).join("")}`
+    : "";
+  const pix = b.pix
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border:1px solid #e7e7ea;border-radius:14px;border-collapse:separate;"><tr><td align="center" style="padding:22px 16px;">
+        <p style="margin:0 0 14px;font:800 12px/1.4 Arial,Helvetica,sans-serif;color:${corDestaque};text-transform:uppercase;letter-spacing:.12em;">Pague com Pix</p>
+        <img src="${esc(`${origem()}/pix/qr.png?c=${encodeURIComponent(b.pix.codigo)}`)}" width="200" height="200" alt="QR Code do Pix" style="display:block;width:200px;height:200px;margin:0 auto;border:0;">
+        <p style="margin:14px 0 16px;font:400 13px/1.55 Arial,Helvetica,sans-serif;color:#5a5a66;">No app do banco, escolha <b>Pix → Ler QR Code</b>.<br>Está no celular? Toque no botão, copie o código e use <b>Pix copia e cola</b>.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr><td style="border-radius:12px;border:2px solid ${corDestaque};">
+          <a href="${esc(`${origem()}/pix?c=${encodeURIComponent(b.pix.codigo)}`)}" style="display:inline-block;padding:13px 22px;font:800 15px/1 Arial,Helvetica,sans-serif;color:${corDestaque};text-decoration:none;border-radius:10px;">Copiar código Pix</a>
+        </td></tr></table>
+      </td></tr></table>`
     : "";
   const nota = b.nota
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px;"><tr><td style="padding:14px 16px;border-radius:12px;background:#f5f5f7;font:500 13px/1.55 Arial,Helvetica,sans-serif;color:#45454f;">${b.nota}</td></tr></table>`
@@ -103,11 +133,10 @@ export function montar(torcida: Torcida, assunto: string, para: Mensagem["para"]
       <p style="margin:0 0 8px;font:800 12px/1.4 Arial,Helvetica,sans-serif;color:${corDestaque};text-transform:uppercase;letter-spacing:.14em;">${b.selo}</p>
       <h1 style="margin:0 0 14px;font:800 26px/1.2 Arial,Helvetica,sans-serif;color:#17171c;">${b.titulo}</h1>
       ${b.paragrafos.map((p) => `<p style="margin:0 0 12px;font:400 16px/1.6 Arial,Helvetica,sans-serif;color:#3a3a44;">${p}</p>`).join("")}
-      ${detalhes}${lista}
+      ${detalhes}${lista}${pix}
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 6px;"><tr><td style="border-radius:14px;background:${cor};">
         <a href="${esc(b.botao.url)}" style="display:inline-block;padding:16px 28px;font:800 16px/1 Arial,Helvetica,sans-serif;color:${corTexto};text-decoration:none;border-radius:14px;">${b.botao.texto} &rarr;</a>
       </td></tr></table>
-      <p style="margin:10px 0 0;font:400 12px/1.5 Arial,Helvetica,sans-serif;color:#8a8a94;">Se o botão não abrir, copie: <a href="${esc(b.botao.url)}" style="color:#5a5a66;word-break:break-all;">${esc(b.botao.url)}</a></p>
       ${nota}
     </td></tr>
     <tr><td style="padding:22px 28px 28px;">
@@ -129,6 +158,7 @@ export function montar(torcida: Torcida, assunto: string, para: Mensagem["para"]
     ...b.paragrafos.map(limpo),
     ...(b.detalhes ?? []).map(([r, v]) => `${limpo(r)}: ${limpo(v)}`),
     ...(b.lista ? ["", limpo(b.lista.titulo), ...b.lista.itens.map((i) => `- ${limpo(i)}`)] : []),
+    ...(b.pix ? ["", `Pix copia e cola: ${b.pix.codigo}`] : []),
     "",
     `${limpo(b.botao.texto)}: ${b.botao.url}`,
     ...(b.nota ? ["", limpo(b.nota)] : []),

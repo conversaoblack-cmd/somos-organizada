@@ -93,6 +93,13 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   pega a chave pública (`chaveNotificacao`), se inscreve no `pushManager` e manda endpoint + p256dh + auth para
   `registrarNotificacao` (`plataforma/notificacoes/inscricoes/`). Mensagem = `{ titulo, corpo, url, tag }`; o `sw-modelo.js`
   sempre mostra a notificação (o iPhone cancela a inscrição se não mostrar). 404/410 apagam a inscrição. Teste 21 do e2e.
+- Suporte (botão de ajuda e central da equipe): anexos (foto, print colado, áudio gravado, PDF; até 4 por mensagem) em
+  `componentes/suporte/anexos.tsx`; arquivo no Storage em `suporte/{dono do chamado}/{chamado}/` (dono e equipe; sem
+  sobrescrever) e na mensagem só o caminho (as regras conferem a pasta). O robô não lê anexo: leva para um chamado novo.
+  `avisarSuporte` manda 1 notificação por mensagem (torcida · assunto / quem: texto); a central grava
+  `vistoPlataformaEm` e `presencaPlataformaEm` (quem abriu o chamado vê "Vista pela equipe" e "A equipe está lendo").
+- App da torcida na tela de início (painel e portaria): manifesto `/{torcida}/app.webmanifest` gerado pela `previaLink`
+  (nome da torcida, escopo "/"). Sem ele o iPhone mostrava a barra do Safari ao ir do painel para o leitor.
 - "Esqueci minha senha" (todas as contas) sai pelo nosso e-mail com link para `/redefinir-senha` (`api/senha.ts`);
   o e-mail do Firebase é só reserva. Login da equipe sugere a torcida certa quando o endereço vem errado (`sugerirTorcidas`).
 - Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável
@@ -128,12 +135,21 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   (o `index.css` força 16 px no celular); grade sem `grid-cols-*` vira uma coluna do tamanho da tela; botão quebra a linha
   no celular em vez de estourar. O fluxo 9 da suíte de navegador passa por todas as telas dos painéis com o tour e reprova
   rolagem lateral, campo < 16 px e balão do tour fora da tela.
+- Topo de tela no celular (cabeçalho, menu, modal, tela cheia, tour): use `var(--topo-seguro)` (index.css), nunca
+  `env(safe-area-inset-top)` direto: o iOS 26 borra um pouco além da faixa da hora ("esfumaçado"). O app instalado usa a
+  barra da hora `black` (opaca). Janela e tela cheia só rolam na vertical (`touch-action: pan-y`); campo de data do
+  iPhone tem largura mínima própria (o index.css limita). O fluxo 9 reprova campo mais largo que a janela.
 - Cor com transparência ou mistura (`bg-x/10`, `color-mix`): o build acrescenta a reserva para navegadores sem color-mix
   (`web/plugins/coresCompat.ts`, variáveis de `lib/tema.ts`). Degradê em `style`: use `backgroundColor` (cor sólida) +
   `backgroundImage`, nunca só `background`.
 - Dinheiro e portaria são idempotentes: compra leva `idCompra` (mesmo id nas tentativas; resposta perdida não cobra duas
   vezes); erro sem resposta da Pagar.me não encerra o pedido (fica "criando" para conferência); a portaria manda `leituraId`
   e o "Tentar de novo" repete o mesmo.
+- E-mails (`functions/src/email/modelos.ts`): o que é para clicar ou copiar é **botão**, nunca endereço ou código em
+  texto (sem "se o botão não abrir, copie..."). Pix vai com QR em imagem (`/pix/qr.png`, gerado pela `previaLink`) e o
+  botão "Copiar código Pix" (abre `/pix`, que copia com um toque). Endereço citado no texto usa `semLink`. Marca: e-mail
+  para sócio, comprador, porteiro e subsede leva o escudo da torcida; e-mail da Somos para a diretoria (fatura, cadastro,
+  vídeo, domínio) usa `MARCA_PLATAFORMA` (a nossa logo). Teste em `functions/test/email.test.ts`.
 - O service worker (`sw.js`, gerado no build a partir de `web/scripts/sw-modelo.js`) só vale para o app (nunca para "/").
   O QR (carteirinha e ingressos) fica no aparelho para a portaria sem internet e é apagado ao sair da conta.
   E-mail nunca leva QR (decisão do dono): leva para a conta.

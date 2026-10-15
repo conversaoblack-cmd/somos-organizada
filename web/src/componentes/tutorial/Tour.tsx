@@ -60,15 +60,26 @@ function alvoTocavel(alvo?: string): boolean {
   return el.getBoundingClientRect().height <= 80;
 }
 
+/** Altura (px) do topo ocupado pela faixa da hora (--topo-seguro do index.css; 0 sem faixa). */
+function topoSeguro(): number {
+  const sonda = document.createElement("div");
+  sonda.style.cssText = "position:fixed;top:0;left:0;width:0;visibility:hidden;height:var(--topo-seguro)";
+  document.body.appendChild(sonda);
+  const h = sonda.getBoundingClientRect().height;
+  sonda.remove();
+  return h;
+}
+
 function rolarAte(alvo: string | undefined, celular: boolean) {
   if (!alvo) return;
   const el = document.querySelector<HTMLElement>(`[data-tour="${alvo}"]`);
   if (!el) return;
   const antes = el.style.scrollMarginTop;
-  el.style.scrollMarginTop = celular ? `${TOPO_CELULAR}px` : "96px";
+  const topo = celular ? topoSeguro() : 0; // o cabeçalho fixo desce junto com a faixa da hora
+  el.style.scrollMarginTop = celular ? `${TOPO_CELULAR + topo}px` : "96px";
   const r = el.getBoundingClientRect();
   // Celular: o balão vira folha embaixo (até 45% da tela); o alvo precisa caber (ou começar) na parte de cima
-  const visivel = r.top >= 64 && r.bottom <= window.innerHeight * (celular ? 1 - FRACAO_FOLHA : 0.85);
+  const visivel = r.top >= 64 + topo && r.bottom <= window.innerHeight * (celular ? 1 - FRACAO_FOLHA : 0.85);
   if (!visivel) el.scrollIntoView({ block: celular || r.height > window.innerHeight * 0.6 ? "start" : "center", behavior: "smooth" });
   setTimeout(() => (el.style.scrollMarginTop = antes), 800);
 }
@@ -237,11 +248,10 @@ export function Tour({
     // Com o vídeo ligado a pessoa pediu para ver: a folha pode crescer (o vídeo tem no máximo 40% da tela)
     // Sem alvo (passo de boas-vindas) não há nada a proteger: a folha pode ser maior
     const limite = tela.h * (!rect || (verVideo && video) ? 0.8 : FRACAO_FOLHA);
-    estiloBalao = { ...estiloBalao, maxHeight: Math.min(alturaMax, limite) };
-    classeBalao = cx(
-      "fixed inset-x-0 mx-2 rounded-[24px]",
-      folhaEmCima ? "top-2" : "bottom-[max(0.5rem,env(safe-area-inset-bottom))]",
-    );
+    // Folha em cima fica abaixo da faixa da hora (no iPhone ela é borrada pelo sistema e cortava o título)
+    const topo = topoSeguro();
+    estiloBalao = { ...estiloBalao, maxHeight: Math.min(alturaMax - topo, limite), ...(folhaEmCima ? { top: topo + MARGEM } : {}) };
+    classeBalao = cx("fixed inset-x-0 mx-2 rounded-[22px]", !folhaEmCima && "bottom-[max(0.5rem,env(safe-area-inset-bottom))]");
   } else if (destaque) {
     const largura = Math.min(LARGURA_BALAO, tela.w - 2 * MARGEM);
     const altura = Math.min(alturaBalao || 240, alturaMax);
@@ -311,22 +321,22 @@ export function Tour({
         className={cx("bg-fundo border border-linha-forte shadow-2xl outline-none flex flex-col overflow-hidden animate-[surgir_.2s_ease_both]", classeBalao)}
         style={estiloBalao}
       >
-        <div ref={corpo} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5">
+        <div ref={corpo} className={cx("min-h-0 flex-1 overflow-y-auto overscroll-contain", celular ? "px-4 pt-3.5" : "px-5 pt-5")}>
           <div className="flex items-start gap-3">
-            <span className="size-9 shrink-0 rounded-xl bg-primaria/15 text-primaria-texto grid place-items-center">
+            <span className={cx("size-9 shrink-0 rounded-xl bg-primaria/15 text-primaria-texto place-items-center", celular ? "hidden" : "grid")}>
               <Icone nome={i === 0 ? "info" : "setaDireita"} className="size-5" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-texto-3">
                 Passo {i + 1} de {passos.length}
               </p>
-              <h2 id="tour-titulo" className="text-lg font-bold leading-snug mt-0.5">
+              <h2 id="tour-titulo" className={cx("font-bold leading-snug mt-0.5", celular ? "text-base" : "text-lg")}>
                 {passo.titulo}
               </h2>
             </div>
             <BotaoIcone icone="x" rotulo="Fechar passo a passo" onClick={fechar} className="-mr-2 -mt-2" />
           </div>
-          <p className="text-[15px] text-texto-2 leading-relaxed mt-2 whitespace-pre-line">{passo.texto}</p>
+          <p className={cx("text-texto-2 whitespace-pre-line", celular ? "text-sm leading-normal mt-1" : "text-[15px] leading-relaxed mt-2")}>{passo.texto}</p>
 
           {video && verVideo && (
             <video
@@ -350,35 +360,65 @@ export function Tour({
           )}
         </div>
 
-        <div className="shrink-0 px-5 pt-3 pb-5 flex flex-col gap-2">
-          {/* Linha 1 no celular: pontinhos + vídeo (sempre com texto). No computador, tudo numa linha. */}
-          <div className="flex items-center gap-2 min-h-11">
-            <div className="flex gap-1 mr-auto" aria-hidden="true">
+        {celular ? (
+          // Celular: uma linha só (pontinhos, vídeo, voltar, próximo): a folha fica baixa e o item destacado aparece
+          <div className="shrink-0 px-3 pt-2 pb-3 flex items-center gap-1">
+            <div className="flex gap-1 mr-auto pl-1" aria-hidden="true">
               {passos.map((_, n) => (
-                <span key={n} className={cx("h-1.5 rounded-full transition-all", n === i ? "w-5 bg-primaria" : "w-1.5 bg-superficie-3")} />
+                <span key={n} className={cx("h-1.5 rounded-full transition-all", n === i ? "w-4 bg-primaria" : "w-1.5 bg-superficie-3")} />
               ))}
             </div>
             {video && (
-              <Botao variante="suave" tamanho="sm" icone={verVideo ? "x" : "camera"} onClick={() => setVerVideo((v) => !v)} aria-pressed={verVideo}>
-                {verVideo ? "Esconder vídeo" : "Ver vídeo"}
+              <BotaoIcone
+                icone={verVideo ? "x" : "camera"}
+                rotulo={verVideo ? "Esconder vídeo" : "Ver vídeo"}
+                onClick={() => setVerVideo((v) => !v)}
+                aria-pressed={verVideo}
+                className={verVideo ? "bg-superficie-2" : undefined}
+              />
+            )}
+            {i === 0 ? (
+              <Botao variante="fantasma" tamanho="sm" onClick={fechar}>
+                Pular
+              </Botao>
+            ) : (
+              <BotaoIcone icone="setaEsquerda" rotulo="Voltar" onClick={voltar} />
+            )}
+            <Botao tamanho="sm" iconeDireita={i === passos.length - 1 ? "check" : "setaDireita"} onClick={proximo} data-tour-proximo="">
+              {i === passos.length - 1 ? "Concluir" : "Próximo"}
+            </Botao>
+          </div>
+        ) : (
+        <div className="shrink-0 px-5 pt-3 pb-5 flex flex-col gap-2">
+            {/* Computador: pontinhos + vídeo (com texto) em cima; voltar e próximo embaixo */}
+            <div className="flex items-center gap-2 min-h-11">
+              <div className="flex gap-1 mr-auto" aria-hidden="true">
+                {passos.map((_, n) => (
+                  <span key={n} className={cx("h-1.5 rounded-full transition-all", n === i ? "w-5 bg-primaria" : "w-1.5 bg-superficie-3")} />
+                ))}
+              </div>
+              {video && (
+                <Botao variante="suave" tamanho="sm" icone={verVideo ? "x" : "camera"} onClick={() => setVerVideo((v) => !v)} aria-pressed={verVideo}>
+                  {verVideo ? "Esconder vídeo" : "Ver vídeo"}
+                </Botao>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2">
+            {i === 0 ? (
+              <Botao variante="fantasma" tamanho="sm" onClick={fechar}>
+                Pular
+              </Botao>
+            ) : (
+              <Botao variante="fantasma" tamanho="sm" icone="setaEsquerda" onClick={voltar}>
+                Voltar
               </Botao>
             )}
-          </div>
-          <div className="flex items-center justify-end gap-2">
-          {i === 0 ? (
-            <Botao variante="fantasma" tamanho="sm" onClick={fechar}>
-              Pular
+            <Botao tamanho="sm" iconeDireita={i === passos.length - 1 ? "check" : "setaDireita"} onClick={proximo} data-tour-proximo="">
+              {i === passos.length - 1 ? "Concluir" : "Próximo"}
             </Botao>
-          ) : (
-            <Botao variante="fantasma" tamanho="sm" icone="setaEsquerda" onClick={voltar}>
-              Voltar
-            </Botao>
-          )}
-          <Botao tamanho="sm" iconeDireita={i === passos.length - 1 ? "check" : "setaDireita"} onClick={proximo} data-tour-proximo="">
-            {i === passos.length - 1 ? "Concluir" : "Próximo"}
-          </Botao>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>,
     document.body,

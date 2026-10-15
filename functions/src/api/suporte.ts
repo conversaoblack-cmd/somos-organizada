@@ -4,7 +4,7 @@
  *
  * O navegador cria o chamado e as mensagens direto no Firestore (regras em firestore.rules, "Suporte") e logo depois
  * chama avisarSuporte, sem esperar a resposta. Aqui conferimos que o chamado é de quem chamou e montamos o aviso a
- * partir do que está gravado (nada do texto vem da chamada). alertarEquipe limita a 1 aviso por chamado a cada 10 min.
+ * partir do que está gravado (nada do texto vem da chamada). Uma notificação por mensagem, com a torcida e o assunto.
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db } from "../util/firebase";
@@ -18,26 +18,59 @@ export function trechoAviso(t: string, max = 120): string {
   return limpo.length > max ? `${limpo.slice(0, max - 1).trimEnd()}…` : limpo;
 }
 
+/** "Foto", "2 fotos, Áudio"... para mensagem que só tem anexo. */
+export function resumoAnexos(anexos: unknown): string {
+  if (!Array.isArray(anexos) || !anexos.length) return "";
+  const n = (t: string) => anexos.filter((x) => (x as { tipo?: string })?.tipo === t).length;
+  return [
+    n("imagem") && (n("imagem") > 1 ? `${n("imagem")} fotos` : "Foto"),
+    n("audio") && (n("audio") > 1 ? `${n("audio")} áudios` : "Áudio"),
+    n("arquivo") && (n("arquivo") > 1 ? `${n("arquivo")} arquivos` : "Arquivo"),
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/** Título e corpo da notificação: torcida + assunto em cima; quem escreveu e o que escreveu embaixo. */
+export function avisoDaMensagem(chamado: { torcidaNome?: unknown; assunto?: unknown; nome?: unknown }, msg: { texto?: unknown; anexos?: unknown; nome?: unknown }) {
+  const torcida = String(chamado.torcidaNome ?? "").trim() || "Suporte";
+  const assunto = trechoAviso(String(chamado.assunto ?? ""), 70);
+  const quem = trechoAviso(String(msg.nome ?? chamado.nome ?? "").trim(), 40) || "Torcedor";
+  const texto = String(msg.texto ?? "").trim();
+  const anexos = resumoAnexos(msg.anexos);
+  const conteudo = [anexos && `[${anexos}]`, texto && trechoAviso(texto)].filter(Boolean).join(" ");
+  return { titulo: trechoAviso(assunto ? `${torcida} · ${assunto}` : torcida, 90), corpo: `${quem}: ${conteudo || "mensagem nova"}` };
+}
+
 export const avisarSuporte = onCall(async (req) => {
   const uid = exigirLogin(req);
   const d = (req.data ?? {}) as Record<string, unknown>;
   const chamadoId = texto(d.chamadoId, "chamadoId", { max: 64 });
-  if (!/^[\w-]+$/.test(chamadoId)) throw new HttpsError("invalid-argument", "Chamado inválido.");
+  const mensagemId = texto(d.mensagemId, "mensagemId", { max: 64, obrigatorio: false });
+  if (!/^[\w-]+$/.test(chamadoId) || (mensagemId && !/^[\w-]+$/.test(mensagemId))) throw new HttpsError("invalid-argument", "Chamado inválido.");
 
   const chamado = await db.doc(`suporte/${chamadoId}`).get();
   if (!chamado.exists) throw new HttpsError("not-found", "Chamado não encontrado.");
   if (chamado.get("uid") !== uid) throw new HttpsError("permission-denied", "Este chamado não é seu.");
 
-  // Sem índice composto: as últimas mensagens e, delas, a mais recente do usuário
-  const ultimas = await chamado.ref.collection("mensagens").orderBy("criadoEm", "desc").limit(10).get();
-  const msg = ultimas.docs.find((m) => m.get("autor") === "usuario");
+  // A mensagem indicada (do próprio usuário) ou, sem ela, a mais recente dele
+  let msg: FirebaseFirestore.DocumentSnapshot | undefined;
+  if (mensagemId) {
+    const m = await chamado.ref.collection("mensagens").doc(mensagemId).get();
+    if (m.exists && m.get("autor") === "usuario") msg = m;
+  }
+  if (!msg) {
+    const ultimas = await chamado.ref.collection("mensagens").orderBy("criadoEm", "desc").limit(10).get();
+    msg = ultimas.docs.find((m) => m.get("autor") === "usuario");
+  }
   if (!msg) return { avisado: false };
 
-  const quem = String(chamado.get("torcidaNome") ?? "").trim() || "Torcedor";
-  await alertarEquipe(`suporte-${chamadoId}`, {
-    titulo: "Nova mensagem no suporte",
-    corpo: `${quem}: ${trechoAviso(String(msg.get("texto") ?? ""))}`,
+  // Uma notificação por mensagem (antes: no máximo 1 a cada 10 min por chamado, e as seguintes se perdiam).
+  // No celular a tag do chamado troca a anterior pela nova, sem empilhar.
+  await alertarEquipe(`suporte-${chamadoId}-${msg.id}`, {
+    ...avisoDaMensagem(chamado.data() ?? {}, msg.data() ?? {}),
     url: `/plataforma/suporte/${chamadoId}`,
+    tag: `suporte-${chamadoId}`,
   });
   return { avisado: true };
 });

@@ -33,8 +33,9 @@ import {
 } from "../dominio/enderecos";
 import type { Torcida } from "../dominio/tipos";
 import { enviarUmaVez } from "../email/enviar";
-import { esc, montar } from "../email/modelos";
+import { esc, montar, semLink } from "../email/modelos";
 import { alertarEquipe } from "./alertas";
+import { MARCA_PLATAFORMA } from "./verificacao";
 
 type TipoDoc = "vitrine" | "painel" | "www";
 
@@ -103,14 +104,15 @@ async function avisarNoAr(tid: string, torcida: Torcida, host: string, tipo: "vi
   const url = `https://${host}/`;
   const vitrine = tipo === "vitrine";
   for (const para of await diretores(tid)) {
-    const m = montar(torcida, `Seu endereço próprio está no ar: ${host}`, para, {
+    // É a Somos Organizada avisando a diretoria: a nossa marca
+    const m = montar(MARCA_PLATAFORMA, `Seu endereço próprio está no ar: ${host}`, para, {
       selo: "Domínio próprio",
       titulo: "Seu endereço próprio está no ar",
       paragrafos: [
         vitrine
-          ? `O site da <strong>${esc(torcida.nome)}</strong> já abre em <strong>${esc(host)}</strong>, com cadeado de segurança. Use esse endereço na divulgação: eventos, ingressos e sócio funcionam nele.`
-          : `O painel da <strong>${esc(torcida.nome)}</strong> já abre em <strong>${esc(host)}</strong>. Diretoria, subsedes e portaria entram com o mesmo e-mail e senha de sempre.`,
-        `O endereço antigo (somosorganizada.com.br/${esc(torcida.slug)}) continua funcionando.`,
+          ? `O site da <strong>${esc(torcida.nome)}</strong> já abre em <strong>${semLink(host)}</strong>, com cadeado de segurança. Use esse endereço na divulgação: eventos, ingressos e sócio funcionam nele.`
+          : `O painel da <strong>${esc(torcida.nome)}</strong> já abre em <strong>${semLink(host)}</strong>. Diretoria, subsedes e portaria entram com o mesmo e-mail e senha de sempre.`,
+        `O endereço antigo (${semLink(`somosorganizada.com.br/${torcida.slug}`)}) continua funcionando.`,
       ],
       botao: { texto: vitrine ? "Abrir o site" : "Abrir o painel", url },
       conta: true,

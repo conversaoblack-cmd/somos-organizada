@@ -254,11 +254,28 @@ service cloud.firestore {
             && (request.resource.data.get('naoLidasPlataforma', 0) == resource.data.get('naoLidasPlataforma', 0)
                 || request.resource.data.get('naoLidasPlataforma', 0) == resource.data.get('naoLidasPlataforma', 0) + 1));
 
+      // Anexos (foto, print, áudio, PDF; até 4): o arquivo tem que estar na pasta deste chamado, do dono dele
+      // (suporte/{dono}/{chamado}/{arquivo} no Storage, onde só o dono e a equipe leem).
+      function anexoOk(a, dono) {
+        return a is map && a.keys().hasOnly(['caminho', 'tipo', 'nome', 'tamanho', 'mime', 'duracao'])
+          && a.caminho is string && a.caminho.matches('suporte/' + dono + '/' + chamadoId + '/[A-Za-z0-9._-]{1,80}')
+          && a.tipo in ['imagem', 'audio', 'arquivo']
+          && a.nome is string && a.nome.size() <= 200
+          && a.tamanho is int && a.mime is string && a.mime.size() <= 100;
+      }
+      function anexosOk(l, dono) {
+        return l is list && l.size() <= 4
+          && (l.size() < 1 || anexoOk(l[0], dono)) && (l.size() < 2 || anexoOk(l[1], dono))
+          && (l.size() < 3 || anexoOk(l[2], dono)) && (l.size() < 4 || anexoOk(l[3], dono));
+      }
+
       match /mensagens/{mid} {
         allow read: if plataforma()
           || (logado() && get(/databases/$(database)/documents/suporte/$(chamadoId)).data.uid == request.auth.uid);
-        allow create: if request.resource.data.keys().hasOnly(['autor', 'texto', 'nome', 'criadoEm'])
+        allow create: if request.resource.data.keys().hasOnly(['autor', 'texto', 'nome', 'anexos', 'criadoEm'])
           && request.resource.data.texto is string && request.resource.data.texto.size() <= 4000
+          && (request.resource.data.texto.size() > 0 || request.resource.data.get('anexos', []).size() > 0)
+          && anexosOk(request.resource.data.get('anexos', []), get(/databases/$(database)/documents/suporte/$(chamadoId)).data.uid)
           && request.resource.data.get('nome', '') is string && request.resource.data.get('nome', '').size() <= 200
           && request.resource.data.criadoEm == request.time && (
           (plataforma() && request.resource.data.autor == 'plataforma')

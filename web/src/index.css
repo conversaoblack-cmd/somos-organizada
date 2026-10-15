@@ -23,6 +23,9 @@
  * As variáveis --cor-* são trocadas em tempo real por lib/tema.ts.
  */
 :root {
+  /* Topo livre da faixa da hora/bateria. O iOS 26 borra um pouco além dela: 35% a mais. Sem faixa (Android,
+     computador, barra opaca) é 0. Use nos topos: pt-[var(--topo-seguro)]. */
+  --topo-seguro: calc(env(safe-area-inset-top, 0px) * 1.35);
   --cor-fundo: #070a12;
   --cor-texto: #f1f4fa;
   --cor-primaria: #2e6bff;
@@ -127,6 +130,14 @@
   @media (max-width: 639px) {
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea { font-size: 16px !important; }
   }
+  /* Data e hora no iPhone: o campo nativo tem largura mínima própria e passa da tela (o modal "Novo evento" andava
+     para o lado). Ocupa só a largura dada e o texto fica à esquerda, como nos outros campos. */
+  input[type="date"], input[type="datetime-local"], input[type="time"], input[type="month"] {
+    min-width: 0; max-width: 100%; -webkit-appearance: none; appearance: none;
+  }
+  input::-webkit-date-and-time-value { text-align: left; }
+  /* Janela, painel e tela cheia no celular: só rola para cima e para baixo (sem pinça e sem arrastar para o lado) */
+  [role="dialog"] { touch-action: pan-y; }
   /* select nativo legível no modo escuro do Windows/Android */
   select, option { background-color: var(--color-superficie-2); color: var(--color-texto); }
   @media (prefers-reduced-motion: reduce) {

@@ -7,6 +7,8 @@
  * A resposta fica 5 minutos no cache do Hosting, então só a primeira pessoa de um grupo espera a function.
  */
 import { onRequest } from "firebase-functions/v2/https";
+import QRCode from "qrcode";
+import { crc16 } from "../util/pix";
 import { logger } from "firebase-functions/v2";
 import { ESCALA_PUBLICA, FUSO, URL_APP } from "../config";
 import { db, refs } from "../util/firebase";
@@ -128,7 +130,79 @@ async function metaDoCaminho(caminhoPedido: string, host = ""): Promise<Meta | n
   return e ? metaDoEvento(t, e, url) : metaDaTorcida(t, url);
 }
 
+/** Código Pix (copia e cola) bem formado: começa no padrão EMV e o CRC do fim confere. */
+export function pixValido(c: string): boolean {
+  if (c.length < 50 || c.length > 512 || !c.startsWith("000201")) return false;
+  const m = /6304([0-9A-F]{4})$/.exec(c);
+  return !!m && crc16(c.slice(0, -4)) === m[1];
+}
+
+/**
+ * QR Code do Pix em imagem para os e-mails (e-mail não roda código: precisa de um PNG num endereço).
+ * Só gera para código Pix válido; o mesmo código dá sempre a mesma imagem, então fica no cache por 1 ano.
+ */
+export async function qrDoPix(c: string): Promise<Buffer | null> {
+  if (!pixValido(c)) return null;
+  return QRCode.toBuffer(c, { type: "png", errorCorrectionLevel: "M", margin: 2, width: 400, color: { dark: "#000000", light: "#ffffff" } });
+}
+
+/**
+ * Manifesto do app da torcida (painel e portaria adicionados à tela de início). Sem ele o iPhone considera que o app
+ * vale só a partir do endereço onde foi adicionado: ao ir do painel (/torcida/admin/...) para o leitor
+ * (/torcida/portaria) aparecia a barra do Safari, como se tivesse saído do app. Escopo = o site inteiro.
+ */
+export async function manifestoDaTorcida(slug: string, inicio: string, host: string): Promise<Record<string, unknown> | null> {
+  const tid = (await refs.slug(slug.toLowerCase()).get()).get("torcidaId") as string | undefined;
+  if (!tid) return null;
+  const t = (await refs.torcida(tid).get()).data() as Torcida | undefined;
+  if (!t) return null;
+  // Subdomínio do painel no domínio próprio: lá o painel é o "/"
+  let painelProprio = false;
+  if (talvezDominioProprio(host, hostPrincipal())) painelProprio = (await db.doc(`dominios/${host}`).get()).get("tipo") === "painel";
+  const portaria = inicio === "portaria";
+  const base = painelProprio ? "" : `/${t.slug}`;
+  return {
+    name: `${t.nome} · ${portaria ? "Portaria" : "Painel"}`,
+    short_name: t.nome.slice(0, 30),
+    lang: "pt-BR",
+    id: `${base}/${portaria ? "portaria" : "admin"}`,
+    start_url: portaria ? `${base}/portaria` : painelProprio ? "/" : `${base}/admin`,
+    scope: "/",
+    display: "standalone",
+    background_color: "#070A12",
+    theme_color: "#070A12",
+    icons: [
+      { src: "/icone-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icone-512.png", sizes: "512x512", type: "image/png" },
+    ],
+  };
+}
+
 export const previaLink = onRequest({ memory: "256MiB", timeoutSeconds: 20, ...ESCALA_PUBLICA }, async (req, res) => {
+  if (req.path === "/pix/qr.png") {
+    const png = await qrDoPix(String(req.query.c ?? "")).catch(() => null);
+    if (!png) {
+      res.status(400).set("Cache-Control", "no-store").send("Código Pix inválido.");
+      return;
+    }
+    res.status(200).set("Content-Type", "image/png").set("Cache-Control", "public, max-age=31536000, s-maxage=31536000, immutable").send(png);
+    return;
+  }
+  const pedidoManifesto = /^\/([a-z0-9-]{3,40})\/app\.webmanifest$/i.exec(req.path);
+  if (pedidoManifesto) {
+    try {
+      const m = await manifestoDaTorcida(pedidoManifesto[1]!, String(req.query.inicio ?? ""), hostDoPedido(req));
+      if (!m) {
+        res.status(404).send("Torcida não encontrada.");
+        return;
+      }
+      res.status(200).set("Content-Type", "application/manifest+json; charset=utf-8").set("Cache-Control", "public, max-age=300").send(JSON.stringify(m));
+    } catch (e) {
+      logger.warn("previa: manifesto", e);
+      res.status(503).set("Retry-After", "5").send("Tente de novo em alguns segundos.");
+    }
+    return;
+  }
   let html: string;
   try {
     html = await appHtml();

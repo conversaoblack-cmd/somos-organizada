@@ -29,6 +29,17 @@ import { useMembro, useTorcida } from "@/hooks/torcida";
 import { Botao, BotaoIcone, cx, Girando, Icone, Selo, type Tom } from "@/ui";
 import { buscarFaq, FAQ_EMBUTIDAS, faqParaPublico, type PublicoFaq } from "./suporte/faqBusca";
 import { buscarDestino, destinoPermitido, destinoPorId, linkDestino, type DestinoPainel, type PapelPainel } from "./suporte/destinos";
+import {
+  AnexosDaMensagem,
+  BarraGravando,
+  BotaoAnexar,
+  enviarAnexos,
+  ListaPendentes,
+  podeGravar,
+  useAnexos,
+  useGravador,
+  type AnexoPendente,
+} from "./suporte/anexos";
 
 type Tela = "assistente" | "novo" | "chamados" | "conversa";
 
@@ -44,8 +55,14 @@ interface MsgRobo {
 }
 
 /** Avisa a equipe no celular (servidor confere que o chamado é seu). Sem esperar e sem erro na tela: o chamado já foi gravado. */
-function avisarEquipe(chamadoId: string) {
-  api.avisarSuporte({ chamadoId }).catch(() => undefined);
+function avisarEquipe(chamadoId: string, mensagemId?: string) {
+  api.avisarSuporte({ chamadoId, mensagemId }).catch(() => undefined);
+}
+
+/** O que o robô passa para o novo chamado (foto, print ou áudio que ele não sabe ler). */
+interface ParaEquipe {
+  pendentes: AnexoPendente[];
+  texto: string;
 }
 
 const ROTULO_STATUS: Record<Chamado["status"], string> = { aberto: "Aguardando equipe", respondido: "Respondido", resolvido: "Resolvido" };
@@ -70,6 +87,16 @@ function gravarVisto(uid: string, chamadoId: string) {
   }
 }
 const ms = (v: Chamado["atualizadoEm"] | null | undefined) => paraData(v ?? null)?.getTime() ?? 0;
+
+/** Hora atual que se renova (para "a equipe está aqui agora" sumir sozinho). */
+function useAgora(intervalo: number): number {
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setAgora(Date.now()), intervalo);
+    return () => window.clearInterval(t);
+  }, [intervalo]);
+  return agora;
+}
 
 /** Remove parâmetros sensíveis (ex.: chave de acesso dos ingressos ?k=) da URL anexada. */
 function limparUrl(u: unknown): unknown {
@@ -136,6 +163,7 @@ export default function SuporteFlutuante() {
   const [aberto, setAberto] = useState(false);
   const [tela, setTela] = useState<Tela>("assistente");
   const [chamadoAtual, setChamadoAtual] = useState<string | null>(null);
+  const [paraEquipe, setParaEquipe] = useState<ParaEquipe | null>(null);
   const [vistos, setVistos] = useState<Record<string, number>>({});
   const botao = useRef<HTMLButtonElement>(null);
   const painel = useRef<HTMLDivElement>(null);
@@ -263,7 +291,10 @@ export default function SuporteFlutuante() {
                 nomeTorcida={torcida.nome}
                 publico={publico}
                 papelPainel={papelPainel}
-                falarComEquipe={() => setTela("novo")}
+                falarComEquipe={(levar) => {
+                  setParaEquipe(levar ?? null);
+                  setTela("novo");
+                }}
                 levar={(d) => {
                   if (!papelPainel) return;
                   setAberto(false);
@@ -279,8 +310,12 @@ export default function SuporteFlutuante() {
                 tid={tid}
                 torcidaNome={torcida.nome}
                 diretoria={diretoria}
-                aoCriar={(id) => abrirConversa(id)}
+                aoCriar={(id) => {
+                  setParaEquipe(null);
+                  abrirConversa(id);
+                }}
                 aoNavegar={fechar}
+                inicial={paraEquipe}
               />
             )}
             {tela === "chamados" && (
@@ -312,12 +347,21 @@ function Assistente({
   publico: PublicoFaq;
   /** diretoria/subsede logada no painel: o robô pode levar até a página certa */
   papelPainel: PapelPainel | null;
-  falarComEquipe: () => void;
+  falarComEquipe: (levar?: ParaEquipe) => void;
   levar: (d: DestinoPainel) => void;
 }) {
   const [faqs, setFaqs] = useState<ComId<Faq>[] | null>(null);
   const [msgs, setMsgs] = useState<MsgRobo[]>([]);
   const [pergunta, setPergunta] = useState("");
+  // O robô não lê foto nem áudio: o que for anexado aqui vai para a equipe num chamado novo
+  const anexos = useAnexos();
+  const gravador = useGravador((p) => anexos.incluir([p]));
+
+  function levarParaEquipe() {
+    const pendentes = anexos.pendentes;
+    anexos.esvaziar(false);
+    falarComEquipe({ pendentes, texto: pergunta.trim() });
+  }
   const fim = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -441,7 +485,7 @@ function Assistente({
               )}
               {m.semResposta && !m.avaliado && (
                 <div className="pl-9">
-                  <Botao tamanho="sm" icone="chat" variante={m.destino ? "contorno" : undefined} onClick={falarComEquipe}>
+                  <Botao tamanho="sm" icone="chat" variante={m.destino ? "contorno" : undefined} onClick={() => falarComEquipe()}>
                     Falar com a equipe
                   </Botao>
                 </div>
@@ -451,32 +495,55 @@ function Assistente({
         )}
         <div ref={fim} />
       </div>
+      {(anexos.pendentes.length > 0 || anexos.erro || gravador.erro) && (
+        <div className="border-t border-linha px-3 pt-3 space-y-2 shrink-0">
+          <ListaPendentes pendentes={anexos.pendentes} remover={anexos.remover} />
+          {anexos.pendentes.length > 0 && <p className="text-xs text-texto-3">Fotos e áudios vão para a equipe: ao enviar, abrimos um chamado com eles.</p>}
+          {(anexos.erro || gravador.erro) && (
+            <p role="alert" className="text-xs text-perigo">
+              {anexos.erro || gravador.erro}
+            </p>
+          )}
+        </div>
+      )}
       <form
-        className="border-t border-linha p-3 flex items-center gap-2 shrink-0"
+        className="border-t border-linha p-3 flex items-center gap-1.5 shrink-0"
         onSubmit={(e) => {
           e.preventDefault();
-          perguntar(pergunta);
+          if (anexos.pendentes.length) levarParaEquipe();
+          else perguntar(pergunta);
         }}
       >
-        <input
-          data-foco-inicial
-          value={pergunta}
-          onChange={(e) => setPergunta(e.target.value)}
-          placeholder="Digite sua dúvida…"
-          aria-label="Sua pergunta"
-          maxLength={300}
-          className="flex-1 h-11 rounded-2xl bg-superficie-2 border border-linha px-4 text-[15px] outline-none focus:border-primaria"
-        />
-        <button
-          type="submit"
-          disabled={!pergunta.trim() || !faqs}
-          aria-label="Perguntar"
-          className="size-11 shrink-0 rounded-2xl bg-primaria text-sobre-primaria grid place-items-center disabled:opacity-40"
-        >
-          <Icone nome="enviar" className="size-5" />
-        </button>
+        <BotaoAnexar aoEscolher={anexos.adicionar} desativado={gravador.gravando} className="shrink-0" />
+        {gravador.gravando ? (
+          <BarraGravando segundos={gravador.segundos} parar={gravador.parar} cancelar={gravador.cancelar} />
+        ) : (
+          <input
+            data-foco-inicial
+            value={pergunta}
+            onChange={(e) => setPergunta(e.target.value)}
+            onPaste={anexos.colar}
+            placeholder="Digite sua dúvida…"
+            aria-label="Sua pergunta"
+            maxLength={300}
+            className="flex-1 min-w-0 h-11 rounded-2xl bg-superficie-2 border border-linha px-4 text-[15px] outline-none focus:border-primaria"
+          />
+        )}
+        {!gravador.gravando &&
+          (!pergunta.trim() && !anexos.pendentes.length && podeGravar() ? (
+            <BotaoIcone icone="microfone" rotulo="Gravar áudio" onClick={() => void gravador.iniciar()} className="shrink-0" data-gravar />
+          ) : (
+            <button
+              type="submit"
+              disabled={(!pergunta.trim() && !anexos.pendentes.length) || !faqs}
+              aria-label={anexos.pendentes.length ? "Enviar para a equipe" : "Perguntar"}
+              className="size-11 shrink-0 rounded-2xl bg-primaria text-sobre-primaria grid place-items-center disabled:opacity-40"
+            >
+              <Icone nome="enviar" className="size-5" />
+            </button>
+          ))}
       </form>
-      <button type="button" onClick={falarComEquipe} className="text-xs text-texto-3 hover:text-texto pb-3 -mt-1 shrink-0">
+      <button type="button" onClick={() => falarComEquipe()} className="text-xs text-texto-3 hover:text-texto pb-3 -mt-1 shrink-0">
         Prefere falar com uma pessoa? <span className="underline">Falar com a equipe</span>
       </button>
     </>
@@ -504,6 +571,7 @@ function NovoChamado({
   diretoria,
   aoCriar,
   aoNavegar,
+  inicial,
 }: {
   logado: boolean;
   anonimo: boolean;
@@ -513,11 +581,15 @@ function NovoChamado({
   diretoria: boolean;
   aoCriar: (id: string) => void;
   aoNavegar: () => void;
+  /** anexos e texto que vieram do robô */
+  inicial?: ParaEquipe | null;
 }) {
   const [assunto, setAssunto] = useState("");
-  const [texto, setTexto] = useState("");
+  const [texto, setTexto] = useState(inicial?.texto ?? "");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const anexos = useAnexos(inicial?.pendentes ?? []);
+  const gravador = useGravador((p) => anexos.incluir([p]));
 
   if (!logado) {
     return (
@@ -552,7 +624,7 @@ function NovoChamado({
     const t = texto.trim();
     if (!u) return setErro("Sua sessão expirou. Entre novamente.");
     if (a.length < 3) return setErro("Escreva um assunto curto.");
-    if (t.length < 5) return setErro("Conte um pouco mais sobre o problema.");
+    if (t.length < 5 && !anexos.pendentes.length) return setErro("Conte um pouco mais sobre o problema (ou anexe um print ou áudio).");
     setEnviando(true);
     try {
       // papel: membro do painel > sócio > torcedor
@@ -577,8 +649,16 @@ function NovoChamado({
         criadoEm: serverTimestamp(),
         atualizadoEm: serverTimestamp(),
       });
-      await addDoc(collection(db, `suporte/${ref.id}/mensagens`), { autor: "usuario", texto: t.slice(0, 4000), nome, criadoEm: serverTimestamp() });
-      avisarEquipe(ref.id);
+      const enviados = anexos.pendentes.length ? await enviarAnexos(u.uid, ref.id, anexos.pendentes) : [];
+      const msg = await addDoc(collection(db, `suporte/${ref.id}/mensagens`), {
+        autor: "usuario",
+        texto: t.slice(0, 4000),
+        nome,
+        ...(enviados.length ? { anexos: enviados } : {}),
+        criadoEm: serverTimestamp(),
+      });
+      avisarEquipe(ref.id, msg.id);
+      anexos.esvaziar();
       aoCriar(ref.id);
     } catch (err) {
       setErro(mensagemDeErro(err));
@@ -613,11 +693,34 @@ function NovoChamado({
           id="sup-msg"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
+          onPaste={anexos.colar}
           maxLength={4000}
           rows={5}
-          placeholder="Descreva o que você tentou fazer e o que apareceu na tela."
+          placeholder="Descreva o que você tentou fazer e o que apareceu na tela. Pode colar um print aqui."
           className="w-full rounded-2xl bg-superficie-2 border border-linha px-4 py-3 text-[15px] outline-none focus:border-primaria resize-y"
         />
+        <div className="mt-2 flex items-center gap-1.5">
+          {gravador.gravando ? (
+            <BarraGravando segundos={gravador.segundos} parar={gravador.parar} cancelar={gravador.cancelar} />
+          ) : (
+            <>
+              <BotaoAnexar aoEscolher={anexos.adicionar} />
+              <span className="text-xs text-texto-3">Foto, print ou PDF</span>
+              {podeGravar() && (
+                <button
+                  type="button"
+                  onClick={() => void gravador.iniciar()}
+                  className="ml-auto h-10 px-3 rounded-xl text-sm font-semibold text-texto-2 hover:text-texto hover:bg-superficie-2 inline-flex items-center gap-1.5"
+                  data-gravar
+                >
+                  <Icone nome="microfone" className="size-5" /> Gravar áudio
+                </button>
+              )}
+            </>
+          )}
+        </div>
+        <ListaPendentes pendentes={anexos.pendentes} remover={anexos.remover} className="mt-2" />
+        {(anexos.erro || gravador.erro) && <p className="text-xs text-perigo mt-1.5">{anexos.erro || gravador.erro}</p>}
       </div>
       <p className="flex gap-2 text-xs text-texto-3 rounded-2xl bg-superficie-2 p-3">
         <Icone nome="info" className="size-4 shrink-0 mt-px" />
@@ -709,6 +812,13 @@ function ConversaUsuario({ chamado, chamadoId, aoVer }: { chamado: ComId<Chamado
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const fim = useRef<HTMLDivElement>(null);
+  const anexos = useAnexos();
+  const gravador = useGravador((p) => anexos.incluir([p]));
+  const agora = useAgora(30_000);
+  // A equipe abriu a conversa depois da última mensagem minha? E está com ela aberta agora (renova a cada minuto)?
+  const ultimaMinha = [...msgs.dados].reverse().find((m) => m.autor === "usuario");
+  const visto = !!ultimaMinha?.criadoEm && ms(chamado?.vistoPlataformaEm) >= ms(ultimaMinha.criadoEm);
+  const equipeAqui = agora - ms(chamado?.presencaPlataformaEm) < 90_000;
 
   // novas mensagens com o painel aberto contam como vistas
   useEffect(() => {
@@ -720,19 +830,24 @@ function ConversaUsuario({ chamado, chamadoId, aoVer }: { chamado: ComId<Chamado
   async function responder(e: FormEvent) {
     e.preventDefault();
     const t = texto.trim();
-    if (!t) return;
+    const u = auth.currentUser;
+    if ((!t && !anexos.pendentes.length) || !u) return;
     setEnviando(true);
     setErro(null);
     try {
-      await addDoc(collection(db, `suporte/${chamadoId}/mensagens`), {
+      // o arquivo fica na pasta do dono do chamado (a regra do Storage confere)
+      const enviados = anexos.pendentes.length ? await enviarAnexos(chamado?.uid ?? u.uid, chamadoId, anexos.pendentes) : [];
+      const msg = await addDoc(collection(db, `suporte/${chamadoId}/mensagens`), {
         autor: "usuario",
         texto: t.slice(0, 4000),
-        nome: chamado?.nome ?? auth.currentUser?.displayName ?? "",
+        nome: chamado?.nome ?? u.displayName ?? "",
+        ...(enviados.length ? { anexos: enviados } : {}),
         criadoEm: serverTimestamp(),
       });
       await updateDoc(doc(db, "suporte", chamadoId), { status: "aberto", atualizadoEm: serverTimestamp(), naoLidasPlataforma: increment(1) });
-      avisarEquipe(chamadoId);
+      avisarEquipe(chamadoId, msg.id);
       setTexto("");
+      anexos.esvaziar();
     } catch (err) {
       setErro(mensagemDeErro(err));
     } finally {
@@ -781,14 +896,35 @@ function ConversaUsuario({ chamado, chamadoId, aoVer }: { chamado: ComId<Chamado
                 )}
               >
                 {!meu && <p className="text-[11px] font-semibold text-texto-3 mb-0.5">{m.nome || "Equipe Somos Organizada"}</p>}
+                <AnexosDaMensagem anexos={m.anexos} meu={meu} />
                 {m.texto}
                 <p className={cx("text-[10px] mt-1 text-right", meu ? "opacity-70" : "text-texto-3")}>{m.criadoEm ? hora(m.criadoEm) : "enviando…"}</p>
               </div>
             </div>
           );
         })}
-        {chamado?.status === "aberto" && msgs.dados.length > 0 && (
-          <p className="text-center text-xs text-texto-3">A equipe foi avisada. Você pode fechar esta janela; a resposta aparece aqui.</p>
+        {ultimaMinha && (
+          <p className="text-right text-[11px] text-texto-3 -mt-1.5 pr-1 flex items-center justify-end gap-1" data-situacao-envio>
+            {!ultimaMinha.criadoEm ? (
+              "Enviando…"
+            ) : visto ? (
+              <>
+                <Icone nome="checkCirculo" className="size-3.5 text-primaria-texto" /> Vista pela equipe
+              </>
+            ) : (
+              <>
+                <Icone nome="check" className="size-3.5" /> Enviada
+              </>
+            )}
+          </p>
+        )}
+        {equipeAqui && chamado?.status !== "resolvido" ? (
+          <p className="flex items-center justify-center gap-2 text-xs font-semibold text-primaria-texto" data-equipe-lendo>
+            <span className="size-2 rounded-full bg-primaria animate-pulse" aria-hidden="true" />A equipe está lendo esta conversa agora
+          </p>
+        ) : (
+          chamado?.status === "aberto" &&
+          msgs.dados.length > 0 && <p className="text-center text-xs text-texto-3">A equipe foi avisada. Você pode fechar esta janela; a resposta aparece aqui.</p>
         )}
         <div ref={fim} />
       </div>
@@ -797,11 +933,22 @@ function ConversaUsuario({ chamado, chamadoId, aoVer }: { chamado: ComId<Chamado
           {erro}
         </p>
       )}
-      <form onSubmit={responder} className="border-t border-linha p-3 flex items-end gap-2 shrink-0">
+      {(anexos.pendentes.length > 0 || anexos.erro || gravador.erro) && (
+        <div className="border-t border-linha px-3 pt-3 space-y-1.5 shrink-0">
+          <ListaPendentes pendentes={anexos.pendentes} remover={anexos.remover} />
+          {(anexos.erro || gravador.erro) && <p className="text-xs text-perigo">{anexos.erro || gravador.erro}</p>}
+        </div>
+      )}
+      <form onSubmit={responder} className="border-t border-linha p-3 flex items-end gap-1.5 shrink-0">
+        <BotaoAnexar aoEscolher={anexos.adicionar} desativado={gravador.gravando || enviando} className="shrink-0" />
+        {gravador.gravando ? (
+          <BarraGravando segundos={gravador.segundos} parar={gravador.parar} cancelar={gravador.cancelar} />
+        ) : (
         <textarea
           data-foco-inicial
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
+          onPaste={anexos.colar}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && window.matchMedia("(pointer: fine)").matches) {
               e.preventDefault();
@@ -812,16 +959,22 @@ function ConversaUsuario({ chamado, chamadoId, aoVer }: { chamado: ComId<Chamado
           maxLength={4000}
           placeholder={chamado?.status === "resolvido" ? "Escreva para reabrir…" : "Escreva uma mensagem…"}
           aria-label="Mensagem para a equipe"
-          className="flex-1 min-h-11 max-h-32 resize-none rounded-2xl bg-superficie-2 border border-linha px-4 py-2.5 text-[15px] outline-none focus:border-primaria"
+          className="flex-1 min-w-0 min-h-11 max-h-32 resize-none rounded-2xl bg-superficie-2 border border-linha px-4 py-2.5 text-[15px] outline-none focus:border-primaria"
         />
-        <button
-          type="submit"
-          disabled={!texto.trim() || enviando}
-          aria-label="Enviar mensagem"
-          className="size-11 shrink-0 rounded-2xl bg-primaria text-sobre-primaria grid place-items-center disabled:opacity-40"
-        >
-          {enviando ? <Girando className="size-5" /> : <Icone nome="enviar" className="size-5" />}
-        </button>
+        )}
+        {!gravador.gravando &&
+          (!texto.trim() && !anexos.pendentes.length && !enviando && podeGravar() ? (
+            <BotaoIcone icone="microfone" rotulo="Gravar áudio" onClick={() => void gravador.iniciar()} className="shrink-0" data-gravar />
+          ) : (
+            <button
+              type="submit"
+              disabled={(!texto.trim() && !anexos.pendentes.length) || enviando}
+              aria-label="Enviar mensagem"
+              className="size-11 shrink-0 rounded-2xl bg-primaria text-sobre-primaria grid place-items-center disabled:opacity-40"
+            >
+              {enviando ? <Girando className="size-5" /> : <Icone nome="enviar" className="size-5" />}
+            </button>
+          ))}
       </form>
     </>
   );

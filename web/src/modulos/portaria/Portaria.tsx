@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { useLocation, useSearchParams } from "react-router";
+import { Link, useLocation, useSearchParams } from "react-router";
 import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -13,6 +13,7 @@ import { SemConexao } from "../publico/comum";
 import { Login } from "@/componentes/Login";
 import { Aviso, Botao, BotaoIcone, Carregando, cx, Esqueleto, Girando, Icone, Modal, Vazio } from "@/ui";
 import { useTelaAcesa } from "../conta/comum";
+import { modoAppDaTorcida } from "@/lib/notificacoes";
 import { feedback, prepararAudio } from "./feedback";
 import { Leitor } from "./Leitor";
 
@@ -98,11 +99,24 @@ function Cabecalho({ titulo, subtitulo, voltar, membro }: { titulo: string; subt
   // Sair no meio da fila obriga a entrar de novo (e-mail e senha): sempre pede confirmação.
   const [confirmarSaida, setConfirmarSaida] = useState(false);
   const [saindo, setSaindo] = useState(false);
+  const { torcida } = useTorcida();
+  // Sem "trocar evento": volta para o painel (a diretoria abre o leitor pela página Portaria do painel)
+  const painel = `/${torcida.slug}/admin${membro?.papel === "diretoria" ? "/portaria" : ""}`;
   return (
-    <header className="sticky top-0 z-30 pt-[env(safe-area-inset-top)] bg-fundo/90 backdrop-blur-xl border-b border-linha">
+    <header className="sticky top-0 z-30 pt-[var(--topo-seguro)] bg-fundo/90 backdrop-blur-xl border-b border-linha">
       <div className="mx-auto max-w-5xl h-16 px-3 sm:px-6 flex items-center gap-2">
         {voltar ? (
           <BotaoIcone icone="chevronEsquerda" rotulo="Trocar evento" onClick={voltar} className="size-12" />
+        ) : membro ? (
+          <Link
+            to={painel}
+            aria-label="Voltar ao painel"
+            title="Voltar ao painel"
+            className="size-12 shrink-0 grid place-items-center rounded-xl text-texto-2 hover:text-texto hover:bg-superficie-2"
+            data-voltar-painel
+          >
+            <Icone nome="chevronEsquerda" className="size-6" />
+          </Link>
         ) : (
           <span className="size-10 ml-1 rounded-xl bg-primaria text-sobre-primaria grid place-items-center">
             <Icone nome="qr" className="size-5" />
@@ -314,7 +328,7 @@ function TelaResultado({ r, proximo, tentarDeNovo }: { r: Resultado; proximo: ()
       aria-label={`${v.titulo}. ${r.mensagem}`}
     >
       <div
-        className="flex-1 min-h-0 overflow-y-auto px-5 pt-[max(env(safe-area-inset-top),1.25rem)] pb-4 flex flex-col items-center justify-center text-center"
+        className="flex-1 min-h-0 overflow-y-auto px-5 pt-[max(var(--topo-seguro),1.25rem)] pb-4 flex flex-col items-center justify-center text-center"
         onClick={() => liberado && setSegurando(true)}
       >
         <div className={cx("so-pop", !liberado && r.resultado !== "ja_usado" && r.resultado !== "erro_conexao" && "so-tremer")}>
@@ -834,7 +848,8 @@ export default function Portaria() {
   }, [torcida]);
   useEffect(() => {
     document.title = `Portaria · ${torcida.nome}`;
-  }, [torcida.nome]);
+    modoAppDaTorcida(torcida.nome, torcida.slug, "portaria"); // porteiro instala o leitor na tela de início
+  }, [torcida.nome, torcida.slug]);
 
   const escolher = (id: string | null) => {
     gravar(chaveEvento, id);

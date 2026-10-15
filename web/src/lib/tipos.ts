@@ -273,14 +273,31 @@ export interface Chamado {
   status: "aberto" | "respondido" | "resolvido";
   diagnostico?: Record<string, unknown>;
   naoLidasPlataforma?: number;
+  /** a equipe abriu a conversa (mostra "visto pela equipe" para quem abriu o chamado) */
+  vistoPlataformaEm?: Timestamp;
+  /** a equipe está com a conversa aberta agora (renovado a cada minuto) */
+  presencaPlataformaEm?: Timestamp;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
+}
+
+export interface AnexoSuporte {
+  /** suporte/{dono do chamado}/{chamado}/{arquivo} no Storage */
+  caminho: string;
+  tipo: "imagem" | "audio" | "arquivo";
+  nome: string;
+  tamanho: number;
+  mime: string;
+  /** segundos (áudio gravado) */
+  duracao?: number;
 }
 
 export interface MensagemSuporte {
   autor: "usuario" | "plataforma";
   texto: string;
   nome?: string;
+  /** foto, print, áudio ou PDF (até 4) */
+  anexos?: AnexoSuporte[];
   criadoEm: Timestamp;
 }
 

@@ -68,7 +68,9 @@ export async function ativarNotificacoes(): Promise<void> {
 /**
  * Painel aberto como app pelo atalho na tela de início (iPhone e Android), sem a barra do navegador.
  * O iPhone lê estas marcações ao criar o atalho e abre na página onde ele foi criado.
- * O cabeçalho dos painéis desce para a área livre (env(safe-area-inset-top)): a faixa da hora e da bateria não recebe toque.
+ * Barra da hora "black" (opaca): com "black-translucent" a página passava por baixo da hora e o iOS 26 borra essa
+ * faixa (cabeçalho, menu e títulos "esfumaçados"). Se o aparelho ainda desenhar por baixo, os topos usam
+ * --topo-seguro (index.css), um pouco maior que a área da hora.
  */
 export function modoApp(titulo: string, manifesto?: string) {
   if (manifesto && !document.querySelector('link[rel="manifest"]')) {
@@ -81,7 +83,7 @@ export function modoApp(titulo: string, manifesto?: string) {
     ["apple-mobile-web-app-capable", "yes"],
     ["mobile-web-app-capable", "yes"],
     ["apple-mobile-web-app-title", titulo.slice(0, 30)],
-    ["apple-mobile-web-app-status-bar-style", "black-translucent"],
+    ["apple-mobile-web-app-status-bar-style", "black"],
   ]) {
     let m = document.querySelector<HTMLMetaElement>(`meta[name="${nome}"]`);
     if (!m) {
@@ -91,6 +93,16 @@ export function modoApp(titulo: string, manifesto?: string) {
     }
     m.content = valor;
   }
+}
+
+/**
+ * Painel e portaria da torcida instalados na tela de início: manifesto próprio (previaLink devolve nome, início e
+ * escopo "/"). Sem ele o iPhone limita o app ao endereço onde foi adicionado e mostra a barra do Safari ao ir do
+ * painel para o leitor. Só no site publicado: no dev e nos testes o endereço devolveria HTML (erro de manifesto).
+ */
+export function modoAppDaTorcida(nome: string, slug: string, inicio?: "portaria") {
+  const manifesto = import.meta.env.MODE === "production" ? `/${slug}/app.webmanifest${inicio ? `?inicio=${inicio}` : ""}` : undefined;
+  modoApp(nome, manifesto);
 }
 
 /** Painel da plataforma: ícone "Somos Equipe" com o manifesto próprio (necessário para as notificações no iPhone). */
