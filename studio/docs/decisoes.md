@@ -39,3 +39,32 @@ pipeline de áudio de teste (3 falas) ≈ 12 s.
 **Em aberto (perguntar ao dono):** ver a resposta da sessão de 15/10/2026 (público da 1ª peça, voz, música, perfil do
 Instagram, licença do Remotion, frase da taxa de 10%, pessoas filmadas, referências visuais, área de respiro do logo,
 semântica completa das cores).
+
+## 15/10/2026 · Apresentação: do roteiro ao portão visual (rodada 2)
+
+**Estado:** peça `campanhas/2026-10-15-apresentacao/` inteira em código (1350 quadros, 45 s). O roteiro passou pela mesa
+(rodada 0: todos aprovaram com condição; condições aplicadas). Portão visual: rodada 1 vetada pela motion-review; a
+direção de arte das cenas de produto foi refeita (v2) e está na rodada 2 (1ª das 2 correções permitidas).
+
+**Decidido pelo dono:** voz da ElevenLabs só no fim (o dono gera à mão a partir do texto que o estúdio entrega:
+`node audio/gerar-take.mjs apresentacao --texto`); Remotion grátis (2 pessoas); a taxa de 10% pode aparecer. Frase:
+"A taxa de 10% vira caixa da torcida. O ingresso só precisa pagar o evento."
+
+**Decidido pelo diretor:**
+- **Território:** arquibancada 3D de placas que viram (mosaico) e uma câmera global contínua; o 2×2 da marca nasce das
+  placas na virada (252). Cor semântica vira luz: vermelho = problema, azul = ação, amarelo = o que entra.
+- **v2 das cenas de produto** (aceito o veto "animação de interface"): o celular fica dentro do 3D, posicionado a partir
+  da câmera (`pontoNaTela`), com luz pontual na cor da cena acendendo as placas em volta. A prova é o recorte exato da
+  captura real (`provas.ts`, regiões medidas em pixel, nunca no olho), num andar fixo, ligada ao celular por um feixe.
+  Andares: assinatura 270–335 · frase 350–570 · prova 545–1080 · legenda 1095–1250 (caixa sólida) · celular abaixo.
+- **CTA:** câmera calculada por projeção (script de mínimos quadrados sobre a geometria do `Palco`), não por tentativa:
+  abaixo da 1ª fileira, olhando para cima, a arquibancada enche o quadro até embaixo. Um eixo (x 120), um CTA (rótulo
+  real do site), linhas legais a 44 px com quebra escolhida à mão.
+- **Trilha:** leito antes da virada ~11 dB abaixo do pós-virada, com impacto no 252 (a virada precisa soar como chegada).
+- **Desvio aceito pelo diretor (levado à mesa):** a linha "Taxa de serviço (10%)" fica com ~38 px, não 44; com a tela
+  real, mais que isso só falseando o layout.
+
+**Aprendizados:**
+- Medir região de captura em pixel (script), nunca pela imagem exibida no chat: ela vem reduzida e o erro passou de 30 px.
+- Sobre `git pull`: usar `git pull --no-rebase` (ou `--rebase=merges`) nesta branch; rebase linear desfazia merges.
+- O QC num trecho curto acusa loudness fora do alvo quando o trecho é só a parte cheia; vale a medida da mix inteira.
