@@ -111,33 +111,78 @@ export function LayoutPainel({
     };
   }, [aberto, idMenu]);
 
-  // Celular: arrastar da borda esquerda para a direita abre o menu; com ele aberto, arrastar para a esquerda fecha.
+  // Celular: o menu acompanha o dedo, como nos apps (Instagram etc.). Arrastar para a direita em qualquer ponto da tela
+  // abre; com ele aberto, arrastar para a esquerda fecha. Solta com mais de 40% aberto, ou num gesto rápido, e completa.
+  // Gesto vertical continua rolagem; lista que rola para o lado (filtros, carrossel) e campos de texto não abrem o menu.
+  const [puxado, setPuxado] = useState<number | null>(null); // 0..1 enquanto o dedo arrasta
+  const abertoRef = useRef(aberto);
+  abertoRef.current = aberto;
   useEffect(() => {
     if (semMenu) return;
-    let inicio: { x: number; y: number } | null = null;
-    const comecar = (e: TouchEvent) => {
-      if (window.matchMedia("(min-width: 1024px)").matches || e.touches.length !== 1) return;
-      const t = e.touches[0]!;
-      // fechado: só a faixa de 28 px junto à borda (o resto da tela rola e toca normal)
-      inicio = aberto || t.clientX <= 28 ? { x: t.clientX, y: t.clientY } : null;
+    const celular = () => !window.matchMedia("(min-width: 1024px)").matches;
+    let g: { x: number; y: number; t: number; decidido: boolean; ativo: boolean; abertoNoInicio: boolean } | null = null;
+    const largura = () => gaveta.current?.offsetWidth || Math.min(320, window.innerWidth * 0.84);
+    const bloqueado = (alvo: EventTarget | null) => {
+      for (let el = alvo as HTMLElement | null; el && el !== document.body; el = el.parentElement) {
+        if (el.matches?.('input, textarea, select, [contenteditable="true"], [data-sem-gesto], [role="dialog"]:not([data-gaveta-menu])')) return true;
+        const ox = getComputedStyle(el).overflowX;
+        if ((ox === "auto" || ox === "scroll") && el.scrollWidth > el.clientWidth + 2) return true;
+      }
+      // janela, tour ou camada aberta por cima: o gesto é dela
+      return !!document.querySelector('[aria-labelledby="tour-titulo"]') || (document.body.dataset.camadas ?? "0") !== "0";
     };
-    const terminar = (e: TouchEvent) => {
-      if (!inicio) return;
-      const t = e.changedTouches[0]!;
-      const dx = t.clientX - inicio.x;
-      const dy = Math.abs(t.clientY - inicio.y);
-      inicio = null;
-      if (dy > Math.abs(dx)) return; // gesto vertical: era rolagem
-      if (!aberto && dx > 60) setAberto(true);
-      else if (aberto && dx < -60) setAberto(false);
+    const comecar = (e: TouchEvent) => {
+      g = null;
+      if (!celular() || e.touches.length !== 1) return;
+      if (!abertoRef.current && bloqueado(e.target)) return;
+      const t = e.touches[0]!;
+      g = { x: t.clientX, y: t.clientY, t: Date.now(), decidido: false, ativo: false, abertoNoInicio: abertoRef.current };
+    };
+    const mover = (e: TouchEvent) => {
+      if (!g) return;
+      const t = e.touches[0]!;
+      const dx = t.clientX - g.x;
+      const dy = t.clientY - g.y;
+      if (!g.decidido) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        g.decidido = true;
+        // horizontal claro e no sentido certo (fechado → direita; aberto → esquerda)
+        g.ativo = Math.abs(dx) > Math.abs(dy) * 1.2 && (g.abertoNoInicio ? dx < 0 : dx > 0);
+        if (!g.ativo) {
+          g = null;
+          return;
+        }
+      }
+      e.preventDefault(); // não rola a página enquanto puxa o menu
+      const w = largura();
+      const p = g.abertoNoInicio ? 1 + Math.min(0, dx) / w : Math.max(0, dx) / w;
+      setPuxado(Math.max(0, Math.min(1, p)));
+    };
+    const soltar = (e: TouchEvent) => {
+      if (!g?.ativo) {
+        g = null;
+        return;
+      }
+      const dx = e.changedTouches[0]!.clientX - g.x;
+      const vel = dx / Math.max(1, Date.now() - g.t); // px/ms
+      const w = largura();
+      const p = g.abertoNoInicio ? 1 + Math.min(0, dx) / w : Math.max(0, dx) / w;
+      const abrir = vel > 0.45 ? true : vel < -0.45 ? false : p > 0.4;
+      g = null;
+      setPuxado(null);
+      setAberto(abrir);
     };
     document.addEventListener("touchstart", comecar, { passive: true });
-    document.addEventListener("touchend", terminar, { passive: true });
+    document.addEventListener("touchmove", mover, { passive: false });
+    document.addEventListener("touchend", soltar, { passive: true });
+    document.addEventListener("touchcancel", soltar, { passive: true });
     return () => {
       document.removeEventListener("touchstart", comecar);
-      document.removeEventListener("touchend", terminar);
+      document.removeEventListener("touchmove", mover);
+      document.removeEventListener("touchend", soltar);
+      document.removeEventListener("touchcancel", soltar);
     };
-  }, [aberto, semMenu]);
+  }, [semMenu]);
 
   function aoClicarItem(e: MouseEvent<HTMLAnchorElement>, para: string) {
     setAberto(false);
@@ -206,33 +251,52 @@ export function LayoutPainel({
         {rodapeMenu}
       </aside>
 
-      {aberto && (
+      {(aberto || puxado !== null) && (
         <div className="lg:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setAberto(false)} aria-hidden="true" />
+          {/* fundo escurece e desfoca junto com o dedo */}
+          <div
+            className={cx("absolute inset-0 bg-black/50 backdrop-blur-[3px]", puxado === null && "transition-opacity duration-300")}
+            style={{ opacity: puxado ?? (aberto ? 1 : 0) }}
+            onClick={() => setAberto(false)}
+            aria-hidden="true"
+          />
           <aside
             ref={gaveta}
             id={idMenu}
             role="dialog"
             aria-modal="true"
             aria-label="Menu do painel"
+            data-gaveta-menu=""
             tabIndex={-1}
-            className="absolute left-0 top-0 h-full w-[84%] max-w-xs bg-fundo border-r border-linha p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col outline-none animate-[surgir_.2s_ease_both]"
+            className={cx(
+              // vidro: translúcido, desfocado e com brilho na borda (Liquid Glass)
+              "absolute left-0 top-0 h-full w-[84%] max-w-xs flex flex-col outline-none rounded-r-[28px] overflow-hidden",
+              "bg-fundo/70 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/10",
+              "shadow-[0_0_0_1px_rgba(255,255,255,0.04),24px_0_60px_-12px_rgba(0,0,0,0.6)]",
+              "px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]",
+              puxado === null && "transition-transform duration-300 ease-[cubic-bezier(.22,1,.36,1)]",
+            )}
+            style={{ transform: `translateX(${((puxado ?? (aberto ? 1 : 0)) - 1) * 100}%)` }}
           >
-            <div className="px-2 pt-1 pb-6 flex items-start justify-between">
+            <div
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.07] via-transparent to-transparent"
+              aria-hidden="true"
+            />
+            <div className="relative px-2 pt-1 pb-6 flex items-start justify-between">
               <div className="min-w-0">
                 {marca}
                 {subtitulo && <p className="text-xs text-texto-3 mt-1">{subtitulo}</p>}
               </div>
               <BotaoIcone icone="x" rotulo="Fechar menu" onClick={() => setAberto(false)} />
             </div>
-            <div className="flex-1 overflow-y-auto overscroll-contain">{navegacao}</div>
-            {rodapeMenu}
+            <div className="relative flex-1 overflow-y-auto overscroll-contain">{navegacao}</div>
+            <div className="relative">{rodapeMenu}</div>
           </aside>
         </div>
       )}
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex items-center gap-3 px-4 sm:px-6 border-b border-linha bg-fundo/85 backdrop-blur">
+        <header className="sticky top-0 z-30 h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex items-center gap-3 px-4 sm:px-6 border-b border-white/10 bg-fundo/70 backdrop-blur-xl backdrop-saturate-150">
           {!semMenu && (
             <BotaoIcone
               icone="menu"

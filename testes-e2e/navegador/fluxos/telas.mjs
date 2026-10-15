@@ -36,13 +36,20 @@ async function percorrerTour(ap, p, id) {
 /** Celular: arrastar da borda esquerda para a direita abre o menu; arrastar para a esquerda fecha. */
 async function gestoDoMenu(ap, p) {
   if (await p.locator('[aria-labelledby="tour-titulo"]').count()) await p.keyboard.press("Escape");
+  // dedo de verdade: começa, passa por vários pontos (o menu acompanha) e solta
   const arrastar = (x1, x2) =>
-    p.evaluate(([a, b]) => {
+    p.evaluate(async ([a, b]) => {
       const toque = (x) => new Touch({ identifier: 1, target: document.body, clientX: x, clientY: 400 });
-      document.dispatchEvent(new TouchEvent("touchstart", { touches: [toque(a)], changedTouches: [toque(a)], bubbles: true }));
-      document.dispatchEvent(new TouchEvent("touchend", { touches: [], changedTouches: [toque(b)], bubbles: true }));
+      const disparar = (tipo, x, ativo) =>
+        document.body.dispatchEvent(new TouchEvent(tipo, { touches: ativo ? [toque(x)] : [], changedTouches: [toque(x)], bubbles: true, cancelable: true }));
+      disparar("touchstart", a, true);
+      for (let i = 1; i <= 8; i++) {
+        disparar("touchmove", a + ((b - a) * i) / 8, true);
+        await new Promise((r) => setTimeout(r, 16));
+      }
+      disparar("touchend", b, false);
     }, [x1, x2]);
-  await arrastar(6, 180);
+  await arrastar(120, 320); // do meio da tela, não só da borda
   const menu = p.getByRole("dialog", { name: "Menu do painel" });
   await menu.waitFor({ timeout: 5_000 }).catch(() => {
     throw new Error(`[${ap.rotulo}] arrastar da borda esquerda não abriu o menu`);

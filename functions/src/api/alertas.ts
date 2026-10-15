@@ -31,37 +31,55 @@ export const registrarNotificacao = onCall(async (req) => {
 
 export const testarNotificacao = onCall(async (req) => {
   exigirPlataforma(req);
-  const enviadas = await enviar({ titulo: "Notificações ligadas", corpo: "Este aparelho vai receber os alertas da Somos Organizada.", url: "/plataforma" });
-  if (!enviadas) throw new HttpsError("failed-precondition", "Nenhum aparelho com notificação ligada. Toque em “Ativar notificações” primeiro.");
-  return { enviadas };
+  const r = await enviar({ titulo: "Notificações ligadas", corpo: "Este aparelho vai receber os alertas da Somos Organizada.", url: "/plataforma" });
+  if (!r.aparelhos) throw new HttpsError("failed-precondition", "Nenhum aparelho com notificação ligada. Toque em “Ativar notificações” primeiro.");
+  // Só a equipe chama: o motivo técnico aparece na tela para corrigir na hora
+  if (!r.enviadas) throw new HttpsError("unavailable", `O Firebase recusou o envio (${[...new Set(r.falhas)].join(", ") || "sem detalhe"}). Toque em “Registrar de novo” e teste outra vez.`);
+  return { enviadas: r.enviadas };
 });
 
 interface Alerta {
   titulo: string;
   corpo: string;
-  /** Caminho do painel da plataforma aberto ao tocar na notificação. */
+  /** Caminho do painel da plataforma aberto ao tocar na notificação (o service worker abre no próprio endereço do app). */
   url?: string;
 }
 
-async function enviar(a: Alerta): Promise<number> {
+async function enviar(a: Alerta): Promise<{ aparelhos: number; enviadas: number; falhas: string[] }> {
   const lista = await aparelhos().get();
-  if (lista.empty) return 0;
-  const r = await getMessaging().sendEach(
+  if (lista.empty) return { aparelhos: 0, enviadas: 0, falhas: [] };
+  // Sem webpush.fcmOptions.link: o Firebase exige endereço https completo ali e recusa a mensagem inteira com caminho
+  // relativo. O caminho vai em data.url e o service worker (sw-modelo.js) abre a tela certa.
+  const mensageiro = getMessaging();
+  // HTTP/1.1: o envio em lote por HTTP/2 pode perder a sessão dentro do Cloud Run e derrubar a chamada inteira
+  mensageiro.enableLegacyHttpTransport();
+  let r: Awaited<ReturnType<typeof mensageiro.sendEach>>;
+  try {
+    r = await mensageiro.sendEach(
     lista.docs.map((d) => ({
       token: String(d.get("token")),
       notification: { title: a.titulo, body: a.corpo.slice(0, 240) },
       data: { url: a.url ?? "/plataforma" },
-      webpush: { fcmOptions: { link: a.url ?? "/plataforma" } },
+      webpush: { headers: { Urgency: "high" } },
     })),
   );
-  // Aparelho que desinstalou o app ou desligou a permissão: sai da lista
+  } catch (e) {
+    const codigo = String((e as { code?: string }).code ?? (e as Error).message ?? e).replace(/^messaging\//, "").slice(0, 120);
+    logger.error("Envio de notificação da equipe falhou", { erro: String(e) });
+    return { aparelhos: lista.size, enviadas: 0, falhas: [codigo] };
+  }
+  const falhas: string[] = [];
+  // Só sai da lista o aparelho que o Firebase diz que não existe mais (desinstalou o app ou desligou a permissão).
+  // Erro de mensagem (invalid-argument) é nosso: nunca apaga aparelho por isso.
   await Promise.all(
     r.responses.map((x, i) => {
       const codigo = x.error?.code ?? "";
-      return /registration-token-not-registered|invalid-registration-token|invalid-argument/.test(codigo) ? lista.docs[i]!.ref.delete() : null;
+      if (codigo) falhas.push(codigo.replace(/^messaging\//, ""));
+      return /registration-token-not-registered|invalid-registration-token/.test(codigo) ? lista.docs[i]!.ref.delete() : null;
     }),
   );
-  return r.successCount;
+  if (falhas.length) logger.warn("Notificação da equipe com falha", { falhas });
+  return { aparelhos: lista.size, enviadas: r.successCount, falhas };
 }
 
 /** Avisa a equipe (no máximo 1 por tipo a cada 10 min). Nunca lança erro. */
