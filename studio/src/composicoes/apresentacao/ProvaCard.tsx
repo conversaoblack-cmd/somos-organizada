@@ -14,6 +14,8 @@ export const ANDAR = {
 };
 /** Topo do celular na arquibancada (px): de onde sai o feixe. */
 export const TOPO_CELULAR = 1278;
+/** Eixo do celular (px): o feixe sobe por ele. */
+export const EIXO_CELULAR = 450;
 
 /**
  * A prova sobe da tela do celular: o recorte EXATO da captura real, num andar fixo, com recorte de luz na cor da cena
@@ -42,11 +44,13 @@ export const ProvaCard: React.FC<{prova: Prova; cor: string; entrada?: number; s
       <div
         style={{
           position: 'absolute',
-          left: left + w / 2 - 40 * k,
+          left: (EIXO_CELULAR - 40) * k,
           top: feixeTopo,
           width: 80 * k,
           height: Math.max(0, TOPO_CELULAR * k - feixeTopo),
           opacity: 0.55 * p * (1 - sai),
+          filter: `blur(${12 * k}px)`,
+          mixBlendMode: 'screen',
           backgroundColor: 'rgba(0,0,0,0)',
           backgroundImage: `linear-gradient(to bottom, ${hexComAlfa(cor, 0.0)} 0%, ${hexComAlfa(cor, 0.35)} 45%, ${hexComAlfa(cor, 0.6)} 100%), radial-gradient(ellipse 50% 100% at 50% 100%, ${hexComAlfa(cor, 0.5)}, ${hexComAlfa(cor, 0)})`,
         }}
@@ -62,7 +66,7 @@ export const ProvaCard: React.FC<{prova: Prova; cor: string; entrada?: number; s
           transform: `translateY(${(1 - p) * 70 * k}px) perspective(${1800 * k}px) rotateX(${sai * 80}deg)`,
           transformOrigin: '50% 0%',
           borderRadius: raio,
-          boxShadow: `0 0 0 ${3 * k}px ${cor}, 0 0 ${46 * k}px ${hexComAlfa(cor, 0.45)}, 0 ${24 * k}px ${60 * k}px rgba(0,0,0,0.7)`,
+          boxShadow: `0 0 0 ${(prova.anel ?? 3) * k}px ${cor}, 0 0 ${(prova.anel ? 56 : 46) * k}px ${hexComAlfa(cor, prova.anel ? 0.75 : 0.45)}, 0 ${24 * k}px ${60 * k}px rgba(0,0,0,0.7)`,
         }}
       >
         <RecorteApp
@@ -77,7 +81,7 @@ export const ProvaCard: React.FC<{prova: Prova; cor: string; entrada?: number; s
         {d && (
           // o escurecimento do foco fica DENTRO do cartão (sem vazar sobre a frase e o placar)
           <div style={{position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: raio}}>
-            <Foco x={0} y={d.y * s} w={w} h={d.h * s} raio={12 * k} intensidade={focoP} margem={6 * k} />
+            <Foco x={0} y={d.y * s} w={w} h={d.h * s} raio={12 * k} intensidade={focoP * (d.forca ?? 1)} margem={6 * k} />
           </div>
         )}
       </div>

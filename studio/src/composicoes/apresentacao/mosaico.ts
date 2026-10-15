@@ -18,6 +18,14 @@ const CENTROS_PROBLEMA: [number, number][] = [
   [17, 22],
 ];
 
+/** Mistura a cor com o escuro da arquibancada: `fator` = quanto da cor sobra (0,3 = 30%). */
+function rebaixar(hex: string, fator: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const fundo = [0x0b, 0x0e, 0x16];
+  const canal = (i: number) => Math.round(((n >> (16 - 8 * i)) & 255) * fator + fundo[i] * (1 - fator));
+  return '#' + [0, 1, 2].map((i) => canal(i).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
 /** A placa que FALTA na grade da marca desde a virada: só acende no toque do CTA (é a torcida de quem assiste). */
 export const PLACA_QUE_FALTA = (() => {
   // canto interno do quadrado branco (embaixo, à direita), bem visível
@@ -70,8 +78,13 @@ export function linhaDoTempoPlaca(c: number, l: number): EstadoPlaca[] {
 
   // QR BARRADO (612–684): perto da base, placas em vermelho (degrau, sem piscar); o resto rebaixa (≤ 30%);
   // em 690 tudo volta ao que era
+  if (grade) {
+    // a grade da marca também cede o quadro ao bloqueio (≤ 30%) e volta em 688
+    estados.push({cor: rebaixar(grade, 0.3), de: 612 + v * 8, virada: 6});
+    estados.push({cor: grade, de: 688 + v * 10, virada: 6});
+  }
   if (!grade) {
-    const perto = v < 0.2 && Math.abs(u - 0.5) < 0.18;
+    const perto = v < 0.27 && Math.abs(u - 0.5) < 0.2;
     const antes = [...estados].reverse().find((e) => e.de < 612);
     if (perto && r2 < 0.45) estados.push({cor: COR.perigo, de: 612 + Math.abs(u - 0.5) * 20 + v * 10, virada: 4});
     else if (antes && antes.cor !== APAGADA_AZUL) estados.push({cor: '#1A1E2A', de: 612 + v * 8, virada: 6});

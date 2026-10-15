@@ -33,7 +33,7 @@ export function celularNoFrame(frame: number): CelularNaArquibancada | null {
   const dur = CENAS[cena].ate - CENAS[cena].de;
   const plano = [...planos].reverse().find((p) => local >= p.de)!;
   const entrada = interpolate(local, [0, 10], [0, 1], {extrapolateRight: 'clamp', easing: ENTRADA}) * interpolate(local, [dur - 8, dur], [1, 0], {extrapolateLeft: 'clamp'});
-  return {tela: plano.tela, cor: plano.cor, x: 540, y: 1520, alturaPx: 470, profundidade: 7, giro: interpolate(local, [0, dur], [-0.18, 0.12]), entrada};
+  return {tela: plano.tela, cor: plano.cor, x: 450 /* eixo da legenda e do feixe */, y: 1520, alturaPx: 470, profundidade: 7, giro: interpolate(local, [0, dur], [-0.18, 0.12]), entrada};
 }
 
 export const FundoArquibancada: React.FC = () => {
