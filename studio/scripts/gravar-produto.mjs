@@ -15,11 +15,12 @@
  *     {"acao": "esperar", "texto": "Eventos"},                 // espera um texto aparecer (ou "seletor")
  *     {"acao": "print", "nome": "painel"},                     // PNG 1170×2532
  *     {"acao": "tocar", "nome": "novo-evento", "texto": "Novo evento"},  // ou "seletor"; grava o retângulo
- *     {"acao": "digitar", "seletor": "input[name=nome]", "texto": "Caravana"},
+ *     {"acao": "digitar", "seletor": "input[name=nome]", "texto": "Caravana"},   // "lento": 70 = letra por letra (vídeo)
  *     {"acao": "rolar", "y": 600},
  *     {"acao": "pausa", "ms": 800},
  *     {"acao": "tocar", "texto": "Pular", "exato": true, "opcional": true}  // toca se aparecer; não vira marca
  *   ],
+ *   "cameraFalsa": "caminho/qr.y4m",           // opcional: vídeo que o navegador usa como câmera (leitor de QR real)
  *   "ocultar": [                                 // cobre o que não é assunto da cena (registrado no origem.json)
  *     {"seletor": "button[aria-label^='Ajuda']"},
  *     {"texto": "Ambiente de teste da Pagar.me", "subir": 1}
@@ -37,7 +38,7 @@
  * Dado fictício sempre rotulado na peça ("Torcida Brasil · dados de demonstração").
  */
 import {execSync} from 'node:child_process';
-import {existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {join, resolve} from 'node:path';
 import {chromium} from 'playwright-core';
 import {rodar, sonda} from './lib/ff.mjs';
@@ -108,9 +109,18 @@ async function executar(page, passo, {base, t0, marcas, prints, pasta, ocultar})
       await page.evaluate((y) => window.scrollTo({top: y, behavior: 'instant'}), passo.y ?? 0);
       await page.waitForTimeout(200);
       break;
-    case 'digitar':
-      await localizar(page, passo).fill(passo.texto ?? '');
+    case 'digitar': {
+      const campo = localizar(page, passo);
+      if (passo.lento) {
+        // no vídeo, a pessoa digita: letra por letra (passo.lento = ms entre teclas)
+        await campo.scrollIntoViewIfNeeded();
+        await campo.focus();
+        await campo.fill('');
+        await campo.pressSequentially(passo.texto ?? '', {delay: passo.lento});
+      } else await campo.fill(passo.texto ?? '');
+      await page.waitForTimeout(passo.depoisMs ?? 0);
       break;
+    }
     case 'print': {
       await aplicarOcultar(page, ocultar);
       await page.evaluate(() => document.fonts.ready);
@@ -159,8 +169,14 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
   const tmpVideo = join(pasta, '.video');
   rmSync(tmpVideo, {recursive: true, force: true});
 
-  const browser = await chromium.launch({executablePath: exe, args: ['--force-color-profile=srgb', '--font-render-hinting=none']});
+  // câmera falsa (portaria): o Chromium "filma" um vídeo .y4m/.mjpeg; o leitor real do produto decodifica o QR dele
+  const camera = roteiro.cameraFalsa ? resolve(roteiro.cameraFalsa) : null;
+  if (camera && !existsSync(camera)) throw new Error(`cameraFalsa não existe: ${camera}`);
+  const argsCamera = camera ? ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', `--use-file-for-fake-video-capture=${camera}`] : [];
+  // LANG do processo: o campo de data do Chromium formata pelo idioma do sistema (sem isso sai "11/07/2026, 01:00 PM")
+  const browser = await chromium.launch({executablePath: exe, env: {...process.env, LANG: 'pt_BR.UTF-8', LANGUAGE: 'pt_BR', LC_ALL: 'pt_BR.UTF-8'}, args: ['--force-color-profile=srgb', '--font-render-hinting=none', '--lang=pt-BR', '--disable-spell-checking', ...argsCamera]});
   const context = await browser.newContext({
+    ...(camera ? {permissions: ['camera']} : {}),
     viewport: VIEWPORT,
     deviceScaleFactor: ESCALA,
     isMobile: true,
@@ -169,9 +185,13 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
     timezoneId: 'America/Bahia',
     colorScheme: 'dark',
     reducedMotion: roteiro.movimentoReduzido ? 'reduce' : 'no-preference',
-    ...(video ? {recordVideo: {dir: tmpVideo, size: CAPTURA}} : {}),
   });
   await context.addInitScript(SEMENTE_JS);
+  // corretor ortográfico do navegador desligado: a nuvem só tem dicionário em inglês e sublinharia "Ônibus" de vermelho
+  // (configuração do aparelho, não estado do produto; registrado no origem.json)
+  await context.addInitScript(() => {
+    document.addEventListener('focusin', (e) => { if (e.target && 'spellcheck' in e.target) e.target.spellcheck = false; }, true);
+  });
   const page = await context.newPage();
   const base = roteiro.base ?? 'http://127.0.0.1:5173';
   const t0 = Date.now();
@@ -179,6 +199,24 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
   const prints = [];
   const consoleErros = [];
   page.on('console', (m) => m.type() === 'error' && consoleErros.push(m.text()));
+
+  // Vídeo por screencast do Chromium (CDP) na resolução do aparelho (3×). O recordVideo do Playwright grava a tela em
+  // 1× (390 px) no canto de um quadro cinza: texto ilegível. Cada quadro chega quando a tela muda, com o instante dele.
+  const quadros = [];
+  const gravando = [];
+  let cdp = null;
+  if (video) {
+    mkdirSync(tmpVideo, {recursive: true});
+    cdp = await context.newCDPSession(page);
+    cdp.on('Page.screencastFrame', ({data, metadata, sessionId}) => {
+      const ms = metadata?.timestamp ? metadata.timestamp * 1000 - t0 : Date.now() - t0;
+      const arq = join(tmpVideo, `q${String(quadros.length).padStart(5, '0')}.jpg`);
+      quadros.push({arq, ms});
+      writeFileSync(arq, Buffer.from(data, 'base64'));
+      gravando.push(cdp.send('Page.screencastFrameAck', {sessionId}).catch(() => {}));
+    });
+    await cdp.send('Page.startScreencast', {format: 'jpeg', quality: 95, maxWidth: CAPTURA.width, maxHeight: CAPTURA.height, everyNthFrame: 1});
+  }
 
   if (roteiro.conta) {
     await page.goto(base + (roteiro.entrarEm ?? '/brasil/admin'), {waitUntil: 'load'});
@@ -202,17 +240,31 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
     }
   }
 
+  const fimMs = Date.now() - t0;
+  if (cdp) {
+    await cdp.send('Page.stopScreencast').catch(() => {});
+    await Promise.all(gravando);
+  }
   await context.close();
   await browser.close();
 
   let gravacao = null;
-  if (video) {
-    const webm = readdirSync(tmpVideo).find((f) => f.endsWith('.webm'));
+  if (video && quadros.length) {
     gravacao = 'gravacao.mp4';
-    // taxa variável → 30 fps constantes; o tempo do Remotion bate com as marcas (ms desde o início)
-    rodar('ffmpeg', ['-v', 'error', '-y', '-i', join(tmpVideo, webm), '-vf', 'fps=30', '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', '-an', join(pasta, gravacao)]);
-    rmSync(tmpVideo, {recursive: true, force: true});
+    // quadros com instante próprio → 30 fps constantes; o 1º cobre desde o início, então o tempo do vídeo = ms das marcas
+    quadros.sort((a, b) => a.ms - b.ms);
+    const linhas = [];
+    quadros.forEach((q, i) => {
+      const de = i === 0 ? 0 : q.ms;
+      const ate = i + 1 < quadros.length ? quadros[i + 1].ms : fimMs;
+      linhas.push(`file '${q.arq}'`, `duration ${Math.max(0.001, (ate - de) / 1000).toFixed(4)}`);
+    });
+    linhas.push(`file '${quadros[quadros.length - 1].arq}'`);
+    const lista = join(tmpVideo, 'lista.txt');
+    writeFileSync(lista, linhas.join('\n') + '\n');
+    rodar('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lista, '-vf', `scale=${CAPTURA.width}:${CAPTURA.height}:flags=lanczos,fps=30`, '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', '-an', join(pasta, gravacao)]);
   }
+  rmSync(tmpVideo, {recursive: true, force: true});
 
   // confere a dimensão REAL de tudo (lição: captura com altura errada estica o cartão)
   const dimensoes = {};
@@ -247,6 +299,7 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
         dimensoes,
         prints,
         ocultado: roteiro.ocultar ?? [],
+        configuracaoDoAparelho: ['idioma pt-BR', 'corretor ortográfico desligado', ...(camera ? [`câmera falsa: ${camera}`] : [])],
         errosNoConsole: consoleErros,
       },
       null,

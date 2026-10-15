@@ -1,0 +1,17 @@
+{
+  "captura": {
+    "width": 1170,
+    "height": 2532
+  },
+  "escala": 3,
+  "marcas": [
+    {
+      "nome": "evento-caravana",
+      "x": 339,
+      "y": 1221,
+      "w": 612,
+      "h": 74,
+      "ms": 6606
+    }
+  ]
+}

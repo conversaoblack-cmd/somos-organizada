@@ -1,0 +1,157 @@
+{
+  "_comentario": "Pedido do dono (15/10): o painel da diretoria como ele é, a pessoa abrindo o menu e criando o evento. Gravação em vídeo (gravacao.mp4) + prints nítidos nos momentos-chave para os recortes. Rodar scripts/semente-estudio.mjs antes.",
+  "base": "http://127.0.0.1:4173",
+  "_base": "build de produção apontado para os emuladores (vite build/preview --mode emulador, como testes-e2e/navegador.sh): o código publicado, sem o modo de desenvolvimento do React",
+  "conta": "diretoria@brasil.test",
+  "entrarEm": "/brasil/admin",
+  "ocultar": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    }
+  ],
+  "passos": [
+    {
+      "acao": "tocar",
+      "nome": "pular-tour",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "esperar",
+      "texto": "Visão geral"
+    },
+    {
+      "acao": "pausa",
+      "ms": 1500
+    },
+    {
+      "acao": "print",
+      "nome": "painel-inicio"
+    },
+    {
+      "acao": "tocar",
+      "nome": "abrir-menu",
+      "papel": "button",
+      "nomeAcessivel": "Abrir menu",
+      "depoisMs": 900
+    },
+    {
+      "acao": "print",
+      "nome": "menu-aberto"
+    },
+    {
+      "acao": "tocar",
+      "nome": "menu-eventos",
+      "papel": "link",
+      "nomeAcessivel": "Eventos",
+      "depoisMs": 1800
+    },
+    {
+      "acao": "tocar",
+      "nome": "pular-tour-eventos",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "print",
+      "nome": "eventos-lista"
+    },
+    {
+      "acao": "tocar",
+      "nome": "novo-evento",
+      "papel": "button",
+      "nomeAcessivel": "Novo evento",
+      "depoisMs": 1200
+    },
+    {
+      "acao": "tocar",
+      "nome": "pular-tour-modal",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "print",
+      "nome": "novo-evento-vazio"
+    },
+    {
+      "acao": "digitar",
+      "texto": "Caravana para a semifinal",
+      "lento": 70,
+      "depoisMs": 400,
+      "seletor": "input[placeholder^='Ex.: Caravana']"
+    },
+    {
+      "acao": "digitar",
+      "texto": "Ônibus saindo da Sede Central às 12h. Ingresso do setor da torcida incluso.",
+      "lento": 35,
+      "depoisMs": 400,
+      "seletor": "textarea[placeholder^='Horário de saída']"
+    },
+    {
+      "acao": "print",
+      "nome": "novo-evento-nome"
+    },
+    {
+      "acao": "digitar",
+      "seletor": "input[type=datetime-local]",
+      "texto": "2026-11-07T13:00",
+      "depoisMs": 400
+    },
+    {
+      "acao": "digitar",
+      "texto": "Sede Central",
+      "lento": 70,
+      "depoisMs": 400,
+      "seletor": "input[placeholder='Ex.: Sede Central']"
+    },
+    {
+      "acao": "digitar",
+      "texto": "10000",
+      "lento": 110,
+      "depoisMs": 300,
+      "seletor": "input[placeholder='0,00'] >> nth=0"
+    },
+    {
+      "acao": "digitar",
+      "texto": "13000",
+      "lento": 110,
+      "depoisMs": 600,
+      "seletor": "input[placeholder='0,00'] >> nth=1"
+    },
+    {
+      "acao": "print",
+      "nome": "novo-evento-valores"
+    },
+    {
+      "acao": "tocar",
+      "nome": "status-publicado",
+      "depoisMs": 600,
+      "seletor": "[role=dialog] button:text-is('Publicado')"
+    },
+    {
+      "acao": "print",
+      "nome": "novo-evento-publicado"
+    },
+    {
+      "acao": "tocar",
+      "nome": "publicar",
+      "papel": "button",
+      "nomeAcessivel": "Publicar evento",
+      "depoisMs": 2500
+    },
+    {
+      "acao": "print",
+      "nome": "evento-publicado-lista"
+    },
+    {
+      "acao": "pausa",
+      "ms": 1200
+    }
+  ]
+}

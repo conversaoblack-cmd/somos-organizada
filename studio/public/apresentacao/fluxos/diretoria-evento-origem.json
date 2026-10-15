@@ -1,0 +1,107 @@
+{
+  "fonte": "produto real, ambiente local de demonstração (testes-e2e/dev-local.sh)",
+  "rotulo": "Torcida Brasil · dados de demonstração",
+  "base": "http://127.0.0.1:4173",
+  "conta": "diretoria@brasil.test",
+  "commitDoProduto": "a98cca62bc01fa5770ae6fb2a076a1da1078b7fd",
+  "gravadoEm": "2026-10-15T18:04:36.005Z",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "escala": 3,
+  "navegador": "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  "dimensoes": {
+    "painel-inicio.png": [
+      1170,
+      2532
+    ],
+    "menu-aberto.png": [
+      1170,
+      2532
+    ],
+    "eventos-lista.png": [
+      1170,
+      2532
+    ],
+    "novo-evento-vazio.png": [
+      1170,
+      2532
+    ],
+    "novo-evento-nome.png": [
+      1170,
+      2532
+    ],
+    "novo-evento-valores.png": [
+      1170,
+      2532
+    ],
+    "novo-evento-publicado.png": [
+      1170,
+      2532
+    ],
+    "evento-publicado-lista.png": [
+      1170,
+      2532
+    ],
+    "gravacao.mp4": [
+      1170,
+      2532
+    ]
+  },
+  "prints": [
+    {
+      "nome": "painel-inicio",
+      "arquivo": "painel-inicio.png",
+      "ms": 4665
+    },
+    {
+      "nome": "menu-aberto",
+      "arquivo": "menu-aberto.png",
+      "ms": 6686
+    },
+    {
+      "nome": "eventos-lista",
+      "arquivo": "eventos-lista.png",
+      "ms": 9518
+    },
+    {
+      "nome": "novo-evento-vazio",
+      "arquivo": "novo-evento-vazio.png",
+      "ms": 14123
+    },
+    {
+      "nome": "novo-evento-nome",
+      "arquivo": "novo-evento-nome.png",
+      "ms": 20292
+    },
+    {
+      "nome": "novo-evento-valores",
+      "arquivo": "novo-evento-valores.png",
+      "ms": 24415
+    },
+    {
+      "nome": "novo-evento-publicado",
+      "arquivo": "novo-evento-publicado.png",
+      "ms": 25281
+    },
+    {
+      "nome": "evento-publicado-lista",
+      "arquivo": "evento-publicado-lista.png",
+      "ms": 28060
+    }
+  ],
+  "ocultado": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    }
+  ],
+  "configuracaoDoAparelho": [
+    "idioma pt-BR",
+    "corretor ortográfico desligado"
+  ],
+  "errosNoConsole": []
+}

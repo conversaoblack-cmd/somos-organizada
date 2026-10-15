@@ -1,0 +1,84 @@
+{
+  "_comentario": "Pedido do dono (15/10): a portaria como ela é, com o LEITOR DE QR da câmera. O navegador usa como câmera um vídeo (gerado pelo estúdio) do celular do torcedor mostrando o QR REAL do ingresso (captura/ingresso.json). 2 s sem nada → QR na frente (LIBERADO) → celular abaixado → mesmo QR de novo aos 12 s (JÁ UTILIZADO; a portaria só aceita o mesmo QR depois de 3 s fora da câmera). Gerar o vídeo: ver 'cameraFalsa' em scripts/gravar-produto.mjs e docs/decisoes.md.",
+  "base": "http://127.0.0.1:4173",
+  "_base": "build de produção apontado para os emuladores (vite build/preview --mode emulador, como testes-e2e/navegador.sh): o código publicado, sem o modo de desenvolvimento do React",
+  "conta": "portaria@brasil.test",
+  "entrarEm": "/brasil/portaria",
+  "cameraFalsa": "/tmp/claude-0/-home-user-somos-organizada/0362b37a-ef4e-5b70-a0f5-6caf0d29c610/scratchpad/grav/camera/qr.y4m",
+  "ocultar": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    }
+  ],
+  "passos": [
+    {
+      "acao": "tocar",
+      "nome": "pular-tour",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "pausa",
+      "ms": 1200
+    },
+    {
+      "acao": "print",
+      "nome": "portaria-eventos"
+    },
+    {
+      "acao": "tocar",
+      "nome": "evento-caravana",
+      "texto": "Caravana para a Final",
+      "depoisMs": 800
+    },
+    {
+      "acao": "tocar",
+      "nome": "pular-tour-leitor",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "pausa",
+      "ms": 1500
+    },
+    {
+      "acao": "print",
+      "nome": "leitor-camera"
+    },
+    {
+      "acao": "esperar",
+      "texto": "LIBERADO",
+      "timeout": 20000
+    },
+    {
+      "acao": "pausa",
+      "ms": 600
+    },
+    {
+      "acao": "print",
+      "nome": "leitor-liberado"
+    },
+    {
+      "acao": "esperar",
+      "texto": "UTILIZADO",
+      "timeout": 25000
+    },
+    {
+      "acao": "pausa",
+      "ms": 600
+    },
+    {
+      "acao": "print",
+      "nome": "leitor-ja-utilizado"
+    },
+    {
+      "acao": "pausa",
+      "ms": 2500
+    }
+  ]
+}

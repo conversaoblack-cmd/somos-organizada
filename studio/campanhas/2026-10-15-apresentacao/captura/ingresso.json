@@ -1,13 +1,43 @@
 {
   "_comentario": "Ingresso nominal com QR na conta do sócio.",
+  "base": "http://127.0.0.1:4173",
+  "_base": "build de produção apontado para os emuladores (vite build/preview --mode emulador, como testes-e2e/navegador.sh): o código publicado, sem o modo de desenvolvimento do React",
   "conta": "socio@brasil.test",
   "entrarEm": "/brasil/socio",
-  "ocultar": [{"seletor": "button[aria-label^='Ajuda']"}, {"texto": "Ambiente de teste da Pagar.me"}],
+  "ocultar": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    }
+  ],
   "passos": [
-    {"acao": "tocar", "nome": "pular-tour", "texto": "Pular", "exato": true, "opcional": true},
-    {"acao": "abrir", "url": "/brasil/socio/ingressos", "ms": 2500},
-    {"acao": "print", "nome": "ingressos-lista"},
-    {"acao": "tocar", "nome": "mostrar-qr", "texto": "Mostrar ingresso", "depoisMs": 2000},
-    {"acao": "print", "nome": "ingresso-qr"}
+    {
+      "acao": "tocar",
+      "nome": "pular-tour",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "abrir",
+      "url": "/brasil/socio/ingressos",
+      "ms": 2500
+    },
+    {
+      "acao": "print",
+      "nome": "ingressos-lista"
+    },
+    {
+      "acao": "tocar",
+      "nome": "mostrar-qr",
+      "texto": "Mostrar ingresso",
+      "depoisMs": 2000
+    },
+    {
+      "acao": "print",
+      "nome": "ingresso-qr"
+    }
   ]
 }
