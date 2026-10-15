@@ -143,6 +143,11 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
 - Dinheiro e portaria são idempotentes: compra leva `idCompra` (mesmo id nas tentativas; resposta perdida não cobra duas
   vezes); erro sem resposta da Pagar.me não encerra o pedido (fica "criando" para conferência); a portaria manda `leituraId`
   e o "Tentar de novo" repete o mesmo.
+- E-mails (`functions/src/email/modelos.ts`): o que é para clicar ou copiar é **botão**, nunca endereço ou código em
+  texto (sem "se o botão não abrir, copie..."). Pix vai com QR em imagem (`/pix/qr.png`, gerado pela `previaLink`) e o
+  botão "Copiar código Pix" (abre `/pix`, que copia com um toque). Endereço citado no texto usa `semLink`. Marca: e-mail
+  para sócio, comprador, porteiro e subsede leva o escudo da torcida; e-mail da Somos para a diretoria (fatura, cadastro,
+  vídeo, domínio) usa `MARCA_PLATAFORMA` (a nossa logo). Teste em `functions/test/email.test.ts`.
 - O service worker (`sw.js`, gerado no build a partir de `web/scripts/sw-modelo.js`) só vale para o app (nunca para "/").
   O QR (carteirinha e ingressos) fica no aparelho para a portaria sem internet e é apagado ao sair da conta.
   E-mail nunca leva QR (decisão do dono): leva para a conta.

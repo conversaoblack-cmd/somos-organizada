@@ -89,6 +89,13 @@
         }
       },
       {
+        "source": "/pix/qr.png",
+        "function": {
+          "functionId": "previaLink",
+          "region": "southamerica-east1"
+        }
+      },
+      {
         "source": "/*/app.webmanifest",
         "function": {
           "functionId": "previaLink",

@@ -50,9 +50,8 @@ export async function avisarFaturaSaas(tid: string, faturaId: string, tipo: Avis
     const painel = urlDaTorcida(torcida, "/admin/plano");
     const venc = f.vencimento.toDate();
     const valor = moeda(f.valor);
-    const pix = f.pixCopiaECola
-      ? `<strong>Pix copia e cola:</strong><br><span style="font-family:monospace;font-size:12px;word-break:break-all">${esc(f.pixCopiaECola)}</span>`
-      : "O Pix desta fatura está no painel, em Plano Somos Organizada.";
+    // Com Pix: QR Code + botão "Copiar código Pix" (montar). Sem: o painel mostra quando a equipe cadastrar a chave.
+    const pix = f.pixCopiaECola ? "" : "O Pix desta fatura aparece no painel, em Plano Somos Organizada.";
     const detalhes: [string, string][] = [
       ["Torcida", esc(torcida.nome)],
       ["Plano", esc(nomePlano(f.plano))],
@@ -66,7 +65,7 @@ export async function avisarFaturaSaas(tid: string, faturaId: string, tipo: Avis
         titulo: "Sua fatura chegou",
         paragrafos: [
           `A mensalidade da Somos Organizada da <strong>${esc(torcida.nome)}</strong> está disponível: <strong>${valor}</strong>, com vencimento em <strong>${dataCurta(venc)}</strong>.`,
-          pix,
+          ...(pix ? [pix] : []),
           "Depois de pagar, toque em “Já paguei” no painel para a equipe confirmar mais rápido.",
         ],
         botao: "Ver a fatura no painel",
@@ -75,7 +74,7 @@ export async function avisarFaturaSaas(tid: string, faturaId: string, tipo: Avis
         assunto: `Lembrete: a fatura da ${torcida.nome} vence em ${dataCurta(venc)}`,
         selo: "Lembrete",
         titulo: "A fatura vence em 2 dias",
-        paragrafos: [`A mensalidade de <strong>${valor}</strong> da ${esc(torcida.nome)} vence em <strong>${dataCurta(venc)}</strong>.`, pix],
+        paragrafos: [`A mensalidade de <strong>${valor}</strong> da ${esc(torcida.nome)} vence em <strong>${dataCurta(venc)}</strong>.`, ...(pix ? [pix] : [])],
         botao: "Pagar pelo painel",
         nota: "Já pagou? Toque em “Já paguei” no painel e ignore este lembrete.",
       },
@@ -88,7 +87,7 @@ export async function avisarFaturaSaas(tid: string, faturaId: string, tipo: Avis
           extra.diasParaBloqueio != null
             ? `Se o pagamento não for confirmado em <strong>${extra.diasParaBloqueio} ${extra.diasParaBloqueio === 1 ? "dia" : "dias"}</strong>, o site e as vendas saem do ar até o Pix ser confirmado.`
             : "Pague o quanto antes para o site e as vendas não saírem do ar.",
-          pix,
+          ...(pix ? [pix] : []),
         ],
         botao: "Pagar agora",
         nota: "Sem multa e sem juros. Já pagou? Toque em “Já paguei” no painel.",
@@ -100,7 +99,7 @@ export async function avisarFaturaSaas(tid: string, faturaId: string, tipo: Avis
         paragrafos: [
           `A fatura de <strong>${valor}</strong> (vencida em ${dataCurta(venc)}) ainda não foi paga. Por isso o site e as vendas da ${esc(torcida.nome)} estão fora do ar.`,
           "Assim que o Pix for confirmado, tudo volta ao ar sozinho, com os mesmos dados, sócios e ingressos.",
-          pix,
+          ...(pix ? [pix] : []),
         ],
         botao: "Regularizar agora",
       },
@@ -114,7 +113,7 @@ export async function avisarFaturaSaas(tid: string, faturaId: string, tipo: Avis
     };
     const t = textos[tipo];
     if (tipo === "paga") detalhes.push(["Situação", "Paga"]);
-    const marca = { ...MARCA_PLATAFORMA, nome: "Somos Organizada" } as Torcida;
+    const marca = MARCA_PLATAFORMA;
     for (const para of await destinatarios(tid)) {
       const m = montar(marca, t.assunto, para, {
         selo: t.selo,
@@ -122,8 +121,9 @@ export async function avisarFaturaSaas(tid: string, faturaId: string, tipo: Avis
         paragrafos: t.paragrafos,
         detalhes,
         botao: { texto: t.botao, url: painel },
+        pix: tipo !== "paga" && f.pixCopiaECola ? { codigo: f.pixCopiaECola } : undefined,
         nota: t.nota,
-        rodape: "Mensalidade fixa, sem porcentagem sobre as vendas. Dúvidas: contato@somosorganizada.com.br.",
+        rodape: "Mensalidade fixa, sem porcentagem sobre as vendas. Dúvidas? Toque no botão de ajuda do painel e fale com a equipe.",
         conta: true,
       });
       const quem = createHash("sha256").update(para.email).digest("hex").slice(0, 12);

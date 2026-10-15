@@ -37,6 +37,8 @@ export function codigoDoLink(link: string): string | null {
 
 export const MARCA_PLATAFORMA = {
   nome: "Somos Organizada",
+  /** e-mail com a nossa logo (email/modelos.ts) */
+  plataforma: true,
   tema: { corPrimaria: "#2E6BFF", corSecundaria: "#FFCC00", corFundo: "#070A12", corTexto: "#F1F4FA" },
 } as unknown as Torcida;
 

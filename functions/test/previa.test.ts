@@ -67,3 +67,15 @@ test("prévia no domínio próprio: host vem do X-Forwarded-Host; endereços da 
   assert.equal(talvezDominioProprio("furia.com.br", p), true);
   for (const h of ["", p, `www.${p}`, "somos-organizada.web.app", "previalink-x.a.run.app", "127.0.0.1", "localhost"]) assert.equal(talvezDominioProprio(h, p), false, h);
 });
+
+test("Pix do e-mail: só código Pix válido vira QR (CRC conferido)", async () => {
+  const { pixValido, qrDoPix } = await import("../src/api/previa");
+  const { pixCopiaECola } = await import("../src/util/pix");
+  const bom = pixCopiaECola({ chave: "52000426000149", valorCentavos: 19700, nome: "SOMOS ORGANIZADA", cidade: "SALVADOR", txid: "SOteste202610" });
+  assert.ok(pixValido(bom));
+  assert.ok(!pixValido(bom.slice(0, -1) + (bom.endsWith("0") ? "1" : "0")), "CRC errado");
+  assert.ok(!pixValido("https://exemplo.com/qualquer-coisa-bem-comprida-para-passar-do-tamanho-minimo"));
+  const png = await qrDoPix(bom);
+  assert.ok(png && png.subarray(1, 4).toString() === "PNG");
+  assert.equal(await qrDoPix("lixo"), null);
+});

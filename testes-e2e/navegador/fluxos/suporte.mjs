@@ -4,6 +4,7 @@
 // - Equipe abre o chamado na plataforma: vê os anexos; a diretoria passa a ver "Vista pela equipe" e
 //   "A equipe está lendo esta conversa agora". A equipe responde com uma foto e a diretoria recebe.
 // - Cada mensagem gera o seu aviso para a equipe (plataforma/notificacoes/ultimos/suporte-{chamado}-{mensagem}).
+// - O botão "Copiar código Pix" dos e-mails abre /pix: QR, valor e cópia com um toque; código quebrado é recusado.
 // Usa a torcida de demonstração "brasil" (semear.mjs).
 import { BASE, novoAparelho, fecharAparelho, novaPagina, conferir, entrar, aguardar, fsConsultar, fsLer } from "../lib.mjs";
 
@@ -90,6 +91,30 @@ export async function suporte(estado) {
   await conferir(dir, p, "resposta da equipe com foto");
   await conferir(eq, pe, "equipe respondeu");
 
+  // Botão "Copiar código Pix" dos e-mails: abre /pix com QR, valor e cópia com um toque
+  await dir.ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: BASE });
+  await p.goto(`${BASE}/pix?c=${encodeURIComponent(pixDeTeste(19700))}`);
+  await p.getByText("R$ 197,00").waitFor();
+  await p.getByRole("button", { name: "Copiar código Pix" }).click();
+  await p.getByRole("button", { name: "Código copiado" }).waitFor({ timeout: 5_000 });
+  await conferir(dir, p, "página /pix");
+  await p.goto(`${BASE}/pix?c=000201quebrado`);
+  await p.getByText("Código Pix incompleto").waitFor();
+
   await fecharAparelho(eq);
   await fecharAparelho(dir);
+}
+
+/** Pix copia e cola válido (EMV + CRC16), como o servidor gera (functions/src/util/pix.ts). */
+function pixDeTeste(centavos) {
+  const c = (id, v) => `${id}${String(v.length).padStart(2, "0")}${v}`;
+  const conta = c("00", "br.gov.bcb.pix") + c("01", "52000426000149");
+  const corpo = c("00", "01") + c("26", conta) + c("52", "0000") + c("53", "986") + c("54", (centavos / 100).toFixed(2)) + c("58", "BR") +
+    c("59", "SOMOS ORGANIZADA") + c("60", "SALVADOR") + c("62", c("05", "TESTE")) + "6304";
+  let crc = 0xffff;
+  for (const ch of corpo) {
+    crc ^= ch.charCodeAt(0) << 8;
+    for (let i = 0; i < 8; i++) crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
+  }
+  return corpo + crc.toString(16).toUpperCase().padStart(4, "0");
 }

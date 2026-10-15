@@ -12,6 +12,7 @@ import { estaRecarregando } from "./lib/sw";
 const Entrar = lazy(() => import("./modulos/inicio/Entrar"));
 const Cadastro = lazy(() => import("./modulos/inicio/Cadastro"));
 const Verificar = lazy(() => import("./modulos/inicio/Verificar"));
+const PaginaPix = lazy(() => import("./modulos/inicio/PaginaPix"));
 const Convite = lazy(() => import("./modulos/inicio/Convite"));
 const RedefinirSenha = lazy(() => import("./modulos/inicio/RedefinirSenha"));
 const PainelPlataforma = lazy(() => import("./modulos/plataforma/PainelPlataforma"));
@@ -197,6 +198,7 @@ function Rotas() {
       <Route path="/cadastro" element={<Cadastro />} />
       <Route path="/verificar" element={<Verificar />} />
       <Route path="/convite" element={<Convite />} />
+      <Route path="/pix" element={<PaginaPix />} />
       <Route path="/redefinir-senha" element={<RedefinirSenha />} />
       <Route path="/termos" element={<PaginaLegal tipo="termos" />} />
       <Route path="/privacidade" element={<PaginaLegal tipo="privacidade" />} />
