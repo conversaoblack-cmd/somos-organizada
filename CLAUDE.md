@@ -93,6 +93,13 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   pega a chave pública (`chaveNotificacao`), se inscreve no `pushManager` e manda endpoint + p256dh + auth para
   `registrarNotificacao` (`plataforma/notificacoes/inscricoes/`). Mensagem = `{ titulo, corpo, url, tag }`; o `sw-modelo.js`
   sempre mostra a notificação (o iPhone cancela a inscrição se não mostrar). 404/410 apagam a inscrição. Teste 21 do e2e.
+- Suporte (botão de ajuda e central da equipe): anexos (foto, print colado, áudio gravado, PDF; até 4 por mensagem) em
+  `componentes/suporte/anexos.tsx`; arquivo no Storage em `suporte/{dono do chamado}/{chamado}/` (dono e equipe; sem
+  sobrescrever) e na mensagem só o caminho (as regras conferem a pasta). O robô não lê anexo: leva para um chamado novo.
+  `avisarSuporte` manda 1 notificação por mensagem (torcida · assunto / quem: texto); a central grava
+  `vistoPlataformaEm` e `presencaPlataformaEm` (quem abriu o chamado vê "Vista pela equipe" e "A equipe está lendo").
+- App da torcida na tela de início (painel e portaria): manifesto `/{torcida}/app.webmanifest` gerado pela `previaLink`
+  (nome da torcida, escopo "/"). Sem ele o iPhone mostrava a barra do Safari ao ir do painel para o leitor.
 - "Esqueci minha senha" (todas as contas) sai pelo nosso e-mail com link para `/redefinir-senha` (`api/senha.ts`);
   o e-mail do Firebase é só reserva. Login da equipe sugere a torcida certa quando o endereço vem errado (`sugerirTorcidas`).
 - Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável
@@ -126,6 +133,10 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   (o `index.css` força 16 px no celular); grade sem `grid-cols-*` vira uma coluna do tamanho da tela; botão quebra a linha
   no celular em vez de estourar. O fluxo 9 da suíte de navegador passa por todas as telas dos painéis com o tour e reprova
   rolagem lateral, campo < 16 px e balão do tour fora da tela.
+- Topo de tela no celular (cabeçalho, menu, modal, tela cheia, tour): use `var(--topo-seguro)` (index.css), nunca
+  `env(safe-area-inset-top)` direto: o iOS 26 borra um pouco além da faixa da hora ("esfumaçado"). O app instalado usa a
+  barra da hora `black` (opaca). Janela e tela cheia só rolam na vertical (`touch-action: pan-y`); campo de data do
+  iPhone tem largura mínima própria (o index.css limita). O fluxo 9 reprova campo mais largo que a janela.
 - Cor com transparência ou mistura (`bg-x/10`, `color-mix`): o build acrescenta a reserva para navegadores sem color-mix
   (`web/plugins/coresCompat.ts`, variáveis de `lib/tema.ts`). Degradê em `style`: use `backgroundColor` (cor sólida) +
   `backgroundImage`, nunca só `background`.

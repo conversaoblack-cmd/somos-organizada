@@ -32,11 +32,11 @@ import PortariaEquipe from "./PortariaEquipe";
 import Dominio from "./Dominio";
 import { recebedorAtivo } from "./recebedor";
 import { iniciaisTorcida, SemConexao } from "../publico/comum";
-import { modoApp } from "@/lib/notificacoes";
+import { modoAppDaTorcida } from "@/lib/notificacoes";
 
 function Centro({ children }: { children: ReactNode }) {
   // Celular: no alto, não no meio (o teclado e o Face ID abrindo e fechando faziam o iPhone rolar e o login tremer)
-  return <div className="min-h-dvh grid items-start justify-items-center sm:items-center px-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-10 sm:py-10">{children}</div>;
+  return <div className="min-h-dvh grid items-start justify-items-center sm:items-center px-4 pt-[calc(var(--topo-seguro)+2rem)] pb-10 sm:py-10">{children}</div>;
 }
 
 export default function PainelDiretoria() {
@@ -48,7 +48,7 @@ export default function PainelDiretoria() {
   useEffect(() => {
     aplicarTema(temaDoPainel(torcida.tema));
     document.title = `Painel · ${torcida.nome}`;
-    modoApp(torcida.nome); // atalho na tela de início abre o painel como app
+    modoAppDaTorcida(torcida.nome, torcida.slug); // atalho na tela de início abre o painel como app
   }, [torcida]);
 
   if (carregando) return <TelaCarregando />;

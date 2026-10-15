@@ -317,7 +317,7 @@ export const api = {
   testarNotificacao: chamar<Record<string, never>, { enviadas: number; aparelhos: number; falhas: string[] }>("testarNotificacao"),
   diagnosticoNotificacao: chamar<Record<string, never>, { aparelhos: { final: string; servico: string; aparelho: string; atualizadoEm: number | null }[] }>("diagnosticoNotificacao"),
   /** Avisa a equipe no celular que chegou mensagem nova no chamado (o servidor confere que o chamado é seu). */
-  avisarSuporte: chamar<{ chamadoId: string }, { avisado: boolean }>("avisarSuporte"),
+  avisarSuporte: chamar<{ chamadoId: string; mensagemId?: string }, { avisado: boolean }>("avisarSuporte"),
 
   // ── Cadastro de torcida (página principal) ───────────
   entrarComCpf: chamar<{ cpf: string; senha: string }, { email: string }>("entrarComCpf"),

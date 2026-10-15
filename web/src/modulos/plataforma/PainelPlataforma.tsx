@@ -85,7 +85,7 @@ export default function PainelPlataforma() {
     return (
       // Celular: cartão no alto (centralizado, o iPhone rola a página a cada abre e fecha do teclado e do Face ID e o
       // login "treme"). O quadriculado fica numa camada própria: a máscara dele não envolve o formulário.
-      <div className="relative min-h-dvh grid items-start justify-items-center sm:items-center px-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-10 sm:py-10">
+      <div className="relative min-h-dvh grid items-start justify-items-center sm:items-center px-4 pt-[calc(var(--topo-seguro)+2rem)] pb-10 sm:py-10">
         <div className="absolute inset-0 grade-fundo pointer-events-none" aria-hidden="true" />
         <div className="relative w-full max-w-md mx-auto flex flex-col items-center gap-6">
           <MarcaSomos />

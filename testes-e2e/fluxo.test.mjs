@@ -948,14 +948,21 @@ test("18. segurança: convite não toma conta existente; estorno só com confirm
 });
 
 test("13. Storage: sócio envia a própria foto; estranhos são barrados", async () => {
-  await ctx.socio.enviar(`suporte/${ctx.socioUid}/print.png`);
+  // anexos do suporte: pasta do dono do chamado; foto, áudio e PDF; ninguém sobrescreve; a equipe também envia
+  await ctx.socio.enviar(`suporte/${ctx.socioUid}/ch1/print.png`);
+  await ctx.socio.enviar(`suporte/${ctx.socioUid}/ch1/audio.m4a`, "audio/mp4");
+  await assert.rejects(ctx.socio.enviar(`suporte/${ctx.socioUid}/ch1/print.png`), "não sobrescreve");
+  await assert.rejects(ctx.socio.enviar(`suporte/${ctx.socioUid}/ch1/app.exe`, "application/x-msdownload"));
+  await assert.rejects(ctx.socio.enviar(`suporte/${ctx.socioUid}/print.png`), "fora da pasta de um chamado");
+  await assert.rejects(ctx.dir.enviar(`suporte/${ctx.socioUid}/ch1/de-outro.png`), "pasta de outra pessoa");
+  await ctx.plat.enviar(`suporte/${ctx.socioUid}/ch1/resposta-da-equipe.png`);
   await ctx.socio.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.jpg`);
   await ctx.socio.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.jpg`); // trocar a foto sobrescreve
   // um arquivo só por sócio (o nome que o checkout usa): outros nomes são recusados
   await assert.rejects(ctx.socio.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/outra.png`));
   await assert.rejects(ctx.torcedor.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.jpg`));
   // sessão anônima não envia anexo de suporte
-  await assert.rejects(ctx.torcedor.enviar(`suporte/${ctx.torcedor.auth.currentUser.uid}/print.png`));
+  await assert.rejects(ctx.torcedor.enviar(`suporte/${ctx.torcedor.auth.currentUser.uid}/ch1/print.png`));
   await assert.rejects(ctx.torcedor.enviar(`torcidas/${ctx.tid}/publico/marca/hack.png`));
 
   // logsErro: só em nome da própria sessão, campos conhecidos e hora do servidor
@@ -975,11 +982,25 @@ test("13. Storage: sócio envia a própria foto; estranhos são barrados", async
   const ch = await addDoc(collection(ctx.socio.db, "suporte"), chamado());
   await addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), { autor: "usuario", texto: "oi", nome: "Sócio", criadoEm: serverTimestamp() });
   await negado(addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), { autor: "usuario", texto: "oi", nome: "Sócio", criadoEm: serverTimestamp(), extra: 1 }));
+  // mensagem com anexo: caminho na pasta deste chamado, do dono dele; só anexo (sem texto) vale; vazia não
+  const anexo = (caminho, tipo = "imagem") => ({ caminho, tipo, nome: "print.png", tamanho: 1000, mime: tipo === "audio" ? "audio/mp4" : "image/png" });
+  const msgAnexo = (anexos, texto = "") => ({ autor: "usuario", texto, nome: "Sócio", anexos, criadoEm: serverTimestamp() });
+  const comFoto = await addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), msgAnexo([anexo(`suporte/${u.uid}/${ch.id}/a1.jpg`), anexo(`suporte/${u.uid}/${ch.id}/a2.m4a`, "audio")]));
+  await negado(addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), msgAnexo([])));
+  await negado(addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), msgAnexo([anexo(`suporte/outra-pessoa/${ch.id}/a.jpg`)])));
+  await negado(addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), msgAnexo([anexo(`suporte/${u.uid}/outro-chamado/a.jpg`)])));
+  await negado(addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), msgAnexo([1, 2, 3, 4, 5].map((n) => anexo(`suporte/${u.uid}/${ch.id}/${n}.jpg`)))));
+  await negado(addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), msgAnexo([{ ...anexo(`suporte/${u.uid}/${ch.id}/a.jpg`), url: "https://x" }])));
+  await addDoc(collection(ctx.plat.db, `suporte/${ch.id}/mensagens`), { autor: "plataforma", texto: "", nome: "Equipe", anexos: [anexo(`suporte/${u.uid}/${ch.id}/r.png`)], criadoEm: serverTimestamp() });
   await updateDoc(doc(ctx.socio.db, "suporte", ch.id), { status: "aberto", atualizadoEm: serverTimestamp(), naoLidasPlataforma: increment(1) });
   await negado(updateDoc(doc(ctx.socio.db, "suporte", ch.id), { status: "aberto", atualizadoEm: serverTimestamp(), naoLidasPlataforma: 0 }));
-  // avisarSuporte: o dono do chamado avisa a equipe (1 aviso por chamado a cada 10 min); outra conta, sessão anônima e chamado inexistente, não
+  // avisarSuporte: o dono do chamado avisa a equipe (1 aviso por mensagem); outra conta, sessão anônima e chamado inexistente, não
+  assert.deepEqual(await ctx.socio.chamar("avisarSuporte", { chamadoId: ch.id, mensagemId: comFoto.id }), { avisado: true });
+  assert.ok((await aDb.doc(`plataforma/notificacoes/ultimos/suporte-${ch.id}-${comFoto.id}`).get()).exists, "aviso da mensagem com anexo registrado");
+  const segunda = await addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), { autor: "usuario", texto: "e agora?", nome: "Sócio", criadoEm: serverTimestamp() });
+  assert.deepEqual(await ctx.socio.chamar("avisarSuporte", { chamadoId: ch.id, mensagemId: segunda.id }), { avisado: true });
+  assert.ok((await aDb.doc(`plataforma/notificacoes/ultimos/suporte-${ch.id}-${segunda.id}`).get()).exists, "a segunda mensagem também avisa");
   assert.deepEqual(await ctx.socio.chamar("avisarSuporte", { chamadoId: ch.id }), { avisado: true });
-  assert.ok((await aDb.doc(`plataforma/notificacoes/ultimos/suporte-${ch.id}`).get()).exists, "aviso do suporte registrado");
   await assert.rejects(ctx.dir.chamar("avisarSuporte", { chamadoId: ch.id }), /não é seu|permission/i);
   await assert.rejects(ctx.torcedor.chamar("avisarSuporte", { chamadoId: ch.id }), /login|unauthenticated/i);
   await assert.rejects(ctx.socio.chamar("avisarSuporte", { chamadoId: "nao-existe" }), /não encontrado|not-found/i);

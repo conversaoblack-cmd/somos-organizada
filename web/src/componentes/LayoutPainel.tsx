@@ -273,7 +273,7 @@ export function LayoutPainel({
               "absolute left-0 top-0 h-full w-[84%] max-w-xs flex flex-col outline-none rounded-r-[28px] overflow-hidden",
               "bg-fundo/70 backdrop-blur-2xl backdrop-saturate-150 border-r border-white/10",
               "shadow-[0_0_0_1px_rgba(255,255,255,0.04),24px_0_60px_-12px_rgba(0,0,0,0.6)]",
-              "px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]",
+              "px-4 pt-[max(1rem,var(--topo-seguro))] pb-[max(1rem,env(safe-area-inset-bottom))]",
               puxado === null && "transition-transform duration-300 ease-[cubic-bezier(.22,1,.36,1)]",
             )}
             style={{ transform: `translateX(${((puxado ?? (aberto ? 1 : 0)) - 1) * 100}%)` }}
@@ -296,7 +296,7 @@ export function LayoutPainel({
       )}
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex items-center gap-3 px-4 sm:px-6 border-b border-white/10 bg-fundo/70 backdrop-blur-xl backdrop-saturate-150">
+        <header className="sticky top-0 z-30 h-[calc(4rem+var(--topo-seguro))] pt-[var(--topo-seguro)] flex items-center gap-3 px-4 sm:px-6 border-b border-white/10 bg-fundo/70 backdrop-blur-xl backdrop-saturate-150">
           {!semMenu && (
             <BotaoIcone
               icone="menu"

@@ -89,6 +89,13 @@
         }
       },
       {
+        "source": "/*/app.webmanifest",
+        "function": {
+          "functionId": "previaLink",
+          "region": "southamerica-east1"
+        }
+      },
+      {
         "source": "/*",
         "function": {
           "functionId": "previaLink",
@@ -132,7 +139,7 @@
           },
           {
             "key": "Permissions-Policy",
-            "value": "geolocation=(), microphone=()"
+            "value": "geolocation=(), microphone=(self)"
           },
           {
             "key": "Strict-Transport-Security",

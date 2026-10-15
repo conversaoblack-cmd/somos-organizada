@@ -81,7 +81,7 @@ export function Modal({
   useCamada(aberto, fechar, ref);
   if (!aberto) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6 touch-pan-y">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-[surgir_.2s_ease_both]" onClick={fechar} />
       <div
         ref={ref}
@@ -92,7 +92,7 @@ export function Modal({
         aria-label={titulo ? undefined : rotulo}
         className={cx(
           "relative w-full bg-fundo border border-linha shadow-2xl outline-none animate-deslizar",
-          "rounded-t-[28px] sm:rounded-[28px] max-h-[92dvh] flex flex-col",
+          "rounded-t-[28px] sm:rounded-[28px] max-h-[min(92dvh,calc(100dvh-var(--topo-seguro)-1rem))] flex flex-col",
           largura,
         )}
       >
@@ -112,7 +112,7 @@ export function Modal({
           // sem título: o X continua lá (no celular a folha ocupa quase a tela toda)
           <BotaoIcone icone="x" rotulo="Fechar" onClick={fechar} className="absolute right-3 top-3 z-10" />
         )}
-        <div className="px-6 py-4 overflow-y-auto overscroll-contain rolagem-fina">{children}</div>
+        <div className="px-6 py-4 overflow-y-auto overflow-x-hidden overscroll-contain rolagem-fina">{children}</div>
         {rodape && <div className="px-6 pb-6 pt-2 border-t border-linha mt-auto">{rodape}</div>}
       </div>
     </div>,
@@ -141,7 +141,7 @@ export function Gaveta({
   useCamada(aberto, fechar, ref);
   if (!aberto) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex justify-end touch-pan-y">
       <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={fechar} />
       <aside
         ref={ref}
@@ -151,13 +151,13 @@ export function Gaveta({
         aria-labelledby={idTitulo}
         className={cx("relative h-full w-full outline-none bg-fundo border-l border-linha flex flex-col animate-[surgir_.25s_ease_both]", largura)}
       >
-        <div className="flex items-center justify-between gap-4 px-6 h-16 border-b border-linha shrink-0">
+        <div className="flex items-center justify-between gap-4 px-6 min-h-16 pt-[var(--topo-seguro)] sm:pt-0 border-b border-linha shrink-0">
           <h2 id={idTitulo} className="text-lg font-bold truncate">
             {titulo}
           </h2>
           <BotaoIcone icone="x" rotulo="Fechar" onClick={fechar} />
         </div>
-        <div className="flex-1 overflow-y-auto overscroll-contain rolagem-fina px-6 py-6">{children}</div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain rolagem-fina touch-pan-y px-6 py-6">{children}</div>
         {rodape && <div className="px-6 py-4 border-t border-linha shrink-0">{rodape}</div>}
       </aside>
     </div>,

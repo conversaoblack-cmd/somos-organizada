@@ -128,7 +128,54 @@ async function metaDoCaminho(caminhoPedido: string, host = ""): Promise<Meta | n
   return e ? metaDoEvento(t, e, url) : metaDaTorcida(t, url);
 }
 
+/**
+ * Manifesto do app da torcida (painel e portaria adicionados à tela de início). Sem ele o iPhone considera que o app
+ * vale só a partir do endereço onde foi adicionado: ao ir do painel (/torcida/admin/...) para o leitor
+ * (/torcida/portaria) aparecia a barra do Safari, como se tivesse saído do app. Escopo = o site inteiro.
+ */
+export async function manifestoDaTorcida(slug: string, inicio: string, host: string): Promise<Record<string, unknown> | null> {
+  const tid = (await refs.slug(slug.toLowerCase()).get()).get("torcidaId") as string | undefined;
+  if (!tid) return null;
+  const t = (await refs.torcida(tid).get()).data() as Torcida | undefined;
+  if (!t) return null;
+  // Subdomínio do painel no domínio próprio: lá o painel é o "/"
+  let painelProprio = false;
+  if (talvezDominioProprio(host, hostPrincipal())) painelProprio = (await db.doc(`dominios/${host}`).get()).get("tipo") === "painel";
+  const portaria = inicio === "portaria";
+  const base = painelProprio ? "" : `/${t.slug}`;
+  return {
+    name: `${t.nome} · ${portaria ? "Portaria" : "Painel"}`,
+    short_name: t.nome.slice(0, 30),
+    lang: "pt-BR",
+    id: `${base}/${portaria ? "portaria" : "admin"}`,
+    start_url: portaria ? `${base}/portaria` : painelProprio ? "/" : `${base}/admin`,
+    scope: "/",
+    display: "standalone",
+    background_color: "#070A12",
+    theme_color: "#070A12",
+    icons: [
+      { src: "/icone-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icone-512.png", sizes: "512x512", type: "image/png" },
+    ],
+  };
+}
+
 export const previaLink = onRequest({ memory: "256MiB", timeoutSeconds: 20, ...ESCALA_PUBLICA }, async (req, res) => {
+  const pedidoManifesto = /^\/([a-z0-9-]{3,40})\/app\.webmanifest$/i.exec(req.path);
+  if (pedidoManifesto) {
+    try {
+      const m = await manifestoDaTorcida(pedidoManifesto[1]!, String(req.query.inicio ?? ""), hostDoPedido(req));
+      if (!m) {
+        res.status(404).send("Torcida não encontrada.");
+        return;
+      }
+      res.status(200).set("Content-Type", "application/manifest+json; charset=utf-8").set("Cache-Control", "public, max-age=300").send(JSON.stringify(m));
+    } catch (e) {
+      logger.warn("previa: manifesto", e);
+      res.status(503).set("Retry-After", "5").send("Tente de novo em alguns segundos.");
+    }
+    return;
+  }
   let html: string;
   try {
     html = await appHtml();
