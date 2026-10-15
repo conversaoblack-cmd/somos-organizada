@@ -87,6 +87,12 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   No site, `main.tsx` acha a torcida pelo endereço e o `unstable_HistoryRouter` mostra caminhos curtos (`lib/dominioProprio.ts`,
   `lib/historicoProprio.ts`); a página inicial estática manda domínio desconhecido para `/app.html`. Links de e-mail: `urlDaTorcida`
   (`util/urls.ts`); no site: `urlTorcida` (`lib/hosts.ts`). Endereço padrão continua valendo sempre.
+- Notificações da equipe (painel da plataforma instalado na tela de início): **Web Push padrão** com a biblioteca `web-push`
+  (`functions/src/api/alertas.ts`), **sem Firebase Cloud Messaging** (pelo FCM o envio era aceito e nunca chegava no
+  iPhone). O par VAPID é criado pelo servidor no 1º uso em `_servidor/notificacoes` (ninguém lê pelas regras); o celular
+  pega a chave pública (`chaveNotificacao`), se inscreve no `pushManager` e manda endpoint + p256dh + auth para
+  `registrarNotificacao` (`plataforma/notificacoes/inscricoes/`). Mensagem = `{ titulo, corpo, url, tag }`; o `sw-modelo.js`
+  sempre mostra a notificação (o iPhone cancela a inscrição se não mostrar). 404/410 apagam a inscrição. Teste 21 do e2e.
 - "Esqueci minha senha" (todas as contas) sai pelo nosso e-mail com link para `/redefinir-senha` (`api/senha.ts`);
   o e-mail do Firebase é só reserva. Login da equipe sugere a torcida certa quando o endereço vem errado (`sugerirTorcidas`).
 - Link direto de evento: `/{torcida}/e/{codigo}` (6 caracteres de `web/src/lib/eventos.ts`, dado na criação, imutável

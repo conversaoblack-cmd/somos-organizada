@@ -1170,3 +1170,72 @@ test("20. domínio próprio: só a equipe liga; um endereço por torcida; DNS ok
   assert.equal(daOutra.hosts[0].host, VITRINE);
   await plat.chamar("removerDominio", { tid: outra.torcidaId, host: VITRINE });
 });
+
+test("21. notificações da equipe: Web Push padrão (chave VAPID do servidor, envio cifrado, inscrição sumida sai da lista)", async () => {
+  const { createServer } = await import("node:https");
+  const { execFileSync } = await import("node:child_process");
+  const { mkdtempSync, readFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { createRequire } = await import("node:module");
+  const cripto = await import("node:crypto");
+  const ece = createRequire(new URL("../functions/package.json", import.meta.url))("http_ece");
+  const plat = ctx.plat;
+
+  // a chave pública é da equipe e não muda entre chamadas; a privada fica onde nenhuma conta lê
+  await assert.rejects(ctx.dir.chamar("chaveNotificacao", {}), /restrito à equipe/);
+  const { chave } = await plat.chamar("chaveNotificacao", {});
+  const bytes = Buffer.from(chave, "base64url");
+  assert.equal(bytes.length, 65);
+  assert.equal(bytes[0], 4);
+  assert.equal((await plat.chamar("chaveNotificacao", {})).chave, chave);
+  await negado(getDoc(doc(plat.db, "_servidor/notificacoes")));
+
+  // "celular" de mentira: recebe o push num servidor local; /sumiu responde 410 (app removido)
+  const recebidos = [];
+  // certificado só deste teste (o envio é sempre https; o emulador aceita o certificado próprio em 127.0.0.1)
+  const pasta = mkdtempSync(`${tmpdir()}/push-`);
+  execFileSync("openssl", ["req", "-x509", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:prime256v1", "-nodes", "-days", "1", "-subj", "/CN=127.0.0.1",
+    "-keyout", `${pasta}/k.pem`, "-out", `${pasta}/c.pem`], { stdio: "ignore" });
+  const servidor = createServer({ key: readFileSync(`${pasta}/k.pem`), cert: readFileSync(`${pasta}/c.pem`) }, (req, res) => {
+    const partes = [];
+    req.on("data", (p) => partes.push(p));
+    req.on("end", () => {
+      recebidos.push({ url: req.url, headers: req.headers, corpo: Buffer.concat(partes) });
+      res.writeHead(req.url.endsWith("/sumiu") ? 410 : 201).end();
+    });
+  });
+  await new Promise((ok) => servidor.listen(0, "127.0.0.1", ok));
+  const porta = servidor.address().port;
+  const celular = cripto.createECDH("prime256v1");
+  celular.generateKeys();
+  const segredo = cripto.randomBytes(16);
+  const inscricao = (fim) => ({ endpoint: `https://127.0.0.1:${porta}/push/${fim}`, p256dh: celular.getPublicKey().toString("base64url"), auth: segredo.toString("base64url"), chave, aparelho: "teste" });
+  try {
+    await assert.rejects(ctx.dir.chamar("registrarNotificacao", inscricao("ok")), /restrito à equipe/);
+    await assert.rejects(plat.chamar("registrarNotificacao", { ...inscricao("ok"), chave: "outra-chave" }), /chave de notificação mudou/);
+    await assert.rejects(plat.chamar("registrarNotificacao", { ...inscricao("ok"), endpoint: "http://exemplo.test/push" }), /inválida/);
+    await plat.chamar("registrarNotificacao", inscricao("ok"));
+    await plat.chamar("registrarNotificacao", inscricao("sumiu"));
+    const diag = await plat.chamar("diagnosticoNotificacao", {});
+    assert.equal(diag.aparelhos.length, 2);
+    assert.ok(diag.aparelhos.some((a) => a.final === inscricao("ok").endpoint.slice(-8)));
+
+    const r = await plat.chamar("testarNotificacao", {});
+    assert.equal(r.aparelhos, 2);
+    assert.equal(r.enviadas, 1);
+    assert.match(r.falhas.join(), /^410/);
+    assert.equal((await plat.chamar("diagnosticoNotificacao", {})).aparelhos.length, 1, "inscrição com 410 sai da lista");
+
+    const ok = recebidos.find((x) => x.url === "/push/ok");
+    assert.ok(ok, "push chegou no celular");
+    assert.equal(ok.headers.ttl, "86400");
+    assert.equal(ok.headers.urgency, "high");
+    assert.equal(ok.headers["content-encoding"], "aes128gcm");
+    assert.match(ok.headers.authorization, new RegExp(`^vapid t=.+, k=${chave}$`));
+    const carga = JSON.parse(ece.decrypt(ok.corpo, { version: "aes128gcm", privateKey: celular, authSecret: segredo }).toString("utf8"));
+    assert.deepEqual(carga, { titulo: "Notificações ligadas", corpo: "Este aparelho vai receber os alertas da Somos Organizada.", url: "/plataforma", tag: "teste" });
+  } finally {
+    servidor.close();
+    for (const d of (await aDb.collection("plataforma/notificacoes/inscricoes").get()).docs) await d.ref.delete();
+  }
+});

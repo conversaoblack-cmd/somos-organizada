@@ -5,7 +5,6 @@ import { ativarNotificacoes, diagnosticar, notificacaoLocal, situacaoNotificacao
 import { Aviso, Botao, Cartao, useToast } from "@/ui";
 
 const TEXTO: Record<SituacaoNotificacao, string> = {
-  nao_configurado: "Falta configurar a chave de notificações do projeto (Firebase → Cloud Messaging).",
   instalar_no_iphone:
     "No iPhone, primeiro adicione o painel à tela de início: toque em Compartilhar (quadrado com seta) → “Adicionar à Tela de Início”. Depois abra pelo ícone novo e volte aqui.",
   sem_suporte: "Este navegador não recebe notificações. No iPhone, use o Safari atualizado (iOS 16.4 ou mais novo).",
@@ -60,8 +59,8 @@ export function CartaoNotificacoes() {
     setOcupado("testar");
     try {
       const r = await api.testarNotificacao({});
-      setResultadoTeste(`Servidor: ${r.enviadas} de ${r.aparelhos} aparelho(s) aceitos pelo Firebase${r.falhas.length ? ` · falhas: ${r.falhas.join(", ")}` : ""}${r.ids.length ? ` · id ${r.ids[0]!.slice(-10)}` : ""}`);
-      avisar("O Firebase aceitou a notificação. Ela chegou?", "sucesso");
+      setResultadoTeste(`Servidor: enviada para ${r.enviadas} de ${r.aparelhos} aparelho(s)${r.falhas.length ? ` · falhas: ${r.falhas.join(", ")}` : ""}`);
+      avisar("Notificação enviada. Ela chegou?", "sucesso");
     } catch (e) {
       setResultadoTeste(`Servidor recusou: ${mensagemDeErro(e)}`);
       avisar(mensagemDeErro(e), "erro");

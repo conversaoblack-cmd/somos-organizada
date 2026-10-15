@@ -41,7 +41,13 @@ export function registrarServiceWorker() {
 
   // O service worker avisa quando uma versão nova assume. Se esta aba roda outra versão, oferece atualizar
   // (sem recarregar sozinho: pode ser alguém no meio de uma compra ou mostrando o QR na portaria).
-  sw.addEventListener("message", (e: MessageEvent<{ tipo?: string; entrada?: string }>) => {
+  sw.addEventListener("message", (e: MessageEvent<{ tipo?: string; entrada?: string; abrir?: string }>) => {
+    // Toque numa notificação da equipe com o painel já aberto: vai para a tela do aviso
+    if (e.data?.abrir) {
+      const destino = new URL(e.data.abrir, location.origin);
+      if (destino.origin === location.origin && destino.href !== location.href) location.assign(destino.href);
+      return;
+    }
     if (e.data?.tipo !== "versao" || !e.data.entrada) return;
     const minha = minhaEntrada();
     if (minha && minha !== e.data.entrada && !novaVersao) {

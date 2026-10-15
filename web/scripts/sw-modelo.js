@@ -163,32 +163,42 @@ async function guardarJaCarregados(urls) {
 }
 
 // ── Notificações da equipe (painel da plataforma instalado na tela de início) ──
-// O servidor manda pelo Firebase Cloud Messaging: { notification: { title, body }, data: { url } }.
+// Web Push padrão: o servidor (functions/src/api/alertas.ts, biblioteca web-push) manda { titulo, corpo, url, tag }.
+// Todo push precisa mostrar uma notificação: o iPhone cancela a inscrição de quem recebe e não mostra.
 self.addEventListener("push", (evento) => {
-  let dados = {};
+  let d = {};
   try {
-    dados = evento.data ? evento.data.json() : {};
+    d = evento.data ? evento.data.json() : {};
   } catch {
-    dados = { notification: { title: "Somos Organizada", body: evento.data ? evento.data.text() : "" } };
+    d = { corpo: evento.data ? evento.data.text() : "" };
   }
-  const n = dados.notification || {};
-  const url = (dados.data && dados.data.url) || (dados.fcmOptions && dados.fcmOptions.link) || "/plataforma";
+  const n = d.notification || {}; // formato antigo (Firebase), por garantia
   evento.waitUntil(
-    self.registration.showNotification(n.title || "Somos Organizada", { body: n.body || "", icon: "/icone-192.png", badge: "/icone-192.png", data: { url } }),
+    self.registration.showNotification(d.titulo || n.title || "Somos Organizada", {
+      body: d.corpo || n.body || "",
+      tag: d.tag || undefined,
+      renotify: !!d.tag,
+      icon: "/icone-192.png",
+      badge: "/icone-192.png",
+      data: { url: d.url || (d.data && d.data.url) || "/plataforma" },
+    }),
   );
 });
 
+// Toque na notificação: foca o painel já aberto e pede para ele abrir a tela (sw.ts ouve { abrir }); senão abre uma janela.
 self.addEventListener("notificationclick", (evento) => {
   evento.notification.close();
-  const url = (evento.notification.data && evento.notification.data.url) || "/plataforma";
+  const url = new URL((evento.notification.data && evento.notification.data.url) || "/plataforma", self.location.origin).href;
   evento.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((janelas) => {
-      const aberta = janelas.find((j) => "focus" in j);
-      if (aberta) {
-        aberta.navigate(url).catch(() => undefined);
-        return aberta.focus();
+    (async () => {
+      const abas = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const aba = abas.find((c) => new URL(c.url).origin === self.location.origin);
+      if (aba) {
+        await aba.focus();
+        aba.postMessage({ abrir: url });
+        return;
       }
-      return self.clients.openWindow(url);
-    }),
+      await self.clients.openWindow(url);
+    })(),
   );
 });

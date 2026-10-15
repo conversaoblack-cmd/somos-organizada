@@ -312,9 +312,10 @@ export const api = {
   executarRotinaSaas: chamar<{ agora?: number }, { faturasGeradas: number; bloqueadas: number }>("executarRotinaSaas"),
   atualizarPixFaturas: chamar<Record<string, never>, { atualizadas: number }>("atualizarPixFaturas"),
   conferirPixFatura: chamar<{ tid: string }, { atualizadas: number }>("conferirPixFatura"),
-  registrarNotificacao: chamar<{ token: string; aparelho?: string }, { ok: boolean }>("registrarNotificacao"),
-  testarNotificacao: chamar<Record<string, never>, { enviadas: number; aparelhos: number; falhas: string[]; ids: string[] }>("testarNotificacao"),
-  diagnosticoNotificacao: chamar<Record<string, never>, { aparelhos: { finalToken: string; aparelho: string; atualizadoEm: number | null }[] }>("diagnosticoNotificacao"),
+  chaveNotificacao: chamar<Record<string, never>, { chave: string }>("chaveNotificacao"),
+  registrarNotificacao: chamar<{ endpoint: string; p256dh: string; auth: string; chave?: string; aparelho?: string }, { ok: boolean }>("registrarNotificacao"),
+  testarNotificacao: chamar<Record<string, never>, { enviadas: number; aparelhos: number; falhas: string[] }>("testarNotificacao"),
+  diagnosticoNotificacao: chamar<Record<string, never>, { aparelhos: { final: string; servico: string; aparelho: string; atualizadoEm: number | null }[] }>("diagnosticoNotificacao"),
   /** Avisa a equipe no celular que chegou mensagem nova no chamado (o servidor confere que o chamado é seu). */
   avisarSuporte: chamar<{ chamadoId: string }, { avisado: boolean }>("avisarSuporte"),
 

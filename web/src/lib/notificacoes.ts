@@ -1,37 +1,68 @@
 /**
  * Notificações da equipe no celular (painel da plataforma).
  * No iPhone só funciona com o painel adicionado à tela de início (iOS 16.4+), aberto por esse atalho.
- * A chave pública (VAPID) vem do Firebase: Configurações do projeto → Cloud Messaging → Certificados push da Web.
+ *
+ * Web Push padrão, sem Firebase Cloud Messaging: o celular se inscreve direto no pushManager do service worker com a
+ * chave pública VAPID do servidor (ação chaveNotificacao) e manda a inscrição (endpoint + chaves p256dh/auth) para
+ * registrarNotificacao. O servidor envia com a biblioteca web-push (functions/src/api/alertas.ts) e o sw.js mostra.
  */
-import { app } from "./firebase";
 import { api } from "./api";
 
-/** Chave PÚBLICA do par Web Push (não é segredo). Vazia: notificações ainda não configuradas. */
-export const CHAVE_VAPID = "BPTY69o9hUz3vnTvI57eOS0SxZKNW0J4O3lCKE6j3-TILyaOlC0EqELxFbQXEPGpuGB_A1KlG-edfaRY62iStrE";
-
-export type SituacaoNotificacao = "sem_suporte" | "instalar_no_iphone" | "nao_configurado" | "negada" | "ligada" | "desligada";
+export type SituacaoNotificacao = "sem_suporte" | "instalar_no_iphone" | "negada" | "ligada" | "desligada";
 
 const ehIphone = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
 const instalado = () =>
   (navigator as Navigator & { standalone?: boolean }).standalone === true || window.matchMedia("(display-mode: standalone)").matches;
 
 export function situacaoNotificacao(): SituacaoNotificacao {
-  if (!CHAVE_VAPID) return "nao_configurado";
   if (ehIphone() && !instalado()) return "instalar_no_iphone";
   if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return "sem_suporte";
   if (Notification.permission === "denied") return "negada";
   return Notification.permission === "granted" ? "ligada" : "desligada";
 }
 
-/** Pede a permissão (tem que ser no toque do botão) e registra este aparelho para receber os alertas. */
+/** Chave VAPID (base64url) → bytes, como o pushManager pede. */
+function bytesDaChave(chave: string): Uint8Array<ArrayBuffer> {
+  const b64 = (chave + "=".repeat((4 - (chave.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+/** A inscrição foi feita com esta chave? (null: o navegador não informa) */
+function mesmaChave(sub: PushSubscription, chave: string): boolean | null {
+  const atual = sub.options?.applicationServerKey;
+  if (!atual) return null;
+  const a = new Uint8Array(atual);
+  const b = bytesDaChave(chave);
+  return a.length === b.length && a.every((x, i) => x === b[i]);
+}
+
+/** Service worker do app pronto (registra se ainda não houver). Sem ele não existe notificação. */
+async function servicoDoApp(): Promise<ServiceWorkerRegistration> {
+  const sw = navigator.serviceWorker;
+  if (!(await sw.getRegistration("/"))) await sw.register("/sw.js", { scope: "/" });
+  const pronto = await Promise.race([sw.ready, new Promise<null>((ok) => setTimeout(() => ok(null), 20_000))]);
+  if (!pronto) throw new Error("O app ainda está terminando de instalar neste celular. Feche, abra de novo pelo ícone e tente outra vez.");
+  return pronto;
+}
+
+/** Pede a permissão (tem que ser no toque do botão) e inscreve este aparelho para receber os alertas. */
 export async function ativarNotificacoes(): Promise<void> {
+  const pedidoChave = api.chaveNotificacao({}); // já sai buscando; a permissão precisa ser o primeiro passo do toque
+  pedidoChave.catch(() => undefined);
   const permissao = await Notification.requestPermission();
   if (permissao !== "granted") throw new Error("Permissão negada. Libere as notificações nos Ajustes do celular.");
-  const { getMessaging, getToken } = await import("firebase/messaging");
-  const registro = await navigator.serviceWorker.ready;
-  const token = await getToken(getMessaging(app), { vapidKey: CHAVE_VAPID, serviceWorkerRegistration: registro });
-  if (!token) throw new Error("O celular não liberou o envio de notificações. Tente de novo.");
-  await api.registrarNotificacao({ token, aparelho: navigator.userAgent.slice(0, 120) });
+  const { chave } = await pedidoChave;
+  const reg = await servicoDoApp();
+  let sub = await reg.pushManager.getSubscription();
+  // Inscrição antiga (feita com a chave do Firebase) não recebe nada: troca pela da chave atual
+  if (sub && mesmaChave(sub, chave) !== true) {
+    await sub.unsubscribe().catch(() => undefined);
+    sub = null;
+  }
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytesDaChave(chave) });
+  const j = sub.toJSON();
+  if (!j.endpoint || !j.keys?.p256dh || !j.keys.auth) throw new Error("O celular não liberou o envio de notificações. Tente de novo.");
+  await api.registrarNotificacao({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, chave, aparelho: navigator.userAgent.slice(0, 120) });
 }
 
 /**
@@ -71,43 +102,45 @@ export function usarManifestoDaPlataforma() {
 export async function diagnosticar(): Promise<{ item: string; ok: boolean; detalhe: string }[]> {
   const r: { item: string; ok: boolean; detalhe: string }[] = [];
   const add = (item: string, ok: boolean, detalhe: string) => r.push({ item, ok, detalhe });
+  const erro = (e: unknown) => String((e as Error)?.message ?? e).slice(0, 160);
   add("Aberto pelo ícone (app instalado)", instalado(), instalado() ? "sim" : "não: abra pelo ícone da tela de início");
   add("Navegador aceita notificação", "Notification" in window && "PushManager" in window, `${"Notification" in window ? "Notification" : "sem Notification"} · ${"PushManager" in window ? "PushManager" : "sem PushManager"}`);
   add("Permissão", typeof Notification !== "undefined" && Notification.permission === "granted", typeof Notification !== "undefined" ? Notification.permission : "—");
-  add("Chave do projeto (VAPID)", !!CHAVE_VAPID, CHAVE_VAPID ? `…${CHAVE_VAPID.slice(-6)}` : "vazia");
+  let chave = "";
+  try {
+    chave = (await api.chaveNotificacao({})).chave;
+    add("Chave do servidor (VAPID)", !!chave, chave ? `…${chave.slice(-6)}` : "vazia");
+  } catch (e) {
+    add("Chave do servidor (VAPID)", false, erro(e));
+  }
   let reg: ServiceWorkerRegistration | undefined;
   try {
     reg = await navigator.serviceWorker?.getRegistration("/");
   } catch {
     reg = undefined;
   }
-  add("Service worker ativo", !!reg?.active, reg?.active ? `${new URL(reg.active.scriptURL).pathname} · escopo ${new URL(reg.scope).pathname}` : "nenhum");
+  add("Service worker ativo", !!reg?.active, reg?.active ? `${new URL(reg.active.scriptURL).pathname} · escopo ${new URL(reg.scope).pathname}` : reg ? "instalando (ainda não ativo)" : "nenhum");
+  let sub: PushSubscription | null | undefined;
   try {
-    const sub = await reg?.pushManager.getSubscription();
-    add("Inscrição de push no celular", !!sub, sub ? new URL(sub.endpoint).host : "nenhuma");
+    sub = await reg?.pushManager.getSubscription();
+    add("Inscrição de push no celular", !!sub, sub ? new URL(sub.endpoint).host : "nenhuma: toque em “Registrar de novo”");
   } catch (e) {
-    add("Inscrição de push no celular", false, String(e).slice(0, 120));
+    add("Inscrição de push no celular", false, erro(e));
   }
-  let token = "";
-  try {
-    if (reg && typeof Notification !== "undefined" && Notification.permission === "granted") {
-      const { getMessaging, getToken } = await import("firebase/messaging");
-      token = await getToken(getMessaging(app), { vapidKey: CHAVE_VAPID, serviceWorkerRegistration: reg });
-    }
-    add("Token do Firebase neste celular", !!token, token ? `…${token.slice(-8)}` : "não gerou");
-  } catch (e) {
-    add("Token do Firebase neste celular", false, String((e as Error)?.message ?? e).slice(0, 160));
+  if (sub && chave) {
+    const igual = mesmaChave(sub, chave);
+    add("Inscrição feita com a chave atual", igual !== false, igual === null ? "o navegador não informa" : igual ? "sim" : "não: toque em “Registrar de novo”");
   }
   try {
     const { aparelhos } = await api.diagnosticoNotificacao({});
-    const bate = !!token && aparelhos.some((a) => a.finalToken === token.slice(-8));
+    const bate = !!sub && aparelhos.some((a) => a.final === sub!.endpoint.slice(-8));
     add(
       "Registrado no servidor",
       bate,
-      aparelhos.length ? `${aparelhos.length} aparelho(s): ${aparelhos.map((a) => `…${a.finalToken}`).join(", ")}${bate ? "" : " · este celular não está na lista"}` : "nenhum aparelho desta conta",
+      aparelhos.length ? `${aparelhos.length} aparelho(s): ${aparelhos.map((a) => `${a.servico} …${a.final}`).join(", ")}${bate ? "" : " · este celular não está na lista"}` : "nenhum aparelho desta conta",
     );
   } catch (e) {
-    add("Registrado no servidor", false, String((e as Error)?.message ?? e).slice(0, 160));
+    add("Registrado no servidor", false, erro(e));
   }
   return r;
 }

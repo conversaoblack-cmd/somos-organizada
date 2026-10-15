@@ -64,6 +64,7 @@ export const ACOES: Record<string, Acao> = {
   confirmarFaturaSaas: saas.confirmarFaturaSaas,
   executarRotinaSaas: saas.executarRotinaSaas,
   registrarNotificacao: alertas.registrarNotificacao,
+  chaveNotificacao: alertas.chaveNotificacao,
   testarNotificacao: alertas.testarNotificacao,
   diagnosticoNotificacao: alertas.diagnosticoNotificacao,
   atualizarPixFaturas: saas.atualizarPixFaturas,
