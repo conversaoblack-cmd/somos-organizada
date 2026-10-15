@@ -1,5 +1,6 @@
 {
-  "tipo": "guia",
-  "arquivo": "take-guia.wav",
-  "aviso": "VOZ GUIA: só para cronometrar; nunca publicar"
+  "tipo": "manual",
+  "arquivo": "take-elevenlabs.mp3",
+  "importadoEm": "2026-10-15T20:06:45.713Z",
+  "origem": "ElevenLabs (gerado pelo dono no site)"
 }

@@ -1,6 +1,6 @@
 {
-  "take": "take-guia.wav",
-  "tipoTake": "guia",
+  "take": "take-elevenlabs.mp3",
+  "tipoTake": "manual",
   "guia": "whisper",
   "silencio": {
     "db": -40,
@@ -9,40 +9,40 @@
   "velocidadeGlobal": 1,
   "cortes": [
     {
-      "inicio": 2.62679,
-      "fim": 3.80023
+      "inicio": 2.2134,
+      "fim": 3.08871
     },
     {
-      "inicio": 8.07885,
-      "fim": 9.21085
+      "inicio": 6.483,
+      "fim": 7.43058
     },
     {
-      "inicio": 11.271,
-      "fim": 12.4046
+      "inicio": 10.2617,
+      "fim": 11.3797
     },
     {
-      "inicio": 15.7892,
-      "fim": 16.9232
+      "inicio": 14.2022,
+      "fim": 15.2775
     },
     {
-      "inicio": 20.7617,
-      "fim": 21.8938
+      "inicio": 19.8368,
+      "fim": 20.8627
     },
     {
-      "inicio": 25.8788,
-      "fim": 27.0109
+      "inicio": 24.6399,
+      "fim": 25.6806
     },
     {
-      "inicio": 29.8844,
-      "fim": 31.0174
+      "inicio": 27.7638,
+      "fim": 28.6487
     },
     {
-      "inicio": 33.4032,
-      "fim": 34.5877
+      "inicio": 31.9168,
+      "fim": 32.9189
     },
     {
-      "inicio": 36.817,
-      "fim": 37.9619
+      "inicio": 35.2487,
+      "fim": 36.2049
     }
   ],
   "avisos": [
@@ -52,506 +52,506 @@
     {
       "id": "gancho",
       "arquivo": "falas/gancho.wav",
-      "duracaoMs": 2687,
+      "duracaoMs": 2230,
       "velocidade": 1,
       "noTake": {
-        "de": 0,
-        "ate": 2.6867900000000002
+        "de": 0.04325,
+        "ate": 2.2734
       },
       "palavras": []
     },
     {
       "id": "problema",
       "arquivo": "falas/problema.wav",
-      "duracaoMs": 4399,
+      "duracaoMs": 3514,
       "velocidade": 1,
       "noTake": {
-        "de": 3.74023,
-        "ate": 8.13885
+        "de": 3.02871,
+        "ate": 6.542999999999999
       },
       "palavras": [
         {
           "texto": "Cobrança",
           "bloco": 0,
           "inicioMs": 60,
-          "fimMs": 660
+          "fimMs": 567
         },
         {
           "texto": "no",
           "bloco": 0,
-          "inicioMs": 660,
-          "fimMs": 810
+          "inicioMs": 567,
+          "fimMs": 693
         },
         {
           "texto": "grupo,",
           "bloco": 0,
-          "inicioMs": 810,
-          "fimMs": 1186
+          "inicioMs": 693,
+          "fimMs": 1010
         },
         {
           "texto": "caravana",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 1186,
-          "fimMs": 1995
+          "inicioMs": 1010,
+          "fimMs": 1516
         },
         {
           "texto": "no",
           "bloco": 0,
-          "inicioMs": 1995,
-          "fimMs": 2145
+          "inicioMs": 1516,
+          "fimMs": 1643
         },
         {
           "texto": "caderno,",
           "bloco": 0,
-          "inicioMs": 2145,
-          "fimMs": 2838
+          "inicioMs": 1643,
+          "fimMs": 2086
         },
         {
           "texto": "ingresso",
           "bloco": 1,
-          "inicioMs": 2838,
-          "fimMs": 3438
+          "inicioMs": 2086,
+          "fimMs": 2593
         },
         {
           "texto": "que",
           "bloco": 1,
-          "inicioMs": 3438,
-          "fimMs": 3663
+          "inicioMs": 2593,
+          "fimMs": 2783
         },
         {
           "texto": "vira",
           "bloco": 1,
-          "inicioMs": 3663,
-          "fimMs": 3963
+          "inicioMs": 2783,
+          "fimMs": 3138
         },
         {
           "texto": "print.",
           "cor": "perigo",
           "bloco": 1,
-          "inicioMs": 3963,
-          "fimMs": 4339
+          "inicioMs": 3138,
+          "fimMs": 3454
         }
       ]
     },
     {
       "id": "virada",
       "arquivo": "falas/virada.wav",
-      "duracaoMs": 2180,
+      "duracaoMs": 2951,
       "velocidade": 1,
       "noTake": {
-        "de": 9.15085,
-        "ate": 11.331000000000001
+        "de": 7.37058,
+        "ate": 10.3217
       },
       "palavras": [
         {
           "texto": "Agora",
           "bloco": 0,
           "inicioMs": 60,
-          "fimMs": 442
+          "fimMs": 695
         },
         {
           "texto": "a",
           "bloco": 0,
-          "inicioMs": 442,
-          "fimMs": 594
+          "inicioMs": 695,
+          "fimMs": 877
         },
         {
           "texto": "torcida",
           "bloco": 0,
-          "inicioMs": 594,
-          "fimMs": 1128
+          "inicioMs": 877,
+          "fimMs": 1513
         },
         {
           "texto": "tem",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 1128,
-          "fimMs": 1357
+          "inicioMs": 1513,
+          "fimMs": 1983
         },
         {
           "texto": "um",
           "cor": "azul",
           "bloco": 0,
-          "inicioMs": 1357,
-          "fimMs": 1510
+          "inicioMs": 1983,
+          "fimMs": 2164
         },
         {
           "texto": "painel",
           "cor": "azul",
           "bloco": 0,
-          "inicioMs": 1510,
-          "fimMs": 1968
+          "inicioMs": 2164,
+          "fimMs": 2709
         },
         {
           "texto": "só.",
           "cor": "azul",
           "bloco": 0,
-          "inicioMs": 1968,
-          "fimMs": 2120
+          "inicioMs": 2709,
+          "fimMs": 2891
         }
       ]
     },
     {
       "id": "socio",
       "arquivo": "falas/socio.wav",
-      "duracaoMs": 3505,
+      "duracaoMs": 2943,
       "velocidade": 1,
       "noTake": {
-        "de": 12.3446,
-        "ate": 15.8492
+        "de": 11.3197,
+        "ate": 14.2622
       },
       "palavras": [
         {
           "texto": "No",
           "bloco": 0,
           "inicioMs": 60,
-          "fimMs": 229
+          "fimMs": 202
         },
         {
           "texto": "cartão,",
           "bloco": 0,
-          "inicioMs": 229,
-          "fimMs": 737
+          "inicioMs": 202,
+          "fimMs": 999
         },
         {
           "texto": "todo",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 737,
-          "fimMs": 1296
+          "inicioMs": 999,
+          "fimMs": 1283
         },
         {
           "texto": "mês.",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 1296,
-          "fimMs": 1883
+          "inicioMs": 1283,
+          "fimMs": 1496
         },
         {
           "texto": "No",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 1883,
-          "fimMs": 2052
+          "inicioMs": 1496,
+          "fimMs": 1639
         },
         {
           "texto": "Pix,",
           "bloco": 0,
-          "inicioMs": 2052,
-          "fimMs": 2306
+          "inicioMs": 1639,
+          "fimMs": 1970
         },
         {
           "texto": "com",
           "cor": "azul",
           "bloco": 0,
-          "inicioMs": 2306,
-          "fimMs": 2767
+          "inicioMs": 1970,
+          "fimMs": 2314
         },
         {
           "texto": "lembrete.",
           "cor": "azul",
           "bloco": 0,
-          "inicioMs": 2767,
-          "fimMs": 3445
+          "inicioMs": 2314,
+          "fimMs": 2883
         }
       ]
     },
     {
       "id": "ingresso",
       "arquivo": "falas/ingresso.wav",
-      "duracaoMs": 3959,
+      "duracaoMs": 4679,
       "velocidade": 1,
       "noTake": {
-        "de": 16.863200000000003,
-        "ate": 20.8217
+        "de": 15.2175,
+        "ate": 19.8968
       },
       "palavras": [
         {
           "texto": "Ingresso",
           "bloco": 0,
           "inicioMs": 60,
-          "fimMs": 717
+          "fimMs": 758
         },
         {
           "texto": "no",
           "bloco": 0,
-          "inicioMs": 717,
-          "fimMs": 882
+          "inicioMs": 758,
+          "fimMs": 932
         },
         {
           "texto": "nome",
           "bloco": 0,
-          "inicioMs": 882,
-          "fimMs": 1211
+          "inicioMs": 932,
+          "fimMs": 1281
         },
         {
           "texto": "de",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 1211,
-          "fimMs": 1375
+          "inicioMs": 1281,
+          "fimMs": 1456
         },
         {
           "texto": "quem",
           "bloco": 0,
-          "inicioMs": 1375,
-          "fimMs": 1704
+          "inicioMs": 1456,
+          "fimMs": 2578
         },
         {
           "texto": "vai.",
           "bloco": 0,
-          "inicioMs": 1704,
-          "fimMs": 2337
+          "inicioMs": 2578,
+          "fimMs": 2962
         },
         {
           "texto": "Cada",
           "bloco": 1,
-          "inicioMs": 2337,
-          "fimMs": 2666
+          "inicioMs": 2962,
+          "fimMs": 3311
         },
         {
           "texto": "QR",
           "cor": "azul",
           "bloco": 1,
-          "inicioMs": 2666,
-          "fimMs": 2830
+          "inicioMs": 3311,
+          "fimMs": 3485
         },
         {
           "texto": "entra",
           "bloco": 1,
-          "inicioMs": 2830,
-          "fimMs": 3241
+          "inicioMs": 3485,
+          "fimMs": 3922
         },
         {
           "texto": "uma",
           "cor": "azul",
           "quebraAntes": true,
           "bloco": 1,
-          "inicioMs": 3241,
-          "fimMs": 3488
+          "inicioMs": 3922,
+          "fimMs": 4183
         },
         {
           "texto": "vez",
           "cor": "azul",
           "bloco": 1,
-          "inicioMs": 3488,
-          "fimMs": 3734
+          "inicioMs": 4183,
+          "fimMs": 4445
         },
         {
           "texto": "só.",
           "cor": "azul",
           "bloco": 1,
-          "inicioMs": 3734,
-          "fimMs": 3898
+          "inicioMs": 4445,
+          "fimMs": 4619
         }
       ]
     },
     {
       "id": "dinheiro",
       "arquivo": "falas/dinheiro.wav",
-      "duracaoMs": 4105,
+      "duracaoMs": 3897,
       "velocidade": 1,
       "noTake": {
-        "de": 21.8338,
-        "ate": 25.938799999999997
+        "de": 20.8027,
+        "ate": 24.6999
       },
       "palavras": [
         {
           "texto": "O",
           "bloco": 0,
           "inicioMs": 60,
-          "fimMs": 204
+          "fimMs": 194
         },
         {
           "texto": "dinheiro",
           "bloco": 0,
-          "inicioMs": 204,
-          "fimMs": 780
+          "inicioMs": 194,
+          "fimMs": 856
         },
         {
           "texto": "não",
           "bloco": 0,
-          "inicioMs": 780,
-          "fimMs": 996
+          "inicioMs": 856,
+          "fimMs": 1056
         },
         {
           "texto": "passa",
           "bloco": 0,
-          "inicioMs": 996,
-          "fimMs": 1356
+          "inicioMs": 1056,
+          "fimMs": 1390
         },
         {
           "texto": "pela",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 1356,
-          "fimMs": 1644
+          "inicioMs": 1390,
+          "fimMs": 1657
         },
         {
           "texto": "gente.",
           "bloco": 0,
-          "inicioMs": 1644,
-          "fimMs": 2390
+          "inicioMs": 1657,
+          "fimMs": 2302
         },
         {
           "texto": "Cada",
           "bloco": 1,
-          "inicioMs": 2390,
-          "fimMs": 2677
+          "inicioMs": 2302,
+          "fimMs": 2569
         },
         {
           "texto": "subsede",
           "cor": "amarelo",
           "bloco": 1,
-          "inicioMs": 2677,
-          "fimMs": 3181
+          "inicioMs": 2569,
+          "fimMs": 3036
         },
         {
           "texto": "recebe",
           "quebraAntes": true,
           "bloco": 1,
-          "inicioMs": 3181,
-          "fimMs": 3613
+          "inicioMs": 3036,
+          "fimMs": 3437
         },
         {
           "texto": "direto.",
           "bloco": 1,
-          "inicioMs": 3613,
-          "fimMs": 4045
-        }
-      ]
-    },
-    {
-      "id": "taxa",
-      "arquivo": "falas/taxa.wav",
-      "duracaoMs": 2994,
-      "velocidade": 1,
-      "noTake": {
-        "de": 26.9509,
-        "ate": 29.944399999999998
-      },
-      "palavras": [
-        {
-          "texto": "A",
-          "bloco": 0,
-          "inicioMs": 60,
-          "fimMs": 229
-        },
-        {
-          "texto": "taxa",
-          "bloco": 0,
-          "inicioMs": 229,
-          "fimMs": 567
-        },
-        {
-          "texto": "de",
-          "bloco": 0,
-          "inicioMs": 567,
-          "fimMs": 736
-        },
-        {
-          "texto": "10%",
-          "cor": "amarelo",
-          "bloco": 0,
-          "inicioMs": 736,
-          "fimMs": 1412
-        },
-        {
-          "texto": "vira",
-          "quebraAntes": true,
-          "bloco": 0,
-          "inicioMs": 1412,
-          "fimMs": 1750
-        },
-        {
-          "texto": "caixa",
-          "cor": "amarelo",
-          "bloco": 0,
-          "inicioMs": 1750,
-          "fimMs": 2173
-        },
-        {
-          "texto": "da",
-          "cor": "amarelo",
-          "bloco": 0,
-          "inicioMs": 2173,
-          "fimMs": 2342
-        },
-        {
-          "texto": "torcida.",
-          "cor": "amarelo",
-          "bloco": 0,
-          "inicioMs": 2342,
-          "fimMs": 2933
+          "inicioMs": 3437,
+          "fimMs": 3837
         }
       ]
     },
     {
       "id": "evento",
       "arquivo": "falas/evento.wav",
-      "duracaoMs": 2506,
+      "duracaoMs": 2203,
       "velocidade": 1,
       "noTake": {
-        "de": 30.9574,
-        "ate": 33.4632
+        "de": 25.6206,
+        "ate": 27.8238
       },
       "palavras": [
         {
           "texto": "O",
           "bloco": 0,
           "inicioMs": 60,
-          "fimMs": 209
+          "fimMs": 190
         },
         {
           "texto": "ingresso",
           "bloco": 0,
-          "inicioMs": 209,
-          "fimMs": 806
+          "inicioMs": 190,
+          "fimMs": 711
         },
         {
           "texto": "só",
           "bloco": 0,
-          "inicioMs": 806,
-          "fimMs": 955
+          "inicioMs": 711,
+          "fimMs": 841
         },
         {
           "texto": "precisa",
           "bloco": 0,
-          "inicioMs": 955,
-          "fimMs": 1477
+          "inicioMs": 841,
+          "fimMs": 1297
         },
         {
           "texto": "pagar",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 1477,
-          "fimMs": 1849
+          "inicioMs": 1297,
+          "fimMs": 1622
         },
         {
           "texto": "o",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 1849,
-          "fimMs": 1998
+          "inicioMs": 1622,
+          "fimMs": 1753
         },
         {
           "texto": "evento.",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 1998,
-          "fimMs": 2446
+          "inicioMs": 1753,
+          "fimMs": 2143
+        }
+      ]
+    },
+    {
+      "id": "taxa",
+      "arquivo": "falas/taxa.wav",
+      "duracaoMs": 3388,
+      "velocidade": 1,
+      "noTake": {
+        "de": 28.588700000000003,
+        "ate": 31.976799999999997
+      },
+      "palavras": [
+        {
+          "texto": "A",
+          "bloco": 0,
+          "inicioMs": 60,
+          "fimMs": 351
+        },
+        {
+          "texto": "taxa",
+          "bloco": 0,
+          "inicioMs": 351,
+          "fimMs": 707
+        },
+        {
+          "texto": "de",
+          "bloco": 0,
+          "inicioMs": 707,
+          "fimMs": 886
+        },
+        {
+          "texto": "10%",
+          "cor": "amarelo",
+          "bloco": 0,
+          "inicioMs": 886,
+          "fimMs": 1599
+        },
+        {
+          "texto": "vira",
+          "quebraAntes": true,
+          "bloco": 0,
+          "inicioMs": 1599,
+          "fimMs": 1956
+        },
+        {
+          "texto": "caixa",
+          "cor": "amarelo",
+          "bloco": 0,
+          "inicioMs": 1956,
+          "fimMs": 2526
+        },
+        {
+          "texto": "da",
+          "cor": "amarelo",
+          "bloco": 0,
+          "inicioMs": 2526,
+          "fimMs": 2704
+        },
+        {
+          "texto": "torcida.",
+          "cor": "amarelo",
+          "bloco": 0,
+          "inicioMs": 2704,
+          "fimMs": 3328
         }
       ]
     },
     {
       "id": "prova",
       "arquivo": "falas/prova.wav",
-      "duracaoMs": 2349,
+      "duracaoMs": 2450,
       "velocidade": 1,
       "noTake": {
-        "de": 34.527699999999996,
-        "ate": 36.877
+        "de": 32.8589,
+        "ate": 35.3087
       },
       "palavras": [
         {
@@ -559,49 +559,49 @@
           "cor": "amarelo",
           "bloco": 0,
           "inicioMs": 60,
-          "fimMs": 420
+          "fimMs": 395
         },
         {
           "texto": "e",
           "bloco": 0,
-          "inicioMs": 420,
-          "fimMs": 563
+          "inicioMs": 395,
+          "fimMs": 652
         },
         {
           "texto": "vendas",
           "bloco": 0,
-          "inicioMs": 563,
-          "fimMs": 995
+          "inicioMs": 652,
+          "fimMs": 1055
         },
         {
           "texto": "prontos",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 995,
-          "fimMs": 1498
+          "inicioMs": 1055,
+          "fimMs": 1652
         },
         {
           "texto": "para",
           "bloco": 0,
-          "inicioMs": 1498,
-          "fimMs": 1786
+          "inicioMs": 1652,
+          "fimMs": 1920
         },
         {
           "texto": "mostrar.",
           "bloco": 0,
-          "inicioMs": 1786,
-          "fimMs": 2289
+          "inicioMs": 1920,
+          "fimMs": 2390
         }
       ]
     },
     {
       "id": "cta",
       "arquivo": "falas/cta.wav",
-      "duracaoMs": 5551,
+      "duracaoMs": 5268,
       "velocidade": 1,
       "noTake": {
-        "de": 37.9019,
-        "ate": 43.4527
+        "de": 36.1449,
+        "ate": 41.413000000000004
       },
       "palavras": []
     }
