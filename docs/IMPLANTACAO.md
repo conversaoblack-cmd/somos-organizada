@@ -152,7 +152,7 @@ Por torcida, confira também:
 Site antigo no domínio raiz sai do ar (os registros A antigos são trocados); o e-mail (MX) não muda. Limitação
 conhecida: a prévia do WhatsApp do endereço raiz da vitrine (`furia.com.br/`) mostra a da Somos Organizada, porque o
 Hosting serve a página inicial estática antes de qualquer function; os links de evento (`/e/{codigo}`) têm prévia
-própria. Parâmetro opcional `DOMINIO_SITE_ID` (functions/.env): site do Hosting que recebe os domínios (padrão: o
+própria. Variável opcional `DOMINIO_SITE_ID` (functions/.env; o deploy não pergunta): site do Hosting que recebe os domínios (padrão: o
 site principal do projeto).
 
 ### Chaves de segurança: nunca recriar

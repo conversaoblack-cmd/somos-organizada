@@ -21,7 +21,6 @@ export const WEB_API_KEY = defineString("WEB_API_KEY", { default: "" });
 export const PLATAFORMA_EMAILS = defineString("PLATAFORMA_EMAILS", { default: "conversaoblack@gmail.com" });
 
 /** Site do Firebase Hosting que recebe os domínios próprios das torcidas. Vazio = site padrão (id do projeto). */
-export const DOMINIO_SITE_ID = defineString("DOMINIO_SITE_ID", { default: "" });
 
 // Cota de CPU por região do Cloud Run = soma de (vCPU × máx. instâncias) de todas as funções, e projeto
 // novo tem cota baixa. Cada instância (1 vCPU) atende 80 pedidos ao mesmo tempo (o trabalho é quase todo

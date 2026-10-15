@@ -9,7 +9,6 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { applicationDefault } from "firebase-admin/app";
 import { db } from "./firebase";
-import { DOMINIO_SITE_ID } from "../config";
 import { apexDe, situacaoDoHosting, type DominioHosting, type SituacaoDominio } from "../dominio/enderecos";
 
 export interface ProvedorDominio {
@@ -30,7 +29,9 @@ function projeto(): string {
     return "";
   }
 }
-const site = () => DOMINIO_SITE_ID.value().trim() || projeto();
+// Site do Hosting que recebe os domínios: o principal do projeto. Para usar outro, defina DOMINIO_SITE_ID em functions/.env
+// (variável comum, não parâmetro: o deploy não pergunta nada).
+const site = () => (process.env.DOMINIO_SITE_ID ?? "").trim() || projeto();
 
 // ── Firebase Hosting (produção) ──
 
