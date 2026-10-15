@@ -35,7 +35,20 @@ export const testarNotificacao = onCall(async (req) => {
   if (!r.aparelhos) throw new HttpsError("failed-precondition", "Nenhum aparelho com notificação ligada. Toque em “Ativar notificações” primeiro.");
   // Só a equipe chama: o motivo técnico aparece na tela para corrigir na hora
   if (!r.enviadas) throw new HttpsError("unavailable", `O Firebase recusou o envio (${[...new Set(r.falhas)].join(", ") || "sem detalhe"}). Toque em “Registrar de novo” e teste outra vez.`);
-  return { enviadas: r.enviadas };
+  return { enviadas: r.enviadas, aparelhos: r.aparelhos, falhas: r.falhas, ids: r.ids };
+});
+
+/** Diagnóstico (só equipe): aparelhos registrados desta conta, para conferir no celular sem console. */
+export const diagnosticoNotificacao = onCall(async (req) => {
+  const quem = exigirPlataforma(req);
+  const lista = await aparelhos().where("uid", "==", quem).get();
+  return {
+    aparelhos: lista.docs.map((d) => ({
+      finalToken: String(d.get("token")).slice(-8),
+      aparelho: String(d.get("aparelho") ?? "").slice(0, 80),
+      atualizadoEm: (d.get("atualizadoEm") as Timestamp | undefined)?.toMillis() ?? null,
+    })),
+  };
 });
 
 interface Alerta {
@@ -45,9 +58,9 @@ interface Alerta {
   url?: string;
 }
 
-async function enviar(a: Alerta): Promise<{ aparelhos: number; enviadas: number; falhas: string[] }> {
+async function enviar(a: Alerta): Promise<{ aparelhos: number; enviadas: number; falhas: string[]; ids: string[] }> {
   const lista = await aparelhos().get();
-  if (lista.empty) return { aparelhos: 0, enviadas: 0, falhas: [] };
+  if (lista.empty) return { aparelhos: 0, enviadas: 0, falhas: [], ids: [] };
   // Sem webpush.fcmOptions.link: o Firebase exige endereço https completo ali e recusa a mensagem inteira com caminho
   // relativo. O caminho vai em data.url e o service worker (sw-modelo.js) abre a tela certa.
   const mensageiro = getMessaging();
@@ -66,7 +79,7 @@ async function enviar(a: Alerta): Promise<{ aparelhos: number; enviadas: number;
   } catch (e) {
     const codigo = String((e as { code?: string }).code ?? (e as Error).message ?? e).replace(/^messaging\//, "").slice(0, 120);
     logger.error("Envio de notificação da equipe falhou", { erro: String(e) });
-    return { aparelhos: lista.size, enviadas: 0, falhas: [codigo] };
+    return { aparelhos: lista.size, enviadas: 0, falhas: [codigo], ids: [] };
   }
   const falhas: string[] = [];
   // Só sai da lista o aparelho que o Firebase diz que não existe mais (desinstalou o app ou desligou a permissão).
@@ -79,7 +92,8 @@ async function enviar(a: Alerta): Promise<{ aparelhos: number; enviadas: number;
     }),
   );
   if (falhas.length) logger.warn("Notificação da equipe com falha", { falhas });
-  return { aparelhos: lista.size, enviadas: r.successCount, falhas };
+  const ids = r.responses.map((x) => (x.messageId ?? "").split("/").pop() ?? "").filter(Boolean);
+  return { aparelhos: lista.size, enviadas: r.successCount, falhas, ids };
 }
 
 /** Avisa a equipe (no máximo 1 por tipo a cada 10 min). Nunca lança erro. */

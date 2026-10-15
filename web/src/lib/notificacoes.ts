@@ -66,3 +66,55 @@ export function modoApp(titulo: string, manifesto?: string) {
 export function usarManifestoDaPlataforma() {
   modoApp("Somos Equipe", "/plataforma.webmanifest");
 }
+
+/** Diagnóstico no próprio celular (sem console): cada elo da corrente até a notificação aparecer. */
+export async function diagnosticar(): Promise<{ item: string; ok: boolean; detalhe: string }[]> {
+  const r: { item: string; ok: boolean; detalhe: string }[] = [];
+  const add = (item: string, ok: boolean, detalhe: string) => r.push({ item, ok, detalhe });
+  add("Aberto pelo ícone (app instalado)", instalado(), instalado() ? "sim" : "não: abra pelo ícone da tela de início");
+  add("Navegador aceita notificação", "Notification" in window && "PushManager" in window, `${"Notification" in window ? "Notification" : "sem Notification"} · ${"PushManager" in window ? "PushManager" : "sem PushManager"}`);
+  add("Permissão", typeof Notification !== "undefined" && Notification.permission === "granted", typeof Notification !== "undefined" ? Notification.permission : "—");
+  add("Chave do projeto (VAPID)", !!CHAVE_VAPID, CHAVE_VAPID ? `…${CHAVE_VAPID.slice(-6)}` : "vazia");
+  let reg: ServiceWorkerRegistration | undefined;
+  try {
+    reg = await navigator.serviceWorker?.getRegistration("/");
+  } catch {
+    reg = undefined;
+  }
+  add("Service worker ativo", !!reg?.active, reg?.active ? `${new URL(reg.active.scriptURL).pathname} · escopo ${new URL(reg.scope).pathname}` : "nenhum");
+  try {
+    const sub = await reg?.pushManager.getSubscription();
+    add("Inscrição de push no celular", !!sub, sub ? new URL(sub.endpoint).host : "nenhuma");
+  } catch (e) {
+    add("Inscrição de push no celular", false, String(e).slice(0, 120));
+  }
+  let token = "";
+  try {
+    if (reg && typeof Notification !== "undefined" && Notification.permission === "granted") {
+      const { getMessaging, getToken } = await import("firebase/messaging");
+      token = await getToken(getMessaging(app), { vapidKey: CHAVE_VAPID, serviceWorkerRegistration: reg });
+    }
+    add("Token do Firebase neste celular", !!token, token ? `…${token.slice(-8)}` : "não gerou");
+  } catch (e) {
+    add("Token do Firebase neste celular", false, String((e as Error)?.message ?? e).slice(0, 160));
+  }
+  try {
+    const { aparelhos } = await api.diagnosticoNotificacao({});
+    const bate = !!token && aparelhos.some((a) => a.finalToken === token.slice(-8));
+    add(
+      "Registrado no servidor",
+      bate,
+      aparelhos.length ? `${aparelhos.length} aparelho(s): ${aparelhos.map((a) => `…${a.finalToken}`).join(", ")}${bate ? "" : " · este celular não está na lista"}` : "nenhum aparelho desta conta",
+    );
+  } catch (e) {
+    add("Registrado no servidor", false, String((e as Error)?.message ?? e).slice(0, 160));
+  }
+  return r;
+}
+
+/** Mostra uma notificação direto pelo service worker, sem passar pelo servidor (testa só o celular). */
+export async function notificacaoLocal() {
+  const reg = await navigator.serviceWorker.getRegistration("/");
+  if (!reg) throw new Error("Service worker não está ativo neste celular.");
+  await reg.showNotification("Teste local", { body: "Se você está vendo isto, o celular mostra as notificações do app.", icon: "/icone-192.png" });
+}

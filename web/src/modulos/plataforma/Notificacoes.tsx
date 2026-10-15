@@ -1,7 +1,7 @@
 /** Configurações → "Alertas neste celular": liga as notificações da equipe (erros, cadastro para analisar, Pix informado). */
 import { useState } from "react";
 import { api, mensagemDeErro } from "@/lib/api";
-import { ativarNotificacoes, situacaoNotificacao, type SituacaoNotificacao } from "@/lib/notificacoes";
+import { ativarNotificacoes, diagnosticar, notificacaoLocal, situacaoNotificacao, type SituacaoNotificacao } from "@/lib/notificacoes";
 import { Aviso, Botao, Cartao, useToast } from "@/ui";
 
 const TEXTO: Record<SituacaoNotificacao, string> = {
@@ -17,7 +17,30 @@ const TEXTO: Record<SituacaoNotificacao, string> = {
 export function CartaoNotificacoes() {
   const avisar = useToast();
   const [situacao, setSituacao] = useState<SituacaoNotificacao>(() => situacaoNotificacao());
-  const [ocupado, setOcupado] = useState<"ativar" | "testar" | null>(null);
+  const [ocupado, setOcupado] = useState<"ativar" | "testar" | "diag" | "local" | null>(null);
+  const [diag, setDiag] = useState<{ item: string; ok: boolean; detalhe: string }[] | null>(null);
+  const [resultadoTeste, setResultadoTeste] = useState<string | null>(null);
+
+  async function rodarDiagnostico() {
+    setOcupado("diag");
+    try {
+      setDiag(await diagnosticar());
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  async function testeLocal() {
+    setOcupado("local");
+    try {
+      await notificacaoLocal();
+      avisar("Notificação local enviada. Ela apareceu no topo da tela?", "info");
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : String(e), "erro");
+    } finally {
+      setOcupado(null);
+    }
+  }
 
   async function ativar() {
     setOcupado("ativar");
@@ -36,9 +59,11 @@ export function CartaoNotificacoes() {
   async function testar() {
     setOcupado("testar");
     try {
-      await api.testarNotificacao({});
-      avisar("Notificação de teste enviada.", "sucesso");
+      const r = await api.testarNotificacao({});
+      setResultadoTeste(`Servidor: ${r.enviadas} de ${r.aparelhos} aparelho(s) aceitos pelo Firebase${r.falhas.length ? ` · falhas: ${r.falhas.join(", ")}` : ""}${r.ids.length ? ` · id ${r.ids[0]!.slice(-10)}` : ""}`);
+      avisar("O Firebase aceitou a notificação. Ela chegou?", "sucesso");
     } catch (e) {
+      setResultadoTeste(`Servidor recusou: ${mensagemDeErro(e)}`);
       avisar(mensagemDeErro(e), "erro");
     } finally {
       setOcupado(null);
@@ -64,6 +89,37 @@ export function CartaoNotificacoes() {
           </Botao>
         )}
       </div>
+      {resultadoTeste && <p className="text-sm text-texto-2 break-words" data-resultado-teste>{resultadoTeste}</p>}
+      <details className="pt-1">
+        <summary className="min-h-11 inline-flex items-center cursor-pointer text-sm font-semibold text-texto-2">Não chegou? Diagnóstico deste celular</summary>
+        <div className="mt-2 space-y-3">
+          <p className="text-sm text-texto-3">Confere cada etapa até a notificação aparecer. Tire um print do resultado e mande para o suporte técnico.</p>
+          <div className="flex flex-wrap gap-2">
+            <Botao variante="contorno" tamanho="sm" carregando={ocupado === "diag"} onClick={rodarDiagnostico}>
+              Rodar diagnóstico
+            </Botao>
+            <Botao variante="contorno" tamanho="sm" carregando={ocupado === "local"} onClick={testeLocal}>
+              Notificação local (sem servidor)
+            </Botao>
+          </div>
+          {diag && (
+            <ul className="space-y-2 text-sm" data-diagnostico>
+              {diag.map((d) => (
+                <li key={d.item} className="flex gap-2">
+                  <span className={d.ok ? "text-sucesso" : "text-perigo"} aria-hidden="true">
+                    {d.ok ? "✓" : "✗"}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="font-semibold">{d.item}</span>
+                    <span className="block text-texto-3 break-all">{d.detalhe}</span>
+                  </span>
+                </li>
+              ))}
+              <li className="text-texto-3 text-xs">{navigator.userAgent}</li>
+            </ul>
+          )}
+        </div>
+      </details>
     </Cartao>
   );
 }
