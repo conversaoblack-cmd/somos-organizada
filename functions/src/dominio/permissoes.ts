@@ -1,5 +1,5 @@
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https";
-import { refs } from "../util/firebase";
+import { auth, refs } from "../util/firebase";
 import { PLATAFORMA_EMAILS } from "../config";
 
 export type Papel = "diretoria" | "subsede" | "portaria";
@@ -9,6 +9,8 @@ export interface Membro {
   papel: Papel;
   sedeId?: string;
   ativo: boolean;
+  /** conta existia sem e-mail confirmado: o acesso vale só depois de aceitar o convite */
+  aguardandoConvite?: boolean;
   nome?: string;
   email?: string;
 }
@@ -59,4 +61,27 @@ export async function exigirMembro(req: CallableRequest, tid: string, papeis: Pa
 export function exigirEscopoSede(m: Membro, sedeId: string | undefined): void {
   if (m.papel === "diretoria") return;
   if (!sedeId || m.sedeId !== sedeId) throw new HttpsError("permission-denied", "Fora do escopo da sua sede.");
+}
+
+/**
+ * As regras do Firestore e do Storage só enxergam a marca "plataforma" na conta, não a lista PLATAFORMA_EMAILS.
+ * Quem saiu da lista (ou está sem e-mail confirmado) perde a marca e as sessões abertas: roda todo dia na rotinaSaas.
+ */
+export async function sincronizarEquipe(): Promise<{ removidos: number }> {
+  const permitidos = emailsPlataforma();
+  let removidos = 0;
+  let pagina: string | undefined;
+  do {
+    const r = await auth.listUsers(1000, pagina);
+    for (const u of r.users) {
+      if (u.customClaims?.plataforma !== true) continue;
+      if (u.emailVerified && permitidos.includes(String(u.email ?? "").toLowerCase())) continue;
+      const { plataforma: _p, ...resto } = u.customClaims;
+      await auth.setCustomUserClaims(u.uid, resto);
+      await auth.revokeRefreshTokens(u.uid);
+      removidos++;
+    }
+    pagina = r.pageToken;
+  } while (pagina);
+  return { removidos };
 }

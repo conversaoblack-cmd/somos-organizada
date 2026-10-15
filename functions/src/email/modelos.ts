@@ -70,7 +70,8 @@ interface Bloco {
   lista?: { titulo: string; itens: string[] };
   botao: { texto: string; url: string };
   /** Pix para pagar: QR Code em imagem + botão "Copiar código Pix" (nunca o código em texto) */
-  pix?: { codigo: string };
+  /** assinatura = assinarPix(codigo): a página /pix e o QR só abrem código assinado pelo servidor */
+  pix?: { codigo: string; assinatura: string };
   /** aviso em destaque abaixo do botão */
   nota?: string;
   /** texto pequeno de rodapé específico do e-mail */
@@ -104,13 +105,14 @@ export function montar(torcida: Torcida, assunto: string, para: Mensagem["para"]
     ? `<p style="margin:22px 0 8px;font:700 13px/1.4 Arial,Helvetica,sans-serif;color:#6b6b76;text-transform:uppercase;letter-spacing:.08em;">${b.lista.titulo}</p>
        ${b.lista.itens.map((i) => `<p style="margin:0 0 6px;font:500 15px/1.5 Arial,Helvetica,sans-serif;color:#17171c;"><span style="color:${corDestaque};font-weight:800;">●</span>&nbsp; ${i}</p>`).join("")}`
     : "";
+  const qsPix = b.pix ? `c=${encodeURIComponent(b.pix.codigo)}&s=${encodeURIComponent(b.pix.assinatura)}` : "";
   const pix = b.pix
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border:1px solid #e7e7ea;border-radius:14px;border-collapse:separate;"><tr><td align="center" style="padding:22px 16px;">
         <p style="margin:0 0 14px;font:800 12px/1.4 Arial,Helvetica,sans-serif;color:${corDestaque};text-transform:uppercase;letter-spacing:.12em;">Pague com Pix</p>
-        <img src="${esc(`${origem()}/pix/qr.png?c=${encodeURIComponent(b.pix.codigo)}`)}" width="200" height="200" alt="QR Code do Pix" style="display:block;width:200px;height:200px;margin:0 auto;border:0;">
+        <img src="${esc(`${origem()}/pix/qr.png?${qsPix}`)}" width="200" height="200" alt="QR Code do Pix" style="display:block;width:200px;height:200px;margin:0 auto;border:0;">
         <p style="margin:14px 0 16px;font:400 13px/1.55 Arial,Helvetica,sans-serif;color:#5a5a66;">No app do banco, escolha <b>Pix → Ler QR Code</b>.<br>Está no celular? Toque no botão, copie o código e use <b>Pix copia e cola</b>.</p>
         <table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr><td style="border-radius:12px;border:2px solid ${corDestaque};">
-          <a href="${esc(`${origem()}/pix?c=${encodeURIComponent(b.pix.codigo)}`)}" style="display:inline-block;padding:13px 22px;font:800 15px/1 Arial,Helvetica,sans-serif;color:${corDestaque};text-decoration:none;border-radius:10px;">Copiar código Pix</a>
+          <a href="${esc(`${origem()}/pix?${qsPix}`)}" style="display:inline-block;padding:13px 22px;font:800 15px/1 Arial,Helvetica,sans-serif;color:${corDestaque};text-decoration:none;border-radius:10px;">Copiar código Pix</a>
         </td></tr></table>
       </td></tr></table>`
     : "";

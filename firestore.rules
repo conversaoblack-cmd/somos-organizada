@@ -8,7 +8,8 @@ service cloud.firestore {
 
     function logado() { return request.auth != null; }
     function anonimo() { return logado() && request.auth.token.firebase.sign_in_provider == 'anonymous'; }
-    function plataforma() { return logado() && request.auth.token.get('plataforma', false) == true; }
+    // equipe: marca na conta + e-mail confirmado (quem sai da lista PLATAFORMA_EMAILS perde a marca na rotina diária)
+    function plataforma() { return logado() && request.auth.token.get('plataforma', false) == true && request.auth.token.get('email_verified', false) == true; }
 
     function membro(tid) {
       return logado() && exists(/databases/$(database)/documents/torcidas/$(tid)/membros/$(request.auth.uid))
@@ -32,6 +33,18 @@ service cloud.firestore {
     }
     function apenas(campos) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos); }
     function corValida(c) { return c is string && c.matches('^#[0-9A-Fa-f]{6}$'); }
+    // Escudo e banner: só arquivo do nosso Storage (o painel envia e grava o link). Endereço de fora viraria imagem
+    // de rastreio nos e-mails e na página da torcida.
+    function imagemNossa(u) {
+      return u == null || u == '' || (u is string && u.size() <= 1000
+        && (u.matches('/[A-Za-z0-9._-][A-Za-z0-9._/-]{0,200}')
+          || u.matches('https://firebasestorage[.]googleapis[.]com/v0/b/[^/]+/o/torcidas%2F.*')
+          || u.matches('http://(127[.]0[.]0[.]1|localhost):9199/v0/b/[^/]+/o/torcidas%2F.*')));
+    }
+    function temaSeguro(t) {
+      return t is map && corValida(t.corPrimaria) && corValida(t.corSecundaria) && corValida(t.corFundo) && corValida(t.corTexto)
+        && imagemNossa(t.get('logoUrl', null)) && imagemNossa(t.get('bannerUrl', null));
+    }
 
     match /slugs/{slug} {
       allow read: if true;
@@ -47,13 +60,14 @@ service cloud.firestore {
     }
 
     match /torcidas/{tid} {
-      allow read: if true; // página pública (nome, tema, chave pública Pagar.me, status)
+      // página pública (nome, tema, chave pública Pagar.me, status): lê uma por vez; listar todas (inclusive as que
+      // ainda não publicaram) só a equipe
+      allow get: if true;
+      allow list: if plataforma();
       // Diretoria edita só aparência, textos, contato e regras de sócio. Status, taxa, pagamentos e domínio: servidor.
       allow update: if diretoria(tid)
         && apenas(['tema', 'textos', 'contato', 'aprovacaoManualSocio', 'destinoMensalidade', 'modulos'])
-        && (!('tema' in request.resource.data) || (
-          corValida(request.resource.data.tema.corPrimaria) && corValida(request.resource.data.tema.corSecundaria)
-          && corValida(request.resource.data.tema.corFundo) && corValida(request.resource.data.tema.corTexto)))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tema']) || temaSeguro(request.resource.data.tema))
         && request.resource.data.destinoMensalidade in ['sede_do_socio', 'principal'];
       allow create, delete: if false;
 
@@ -230,7 +244,8 @@ service cloud.firestore {
       allow read: if plataforma() || (logado() && resource.data.uid == request.auth.uid);
       // Campos exatamente os que o SuporteFlutuante grava; datas do servidor; tamanhos limitados.
       function textoAte(v, max) { return v is string && v.size() <= max; }
-      allow create: if logado() && !anonimo()
+      // id só com letras, números, - e _ (o id entra na expressão que confere a pasta dos anexos)
+      allow create: if logado() && !anonimo() && chamadoId.matches('[A-Za-z0-9_-]{6,64}')
         && request.resource.data.keys().hasOnly(['uid', 'nome', 'email', 'torcidaId', 'torcidaNome', 'papel', 'assunto',
              'status', 'naoLidasPlataforma', 'diagnostico', 'criadoEm', 'atualizadoEm'])
         && request.resource.data.uid == request.auth.uid
@@ -310,9 +325,10 @@ service cloud.firestore {
     }
 
     // Configuração pública da plataforma (planos e chave Pix da mensalidade)
+    // Pix e planos da plataforma: só o servidor grava (salvarConfigPlataforma confere a lista da equipe e registra o histórico)
     match /plataforma/publico {
       allow read: if true;
-      allow write: if plataforma();
+      allow write: if false;
     }
 
     // Pedidos de cadastro de torcida feitos pela página principal

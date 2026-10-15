@@ -15,6 +15,7 @@ import { refs } from "../util/firebase";
 import type { Torcida } from "../dominio/tipos";
 import { enviarUmaVez } from "./enviar";
 import { dataCurta, esc, montar, moeda } from "./modelos";
+import { assinarPix } from "../util/assinaturaPix";
 import { MARCA_PLATAFORMA } from "../api/verificacao";
 import { normalizarPlano, refsSaas, SAAS_PADRAO, type FaturaSaas } from "../api/saas";
 
@@ -121,7 +122,7 @@ export async function avisarFaturaSaas(tid: string, faturaId: string, tipo: Avis
         paragrafos: t.paragrafos,
         detalhes,
         botao: { texto: t.botao, url: painel },
-        pix: tipo !== "paga" && f.pixCopiaECola ? { codigo: f.pixCopiaECola } : undefined,
+        pix: tipo !== "paga" && f.pixCopiaECola ? { codigo: f.pixCopiaECola, assinatura: await assinarPix(f.pixCopiaECola) } : undefined,
         nota: t.nota,
         rodape: "Mensalidade fixa, sem porcentagem sobre as vendas. Dúvidas? Toque no botão de ajuda do painel e fale com a equipe.",
         conta: true,

@@ -8,10 +8,10 @@ import { createHash } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { EMAIL_API_KEY, URL_APP } from "../config";
-import { origemDaTorcida } from "../util/urls";
-import { areaDoCaminhoInterno } from "../dominio/enderecos";
 import { auth, db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { exigirLogin } from "../dominio/permissoes";
+import { DIA_MS, dentroDoLimite } from "../util/limites";
+import { alertarEquipe } from "./alertas";
 import { enviarAgora } from "../email/enviar";
 import { esc, montar } from "../email/modelos";
 import type { Torcida } from "../dominio/tipos";
@@ -71,6 +71,13 @@ export const enviarConfirmacaoEmail = onCall({ secrets: [EMAIL_API_KEY] }, async
     tx.set(porEmail, { qtd: qtd + 1, janelaAte: janelaAberta ? e!.janelaAte : Timestamp.fromMillis(agora + 3600_000) });
   });
 
+  // Teto do sistema por dia: contas criadas em série com e-mails de terceiros não viram disparo em massa com a nossa marca
+  if (!(await dentroDoLimite("confirmacao-email-global", 3000, DIA_MS))) {
+    logger.error("Teto diário de e-mails de confirmação atingido");
+    await alertarEquipe("teto-confirmacao", { titulo: "Teto de e-mails de confirmação", corpo: "Mais de 3000 confirmações hoje: confira se há cadastro em massa.", url: "/plataforma" }, 3600_000);
+    throw new HttpsError("resource-exhausted", "Não foi possível enviar agora. Tente de novo mais tarde.");
+  }
+
   // E-mail com a identidade da torcida quando o cadastro é feito no site dela (/{torcida}/...)
   let marca = MARCA_PLATAFORMA;
   const slug = /^\/([a-z0-9-]{3,40})\//.exec(continuar)?.[1];
@@ -91,7 +98,8 @@ export const enviarConfirmacaoEmail = onCall({ secrets: [EMAIL_API_KEY] }, async
   const usuario = await auth.getUser(uid).catch(() => null);
   const primeiroNome = (usuario?.displayName ?? "").trim().split(/\s+/)[0];
   // No domínio próprio da torcida (se estiver no ar): a confirmação continua no mesmo endereço em que a pessoa se cadastrou
-  const origem = marca === MARCA_PLATAFORMA ? URL_APP.value().replace(/\/+$/, "") : origemDaTorcida(marca, areaDoCaminhoInterno(continuar));
+  // Link com código sempre no endereço padrão (o domínio próprio é controlado pela torcida)
+  const origem = URL_APP.value().replace(/\/+$/, "");
   const url = `${origem}/verificar?oobCode=${encodeURIComponent(codigo)}&continuar=${encodeURIComponent(continuar)}`;
   const m = montar(marca, "Confirme seu e-mail para continuar", { email, nome: usuario?.displayName ?? undefined }, {
     selo: "Confirmação de e-mail",

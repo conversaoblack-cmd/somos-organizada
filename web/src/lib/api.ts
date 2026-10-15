@@ -255,6 +255,7 @@ export const api = {
     { uid: string; contaNova: boolean; nuncaEntrou?: boolean; emailEnviado?: boolean }
   >("convidarMembro"),
   /** Página /convite: para quem é o convite, de qual torcida e com quais cores (sem login). */
+  conferirPix: chamar<{ c: string; s: string }, { valido: boolean }>("conferirPix"),
   verConvite: chamar<
     { c: string },
     {
@@ -311,6 +312,10 @@ export const api = {
   confirmarFaturaSaas: chamar<{ tid: string; faturaId: string }, { ok: boolean }>("confirmarFaturaSaas"),
   executarRotinaSaas: chamar<{ agora?: number }, { faturasGeradas: number; bloqueadas: number }>("executarRotinaSaas"),
   atualizarPixFaturas: chamar<Record<string, never>, { atualizadas: number }>("atualizarPixFaturas"),
+  salvarConfigPlataforma: chamar<
+    { pix: { chave: string; nome: string; cidade: string }; planos: Record<"pro" | "plus" | "max", number> },
+    { ok: true; atualizadas: number }
+  >("salvarConfigPlataforma"),
   conferirPixFatura: chamar<{ tid: string }, { atualizadas: number }>("conferirPixFatura"),
   chaveNotificacao: chamar<Record<string, never>, { chave: string }>("chaveNotificacao"),
   registrarNotificacao: chamar<{ endpoint: string; p256dh: string; auth: string; chave?: string; aparelho?: string }, { ok: boolean }>("registrarNotificacao"),
@@ -365,6 +370,7 @@ export const api = {
       tid: string;
       status?: StatusTorcida;
       taxaServicoPct?: number;
+      demonstracao?: boolean;
       contrato?: { mensalidadeSaas: number; diaVencimento: number; observacoes?: string };
     },
     { ok: boolean }

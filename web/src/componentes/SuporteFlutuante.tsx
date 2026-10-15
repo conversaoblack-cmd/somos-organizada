@@ -21,7 +21,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
-import { diagnosticoDoNavegador } from "@/lib/erros";
+import { diagnosticoDoNavegador, limparUrl } from "@/lib/erros";
 import { hora, paraData, relativo } from "@/lib/formatos";
 import type { Chamado, ComId, Faq, MensagemSuporte } from "@/lib/tipos";
 import { useColecao, useUsuario } from "@/hooks/dados";
@@ -98,21 +98,12 @@ function useAgora(intervalo: number): number {
   return agora;
 }
 
-/** Remove parâmetros sensíveis (ex.: chave de acesso dos ingressos ?k=) da URL anexada. */
-function limparUrl(u: unknown): unknown {
-  if (typeof u !== "string") return u;
-  try {
-    const url = new URL(u);
-    for (const p of ["k", "chave", "token", "oobCode", "apiKey"]) if (url.searchParams.has(p)) url.searchParams.set(p, "***");
-    return url.toString();
-  } catch {
-    return u;
-  }
-}
 function diagnosticoSeguro(): Record<string, unknown> {
   const d = diagnosticoDoNavegador();
-  const erros = Array.isArray(d.erros) ? (d.erros as { url?: string }[]).map((e) => ({ ...e, url: limparUrl(e.url) })) : [];
-  return { ...d, url: limparUrl(d.url), erros };
+  // erros e url já saem limpos de lib/erros.ts; limpa de novo por garantia (diagnóstico vai para a equipe)
+  const limpar = (u: unknown) => (typeof u === "string" ? limparUrl(u) : u);
+  const erros = Array.isArray(d.erros) ? (d.erros as { url?: string }[]).map((e) => ({ ...e, url: limpar(e.url) })) : [];
+  return { ...d, url: limpar(d.url), erros };
 }
 
 /**

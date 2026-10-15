@@ -121,6 +121,31 @@ O `implantar.sh` lista as functions publicadas que não existem mais no código 
   qualquer erro no console. "Não reproduzi" não é resposta para erro relatado em produção: baixe o bundle publicado e o
   `.map` (`https://somosorganizada.com.br/assets/<arquivo>.js.map`) e ache a linha original.
 
+## Segurança (auditoria de out/2026: não desfaça)
+
+- Link com código secreto (convite, redefinir senha, confirmar e-mail) sempre em `URL_APP`, nunca no domínio próprio da
+  torcida (ela controla o DNS e poderia capturar o código). Os demais links de e-mail seguem `urlDaTorcida`.
+- Convite para conta que já existia **sem e-mail confirmado**: senha trocada, sessões derrubadas e o acesso fica
+  `aguardandoConvite` (inativo) até o dono do e-mail aceitar o convite. Limite: 60 convites/dia por torcida, 5/dia por e-mail.
+- Equipe da plataforma: regras exigem a marca `plataforma` **e** `email_verified`; a `rotinaSaas` (e `executarRotinaSaas`)
+  tira a marca de quem saiu de `PLATAFORMA_EMAILS` (`sincronizarEquipe`). `plataforma/publico` (Pix e preços) só pelo
+  servidor (`salvarConfigPlataforma`, com histórico e alerta quando a chave Pix muda).
+- Publicar exige Pagar.me em **produção** (fora do emulador e da torcida com `demonstracao: true`, que só a equipe liga);
+  torcida que já publicou não volta para `sk_test_` nem demonstração. A `rotinaSaas` cobra toda torcida que já publicou
+  (despublicar não foge da mensalidade); só `suspensa` fica de fora.
+- Botão de Pix dos e-mails: `/pix?c=..&s=..` e `/pix/qr.png?c=..&s=..` só abrem código **assinado** pelo servidor
+  (`util/assinaturaPix.ts`, chave em `_servidor/pix`, criada sozinha; não é MASTER_KEY nem QR_HMAC). `montar()` pede `pix: { codigo, assinatura }`.
+- Toda ação da `api` passa por `idsSeguros` (tid, uid, id e `*Id` só com letras, números, `-` e `_`).
+- Suporte: o servidor confere papel e torcida do chamado (`conferido`) e o aviso usa o nome real; a central marca "Não confere".
+  Storage: anexo só na pasta de um chamado que existe e é do dono; vídeo de verificação só numa solicitação pendente dele.
+- Tema: `logoUrl`/`bannerUrl` só do nosso Storage (ou caminho do próprio site). Logs (`logsErro`, diagnóstico) passam por
+  `limparUrl` (sem `k`, `c`, `s`, `oobCode`...). AES-GCM com etiqueta de 16 bytes.
+- Login/"esqueci a senha" por CPF: CPF sem conta também conta tentativa e a resposta é sempre a mesma (nada de revelar cadastro).
+- CI `.github/workflows/seguranca.yml`: gitleaks (exceções conferidas em `.gitleaks.toml`) e osv-scanner. Achou chave real:
+  troque a chave; não acrescente exceção.
+- Testes: `rodar.sh` e `dev-local.sh` sobem os emuladores **sem proxy** (com proxy, o Storage não alcança o Firestore e
+  regra que lê o banco recusa tudo).
+
 ## Regras que já derrubaram produção (não repita)
 
 - Efeito do React sempre com chaves: `useEffect(() => { algo(); }, [...])`. Sem chaves, o valor de `algo()` vai para o React

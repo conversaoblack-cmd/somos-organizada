@@ -79,3 +79,15 @@ test("Pix do e-mail: só código Pix válido vira QR (CRC conferido)", async () 
   assert.ok(png && png.subarray(1, 4).toString() === "PNG");
   assert.equal(await qrDoPix("lixo"), null);
 });
+
+test("link de Pix assinado: só o código assinado com a chave do servidor confere", async () => {
+  const { assinaturaComChave, confereComChave } = await import("../src/util/assinaturaPix");
+  const k = Buffer.alloc(32, 7);
+  const s = assinaturaComChave(k, "000201abc");
+  assert.equal(s.length, 22);
+  assert.ok(confereComChave(k, "000201abc", s));
+  assert.ok(!confereComChave(k, "000201abd", s), "outro código");
+  assert.ok(!confereComChave(Buffer.alloc(32, 8), "000201abc", s), "outra chave");
+  assert.ok(!confereComChave(k, "000201abc", ""));
+  assert.ok(!confereComChave(k, "000201abc", s.slice(0, 21) + (s.endsWith("A") ? "B" : "A")));
+});

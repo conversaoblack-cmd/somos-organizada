@@ -5,7 +5,8 @@ service firebase.storage {
     function logado() { return request.auth != null; }
     // Sessão anônima (compra sem cadastro) não envia arquivo: só contas com e-mail
     function contaComEmail() { return logado() && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
-    function plataforma() { return logado() && request.auth.token.get('plataforma', false) == true; }
+    // equipe: marca na conta + e-mail confirmado (quem sai da lista PLATAFORMA_EMAILS perde a marca na rotina diária)
+    function plataforma() { return logado() && request.auth.token.get('plataforma', false) == true && request.auth.token.get('email_verified', false) == true; }
     function membroAtivo(tid) {
       return logado() && firestore.exists(/databases/(default)/documents/torcidas/$(tid)/membros/$(request.auth.uid))
         && firestore.get(/databases/(default)/documents/torcidas/$(tid)/membros/$(request.auth.uid)).data.ativo == true;
@@ -40,9 +41,18 @@ service firebase.storage {
     }
 
     // Vídeo de verificação do cadastro da torcida: só quem enviou e a equipe veem; ninguém troca nem apaga (é a prova)
+    // Só na pasta de uma solicitação do próprio usuário, ainda pendente e sem vídeo aceito: antes qualquer conta
+    // enviava vídeos de 500 MB sem limite (custo de armazenamento).
+    function solicitacaoAberta(uid, sol) {
+      let s = firestore.get(/databases/(default)/documents/solicitacoes/$(sol)).data;
+      return s.uid == uid && s.status == 'pendente' && s.get('verificacao', {}).get('status', '') != 'enviado';
+    }
     match /verificacoes/{uid}/{arquivo=**} {
       allow read: if (logado() && request.auth.uid == uid) || plataforma();
-      allow create: if contaComEmail() && request.auth.uid == uid && resource == null
+    }
+    match /verificacoes/{uid}/{sol}/{arquivo} {
+      allow create: if contaComEmail() && request.auth.uid == uid && request.auth.token.get('email_verified', false) == true
+        && resource == null && solicitacaoAberta(uid, sol)
         && request.resource.size < 500 * 1024 * 1024 && request.resource.contentType.matches('video/.*');
     }
 
@@ -53,9 +63,15 @@ service firebase.storage {
         || (request.resource.contentType.matches('audio/.*') && request.resource.size < 15 * 1024 * 1024)
         || (request.resource.contentType == 'application/pdf' && request.resource.size < 10 * 1024 * 1024);
     }
+    // O chamado tem que existir e ser do dono da pasta (antes a pasta aceitava arquivos sem chamado nenhum)
+    function chamadoDe(uid, chamado) {
+      return firestore.exists(/databases/(default)/documents/suporte/$(chamado))
+        && firestore.get(/databases/(default)/documents/suporte/$(chamado)).data.uid == uid;
+    }
     match /suporte/{uid}/{chamado}/{arquivo} {
       allow read: if (logado() && request.auth.uid == uid) || plataforma();
-      allow create: if ((contaComEmail() && request.auth.uid == uid) || plataforma()) && resource == null && anexoSuporte();
+      allow create: if ((contaComEmail() && request.auth.uid == uid) || plataforma()) && resource == null && anexoSuporte()
+        && chamadoDe(uid, chamado);
     }
   }
 }

@@ -16,6 +16,14 @@ export const ROTULO_STATUS_CHAMADO: Record<Chamado["status"], string> = { aberto
 export const TOM_STATUS_CHAMADO: Record<Chamado["status"], Tom> = { aberto: "alerta", respondido: "info", resolvido: "sucesso" };
 const ROTULO_PAPEL: Record<string, string> = { diretoria: "Diretoria", subsede: "Subsede", portaria: "Portaria", socio: "Sócio", torcedor: "Torcedor" };
 
+/** Torcida e papel que o servidor conferiu; antes disso (ou se não bater), o que a pessoa informou vem marcado. */
+function quemEh(c: Chamado): { torcida: string | null; papel: string; naoConfere: boolean } {
+  const papelDito = c.papel ?? "torcedor";
+  if (!c.conferido) return { torcida: c.torcidaNome ?? null, papel: ROTULO_PAPEL[papelDito] ?? papelDito, naoConfere: false };
+  const naoConfere = c.conferido.papel !== papelDito || (c.torcidaId ?? null) !== c.conferido.torcidaId;
+  return { torcida: c.conferido.torcidaNome, papel: ROTULO_PAPEL[c.conferido.papel] ?? c.conferido.papel, naoConfere };
+}
+
 const RESPOSTAS_RAPIDAS: { titulo: string; texto: string }[] = [
   { titulo: "Saudação", texto: "Olá, {nome}! Aqui é da equipe Somos Organizada. Já estamos olhando o seu caso." },
   { titulo: "Pedir print", texto: "Pode nos mandar um print da tela onde aparece o problema? Assim conseguimos reproduzir mais rápido." },
@@ -124,7 +132,8 @@ export default function CentralSuporte() {
                         <span className="block text-sm truncate">{c.assunto}</span>
                         <span className="flex items-center gap-1.5 mt-1">
                           <Selo tom={TOM_STATUS_CHAMADO[c.status]}>{ROTULO_STATUS_CHAMADO[c.status]}</Selo>
-                          {c.torcidaNome && <span className="text-xs text-texto-3 truncate">{c.torcidaNome}</span>}
+                          {quemEh(c).torcida && <span className="text-xs text-texto-3 truncate">{quemEh(c).torcida}</span>}
+                          {quemEh(c).naoConfere && <Selo tom="perigo">Não confere</Selo>}
                           {!!c.naoLidasPlataforma && (
                             <span className="ml-auto text-[11px] font-bold rounded-full bg-secundaria text-sobre-secundaria px-1.5 min-w-5 text-center">
                               {c.naoLidasPlataforma}
@@ -259,7 +268,8 @@ function Conversa({ chamado, voltar }: { chamado: ComId<Chamado>; voltar: () => 
           <div className="min-w-0 flex-1">
             <h2 className="font-bold leading-snug break-words">{chamado.assunto}</h2>
             <p className="text-xs text-texto-3 mt-0.5 truncate">
-              {chamado.nome} · {chamado.email} · {ROTULO_PAPEL[chamado.papel ?? ""] ?? chamado.papel ?? "—"}
+              {chamado.nome} · {chamado.email} · {quemEh(chamado).papel}
+              {quemEh(chamado).naoConfere && ` (disse ser ${ROTULO_PAPEL[chamado.papel ?? ""] ?? chamado.papel ?? "—"}${chamado.torcidaNome ? ` da ${chamado.torcidaNome}` : ""}: não confere)`}
               {chamado.torcidaNome && ` · ${chamado.torcidaNome}`}
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -395,7 +405,7 @@ function PainelDiagnostico({ chamado }: { chamado: ComId<Chamado> }) {
       )}
       <dl>
         {linha("Torcida", chamado.torcidaNome ? `${chamado.torcidaNome} (${chamado.torcidaId})` : chamado.torcidaId)}
-        {linha("Papel", ROTULO_PAPEL[chamado.papel ?? ""] ?? chamado.papel)}
+        {linha("Papel", quemEh(chamado).papel)}
         {linha("URL", d.url)}
         {linha("Navegador", d.navegador)}
         {linha("Tela", d.tela)}

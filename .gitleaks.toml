@@ -1,0 +1,19 @@
+# Varredura de segredos (gitleaks): regras padrão + falsos positivos já conferidos.
+# Antes de acrescentar uma exceção aqui, confirme que NÃO é chave de verdade. Chave real que vazou: troque a chave.
+title = "Somos Organizada"
+
+[extend]
+useDefault = true
+
+# Chaves falsas da Pagar.me simulada nos testes (sk_test_/pk_test_ inventadas, só valem nos emuladores)
+[[allowlists]]
+description = "chaves inventadas dos testes"
+condition = "AND"
+paths = ['''^testes-e2e/''']
+regexes = ['''(sk|pk)_(test|demo|live)_[A-Za-z0-9]+''']
+
+# Histórico: chave PÚBLICA VAPID antiga (web/src/lib/notificacoes.ts) e chaves web do Firebase (públicas por
+# natureza, de outro projeto) em builds antigos na pasta sites/. Nenhuma dá acesso a nada.
+[[allowlists]]
+description = "chaves públicas no histórico"
+commits = ["29f79a5b84eb4a8e597f8389c48cc914d4bbf0a3", "ec0401d63b02bee9582c784102599a37bd8858b4"]

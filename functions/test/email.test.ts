@@ -29,8 +29,9 @@ test("nenhum endereço em texto: o link é só o botão", () => {
 
 test("Pix: QR Code em imagem + botão de copiar; o código não aparece em texto no HTML", () => {
   const codigo = pixCopiaECola({ chave: "52000426000149", valorCentavos: 19700, nome: "SOMOS ORGANIZADA", cidade: "SALVADOR", txid: "SOteste" });
-  const m = montar(MARCA_PLATAFORMA, "Fatura", para, { selo: "Mensalidade", titulo: "Fatura", paragrafos: ["Oi"], pix: { codigo }, botao: { texto: "Ver", url: "https://x.test" }, conta: true });
-  assert.match(m.html, /\/pix\/qr\.png\?c=/);
+  const m = montar(MARCA_PLATAFORMA, "Fatura", para, { selo: "Mensalidade", titulo: "Fatura", paragrafos: ["Oi"], pix: { codigo, assinatura: "A".repeat(22) }, botao: { texto: "Ver", url: "https://x.test" }, conta: true });
+  assert.match(m.html, /\/pix\/qr\.png\?c=[^"]+&amp;s=A{22}/);
+  assert.match(m.html, /\/pix\?c=[^"]+&amp;s=A{22}/);
   assert.match(m.html, />Copiar código Pix</);
   assert.ok(!m.html.includes(`>${codigo}<`), "código Pix não fica como texto");
   assert.ok(m.texto.includes(codigo), "a versão só texto (sem HTML) leva o código");

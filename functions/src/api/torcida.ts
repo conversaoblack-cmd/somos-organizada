@@ -8,8 +8,9 @@ import { Pagarme, PagarmeErro } from "../pagarme/cliente";
 import { encerrarPedidoNaoPago } from "../dominio/processamento";
 import type { PrivadoPagarme } from "../pagarme/credenciais";
 import type { Evento, Sede } from "../dominio/tipos";
-import { contarEventosAVenda, limitesDoPlano, planoDaTorcida, SAAS_PADRAO } from "./saas";
+import { contarEventosAVenda, exigeProducao, limitesDoPlano, planoDaTorcida, SAAS_PADRAO } from "./saas";
 import { enviarConvite } from "./convite";
+import { DIA_MS, dentroDoLimite } from "../util/limites";
 
 export function urlWebhook(tid: string, token: string): string {
   return `${URL_APP.value().replace(/\/$/, "")}/api/pagarme/webhook/${tid}/${token}`;
@@ -52,10 +53,16 @@ export const salvarCredenciaisPagarme = onCall({ secrets: [MASTER_KEY] }, async 
   }
   // Simulador só antes de publicar: uma torcida no ar não pode trocar a Pagar.me real pelo modo demonstração
   // (ingressos e carteirinhas "pagos" sem dinheiro de verdade). Quem já estava em demonstração continua.
-  if (demo) {
-    const t = (await refs.torcida(tid).get()).data() as { publicada?: boolean; pagamentos?: { ambiente?: string } } | undefined;
-    if (t?.publicada === true && t.pagamentos?.ambiente !== "demo") {
-      throw new HttpsError("failed-precondition", "O modo demonstração só pode ser ativado antes de publicar o site. Use as chaves da Pagar.me.");
+  // Torcida que já foi publicada (mesmo despublicada agora) não volta para teste nem demonstração: despublicar,
+  // trocar para demo, "pagar" ingressos de mentira e voltar deixava ingressos válidos sem dinheiro.
+  if (demo || sk.startsWith("sk_test_")) {
+    const t = (await refs.torcida(tid).get()).data() as { publicada?: boolean; publicadaEm?: unknown; demonstracao?: boolean; pagamentos?: { ambiente?: string } } | undefined;
+    const jaPublicou = (t?.publicada === true || !!t?.publicadaEm) && t?.demonstracao !== true;
+    if (demo && jaPublicou && t?.pagamentos?.ambiente !== "demo") {
+      throw new HttpsError("failed-precondition", "O modo demonstração só pode ser ativado antes de publicar o site. Use as chaves de produção da Pagar.me.");
+    }
+    if (!demo && jaPublicou && exigeProducao(t)) {
+      throw new HttpsError("failed-precondition", "Depois que o site foi publicado, só as chaves de produção da Pagar.me podem ser usadas.");
     }
   }
   const pix = d.pix !== false;
@@ -119,31 +126,46 @@ export async function concederAcesso(args: {
   const { tid, email, nome, papel, sedeId, convidadoPor } = args;
   let usuario;
   let contaNova = false;
+  let semDonoComprovado = false;
   try {
     usuario = await auth.getUserByEmail(email);
-  } catch {
+    // Conta que existe mas nunca confirmou o e-mail: qualquer um pode ter criado antes com o e-mail do convidado
+    // (e saberia a senha). Não confia: senha trocada por uma aleatória, sessões derrubadas, e o convite manda
+    // criar a senha pelo link que só o dono do e-mail recebe.
+    // (quem já é membro ativo desta torcida não é derrubado: o "Reenviar convite" passa por aqui)
+    const jaMembroAtivo = (await refs.membro(tid, usuario.uid).get()).get("ativo") === true;
+    if (!usuario.emailVerified && !jaMembroAtivo) {
+      await auth.updateUser(usuario.uid, { password: tokenAleatorio(32) });
+      await auth.revokeRefreshTokens(usuario.uid);
+      semDonoComprovado = true;
+    }
+  } catch (e) {
+    if ((e as { code?: string }).code !== "auth/user-not-found") throw e;
     usuario = await auth.createUser({ email, displayName: nome, password: tokenAleatorio(18) });
     contaNova = true;
   }
-  const membro: Membro & Record<string, unknown> = {
+  const membro: Omit<Membro, "aguardandoConvite"> & Record<string, unknown> = {
     uid: usuario.uid,
     email,
     nome,
     papel,
     sedeId: sedeId ?? undefined,
-    ativo: true,
+    // sem dono comprovado: o acesso só vale quando o dono do e-mail aceitar o convite (quem criou a conta antes
+    // ainda teria até 1 h de sessão aberta)
+    ativo: !semDonoComprovado,
+    aguardandoConvite: semDonoComprovado ? true : FieldValue.delete(),
     convidadoPor,
     criadoEm: FieldValue.serverTimestamp(),
   };
   await refs.membro(tid, usuario.uid).set(membro, { merge: true });
-  await db.doc(`usuarios/${usuario.uid}/acessos/${tid}`).set({ papel, sedeId: sedeId ?? null, ativo: true });
+  await db.doc(`usuarios/${usuario.uid}/acessos/${tid}`).set({ papel, sedeId: sedeId ?? null, ativo: !semDonoComprovado });
   // Link de definir senha só para conta recém-criada e só para quem pediu explicitamente (equipe da plataforma).
   // Nunca para conta que já existe: quem convida poderia trocar a senha de outra pessoa e entrar no lugar dela.
   // No convite da diretoria o link vai só por e-mail, direto para o convidado (ninguém mais vê a senha).
   const linkDefinirSenha =
     contaNova && args.devolverLink ? await auth.generatePasswordResetLink(email, { url: `${URL_APP.value()}/entrar` }) : null;
   // Convidado antes e nunca entrou (não criou a senha): o "Reenviar" precisa mandar de novo o link de criar senha
-  const nuncaEntrou = contaNova || !usuario.metadata.lastSignInTime;
+  const nuncaEntrou = contaNova || semDonoComprovado || !usuario.metadata.lastSignInTime;
   return { uid: usuario.uid, contaNova, nuncaEntrou, linkDefinirSenha };
 }
 
@@ -158,6 +180,11 @@ export const convidarMembro = onCall(async (req) => {
   const sedeId = texto(d.sedeId, "sede", { max: 40, obrigatorio: false }) || undefined;
   if (papel === "subsede" && !sedeId) throw new HttpsError("invalid-argument", "Escolha a subsede deste usuário.");
   if (sedeId && !(await refs.sede(tid, sedeId).get()).exists) throw new HttpsError("invalid-argument", "Sede inválida.");
+  // Convite manda e-mail (e, em conta sem e-mail confirmado, troca a senha): sem limite viraria envio em massa ou
+  // derrubaria a mesma pessoa várias vezes
+  if (!(await dentroDoLimite(`convite-torcida:${tid}`, 60, DIA_MS)) || !(await dentroDoLimite(`convite-email:${email}`, 5, DIA_MS))) {
+    throw new HttpsError("resource-exhausted", "Muitos convites hoje. Tente de novo amanhã ou fale com a equipe pelo botão de ajuda.");
+  }
   const r = await concederAcesso({ tid, email, nome, papel, sedeId, convidadoPor: quem.uid });
   // E-mail com a cara da torcida: "você foi convidado" com botão para criar a senha (nunca o "redefinir senha" do Google)
   const emailEnviado = await enviarConvite({ tid, uid: r.uid, email, nome, papel, sedeId, convidadoPor: quem.uid, precisaSenha: r.nuncaEntrou });
@@ -180,7 +207,10 @@ export const atualizarMembro = onCall(async (req) => {
     if (novaSede && !(await refs.sede(tid, novaSede).get()).exists) throw new HttpsError("invalid-argument", "Sede inválida.");
     upd.sedeId = novaSede ?? FieldValue.delete();
   }
-  if (d.ativo !== undefined) upd.ativo = d.ativo === true;
+  if (d.ativo === false) {
+    upd.ativo = false;
+    upd.aguardandoConvite = FieldValue.delete();
+  } else if (d.ativo === true && !atual.aguardandoConvite) upd.ativo = true; // aguardando: só o aceite do convite libera
   const ficaraDiretoriaAtiva = (upd.papel ?? atual.papel) === "diretoria" && (upd.ativo ?? atual.ativo);
   if (atual.papel === "diretoria" && atual.ativo && !ficaraDiretoriaAtiva) {
     const diretores = await db.collection(`torcidas/${tid}/membros`).where("papel", "==", "diretoria").where("ativo", "==", true).get();

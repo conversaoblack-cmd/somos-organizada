@@ -41,7 +41,7 @@ export default function Usuarios() {
   const ordenados = useMemo(
     () =>
       [...membros.dados].sort(
-        (a, b) => Number(b.ativo) - Number(a.ativo) || ["diretoria", "subsede", "portaria"].indexOf(a.papel) - ["diretoria", "subsede", "portaria"].indexOf(b.papel) || (a.nome ?? "").localeCompare(b.nome ?? ""),
+        (a, b) => Number(liberado(b)) - Number(liberado(a)) || ["diretoria", "subsede", "portaria"].indexOf(a.papel) - ["diretoria", "subsede", "portaria"].indexOf(b.papel) || (a.nome ?? "").localeCompare(b.nome ?? ""),
       ),
     [membros.dados],
   );
@@ -87,7 +87,7 @@ export default function Usuarios() {
         <Cartao className="overflow-hidden" data-tour="lista-usuarios">
           <ul className="divide-y divide-linha">
             {ordenados.map((m) => (
-              <li key={m.id} className={cx("flex items-center gap-3 px-4 py-3.5", !m.ativo && "opacity-60")}>
+              <li key={m.id} className={cx("flex items-center gap-3 px-4 py-3.5", !liberado(m) && "opacity-60")}>
                 <Avatar nome={m.nome || m.email} />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">
@@ -101,15 +101,17 @@ export default function Usuarios() {
                   {/* no celular o papel e o "Sem acesso" ficam embaixo do e-mail (sem espremer o nome) */}
                   <div className="sm:hidden mt-1.5 flex flex-wrap gap-1.5">
                     <Selo tom={m.papel === "diretoria" ? "primaria" : m.papel === "subsede" ? "info" : "neutro"}>{ROTULO_PAPEL[m.papel]}</Selo>
-                    {!m.ativo && <Selo tom="perigo">Sem acesso</Selo>}
+                    {!liberado(m) && <Selo tom="perigo">Sem acesso</Selo>}
+                    {m.aguardandoConvite && <Selo tom="alerta">Aguardando aceite</Selo>}
                   </div>
                 </div>
                 <div className="hidden sm:flex gap-1.5">
                   <Selo tom={m.papel === "diretoria" ? "primaria" : m.papel === "subsede" ? "info" : "neutro"}>{ROTULO_PAPEL[m.papel]}</Selo>
-                  {!m.ativo && <Selo tom="perigo">Sem acesso</Selo>}
+                  {!liberado(m) && <Selo tom="perigo">Sem acesso</Selo>}
+                  {m.aguardandoConvite && <Selo tom="alerta">Aguardando aceite</Selo>}
                 </div>
                 {/* no celular só o lápis (o nome não fica espremido): "Reenviar convite" fica dentro da edição */}
-                {m.ativo && m.id !== uid && (
+                {liberado(m) && m.id !== uid && (
                   <BotaoIcone
                     icone={reenviando === m.id ? "relogio" : "enviar"}
                     rotulo={`Reenviar convite para ${m.nome || m.email}`}
@@ -131,7 +133,7 @@ export default function Usuarios() {
           m={editando}
           fechar={() => setEditando(null)}
           reenviar={
-            editando.ativo && editando.id !== uid
+            liberado(editando) && editando.id !== uid
               ? () => {
                   const m = editando;
                   setEditando(null);
@@ -148,12 +150,15 @@ export default function Usuarios() {
   );
 }
 
+/** Acesso liberado ou só esperando o convidado aceitar o convite (conta que já existia sem e-mail confirmado). */
+const liberado = (m: Membro) => m.ativo || m.aguardandoConvite === true;
+
 function ModalEditar({ m, fechar, reenviar, reenviando }: { m: ComId<Membro>; fechar: () => void; reenviar?: () => void; reenviando?: boolean }) {
   const { tid, uid, sedes } = usePainel();
   const avisar = useToast();
   const [papel, setPapel] = useState<Papel>(m.papel);
   const [sedeId, setSedeId] = useState(m.sedeId ?? "");
-  const [ativo, setAtivo] = useState(m.ativo);
+  const [ativo, setAtivo] = useState(liberado(m));
   const [erro, setErro] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -163,7 +168,7 @@ function ModalEditar({ m, fechar, reenviar, reenviando }: { m: ComId<Membro>; fe
   function revisar() {
     setErro(null);
     if (papel === "subsede" && !sedeId) return setErro("Escolha a subsede.");
-    const sensivel = (!ativo && m.ativo) || (m.papel === "diretoria" && papel !== "diretoria") || (papel === "diretoria" && m.papel !== "diretoria");
+    const sensivel = (!ativo && liberado(m)) || (m.papel === "diretoria" && papel !== "diretoria") || (papel === "diretoria" && m.papel !== "diretoria");
     if (sensivel) return setConfirmar(true);
     if (salvando) return;
     setSalvando(true);
@@ -180,7 +185,7 @@ function ModalEditar({ m, fechar, reenviar, reenviando }: { m: ComId<Membro>; fe
         uid: m.id,
         ...(papel !== m.papel ? { papel } : {}),
         ...(novaSede !== (m.sedeId ?? null) ? { sedeId: novaSede } : {}),
-        ...(ativo !== m.ativo ? { ativo } : {}),
+        ...(ativo !== liberado(m) ? { ativo } : {}),
       }),
     );
     avisar("Usuário atualizado.", "sucesso");
@@ -235,7 +240,7 @@ function ModalEditar({ m, fechar, reenviar, reenviando }: { m: ComId<Membro>; fe
         {erro && <Aviso tom="perigo">{erro}</Aviso>}
       </div>
       <Confirmar aberto={confirmar} fechar={() => setConfirmar(false)} titulo="Confirmar alteração de acesso?" rotulo="Confirmar" perigo={!ativo} acao={salvar}>
-        {!ativo && m.ativo
+        {!ativo && liberado(m)
           ? `${m.nome} não vai mais conseguir entrar no painel.`
           : papel === "diretoria"
             ? `${m.nome} passará a ter acesso total, incluindo finanças e pagamentos.`

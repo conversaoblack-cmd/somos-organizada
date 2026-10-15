@@ -27,7 +27,7 @@ import { texto } from "../util/validacao";
 import { pixCopiaECola } from "../util/pix";
 import { avancarCiclo } from "../dominio/precos";
 import { identificacaoPublica } from "../dominio/identificacao";
-import { exigirMembro, exigirPlataforma } from "../dominio/permissoes";
+import { exigirMembro, exigirPlataforma, sincronizarEquipe } from "../dominio/permissoes";
 import type { Torcida } from "../dominio/tipos";
 
 export type PlanoSaas = "pro" | "plus" | "max";
@@ -269,6 +269,11 @@ function proximoMes(venc: Date, dia: number): Date {
 }
 
 /** Publica o site: na 1ª vez cria a assinatura (plano escolhido) e a 1ª fatura (vence em 7 dias). */
+/** Site no ar só com pagamento real (fora a torcida de exemplo da Somos e os emuladores de teste). */
+export function exigeProducao(t: { demonstracao?: boolean } | undefined): boolean {
+  return process.env.FUNCTIONS_EMULATOR !== "true" && t?.demonstracao !== true;
+}
+
 export const publicarSite = onCall(async (req) => {
   const d = (req.data ?? {}) as Record<string, unknown>;
   const tid = texto(d.tid, "torcida", { max: 40 });
@@ -280,6 +285,12 @@ export const publicarSite = onCall(async (req) => {
   const m = torcida.modulos ?? { eventos: true, socios: true };
   if (!m.eventos && !m.socios) throw new HttpsError("failed-precondition", "Ative pelo menos um módulo: Eventos ou Sócios.");
   if (!torcida.tema?.logoUrl) throw new HttpsError("failed-precondition", "Envie o escudo da torcida em Personalizar página antes de publicar.");
+  // No ar só com a Pagar.me real: em "teste" os cartões de teste públicos da Pagar.me compram ingresso e sócio sem
+  // dinheiro, e em "demonstração" qualquer um simula o pagamento. Exceções: a torcida de exemplo da Somos (marca
+  // "demonstracao", só a equipe liga) e os emuladores de teste.
+  if (exigeProducao(torcida) && torcida.pagamentos?.ambiente !== "producao") {
+    throw new HttpsError("failed-precondition", "Para publicar, conecte as chaves de produção da Pagar.me (as de teste e a demonstração só servem para testar antes).");
+  }
 
   const assRef = refsSaas.assinatura(tid);
   if (!(await assRef.get()).exists) {
@@ -382,10 +393,13 @@ export const confirmarFaturaSaas = onCall(async (req) => {
 /** Gera faturas e aplica bloqueio por atraso em todas as torcidas publicadas. */
 export async function processarSaas(agora = Date.now()) {
   const cfg = await configSaas();
-  const torcidas = await db.collection("torcidas").where("publicada", "==", true).get();
+  // Toda torcida que já publicou (tem assinatura), no ar ou não: antes só as publicadas, e despublicar pouco antes da
+  // rotina fazia a fatura nunca ser gerada (e o bloqueio nunca chegar). Suspensa pela equipe não é cobrada.
+  const torcidas = await db.collection("torcidas").get();
   const resultado = { faturasGeradas: 0, bloqueadas: 0 };
   for (const t of torcidas.docs) {
     const tid = t.id;
+    if (t.get("status") === "suspensa") continue;
     try {
       const assRef = refsSaas.assinatura(tid);
       const ass = (await assRef.get()).data() as AssinaturaSaas | undefined;
@@ -435,12 +449,56 @@ export async function processarSaas(agora = Date.now()) {
 export const rotinaSaas = onSchedule({ schedule: "20 7 * * *", timeZone: FUSO, timeoutSeconds: 300, secrets: [EMAIL_API_KEY] }, async () => {
   const r = await processarSaas();
   logger.info("Rotina SaaS", r);
+  try {
+    const eq = await sincronizarEquipe();
+    if (eq.removidos) await alertarEquipe("equipe-removidos", { titulo: "Acesso da equipe retirado", corpo: `${eq.removidos} conta(s) fora da lista da equipe perderam o acesso.`, url: "/plataforma" });
+  } catch (e) {
+    logger.error("Sincronizar equipe falhou", { erro: String(e) });
+  }
   // Domínios próprios ainda pendentes (DNS/certificado): confere e avisa a equipe antes de o Firebase apagar
   try {
     logger.info("Rotina de domínios", await revisarDominios());
   } catch (e) {
     logger.error("Rotina de domínios falhou", { erro: String(e) });
   }
+});
+
+/**
+ * Equipe: chave Pix e preços dos planos (plataforma/publico). Antes o navegador gravava direto, e as regras só olhavam
+ * a marca "plataforma" da conta: quem saiu da equipe ainda conseguia trocar a chave Pix das faturas de todas as
+ * torcidas. Agora só o servidor grava, com a conferência completa da equipe, e guarda quem trocou.
+ */
+export const salvarConfigPlataforma = onCall(async (req) => {
+  const uid = exigirPlataforma(req);
+  const d = (req.data ?? {}) as Record<string, unknown>;
+  const p = (d.pix ?? {}) as Record<string, unknown>;
+  const pix = {
+    chave: texto(p.chave, "chave Pix", { max: 77, obrigatorio: false }).trim(),
+    nome: texto(p.nome, "nome do recebedor", { max: 25, obrigatorio: false }).trim().toUpperCase(),
+    cidade: texto(p.cidade, "cidade", { max: 15, obrigatorio: false }).trim().toUpperCase(),
+  };
+  const valores = (d.planos ?? {}) as Record<string, unknown>;
+  const planos: Record<string, unknown> = { pequena: FieldValue.delete(), grande: FieldValue.delete(), gigante: FieldValue.delete() };
+  for (const k of Object.keys(SAAS_PADRAO.planos) as (keyof typeof SAAS_PADRAO.planos)[]) {
+    const v = Math.round(Number(valores[k]));
+    if (!Number.isFinite(v) || v < 100 || v > 10_000_000) throw new HttpsError("invalid-argument", `Valor inválido no plano ${SAAS_PADRAO.planos[k].nome}.`);
+    planos[k] = { nome: SAAS_PADRAO.planos[k].nome, valor: v };
+  }
+  const ref = db.doc("plataforma/publico");
+  const antes = (await ref.get()).get("pix.chave") as string | undefined;
+  await ref.set({ pix, planos, limiteGigante: FieldValue.delete(), atualizadoEm: FieldValue.serverTimestamp(), atualizadoPor: uid }, { merge: true });
+  if ((antes ?? "") !== pix.chave) {
+    await ref.collection("historico").add({ tipo: "pix", de: antes ?? "", para: pix.chave, por: uid, em: FieldValue.serverTimestamp() });
+    await alertarEquipe("config-pix", { titulo: "Chave Pix da plataforma trocada", corpo: `Nova chave: ${pix.chave ? `…${pix.chave.slice(-4)}` : "(vazia)"}. Se não foi você, troque já.`, url: "/plataforma/configuracoes" }, 0);
+  }
+  // Faturas já abertas passam a usar a chave salva
+  let atualizadas = 0;
+  if (pix.chave) {
+    const cfg = await configSaas();
+    const torcidas = await db.collection("torcidas").select().get();
+    for (const t of torcidas.docs) atualizadas += await atualizarPixAbertas(t.id, cfg).catch(() => 0);
+  }
+  return { ok: true, atualizadas };
 });
 
 /** Equipe: depois de salvar a chave Pix, refaz o Pix das faturas em aberto de todas as torcidas. */
@@ -466,5 +524,5 @@ export const executarRotinaSaas = onCall(async (req) => {
   exigirPlataforma(req);
   const d = (req.data ?? {}) as Record<string, unknown>;
   const agora = typeof d.agora === "number" ? d.agora : Date.now();
-  return processarSaas(agora);
+  return { ...(await processarSaas(agora)), equipeRemovidos: (await sincronizarEquipe()).removidos };
 });

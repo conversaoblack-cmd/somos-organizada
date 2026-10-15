@@ -13,6 +13,21 @@ interface ErroCapturado {
   em: number;
 }
 
+/** Parâmetros com segredo (chave dos ingressos, código de convite e de senha, Pix assinado) nunca vão para log. */
+const SENSIVEIS = ["k", "c", "s", "chave", "token", "oobCode", "apiKey", "codigo"];
+
+/** Endereço sem os segredos (vai para logsErro e para o diagnóstico do suporte, que a equipe lê). */
+export function limparUrl(u: string): string {
+  try {
+    const url = new URL(u);
+    for (const p of SENSIVEIS) if (url.searchParams.has(p)) url.searchParams.set(p, "***");
+    if (url.hash.length > 1) url.hash = "#***";
+    return url.toString();
+  } catch {
+    return u.replace(/[?#].*$/, "");
+  }
+}
+
 const recentes: ErroCapturado[] = [];
 let enviados = 0;
 let torcidaAtual: string | null = null;
@@ -32,7 +47,7 @@ export function registrarErro(erro: unknown, contexto?: string) {
   const item: ErroCapturado = {
     mensagem: e.message.slice(0, 2000),
     stack: e.stack?.slice(0, 6000),
-    url: location.href.slice(0, 500),
+    url: limparUrl(location.href).slice(0, 500),
     em: Date.now(),
   };
   recentes.push(item);
@@ -63,7 +78,7 @@ export function instalarCapturaDeErros() {
 /** Resumo técnico anexado ao chamado de suporte. */
 export function diagnosticoDoNavegador(): Record<string, unknown> {
   return {
-    url: location.href,
+    url: limparUrl(location.href),
     navegador: navigator.userAgent,
     tela: `${window.innerWidth}x${window.innerHeight}`,
     idioma: navigator.language,

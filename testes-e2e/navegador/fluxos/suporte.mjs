@@ -4,9 +4,11 @@
 // - Equipe abre o chamado na plataforma: vê os anexos; a diretoria passa a ver "Vista pela equipe" e
 //   "A equipe está lendo esta conversa agora". A equipe responde com uma foto e a diretoria recebe.
 // - Cada mensagem gera o seu aviso para a equipe (plataforma/notificacoes/ultimos/suporte-{chamado}-{mensagem}).
-// - O botão "Copiar código Pix" dos e-mails abre /pix: QR, valor e cópia com um toque; código quebrado é recusado.
+// - O botão "Copiar código Pix" dos e-mails abre /pix: QR, valor e cópia com um toque; código quebrado e código sem a
+//   assinatura do servidor (link montado por terceiro com outro Pix) são recusados.
 // Usa a torcida de demonstração "brasil" (semear.mjs).
-import { BASE, novoAparelho, fecharAparelho, novaPagina, conferir, entrar, aguardar, fsConsultar, fsLer } from "../lib.mjs";
+import { createHmac, randomBytes } from "node:crypto";
+import { BASE, novoAparelho, fecharAparelho, novaPagina, conferir, entrar, aguardar, fsConsultar, fsLer, fsAtualizar } from "../lib.mjs";
 
 // PNG 1×1 de verdade (o site reduz a foto antes de enviar: precisa ser imagem que o navegador lê)
 const PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
@@ -93,16 +95,34 @@ export async function suporte(estado) {
 
   // Botão "Copiar código Pix" dos e-mails: abre /pix com QR, valor e cópia com um toque
   await dir.ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: BASE });
-  await p.goto(`${BASE}/pix?c=${encodeURIComponent(pixDeTeste(19700))}`);
+  const codigoPix = pixDeTeste(19700);
+  const assinatura = await assinarComoServidor(codigoPix);
+  await p.goto(`${BASE}/pix?c=${encodeURIComponent(codigoPix)}&s=${assinatura}`);
   await p.getByText("R$ 197,00").waitFor();
   await p.getByRole("button", { name: "Copiar código Pix" }).click();
   await p.getByRole("button", { name: "Código copiado" }).waitFor({ timeout: 5_000 });
   await conferir(dir, p, "página /pix");
   await p.goto(`${BASE}/pix?c=000201quebrado`);
   await p.getByText("Código Pix incompleto").waitFor();
+  // golpe: Pix válido de outra pessoa num link com o nosso endereço, sem assinatura ou com assinatura errada
+  await p.goto(`${BASE}/pix?c=${encodeURIComponent(codigoPix)}`);
+  await p.getByText("Link de Pix não conferido").waitFor();
+  await p.goto(`${BASE}/pix?c=${encodeURIComponent(pixDeTeste(19800))}&s=${assinatura}`);
+  await p.getByText("Link de Pix não conferido").waitFor();
+  if ((await p.getByRole("button", { name: "Copiar código Pix" }).count()) !== 0) throw new Error("/pix mostrou o botão de copiar para código não assinado");
 
   await fecharAparelho(eq);
   await fecharAparelho(dir);
+}
+
+/** Assina como functions/src/util/assinaturaPix.ts (a chave fica em _servidor/pix; cria se o servidor ainda não criou). */
+async function assinarComoServidor(codigo) {
+  let doc = await fsLer("_servidor/pix");
+  if (!doc) {
+    await fsAtualizar("_servidor/pix", { chave: randomBytes(32).toString("base64") });
+    doc = await fsLer("_servidor/pix");
+  }
+  return createHmac("sha256", Buffer.from(doc.chave, "base64")).update(`pix:${codigo}`).digest("base64url").slice(0, 22);
 }
 
 /** Pix copia e cola válido (EMV + CRC16), como o servidor gera (functions/src/util/pix.ts). */

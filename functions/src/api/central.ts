@@ -26,6 +26,7 @@ import * as senha from "./senha";
 import * as verificacaoVideo from "./verificacaoVideo";
 import * as suporte from "./suporte";
 import * as dominios from "./dominios";
+import * as previa from "./previa";
 
 type Acao = { run: (req: CallableRequest<unknown>) => unknown };
 
@@ -68,6 +69,7 @@ export const ACOES: Record<string, Acao> = {
   testarNotificacao: alertas.testarNotificacao,
   diagnosticoNotificacao: alertas.diagnosticoNotificacao,
   atualizarPixFaturas: saas.atualizarPixFaturas,
+  salvarConfigPlataforma: saas.salvarConfigPlataforma,
   conferirPixFatura: saas.conferirPixFatura,
   slugDisponivel: cadastro.slugDisponivel,
   sugerirTorcidas: cadastro.sugerirTorcidas,
@@ -77,6 +79,7 @@ export const ACOES: Record<string, Acao> = {
   redefinirSenhaPorCpf: conta.redefinirSenhaPorCpf,
   enviarConfirmacaoEmail: verificacao.enviarConfirmacaoEmail,
   verConvite: convite.verConvite,
+  conferirPix: previa.conferirPix,
   aceitarConvite: convite.aceitarConvite,
   redefinirSenhaPorEmail: senha.redefinirSenhaPorEmail,
   registrarVideoVerificacao: verificacaoVideo.registrarVideoVerificacao,
@@ -87,6 +90,19 @@ export const ACOES: Record<string, Acao> = {
   removerDominio: dominios.removerDominio,
 } as unknown as Record<string, Acao>;
 
+/**
+ * Ids de documento (tid, uid, eventoId, pedidoId...) só com letras, números, - e _: um "/" no id viraria outro caminho
+ * do banco (torcidas/{tid}/... com tid = "x/outra/y"). Conferido aqui, na porta única, para toda ação.
+ */
+const ID = /^[A-Za-z0-9_-]{1,128}$/;
+export function idsSeguros(dados: unknown): void {
+  if (!dados || typeof dados !== "object" || Array.isArray(dados)) return;
+  for (const [k, v] of Object.entries(dados as Record<string, unknown>)) {
+    if (!(k === "tid" || k === "uid" || k === "id" || /[a-z]Id$/.test(k) || k === "socioUid")) continue;
+    if (typeof v === "string" && v !== "" && !ID.test(v)) throw new HttpsError("invalid-argument", "Identificador inválido.");
+  }
+}
+
 export const api = onCall(
   { secrets: [MASTER_KEY, QR_HMAC, EMAIL_API_KEY], maxInstances: MAX_INSTANCIAS_API, timeoutSeconds: 120 },
   async (req) => {
@@ -94,6 +110,7 @@ export const api = onCall(
     if (typeof acao !== "string" || !Object.prototype.hasOwnProperty.call(ACOES, acao)) {
       throw new HttpsError("not-found", "Ação desconhecida.");
     }
+    idsSeguros(dados);
     try {
       return await ACOES[acao].run({ ...req, data: dados ?? {} });
     } catch (e) {

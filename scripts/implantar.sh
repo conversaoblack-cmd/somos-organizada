@@ -115,7 +115,9 @@ else
     "") CHAVE_EMAIL="desativado"; aviso "E-mails desligados por enquanto." ;;
     *) aviso "Formato não reconhecido: os e-mails ficam desligados."; CHAVE_EMAIL="desativado" ;;
   esac
-  TMP_EMAIL="$(mktemp)"; chmod 600 "$TMP_EMAIL"; printf '%s' "$CHAVE_EMAIL" > "$TMP_EMAIL"
+  TMP_EMAIL="$(mktemp)"; chmod 600 "$TMP_EMAIL"
+  trap 'rm -f "$TMP_EMAIL"' EXIT INT TERM # se o comando abaixo falhar ou for interrompido, a chave não fica no disco
+  printf '%s' "$CHAVE_EMAIL" > "$TMP_EMAIL"
   firebase functions:secrets:set EMAIL_API_KEY --data-file "$TMP_EMAIL" --project "$PROJETO" >/dev/null
   rm -f "$TMP_EMAIL"; unset CHAVE_EMAIL
   echo "EMAIL_API_KEY gravada no Secret Manager."

@@ -4,7 +4,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { initializeApp as adminApp } from "firebase-admin/app";
 import { getAuth as adminAuth } from "firebase-admin/auth";
-import { getFirestore as adminDb } from "firebase-admin/firestore";
+import { getFirestore as adminDb, Timestamp as TimestampAdmin } from "firebase-admin/firestore";
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator, doc, getDoc, getDocs, query, where, setDoc, updateDoc, addDoc, collection, Timestamp, serverTimestamp, increment } from "firebase/firestore";
@@ -74,6 +74,17 @@ test("1. plataforma cria a torcida e a diretoria recebe acesso", async () => {
   assert.match(r.linkDefinirSenha, /oobCode|mode=resetPassword/);
   ctx.tid = r.torcidaId;
   ctx.plat = b;
+
+  // marca "plataforma" de quem não está na lista da equipe (ou sem e-mail confirmado) cai na rotina diária
+  const ex = await aAuth.createUser({ email: "ex-equipe@somos.test", password: SENHA, emailVerified: true });
+  await aAuth.setCustomUserClaims(ex.uid, { plataforma: true, outra: 1 });
+  const naoConfirmado = await aAuth.createUser({ email: "equipe2@somos.test", password: SENHA });
+  await aAuth.setCustomUserClaims(naoConfirmado.uid, { plataforma: true });
+  const rot = await b.chamar("executarRotinaSaas", {});
+  assert.ok(rot.equipeRemovidos >= 2);
+  assert.deepEqual((await aAuth.getUser(ex.uid)).customClaims, { outra: 1 });
+  assert.equal((await aAuth.getUser(naoConfirmado.uid)).customClaims?.plataforma, undefined);
+  assert.equal((await aAuth.getUser(plat.uid)).customClaims?.plataforma, true, "quem está na lista continua");
 
   await assert.rejects(
     b.chamar("criarTorcida", { nome: "Outra", slug: "brasil-demo", diretor: { nome: "Xavier", email: "x@x.test" } }),
@@ -258,6 +269,17 @@ test("3c. site só vende depois de publicado; publicar escolhe o plano e gera a 
   );
   // módulos: a diretoria pode ligar/desligar eventos e sócios
   await updateDoc(doc(ctx.dir.db, `torcidas/${ctx.tid}`), { modulos: { eventos: true, socios: true } });
+  // escudo e banner só do nosso Storage (endereço de fora viraria imagem de rastreio nos e-mails)
+  const temaOk = { corPrimaria: "#2E6BFF", corSecundaria: "#FFCC00", corFundo: "#070A12", corTexto: "#F1F4FA" };
+  await negado(updateDoc(doc(ctx.dir.db, `torcidas/${ctx.tid}`), { tema: { ...temaOk, logoUrl: "https://rastreio.test/pixel.png" } }));
+  await negado(updateDoc(doc(ctx.dir.db, `torcidas/${ctx.tid}`), { tema: { ...temaOk, bannerUrl: "//rastreio.test/b.png" } }));
+  await updateDoc(doc(ctx.dir.db, `torcidas/${ctx.tid}`), { tema: { ...temaOk, logoUrl: "http://127.0.0.1:9199/v0/b/demo-somos.appspot.com/o/torcidas%2Fx%2Fpublico%2Fmarca%2Fe.png?alt=media" } });
+  await updateDoc(doc(ctx.dir.db, `torcidas/${ctx.tid}`), { tema: temaOk }); // volta sem escudo (o teste abaixo precisa)
+  // a lista de todas as torcidas (inclusive as que não publicaram) é só da equipe; uma por vez continua pública
+  await negado(getDocs(collection(ctx.dir.db, "torcidas")));
+  assert.ok((await getDoc(doc(ctx.dir.db, `torcidas/${ctx.tid}`))).exists());
+  // id com "/" não vira outro caminho do banco
+  await assert.rejects(ctx.dir.chamar("conferirPixFatura", { tid: `${ctx.tid}/x/y` }), /Identificador inválido/);
   await assert.rejects(ctx.sub.chamar("publicarSite", { tid: ctx.tid, plano: "pro" }), /permissão/);
   // sem escudo não publica (a página precisa da cara da torcida)
   await assert.rejects(ctx.dir.chamar("publicarSite", { tid: ctx.tid, plano: "pro" }), /escudo/);
@@ -423,6 +445,20 @@ test("7. adesão de sócio no Pix → ativo com matrícula; carteirinha com QR",
     }),
     /CPF já está cadastrado/,
   );
+
+  // adesão abandonada (nunca pagou) não prende o CPF de outra pessoa para sempre: depois de 2 h, quem é dono usa
+  const endB = { cep: "40000000", logradouro: "Rua B", numero: "10", bairro: "Stiep", cidade: "Salvador", uf: "BA" };
+  const aderir = (quem, nome) => quem.chamar("aderirSocio", { tid: ctx.tid, planoId: "mensal", sedeId: ctx.subsede, metodo: "pix",
+    dados: { nome, cpf: "16899535009", telefone: "71988887777", nascimento: "1990-05-10", endereco: endB } });
+  const intruso = navegador("trava-cpf");
+  await createUserWithEmailAndPassword(intruso.auth, "trava@x.test", SENHA);
+  await aderir(intruso, "Quem Trava");
+  const dono = navegador("dono-cpf");
+  await createUserWithEmailAndPassword(dono.auth, "dono-cpf@x.test", SENHA);
+  await assert.rejects(aderir(dono, "Dono Do Cpf"), /CPF já está cadastrado/, "dentro das 2 h a adesão do outro ainda pode ser paga");
+  await aDb.doc(`torcidas/${ctx.tid}/socios/${intruso.auth.currentUser.uid}`).update({ atualizadoEm: TimestampAdmin.fromMillis(Date.now() - 3 * 3600_000) });
+  assert.equal((await aderir(dono, "Dono Do Cpf")).modo, "pedido");
+  assert.equal((await aDb.doc(`torcidas/${ctx.tid}/cpfs/16899535009`).get()).get("uid"), dono.auth.currentUser.uid);
 });
 
 test("8. sócio ativo compra com preço de sócio (uma vez por evento)", async () => {
@@ -679,6 +715,9 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
   await signInAnonymously(curioso.auth);
   await negadoStorage(getBytes(sRef(getStorage(curioso.auth.app, "demo-somos.appspot.com"), `${pasta}/video-1.mp4`)));
   await negadoStorage(b.enviar(`${pasta}/video-1.mp4`, "video/mp4"));
+  // com o vídeo enviado (ou fora de uma solicitação pendente dele) a pasta não aceita mais arquivos: sem depósito de 500 MB
+  await negadoStorage(b.enviar(`${pasta}/video-extra.mp4`, "video/mp4"));
+  await negadoStorage(b.enviar(`verificacoes/${u.uid}/inventada/v.mp4`, "video/mp4"));
   // equipe pede outro vídeo; diretor reenvia
   await assert.rejects(b.chamar("pedirNovoVideo", { id: sol.solicitacaoId, motivo: "Faltou testemunha" }), /equipe Somos Organizada/);
   await ctx.plat.chamar("pedirNovoVideo", { id: sol.solicitacaoId, motivo: "Só apareceu 1 testemunha" });
@@ -775,6 +814,17 @@ test("16. modo demonstração: torcida sem Pagar.me vende ingresso (Pix simulado
   assert.match((await faturaDemo.get()).get("pixCopiaECola"), /nova@somosorganizada\.test/);
   await cfgRef.set({ pix: pixOriginal }, { merge: true });
   await ctx.plat.chamar("atualizarPixFaturas", {});
+  // Pix e planos só pelo servidor: nem a equipe grava direto (marca antiga na conta não basta), a diretoria não chama
+  await assert.rejects(setDoc(doc(ctx.plat.db, "plataforma/publico"), { pix: { chave: "golpe@x.test" } }, { merge: true }));
+  const planosAtuais = (await cfgRef.get()).get("planos") ?? {};
+  const valoresPlanos = { pro: planosAtuais.pro?.valor ?? 9700, plus: planosAtuais.plus?.valor ?? 19700, max: planosAtuais.max?.valor ?? 39700 };
+  await assert.rejects(dir.chamar("salvarConfigPlataforma", { pix: { chave: "golpe@x.test", nome: "X", cidade: "Y" }, planos: valoresPlanos }), /equipe Somos Organizada/);
+  await assert.rejects(ctx.plat.chamar("salvarConfigPlataforma", { pix: pixOriginal, planos: { ...valoresPlanos, pro: 0 } }), /Valor inválido/);
+  const salvo = await ctx.plat.chamar("salvarConfigPlataforma", { pix: { ...pixOriginal, chave: "outra@somosorganizada.test" }, planos: valoresPlanos });
+  assert.ok(salvo.atualizadas >= 1);
+  assert.match((await faturaDemo.get()).get("pixCopiaECola"), /outra@somosorganizada\.test/);
+  assert.equal((await cfgRef.collection("historico").where("para", "==", "outra@somosorganizada.test").get()).size, 1, "troca de chave fica no histórico");
+  await ctx.plat.chamar("salvarConfigPlataforma", { pix: pixOriginal, planos: valoresPlanos });
   assert.equal(t0.pagamentos.ambiente, "demo");
 
   // torcedor compra no Pix e "paga" pelo simulador
@@ -875,6 +925,22 @@ test("18. segurança: convite não toma conta existente; estorno só com confirm
   const novo = await dir.chamar("convidarMembro", { tid, email: "porteiro2@brasil.test", nome: "Porteiro Dois", papel: "portaria" });
   assert.equal(novo.contaNova, true);
   assert.equal(novo.linkDefinirSenha ?? null, null); // nem para conta nova: o link vai só por e-mail ao convidado
+  // alguém cria antes uma conta com o e-mail do futuro porteiro (sem confirmar) e espera o convite: a senha dele não vale mais
+  const intruso = navegador("intruso-convite");
+  await createUserWithEmailAndPassword(intruso.auth, "porteiro3@brasil.test", "senhaDoIntruso1");
+  const pre = await dir.chamar("convidarMembro", { tid, email: "porteiro3@brasil.test", nome: "Porteiro Três", papel: "portaria" });
+  assert.equal(pre.contaNova, false);
+  assert.equal(pre.nuncaEntrou, true, "conta sem dono comprovado recebe o convite de criar senha");
+  assert.ok((await aDb.doc(`_emulador/convite-${pre.uid}`).get()).exists);
+  await assert.rejects(signInWithEmailAndPassword(navegador("intruso-2").auth, "porteiro3@brasil.test", "senhaDoIntruso1"));
+  // a sessão que o intruso já tinha aberta não vê o painel: o acesso só vale depois do aceite pelo dono do e-mail
+  assert.equal((await aDb.doc(`torcidas/${tid}/membros/${pre.uid}`).get()).get("ativo"), false);
+  await negado(getDocs(collection(intruso.db, `torcidas/${tid}/pedidos`)));
+  const tokPre = (await aDb.doc(`_emulador/convite-${pre.uid}`).get()).get("token");
+  await navegador("dono-porteiro3").chamar("aceitarConvite", { c: tokPre, senha: "senhaDoDono123" });
+  const mPre = (await aDb.doc(`torcidas/${tid}/membros/${pre.uid}`).get()).data();
+  assert.equal(mPre.ativo, true);
+  assert.equal(mPre.aguardandoConvite, undefined);
 
   // compra de 2 ingressos no cartão
   const ev = await addDoc(collection(dir.db, `torcidas/${tid}/eventos`), {
@@ -948,14 +1014,6 @@ test("18. segurança: convite não toma conta existente; estorno só com confirm
 });
 
 test("13. Storage: sócio envia a própria foto; estranhos são barrados", async () => {
-  // anexos do suporte: pasta do dono do chamado; foto, áudio e PDF; ninguém sobrescreve; a equipe também envia
-  await ctx.socio.enviar(`suporte/${ctx.socioUid}/ch1/print.png`);
-  await ctx.socio.enviar(`suporte/${ctx.socioUid}/ch1/audio.m4a`, "audio/mp4");
-  await assert.rejects(ctx.socio.enviar(`suporte/${ctx.socioUid}/ch1/print.png`), "não sobrescreve");
-  await assert.rejects(ctx.socio.enviar(`suporte/${ctx.socioUid}/ch1/app.exe`, "application/x-msdownload"));
-  await assert.rejects(ctx.socio.enviar(`suporte/${ctx.socioUid}/print.png`), "fora da pasta de um chamado");
-  await assert.rejects(ctx.dir.enviar(`suporte/${ctx.socioUid}/ch1/de-outro.png`), "pasta de outra pessoa");
-  await ctx.plat.enviar(`suporte/${ctx.socioUid}/ch1/resposta-da-equipe.png`);
   await ctx.socio.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.jpg`);
   await ctx.socio.enviar(`torcidas/${ctx.tid}/socios/${ctx.socioUid}/foto.jpg`); // trocar a foto sobrescreve
   // um arquivo só por sócio (o nome que o checkout usa): outros nomes são recusados
@@ -980,6 +1038,17 @@ test("13. Storage: sócio envia a própria foto; estranhos são barrados", async
   await negado(addDoc(collection(ctx.socio.db, "suporte"), chamado({ prioridade: "alta" })));
   await negado(addDoc(collection(ctx.socio.db, "suporte"), chamado({ naoLidasPlataforma: 999 })));
   const ch = await addDoc(collection(ctx.socio.db, "suporte"), chamado());
+  // id do chamado só com letras, números, - e _ (entra na expressão que confere os anexos)
+  await negado(setDoc(doc(ctx.socio.db, "suporte", "a.b*c"), chamado()));
+  // anexos do suporte: pasta do dono do chamado; foto, áudio e PDF; ninguém sobrescreve; a equipe também envia
+  await ctx.socio.enviar(`suporte/${ctx.socioUid}/${ch.id}/print.png`);
+  await ctx.socio.enviar(`suporte/${ctx.socioUid}/${ch.id}/audio.m4a`, "audio/mp4");
+  await assert.rejects(ctx.socio.enviar(`suporte/${ctx.socioUid}/${ch.id}/print.png`), "não sobrescreve");
+  await assert.rejects(ctx.socio.enviar(`suporte/${ctx.socioUid}/${ch.id}/app.exe`, "application/x-msdownload"));
+  await assert.rejects(ctx.socio.enviar(`suporte/${ctx.socioUid}/print.png`), "fora da pasta de um chamado");
+  await assert.rejects(ctx.dir.enviar(`suporte/${ctx.socioUid}/${ch.id}/de-outro.png`), "pasta de outra pessoa");
+  await ctx.plat.enviar(`suporte/${ctx.socioUid}/${ch.id}/resposta-da-equipe.png`);
+  await assert.rejects(ctx.socio.enviar(`suporte/${ctx.socioUid}/chamado-inventado/print.png`), "chamado que não existe");
   await addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), { autor: "usuario", texto: "oi", nome: "Sócio", criadoEm: serverTimestamp() });
   await negado(addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), { autor: "usuario", texto: "oi", nome: "Sócio", criadoEm: serverTimestamp(), extra: 1 }));
   // mensagem com anexo: caminho na pasta deste chamado, do dono dele; só anexo (sem texto) vale; vazia não
@@ -1006,10 +1075,19 @@ test("13. Storage: sócio envia a própria foto; estranhos são barrados", async
   await assert.rejects(ctx.dir.chamar("avisarSuporte", { chamadoId: ch.id }), /não é seu|permission/i);
   await assert.rejects(ctx.torcedor.chamar("avisarSuporte", { chamadoId: ch.id }), /login|unauthenticated/i);
   await assert.rejects(ctx.socio.chamar("avisarSuporte", { chamadoId: "nao-existe" }), /não encontrado|not-found/i);
-  // Regras que consultam o Firestore (diretoria enviando banner/logo) dependem do acesso
-  // cruzado Storage→Firestore do emulador, que não funciona em todo ambiente (ex.: sem IPv6).
-  // Rode com STORAGE_CRUZADO=1 onde funcionar; em produção é validado no primeiro upload.
-  if (process.env.STORAGE_CRUZADO === "1") await ctx.dir.enviar(`torcidas/${ctx.tid}/publico/marca/banner.png`);
+  // papel e torcida informados pelo navegador são conferidos pelo servidor: o aviso usa o nome real da torcida
+  const conf = (await aDb.doc(`suporte/${ch.id}`).get()).get("conferido");
+  assert.equal(conf.papel, "socio");
+  assert.equal(conf.torcidaNome, (await aDb.doc(`torcidas/${ctx.tid}`).get()).get("nome"));
+  const falso = await addDoc(collection(ctx.socio.db, "suporte"), chamado({ papel: "diretoria", torcidaNome: "Torcida Rival" }));
+  await addDoc(collection(ctx.socio.db, `suporte/${falso.id}/mensagens`), { autor: "usuario", texto: "sou da diretoria", nome: "Sócio", criadoEm: serverTimestamp() });
+  await ctx.socio.chamar("avisarSuporte", { chamadoId: falso.id });
+  assert.equal((await aDb.doc(`suporte/${falso.id}`).get()).get("conferido").papel, "socio", "quem se diz diretoria sem ser fica marcado");
+  await negado(updateDoc(doc(ctx.socio.db, "suporte", falso.id), { conferido: { papel: "diretoria" } }));
+  // Regras que consultam o Firestore (diretoria enviando banner/logo; anexos e vídeo conferem chamado e solicitação).
+  // O rodar.sh sobe os emuladores sem proxy: com proxy, o firebase-tools não alcança o Firestore e a regra recusa.
+  await ctx.dir.enviar(`torcidas/${ctx.tid}/publico/marca/banner.png`);
+  await assert.rejects(ctx.sub.enviar(`torcidas/${ctx.tid}/publico/marca/banner2.png`), "subsede não troca a marca");
 });
 
 test("19. compra repetida não cobra duas vezes; sócio grátis sai sem cobrança; a mesma leitura da portaria não vira 'já utilizado'", async () => {
@@ -1169,11 +1247,12 @@ test("20. domínio próprio: só a equipe liga; um endereço por torcida; DNS ok
   await plat.chamar("consultarDominio", { tid });
   assert.equal((await aDb.collection(`torcidas/${tid}/emails`).where("tipo", "==", "dominio_ativo").get()).size, avisos.size);
 
-  // links de e-mail usam o domínio próprio: convite para o painel abre no painel.<domínio>
+  // link com código secreto (convite) nunca vai pelo domínio próprio: a torcida controla o DNS e poderia capturar o código
   await ctx.dir.chamar("convidarMembro", { tid, email: "convidado-dominio@brasil.test", nome: "Convidado Domínio", papel: "diretoria" });
   const convidado = await aAuth.getUserByEmail("convidado-dominio@brasil.test");
   const convite = (await aDb.doc(`_emulador/convite-${convidado.uid}`).get()).data();
-  assert.match(convite.url, new RegExp(`^https://${PAINEL.replace(/\./g, "\\.")}/convite\\?c=`));
+  assert.doesNotMatch(convite.url, new RegExp(PAINEL.replace(/\./g, "\\.")));
+  assert.match(convite.url, /^http:\/\/localhost:5173\/convite\?c=/);
 
   // remover a vitrine leva o www junto e tira do torcida.dominio; o painel continua
   const semVitrine = await plat.chamar("removerDominio", { tid, host: VITRINE });

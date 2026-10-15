@@ -1,6 +1,4 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { deleteField, doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { api, mensagemDeErro } from "@/lib/api";
 import { CartaoNotificacoes } from "./Notificacoes";
 import { centavosDeTexto, moeda } from "@/lib/formatos";
@@ -10,7 +8,7 @@ import { Aviso, Botao, CabecalhoPagina, Campo, Cartao, Carregando, useToast } fr
 
 const textoMoeda = (c: number) => (c ? moeda(c).replace(/^R\$\s?/, "").trim() : "");
 
-/** plataforma/publico: Pix da Somos Organizada e valores dos planos (leitura pública, escrita da equipe). */
+/** plataforma/publico: Pix da Somos Organizada e valores dos planos (leitura pública; grava só pelo servidor). */
 export default function Configuracoes() {
   const cfg = usePlanosSaas();
   const [chave, setChave] = useState("");
@@ -52,24 +50,11 @@ export default function Configuracoes() {
     if (!valido) return;
     setSalvando(true);
     try {
-      await setDoc(
-        doc(db, "plataforma/publico"),
-        {
-          pix: { chave: chave.trim(), nome: nome.trim().toUpperCase(), cidade: cidade.trim().toUpperCase() },
-          // Só o valor é configurável (nome e limites são fixos). Apaga as chaves dos planos antigos.
-          planos: {
-            ...Object.fromEntries(ORDEM_PLANOS.map((k) => [k, { nome: cfg.planos[k].nome, valor: centavos[k] }])),
-            pequena: deleteField(),
-            grande: deleteField(),
-            gigante: deleteField(),
-          },
-          limiteGigante: deleteField(),
-          atualizadoEm: serverTimestamp(),
-        },
-        { merge: true },
-      );
-      // Faturas já abertas passam a usar a chave salva (antes ficavam sem QR ou com a chave antiga)
-      const r = chave.trim() ? await api.atualizarPixFaturas({}).catch(() => null) : null;
+      // O servidor confere a equipe, guarda o histórico da chave e refaz o Pix das faturas em aberto
+      const r = await api.salvarConfigPlataforma({
+        pix: { chave: chave.trim(), nome: nome.trim().toUpperCase(), cidade: cidade.trim().toUpperCase() },
+        planos: centavos,
+      });
       avisar(r?.atualizadas ? `Configurações salvas. Pix atualizado em ${r.atualizadas} fatura(s) em aberto.` : "Configurações salvas.", "sucesso");
     } catch (err) {
       avisar(mensagemDeErro(err), "erro");

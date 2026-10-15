@@ -17,8 +17,11 @@ export function cifrar(texto: string, chaveHex: string): string {
 export function decifrar(pacote: string, chaveHex: string): string {
   const [versao, iv, tag, enc] = pacote.split(".");
   if (versao !== "v1" || !iv || !tag || !enc) throw new Error("Pacote cifrado inválido.");
-  const d = crypto.createDecipheriv("aes-256-gcm", chave(chaveHex), Buffer.from(iv, "base64url"));
-  d.setAuthTag(Buffer.from(tag, "base64url"));
+  // Etiqueta sempre de 16 bytes: sem fixar o tamanho, o Node aceitaria uma etiqueta curta (mais fácil de forjar)
+  const t = Buffer.from(tag, "base64url");
+  if (t.length !== 16) throw new Error("Pacote cifrado inválido.");
+  const d = crypto.createDecipheriv("aes-256-gcm", chave(chaveHex), Buffer.from(iv, "base64url"), { authTagLength: 16 });
+  d.setAuthTag(t);
   return Buffer.concat([d.update(Buffer.from(enc, "base64url")), d.final()]).toString("utf8");
 }
 

@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase";
 import type { FaturaSaas, StatusTorcida, Torcida } from "@/lib/tipos";
 import { usePlanosSaas } from "@/modulos/inicio/planos";
 import { ConfirmarPix } from "./Mensalidades";
-import { Abas, AreaTexto, Aviso, Botao, Campo, Cartao, Carregando, Icone, Indicador, Modal, OpcoesCartao, Selo, Vazio, useToast } from "@/ui";
+import { Abas, AreaTexto, Aviso, Botao, Campo, Cartao, Carregando, Icone, Indicador, Interruptor, Modal, OpcoesCartao, Selo, Vazio, useToast } from "@/ui";
 import {
   gmv,
   moedaCompacta,
@@ -170,6 +170,19 @@ function CartaoStatus({ tid, torcida, aoSalvar }: { tid: string; torcida: Torcid
     }
   }
 
+  async function trocarDemonstracao(ligar: boolean) {
+    setSalvando(true);
+    try {
+      await api.atualizarTorcidaPlataforma({ tid, demonstracao: ligar });
+      avisar(ligar ? "Marcada como torcida de demonstração." : "Deixou de ser torcida de demonstração.", "sucesso");
+      void aoSalvar();
+    } catch (e) {
+      avisar(mensagemDeErro(e), "erro");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   return (
     <Cartao className="p-5 sm:p-6">
       <h2 className="font-bold mb-1">Status da torcida</h2>
@@ -186,6 +199,14 @@ function CartaoStatus({ tid, torcida, aoSalvar }: { tid: string; torcida: Torcid
           icone: s === "ativa" ? "checkCirculo" : s === "suspensa" ? "xCirculo" : "engrenagem",
         }))}
       />
+      <div className="mt-4 rounded-xl border border-linha p-4">
+        <Interruptor
+          ligado={torcida.demonstracao === true}
+          onChange={(v) => void trocarDemonstracao(v)}
+          rotulo="Torcida de demonstração"
+          descricao="Só para a torcida de exemplo da Somos: pode ficar no ar sem a Pagar.me de produção. Torcida de verdade nunca."
+        />
+      </div>
       <Modal
         aberto={!!novo}
         fechar={() => setNovo(null)}

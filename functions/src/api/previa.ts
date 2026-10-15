@@ -6,9 +6,10 @@
  * com título, descrição e imagem daquela torcida ou daquele evento. O navegador abre o site normalmente.
  * A resposta fica 5 minutos no cache do Hosting, então só a primeira pessoa de um grupo espera a function.
  */
-import { onRequest } from "firebase-functions/v2/https";
+import { onCall, onRequest } from "firebase-functions/v2/https";
 import QRCode from "qrcode";
 import { crc16 } from "../util/pix";
+import { pixAssinado } from "../util/assinaturaPix";
 import { logger } from "firebase-functions/v2";
 import { ESCALA_PUBLICA, FUSO, URL_APP } from "../config";
 import { db, refs } from "../util/firebase";
@@ -131,6 +132,13 @@ async function metaDoCaminho(caminhoPedido: string, host = ""): Promise<Meta | n
   return e ? metaDoEvento(t, e, url) : metaDaTorcida(t, url);
 }
 
+/** Página /pix (botão "Copiar código Pix" dos e-mails): confere se o código foi assinado pelo servidor. Sem login. */
+export const conferirPix = onCall(ESCALA_PUBLICA, async (req) => {
+  const d = (req.data ?? {}) as Record<string, unknown>;
+  const c = typeof d.c === "string" ? d.c.trim() : "";
+  return { valido: pixValido(c) && (await pixAssinado(c, d.s)) };
+});
+
 /** Código Pix (copia e cola) bem formado: começa no padrão EMV e o CRC do fim confere. */
 export function pixValido(c: string): boolean {
   if (c.length < 50 || c.length > 512 || !c.startsWith("000201")) return false;
@@ -181,7 +189,9 @@ export async function manifestoDaTorcida(slug: string, inicio: string, host: str
 
 export const previaLink = onRequest({ memory: "256MiB", timeoutSeconds: 20, ...ESCALA_PUBLICA }, async (req, res) => {
   if (req.path === "/pix/qr.png") {
-    const png = await qrDoPix(String(req.query.c ?? "")).catch(() => null);
+    const c = String(req.query.c ?? "");
+    // só o código que o próprio servidor pôs num e-mail (assinado): ninguém usa o nosso endereço para o Pix de outra pessoa
+    const png = (await pixAssinado(c, req.query.s).catch(() => false)) ? await qrDoPix(c).catch(() => null) : null;
     if (!png) {
       res.status(400).set("Cache-Control", "no-store").send("Código Pix inválido.");
       return;

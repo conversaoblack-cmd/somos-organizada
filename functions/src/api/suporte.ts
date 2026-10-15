@@ -7,7 +7,7 @@
  * partir do que está gravado (nada do texto vem da chamada). Uma notificação por mensagem, com a torcida e o assunto.
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db } from "../util/firebase";
+import { db, refs, FieldValue } from "../util/firebase";
 import { exigirLogin } from "../dominio/permissoes";
 import { texto } from "../util/validacao";
 import { alertarEquipe } from "./alertas";
@@ -44,6 +44,18 @@ export function avisoDaMensagem(chamado: { torcidaNome?: unknown; assunto?: unkn
 
 const INTERVALO_SUPORTE_MS = 15_000;
 
+/** O que o servidor confirma do chamado: papel de verdade (ou "torcedor") e o nome da torcida lido do banco. */
+async function conferirChamado(uid: string, c: Record<string, unknown>) {
+  const tid = typeof c.torcidaId === "string" && /^[\w-]{1,64}$/.test(c.torcidaId) ? c.torcidaId : null;
+  const t = tid ? await refs.torcida(tid).get() : null;
+  if (!tid || !t?.exists) return { papel: "torcedor", torcidaId: null, torcidaNome: null, em: FieldValue.serverTimestamp() };
+  let papel = "torcedor";
+  const m = await refs.membro(tid, uid).get();
+  if (m.exists && m.get("ativo") === true) papel = String(m.get("papel"));
+  else if ((await refs.socio(tid, uid).get()).exists) papel = "socio";
+  return { papel, torcidaId: tid, torcidaNome: String(t.get("nome") ?? ""), em: FieldValue.serverTimestamp() };
+}
+
 export const avisarSuporte = onCall(async (req) => {
   const uid = exigirLogin(req);
   const d = (req.data ?? {}) as Record<string, unknown>;
@@ -67,12 +79,22 @@ export const avisarSuporte = onCall(async (req) => {
   }
   if (!msg) return { avisado: false };
 
+  // Papel e torcida são escritos pelo navegador ao abrir o chamado: o servidor confere uma vez (membro ativo do painel
+  // ou sócio daquela torcida) e o aviso usa só o que conferiu. Sem isso, qualquer conta se dizia "diretoria da X".
+  let c = chamado.data() ?? {};
+  if (!c.conferido) {
+    const conferido = await conferirChamado(uid, c);
+    await chamado.ref.update({ conferido });
+    c = { ...c, conferido };
+  }
+  const conf = c.conferido as { torcidaNome?: string | null } | undefined;
+
   // No máximo 1 notificação por chamado a cada 15 s (antes: 1 a cada 10 min, e as seguintes se perdiam; sem limite,
   // um usuário mandando centenas de mensagens viraria centenas de notificações). As do meio entram como "+N" no
   // próximo aviso, e no celular a tag do chamado troca a anterior pela nova, sem empilhar.
   await alertarEquipe(
     `suporte-${chamadoId}`,
-    { ...avisoDaMensagem(chamado.data() ?? {}, msg.data() ?? {}), url: `/plataforma/suporte/${chamadoId}`, tag: `suporte-${chamadoId}` },
+    { ...avisoDaMensagem({ ...c, torcidaNome: conf?.torcidaNome ?? "" }, msg.data() ?? {}), url: `/plataforma/suporte/${chamadoId}`, tag: `suporte-${chamadoId}` },
     INTERVALO_SUPORTE_MS,
   );
   return { avisado: true };

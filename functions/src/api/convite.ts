@@ -7,8 +7,8 @@
 import { createHash } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
-import { ESCALA_PUBLICA } from "../config";
-import { origemDaTorcida, urlDaTorcida } from "../util/urls";
+import { ESCALA_PUBLICA, URL_APP } from "../config";
+import { urlDaTorcida } from "../util/urls";
 import { auth, db, refs, FieldValue, Timestamp } from "../util/firebase";
 import { tokenAleatorio } from "../util/cripto";
 import { texto } from "../util/validacao";
@@ -73,7 +73,9 @@ export async function enviarConvite(a: {
       expiraEm: Timestamp.fromMillis(Date.now() + VALIDADE_MS),
       usado: false,
     });
-    url = `${origemDaTorcida(torcida, "painel")}/convite?c=${encodeURIComponent(token)}`;
+    // Link com segredo sempre no endereço padrão: o domínio próprio é da torcida (ela controla o DNS) e poderia
+    // capturar o código e definir a senha da conta convidada.
+    url = `${URL_APP.value().replace(/\/+$/, "")}/convite?c=${encodeURIComponent(token)}`;
     // Só no emulador: os testes leem o link daqui (em produção ele existe apenas no e-mail do convidado)
     if (process.env.FUNCTIONS_EMULATOR === "true") await db.doc(`_emulador/convite-${a.uid}`).set({ url, token });
   }
@@ -142,8 +144,13 @@ export const aceitarConvite = onCall(ESCALA_PUBLICA, async (req) => {
     if ((dados.expiraEm as Timestamp).toMillis() < Date.now()) throw new HttpsError("failed-precondition", "Este convite venceu. Peça um novo à diretoria.");
     // Acesso removido (ou desativado) depois do convite: o link não cria mais senha para o painel
     const membro = (await tx.get(refs.membro(dados.tid as string, dados.uid as string))).data();
-    if (!membro?.ativo) throw new HttpsError("failed-precondition", "Este convite foi cancelado pela diretoria.");
+    if (!membro?.ativo && !membro?.aguardandoConvite) throw new HttpsError("failed-precondition", "Este convite foi cancelado pela diretoria.");
     tx.update(ref, { usado: true, usadoEm: FieldValue.serverTimestamp() });
+    // conta que existia sem e-mail confirmado: o acesso só passa a valer agora, com o dono do e-mail
+    if (membro.aguardandoConvite) {
+      tx.update(refs.membro(dados.tid as string, dados.uid as string), { ativo: true, aguardandoConvite: FieldValue.delete() });
+      tx.set(db.doc(`usuarios/${dados.uid as string}/acessos/${dados.tid as string}`), { ativo: true }, { merge: true });
+    }
     return dados;
   });
   await auth.updateUser(c.uid as string, { password: senha, emailVerified: true });

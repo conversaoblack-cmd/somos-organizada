@@ -20,6 +20,8 @@ export interface Torcida {
   status: StatusTorcida;
   /** Site no ar. Antes disso só a equipe da torcida vê a página (e pode fazer compras de teste). */
   publicada?: boolean;
+  /** Torcida de exemplo da Somos (só a equipe liga): pode ficar no ar com a Pagar.me de teste ou em demonstração. */
+  demonstracao?: boolean;
   /** Módulos ligados. Ausente = ligado. */
   modulos?: { eventos?: boolean; socios?: boolean };
   /** Mensalidade da plataforma em atraso (> 7 dias): site e vendas fora do ar. */
@@ -223,6 +225,8 @@ export interface Membro {
   papel: Papel;
   sedeId?: string;
   ativo: boolean;
+  /** conta existia sem e-mail confirmado: o acesso vale só depois de aceitar o convite */
+  aguardandoConvite?: boolean;
 }
 
 export interface Lancamento {
@@ -269,6 +273,8 @@ export interface Chamado {
   torcidaId: string | null;
   torcidaNome?: string | null;
   papel?: string | null;
+  /** o que o servidor conferiu na 1ª mensagem (papel e torcida que o navegador informou podem ser falsos) */
+  conferido?: { papel: string; torcidaId: string | null; torcidaNome: string | null };
   assunto: string;
   status: "aberto" | "respondido" | "resolvido";
   diagnostico?: Record<string, unknown>;

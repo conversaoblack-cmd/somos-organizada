@@ -17,6 +17,8 @@ export interface Tema {
 export interface Torcida {
   nome: string;
   slug: string;
+  /** Torcida de exemplo da Somos (vitrine comercial): pode ficar no ar em demonstração. Só a equipe liga. */
+  demonstracao?: boolean;
   status: StatusTorcida;
   taxaServicoPct: number;
   /** Se true, sócio novo fica "em_analise" após pagar até a diretoria aprovar. */

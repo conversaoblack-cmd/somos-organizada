@@ -1,0 +1,42 @@
+# Segurança: roda em todo push e uma vez por semana (vulnerabilidade nova aparece sem ninguém mexer no código).
+#  - gitleaks: chave ou token no código ou no histórico do Git (falsos positivos conferidos em .gitleaks.toml)
+#  - osv-scanner: dependências com vulnerabilidade conhecida (functions e web)
+# Só leitura: não implanta nada e não usa segredo do projeto.
+name: Segurança
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  segredos:
+    name: Segredos no código (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: false
+      - run: go install github.com/zricethezav/gitleaks/v8@v8.30.1
+      - run: "$(go env GOPATH)/bin/gitleaks git . --redact --no-banner -c .gitleaks.toml"
+
+  dependencias:
+    name: Dependências vulneráveis (osv-scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: false
+      - run: go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.0
+      - run: "$(go env GOPATH)/bin/osv-scanner scan source --lockfile functions/package-lock.json --lockfile web/package-lock.json"

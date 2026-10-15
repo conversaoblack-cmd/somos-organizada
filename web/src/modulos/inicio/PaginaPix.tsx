@@ -1,14 +1,16 @@
 /**
- * Destino do botão "Copiar código Pix" dos e-mails (somosorganizada.com.br/pix?c=<código>).
+ * Destino do botão "Copiar código Pix" dos e-mails (somosorganizada.com.br/pix?c=<código>&s=<assinatura>).
  * E-mail não roda código, então não copia nada sozinho: esta página mostra o QR, quem recebe e o valor (lidos do
- * próprio código) e copia com um toque. Só aceita código Pix válido (CRC conferido), nada vai para o servidor.
+ * próprio código) e copia com um toque. Só abre código Pix válido (CRC) e assinado pelo servidor (conferirPix):
+ * sem isso qualquer um montava um link no nosso endereço com o Pix de outra pessoa.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { aplicarTema, TEMA_PAINEL } from "@/lib/tema";
 import { copiarTexto } from "@/lib/servicos";
+import { api } from "@/lib/api";
 import { moeda } from "@/lib/formatos";
-import { Botao, Cartao, Icone } from "@/ui";
+import { Botao, Carregando, Cartao, Icone } from "@/ui";
 import { QrCode } from "@/ui/qr";
 
 /** CRC16-CCITT do padrão Pix (o mesmo de functions/src/util/pix.ts). */
@@ -47,13 +49,35 @@ export function lerPix(c: string): { valido: boolean; recebedor?: string; cidade
 export default function PaginaPix() {
   const [params] = useSearchParams();
   const codigo = (params.get("c") ?? "").trim();
-  const pix = useMemo(() => lerPix(codigo), [codigo]);
+  const assinatura = (params.get("s") ?? "").trim();
+  const lido = useMemo(() => lerPix(codigo), [codigo]);
   const [copiado, setCopiado] = useState<boolean | null>(null);
+  // null = conferindo; o código só aparece depois que o servidor confirma que foi ele que mandou
+  const [conferido, setConferido] = useState<boolean | null>(lido.valido && assinatura ? null : false);
+
+  useEffect(() => {
+    if (!lido.valido || !assinatura) return;
+    let ativo = true;
+    api
+      .conferirPix({ c: codigo, s: assinatura })
+      .then((r) => {
+        if (ativo) setConferido(r.valido);
+      })
+      .catch(() => {
+        if (ativo) setConferido(false);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [codigo, assinatura, lido.valido]);
+  const pix = conferido ? lido : { valido: false as const };
 
   useEffect(() => {
     aplicarTema(TEMA_PAINEL);
     document.title = "Pagar com Pix · Somos Organizada";
   }, []);
+
+  if (conferido === null) return <Carregando />;
 
   if (!pix.valido) {
     return (
@@ -62,8 +86,12 @@ export default function PaginaPix() {
           <span className="mx-auto size-12 rounded-2xl bg-perigo/15 text-perigo grid place-items-center">
             <Icone nome="alerta" className="size-6" />
           </span>
-          <h1 className="text-xl font-bold">Código Pix incompleto</h1>
-          <p className="text-sm text-texto-2">Abra de novo pelo botão do e-mail. Se continuar assim, pague pelo painel ou fale com a equipe.</p>
+          <h1 className="text-xl font-bold">{lido.valido ? "Link de Pix não conferido" : "Código Pix incompleto"}</h1>
+          <p className="text-sm text-texto-2">
+            {lido.valido
+              ? "Este link não foi enviado pela Somos Organizada. Não pague. Abra a fatura pelo painel ou fale com a equipe."
+              : "Abra de novo pelo botão do e-mail. Se continuar assim, pague pelo painel ou fale com a equipe."}
+          </p>
         </Cartao>
       </div>
     );
@@ -100,6 +128,11 @@ export default function PaginaPix() {
               ? "Não deu para copiar neste navegador. Use o QR Code acima no app do banco."
               : "No computador, leia o QR Code com o app do banco. No celular, copie o código e use Pix copia e cola."}
         </p>
+        {pix.recebedor && (
+          <p className="mt-3 text-xs text-texto-3">
+            Antes de confirmar, confira no app do banco se quem recebe é <strong className="text-texto-2">{pix.recebedor}</strong>.
+          </p>
+        )}
       </Cartao>
     </div>
   );

@@ -259,12 +259,21 @@ export const aderirSocio = onCall({ secrets: segredos, ...ESCALA_PUBLICA }, asyn
     const cpfRef = refs.cpf(tid, cpf);
     const [sSnap, cSnap] = await Promise.all([tx.get(sRef), tx.get(cpfRef)]);
     const atual = sSnap.data() as Socio | undefined;
+    // CPF preso por outra conta que nunca pagou (adesão abandonada há mais de 2 h, Pix já vencido): a trava passa
+    // para quem está aderindo agora. Antes, qualquer um travava o CPF de outra pessoa só começando uma adesão.
+    const donoTrava = cSnap.exists ? (cSnap.get("uid") as string) : null;
+    let travaLivre = !donoTrava || donoTrava === uid;
+    if (!travaLivre && donoTrava) {
+      const outro = (await tx.get(refs.socio(tid, donoTrava))).data() as Socio | undefined;
+      const parado = (outro?.atualizadoEm?.toMillis?.() ?? 0) < Date.now() - 2 * 3600_000;
+      travaLivre = !outro || (outro.status === "pendente_pagamento" && !outro.matricula && !outro.validoAte && parado);
+    }
     if (atual && ATIVOS.includes(atual.status)) throw new HttpsError("already-exists", "Você já é sócio desta torcida.");
     anterior = atual?.cobrancaAbertaId ?? null;
     if (atual?.bloqueadoPelaDiretoria && atual.status === "cancelado") {
       throw new HttpsError("failed-precondition", "Sua associação foi cancelada pela diretoria. Fale com ela para voltar.");
     }
-    if (cSnap.exists && cSnap.get("uid") !== uid) throw new HttpsError("already-exists", "Este CPF já está cadastrado como sócio nesta torcida.");
+    if (!travaLivre) throw new HttpsError("already-exists", "Este CPF já está cadastrado como sócio nesta torcida. Se ele é seu, fale com a diretoria.");
     if (atual && atual.cpf !== cpf) tx.delete(refs.cpf(tid, atual.cpf));
     tx.set(cpfRef, { uid });
     const ficha: Socio = {

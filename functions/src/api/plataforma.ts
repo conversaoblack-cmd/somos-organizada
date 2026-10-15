@@ -100,6 +100,8 @@ export const atualizarTorcidaPlataforma = onCall(async (req) => {
     if (!Number.isFinite(pct) || pct < 0 || pct > 30) throw new HttpsError("invalid-argument", "Taxa inválida.");
     upd.taxaServicoPct = pct;
   }
+  // Torcida de exemplo da Somos (vitrine comercial): pode ficar publicada em demonstração. Só a equipe liga.
+  if (d.demonstracao !== undefined) upd.demonstracao = d.demonstracao === true;
   if (Object.keys(upd).length) await refs.torcida(tid).update(upd);
   if (d.contrato && typeof d.contrato === "object") {
     const c = d.contrato as Record<string, unknown>;

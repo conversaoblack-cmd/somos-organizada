@@ -19,5 +19,7 @@ PLATAFORMA_EMAILS=equipe@somos.test
 EOF
 
 cd "$RAIZ"
-env -u JAVA_TOOL_OPTIONS firebase emulators:exec --project demo-somos --only auth,firestore,functions,storage \
+# Sem proxy: o firebase-tools manda a consulta do Storage ao Firestore (regras que leem o banco) pelo proxy
+# do ambiente, ignorando o NO_PROXY, e a regra recebe "documento não existe".
+env -u JAVA_TOOL_OPTIONS -u HTTPS_PROXY -u https_proxy -u HTTP_PROXY -u http_proxy firebase emulators:exec --project demo-somos --only auth,firestore,functions,storage \
   "node --test --test-concurrency=1 testes-e2e/fluxo.test.mjs"

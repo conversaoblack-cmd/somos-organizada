@@ -70,13 +70,14 @@ export const entrarComCpf = onCall(ESCALA_PUBLICA, async (req) => {
   const uids = await db.runTransaction(async (tx) => {
     const dados = (await tx.get(ref)).data() as { uids?: string[]; uid?: string; tentativas?: number; janelaAte?: Timestamp } | undefined;
     const lista = [...new Set([...(dados?.uids ?? []), ...(dados?.uid ? [dados.uid] : [])])];
-    if (!lista.length) return null;
     const agora = Date.now();
     const janelaAberta = !!dados?.janelaAte && dados.janelaAte.toMillis() > agora;
     const tentativas = janelaAberta ? dados?.tentativas ?? 0 : 0;
     if (tentativas >= MAX_TENTATIVAS) return "bloqueado" as const;
-    tx.update(ref, { tentativas: tentativas + 1, janelaAte: janelaAberta ? dados!.janelaAte : Timestamp.fromMillis(agora + BLOQUEIO_MS) });
-    return lista;
+    // CPF sem conta também conta tentativa: antes só o CPF com conta chegava ao "Muitas tentativas", e 6 tentativas
+    // revelavam quem tem cadastro
+    tx.set(ref, { tentativas: tentativas + 1, janelaAte: janelaAberta ? dados!.janelaAte : Timestamp.fromMillis(agora + BLOQUEIO_MS) }, { merge: true });
+    return lista.length ? lista : null;
   });
   if (uids === null) throw new HttpsError("permission-denied", INCORRETO);
   if (uids === "bloqueado") throw new HttpsError("resource-exhausted", "Muitas tentativas. Aguarde 15 minutos ou entre com o e-mail.");
@@ -157,10 +158,8 @@ export const redefinirSenhaPorCpf = onCall(ESCALA_PUBLICA, async (req) => {
 
   const slug = tid ? ((await refs.torcida(tid).get().catch(() => null))?.get("slug") as string | undefined) : undefined;
   const continuar = slug ? `/${slug}/conta` : "/entrar";
-  const resultados = await Promise.all(emails.map((e) => enviarLinkRedefinicao(e, { continuar, tid })));
-  if (resultados.every((r) => r === "limite")) {
-    throw new HttpsError("resource-exhausted", "Muitos pedidos de link seguidos. Aguarde alguns minutos e confira o seu e-mail.");
-  }
+  // Limite de links por e-mail atingido: a resposta é a mesma (avisar "muitos pedidos" só para CPF com conta revelava o cadastro)
+  await Promise.all(emails.map((e) => enviarLinkRedefinicao(e, { continuar, tid })));
   // Mesma resposta com ou sem conta: não confirmamos a ninguém que um CPF é sócio ou comprou ingresso desta torcida.
   return { enviado: true };
 });
