@@ -51,7 +51,7 @@ export async function abrirNavegador() {
   const seguros = ["vitrine.test", "painel.vitrine.test"].map((h) => `http://${h}${porta ? `:${porta}` : ""}`).join(",");
   return chromium.launch({
     executablePath,
-    args: ["--use-fake-device-for-media-stream", "--host-resolver-rules=MAP *.test 127.0.0.1", `--unsafely-treat-insecure-origin-as-secure=${seguros}`],
+    args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", "--host-resolver-rules=MAP *.test 127.0.0.1", `--unsafely-treat-insecure-origin-as-secure=${seguros}`],
   });
 }
 

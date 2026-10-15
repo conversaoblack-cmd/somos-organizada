@@ -84,7 +84,7 @@ export async function suporte(estado) {
 
   // equipe responde com foto
   await pe.locator('form input[type="file"]').setInputFiles({ name: "resposta.png", mimeType: "image/png", buffer: Buffer.from(PNG_B64, "base64") });
-  await pe.getByLabel("Resposta").fill("Recebemos, olha este print");
+  await pe.getByRole("textbox", { name: "Resposta" }).fill("Recebemos, olha este print");
   await pe.getByRole("button", { name: "Enviar resposta" }).click();
   await aguardar(async () => (await conversa.locator("[data-anexos-mensagem] img").count()) >= 2, { mensagem: "foto da equipe na conversa da diretoria" });
   await conferir(dir, p, "resposta da equipe com foto");
