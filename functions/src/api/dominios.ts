@@ -148,6 +148,18 @@ async function aplicarSituacao(tid: string, host: string, tipo: TipoDoc, s: Situ
     { merge: true },
   );
   await refDominio(host).update({ status: s.estado, atualizadoEm: agora }).catch(() => undefined);
+  // Estava no ar e caiu (DNS trocado, certificado vencido, removido do Hosting): sai da torcida, senão e-mails e
+  // redirecionamentos continuariam mandando todo mundo para um endereço fora do ar. Volta sozinho quando ficar ativo.
+  const caiu = s.estado !== "ativo" && privado?.estado === "ativo";
+  if (caiu && tipo !== "www") {
+    const atual = ((await refs.torcida(tid).get()).get("dominio") as Torcida["dominio"])?.[tipo];
+    if (atual === host) {
+      await refs.torcida(tid).update({ [`dominio.${tipo}`]: FieldValue.delete() });
+      await espelharAtivos(tid);
+    }
+    await alertarEquipe(`dominio-caiu-${host}`, { titulo: "Domínio próprio fora do ar", corpo: `${host} parou de responder (${s.erro ?? s.estado}). Links voltaram para o endereço padrão.`, url: `/plataforma/torcidas/${tid}` });
+    return;
+  }
   if (!ficouAtivo || tipo === "www") return;
   await refs.torcida(tid).update({ [`dominio.${tipo}`]: host });
   await espelharAtivos(tid);
@@ -260,7 +272,7 @@ export const consultarDominio = onCall(async (req) => {
   exigirPlataforma(req);
   const tid = texto((req.data as Record<string, unknown> | undefined)?.tid, "torcida", { max: 64 });
   const hosts = ((await refPrivado(tid).get()).data() as DominioPrivado | undefined)?.hosts ?? {};
-  for (const [host, h] of Object.entries(hosts)) await atualizarHost(tid, host, h.tipo);
+  await Promise.all(Object.entries(hosts).map(([host, h]) => atualizarHost(tid, host, h.tipo)));
   return resumo(tid);
 });
 
@@ -292,22 +304,24 @@ export const removerDominio = onCall(async (req) => {
 });
 
 /**
- * Rotina diária (chamada pela rotinaSaas): confere os domínios que ainda não estão no ar e avisa a equipe quando
+ * Rotina diária (chamada pela rotinaSaas): confere todos os domínios (o que caiu sai da torcida) e avisa a equipe quando
  * um passa de 25 dias pendente (o Firebase apaga com 30).
  */
 export async function revisarDominios(agora = Date.now()) {
-  const pendentes = await db.collection("dominios").where("status", "in", ["pendente_dns", "emitindo_certificado", "erro"]).get();
+  // Todos, inclusive os que estão no ar: um domínio ativo pode cair (aplicarSituacao tira da torcida)
+  const pendentes = await db.collection("dominios").get();
   const resultado = { conferidos: 0, ativados: 0, avisos: 0 };
   for (const doc of pendentes.docs) {
-    const { tid, tipo, criadoEm, avisadoPrazo } = doc.data() as { tid: string; tipo: TipoDoc; criadoEm?: Timestamp; avisadoPrazo?: boolean };
+    const { tid, tipo, criadoEm, avisadoPrazo, status: antes } = doc.data() as { tid: string; tipo: TipoDoc; criadoEm?: Timestamp; avisadoPrazo?: boolean; status?: EstadoDominio };
     try {
       await atualizarHost(tid, doc.id, tipo);
       resultado.conferidos++;
       const status = (await doc.ref.get()).get("status") as EstadoDominio | undefined;
       if (status === "ativo") {
-        resultado.ativados++;
+        if (antes !== "ativo") resultado.ativados++;
         continue;
       }
+      if (antes === "ativo") continue; // acabou de cair: aplicarSituacao já avisou a equipe
       const dias = criadoEm ? (agora - criadoEm.toMillis()) / 86400_000 : 0;
       if (dias >= DIAS_AVISO_PENDENTE && !avisadoPrazo) {
         const nome = ((await refs.torcida(tid).get()).get("nome") as string | undefined) ?? tid;

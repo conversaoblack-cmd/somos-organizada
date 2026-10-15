@@ -994,12 +994,14 @@ test("13. Storage: sócio envia a própria foto; estranhos são barrados", async
   await addDoc(collection(ctx.plat.db, `suporte/${ch.id}/mensagens`), { autor: "plataforma", texto: "", nome: "Equipe", anexos: [anexo(`suporte/${u.uid}/${ch.id}/r.png`)], criadoEm: serverTimestamp() });
   await updateDoc(doc(ctx.socio.db, "suporte", ch.id), { status: "aberto", atualizadoEm: serverTimestamp(), naoLidasPlataforma: increment(1) });
   await negado(updateDoc(doc(ctx.socio.db, "suporte", ch.id), { status: "aberto", atualizadoEm: serverTimestamp(), naoLidasPlataforma: 0 }));
-  // avisarSuporte: o dono do chamado avisa a equipe (1 aviso por mensagem); outra conta, sessão anônima e chamado inexistente, não
+  // avisarSuporte: o dono do chamado avisa a equipe (no máximo 1 aviso a cada 15 s por chamado; as do meio viram "+N");
+  // outra conta, sessão anônima e chamado inexistente, não
   assert.deepEqual(await ctx.socio.chamar("avisarSuporte", { chamadoId: ch.id, mensagemId: comFoto.id }), { avisado: true });
-  assert.ok((await aDb.doc(`plataforma/notificacoes/ultimos/suporte-${ch.id}-${comFoto.id}`).get()).exists, "aviso da mensagem com anexo registrado");
+  const marca = aDb.doc(`plataforma/notificacoes/ultimos/suporte-${ch.id}`);
+  assert.equal((await marca.get()).get("repetidos"), 0, "aviso da mensagem com anexo registrado");
   const segunda = await addDoc(collection(ctx.socio.db, `suporte/${ch.id}/mensagens`), { autor: "usuario", texto: "e agora?", nome: "Sócio", criadoEm: serverTimestamp() });
   assert.deepEqual(await ctx.socio.chamar("avisarSuporte", { chamadoId: ch.id, mensagemId: segunda.id }), { avisado: true });
-  assert.ok((await aDb.doc(`plataforma/notificacoes/ultimos/suporte-${ch.id}-${segunda.id}`).get()).exists, "a segunda mensagem também avisa");
+  assert.equal((await marca.get()).get("repetidos"), 1, "a segunda mensagem em menos de 15 s entra na conta do próximo aviso (sem enxurrada)");
   assert.deepEqual(await ctx.socio.chamar("avisarSuporte", { chamadoId: ch.id }), { avisado: true });
   await assert.rejects(ctx.dir.chamar("avisarSuporte", { chamadoId: ch.id }), /não é seu|permission/i);
   await assert.rejects(ctx.torcedor.chamar("avisarSuporte", { chamadoId: ch.id }), /login|unauthenticated/i);

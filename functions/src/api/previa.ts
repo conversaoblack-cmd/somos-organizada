@@ -88,7 +88,8 @@ export function hostDoPedido(cabecalhos: { get(nome: string): string | undefined
  */
 /** Pode ser domínio próprio de torcida? (não é o endereço padrão, nem endereço do Firebase/Google, nem IP) */
 export function talvezDominioProprio(host: string, principal: string): boolean {
-  if (!host || host === principal || host === `www.${principal}`) return false;
+  // O endereço padrão e qualquer subdomínio nosso (plataforma., www.) nunca são domínio de torcida
+  if (!host || host === principal || (principal && host.endsWith(`.${principal}`))) return false;
   if (/(^|\.)(web\.app|firebaseapp\.com|run\.app|cloudfunctions\.net|localhost)$/.test(host) || /^[\d.]+$/.test(host)) return false;
   return /^[a-z0-9.-]{3,253}$/.test(host);
 }
@@ -196,7 +197,8 @@ export const previaLink = onRequest({ memory: "256MiB", timeoutSeconds: 20, ...E
         res.status(404).send("Torcida não encontrada.");
         return;
       }
-      res.status(200).set("Content-Type", "application/manifest+json; charset=utf-8").set("Cache-Control", "public, max-age=300").send(JSON.stringify(m));
+      // private: muda conforme o endereço (no subdomínio do painel o início é "/"), não pode ficar no cache compartilhado
+      res.status(200).set("Content-Type", "application/manifest+json; charset=utf-8").set("Cache-Control", "private, max-age=300").send(JSON.stringify(m));
     } catch (e) {
       logger.warn("previa: manifesto", e);
       res.status(503).set("Retry-After", "5").send("Tente de novo em alguns segundos.");

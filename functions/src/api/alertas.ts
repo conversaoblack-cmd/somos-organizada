@@ -22,9 +22,9 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { Agent } from "node:https";
 import webpush from "web-push";
-import { db, FieldValue, Timestamp } from "../util/firebase";
+import { auth, db, FieldValue, Timestamp } from "../util/firebase";
 import { URL_APP } from "../config";
-import { exigirPlataforma } from "../dominio/permissoes";
+import { emailsPlataforma, exigirPlataforma } from "../dominio/permissoes";
 import { texto } from "../util/validacao";
 
 const inscricoes = () => db.collection("plataforma/notificacoes/inscricoes");
@@ -48,7 +48,11 @@ async function chaves(): Promise<{ publica: string; privada: string }> {
     }
     doc = await docChaves().get();
   }
-  chavesEmMemoria = { publica: String(doc.get("publica")), privada: String(doc.get("privada")) };
+  const publica = doc.get("publica");
+  const privada = doc.get("privada");
+  // Falha passageira ao criar/ler: erro agora (tenta de novo na próxima chamada), nunca chave "undefined" na memória
+  if (typeof publica !== "string" || typeof privada !== "string" || !publica || !privada) throw new Error("Chaves de notificação indisponíveis no momento.");
+  chavesEmMemoria = { publica, privada };
   return chavesEmMemoria;
 }
 
@@ -116,8 +120,35 @@ interface Alerta {
 const agenteDoTeste = (endpoint: string) =>
   process.env.FUNCTIONS_EMULATOR === "true" && endpoint.startsWith("https://127.0.0.1:") ? { agent: new Agent({ rejectUnauthorized: false }) } : {};
 
+/**
+ * A conta ainda é da equipe? Mesmo critério das ações (ehPlataforma): marca "plataforma" na conta, e-mail confirmado
+ * e na lista PLATAFORMA_EMAILS. Quem saiu da equipe para de receber os alertas internos na hora.
+ */
+async function aindaDaEquipe(uid: string, cache: Map<string, Promise<boolean>>): Promise<boolean> {
+  let r = cache.get(uid);
+  if (!r) {
+    r = auth
+      .getUser(uid)
+      .then((u) => !u.disabled && u.customClaims?.plataforma === true && u.emailVerified && emailsPlataforma().includes(String(u.email ?? "").toLowerCase()))
+      .catch((e: { code?: string }) => (e?.code === "auth/user-not-found" ? false : true)); // falha passageira: não corta ninguém
+    cache.set(uid, r);
+  }
+  return r;
+}
+
 async function enviar(a: Alerta): Promise<{ aparelhos: number; enviadas: number; falhas: string[] }> {
-  const lista = await inscricoes().get();
+  const todas = await inscricoes().get();
+  const equipe = new Map<string, Promise<boolean>>();
+  const docs = (
+    await Promise.all(
+      todas.docs.map(async (d) => {
+        if (await aindaDaEquipe(String(d.get("uid") ?? ""), equipe)) return d;
+        await d.ref.delete().catch(() => undefined); // saiu da equipe: a inscrição sai também
+        return null;
+      }),
+    )
+  ).filter((d): d is NonNullable<typeof d> => !!d);
+  const lista = { docs, size: docs.length, empty: !docs.length };
   if (lista.empty) return { aparelhos: 0, enviadas: 0, falhas: [] };
   const { publica, privada } = await chaves();
   const carga = JSON.stringify({ titulo: a.titulo, corpo: a.corpo.slice(0, 300), url: a.url ?? "/plataforma", tag: a.tag });
@@ -146,19 +177,23 @@ async function enviar(a: Alerta): Promise<{ aparelhos: number; enviadas: number;
 }
 
 /** Avisa a equipe (no máximo 1 por tipo a cada 10 min). Nunca lança erro. */
-export async function alertarEquipe(tipo: string, a: Alerta): Promise<void> {
+export async function alertarEquipe(tipo: string, a: Alerta, intervaloMs = INTERVALO_MS): Promise<void> {
   try {
     const ref = db.doc(`plataforma/notificacoes/ultimos/${tipo.replace(/[^\w-]/g, "_").slice(0, 80)}`);
-    const pode = await db.runTransaction(async (tx) => {
-      const ultimo = (await tx.get(ref)).get("em") as Timestamp | undefined;
-      if (ultimo && Date.now() - ultimo.toMillis() < INTERVALO_MS) {
+    // Dentro do intervalo só conta; o próximo aviso diz quantos ficaram no meio ("+3 mensagens")
+    const repetidos = await db.runTransaction(async (tx) => {
+      const atual = await tx.get(ref);
+      const ultimo = atual.get("em") as Timestamp | undefined;
+      if (ultimo && Date.now() - ultimo.toMillis() < intervaloMs) {
         tx.set(ref, { repetidos: FieldValue.increment(1) }, { merge: true });
-        return false;
+        return null;
       }
       tx.set(ref, { em: Timestamp.now(), repetidos: 0 });
-      return true;
+      return Number(atual.get("repetidos") ?? 0);
     });
-    if (pode) await enviar({ tag: tipo.slice(0, 60), ...a });
+    if (repetidos === null) return;
+    const mais = repetidos > 0 ? ` (+${repetidos} ${repetidos === 1 ? "aviso" : "avisos"} antes deste)` : "";
+    await enviar({ tag: tipo.slice(0, 60), ...a, corpo: `${a.corpo}${mais}` });
   } catch (e) {
     logger.warn("Alerta para a equipe não enviado", { tipo, erro: String(e) });
   }

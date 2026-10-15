@@ -42,6 +42,8 @@ export function avisoDaMensagem(chamado: { torcidaNome?: unknown; assunto?: unkn
   return { titulo: trechoAviso(assunto ? `${torcida} · ${assunto}` : torcida, 90), corpo: `${quem}: ${conteudo || "mensagem nova"}` };
 }
 
+const INTERVALO_SUPORTE_MS = 15_000;
+
 export const avisarSuporte = onCall(async (req) => {
   const uid = exigirLogin(req);
   const d = (req.data ?? {}) as Record<string, unknown>;
@@ -65,12 +67,13 @@ export const avisarSuporte = onCall(async (req) => {
   }
   if (!msg) return { avisado: false };
 
-  // Uma notificação por mensagem (antes: no máximo 1 a cada 10 min por chamado, e as seguintes se perdiam).
-  // No celular a tag do chamado troca a anterior pela nova, sem empilhar.
-  await alertarEquipe(`suporte-${chamadoId}-${msg.id}`, {
-    ...avisoDaMensagem(chamado.data() ?? {}, msg.data() ?? {}),
-    url: `/plataforma/suporte/${chamadoId}`,
-    tag: `suporte-${chamadoId}`,
-  });
+  // No máximo 1 notificação por chamado a cada 15 s (antes: 1 a cada 10 min, e as seguintes se perdiam; sem limite,
+  // um usuário mandando centenas de mensagens viraria centenas de notificações). As do meio entram como "+N" no
+  // próximo aviso, e no celular a tag do chamado troca a anterior pela nova, sem empilhar.
+  await alertarEquipe(
+    `suporte-${chamadoId}`,
+    { ...avisoDaMensagem(chamado.data() ?? {}, msg.data() ?? {}), url: `/plataforma/suporte/${chamadoId}`, tag: `suporte-${chamadoId}` },
+    INTERVALO_SUPORTE_MS,
+  );
   return { avisado: true };
 });

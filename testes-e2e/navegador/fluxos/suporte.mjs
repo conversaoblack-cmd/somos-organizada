@@ -66,7 +66,7 @@ export async function suporte(estado) {
   if (!chamado) throw new Error("chamado não gravado");
   const [primeira] = await fsConsultar(`suporte/${chamado._id}`, "mensagens");
   if (!primeira?.anexos || primeira.anexos.length !== 3) throw new Error(`mensagem gravada com ${primeira?.anexos?.length ?? 0} anexo(s), esperado 3`);
-  await aguardar(async () => !!(await fsLer(`plataforma/notificacoes/ultimos/suporte-${chamado._id}-${primeira._id}`)), { mensagem: "aviso da mensagem para a equipe" });
+  await aguardar(async () => !!(await fsLer(`plataforma/notificacoes/ultimos/suporte-${chamado._id}`)), { mensagem: "aviso da mensagem para a equipe" });
 
   // ── Equipe ──
   const eq = await novoAparelho(estado, "suporte-equipe");

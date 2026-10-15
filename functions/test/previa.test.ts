@@ -65,7 +65,7 @@ test("prévia no domínio próprio: host vem do X-Forwarded-Host; endereços da 
   assert.equal(hostDoPedido(cab({})), "");
   const p = "somosorganizada.com.br";
   assert.equal(talvezDominioProprio("furia.com.br", p), true);
-  for (const h of ["", p, `www.${p}`, "somos-organizada.web.app", "previalink-x.a.run.app", "127.0.0.1", "localhost"]) assert.equal(talvezDominioProprio(h, p), false, h);
+  for (const h of ["", p, `www.${p}`, `plataforma.${p}`, "somos-organizada.web.app", "previalink-x.a.run.app", "127.0.0.1", "localhost"]) assert.equal(talvezDominioProprio(h, p), false, h);
 });
 
 test("Pix do e-mail: só código Pix válido vira QR (CRC conferido)", async () => {

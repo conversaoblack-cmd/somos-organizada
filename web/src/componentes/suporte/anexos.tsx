@@ -101,7 +101,8 @@ export function useAnexos(iniciais: AnexoPendente[] = []) {
           arquivo: f,
           nome: f.name || (tipo === "imagem" ? "print.png" : tipo === "audio" ? "audio" : "arquivo.pdf"),
           tipo,
-          mime: f.type || (tipo === "imagem" ? "image/jpeg" : "application/octet-stream"),
+          // HEIC sem tipo (Files do iPhone) não é JPEG: guarda o tipo certo para a conversão decidir
+          mime: f.type || (tipo === "imagem" ? (/\.(heic|heif)$/i.test(f.name) ? "image/heic" : "image/jpeg") : "application/octet-stream"),
           previa: tipo !== "arquivo" ? URL.createObjectURL(f) : undefined,
         });
       }
@@ -350,7 +351,11 @@ export async function enviarAnexos(dono: string, chamadoId: string, pendentes: A
     let blob = p.arquivo;
     let mime = p.mime.split(";")[0]!;
     let ext = (p.nome.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "bin";
-    if (p.tipo === "imagem") ({ blob, mime, ext } = await prepararImagem(p));
+    if (p.tipo === "imagem") {
+      ({ blob, mime, ext } = await prepararImagem(p));
+      // Formato que este navegador não conseguiu converter (ex.: HEIC no Windows): o Storage só aceita estes
+      if (!/^image\/(jpeg|png|webp|gif)$/.test(mime)) throw new Error("Este formato de foto não abriu aqui. Envie em JPG ou PNG, ou tire um print da tela.");
+    }
     if (p.tipo === "arquivo") mime = "application/pdf";
     if (p.tipo === "audio" && !mime.startsWith("audio/")) mime = "audio/mp4";
     const caminho = `suporte/${dono}/${chamadoId}/${novoId()}.${ext}`;

@@ -14,8 +14,9 @@ import { QrCode } from "@/ui/qr";
 /** CRC16-CCITT do padrão Pix (o mesmo de functions/src/util/pix.ts). */
 function crc16(dados: string): string {
   let crc = 0xffff;
-  for (let i = 0; i < dados.length; i++) {
-    crc ^= dados.charCodeAt(i) << 8;
+  // bytes em UTF-8, como o servidor (Buffer) e os bancos calculam
+  for (const byte of new TextEncoder().encode(dados)) {
+    crc ^= byte << 8;
     for (let b = 0; b < 8; b++) crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
   }
   return crc.toString(16).toUpperCase().padStart(4, "0");

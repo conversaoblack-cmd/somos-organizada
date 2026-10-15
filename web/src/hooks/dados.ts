@@ -33,13 +33,12 @@ const ESPERA_SERVIDOR_MS = 6000;
  * No máximo uma vez a cada 30 s para todas as telas juntas.
  */
 let ultimaReconexao = 0;
-function reconectarFirestore(): boolean {
-  if (!navigator.onLine || Date.now() - ultimaReconexao < 30_000) return false;
+function reconectarFirestore(): void {
+  if (!navigator.onLine || Date.now() - ultimaReconexao < 30_000) return;
   ultimaReconexao = Date.now();
   void disableNetwork(db)
     .then(() => enableNetwork(db))
     .catch(() => undefined);
-  return true;
 }
 
 /**
@@ -47,13 +46,16 @@ function reconectarFirestore(): boolean {
  * Devolve o cancelamento (a resposta chegou ou a tela saiu).
  */
 function esperarServidor(semConexao: () => void): () => void {
-  let t = setTimeout(
-    () => {
-      if (reconectarFirestore()) t = setTimeout(semConexao, ESPERA_SERVIDOR_MS);
-      else semConexao();
-    },
-    navigator.onLine ? ESPERA_SERVIDOR_MS : 0,
-  );
+  if (!navigator.onLine) {
+    const t0 = setTimeout(semConexao, 0);
+    return () => clearTimeout(t0);
+  }
+  let t = setTimeout(() => {
+    // Toda tela espera mais uma vez (também as que chegaram depois de outra já ter reaberto o canal: a resposta
+    // pode estar a caminho); só uma reabre o canal a cada 30 s.
+    reconectarFirestore();
+    t = setTimeout(semConexao, ESPERA_SERVIDOR_MS);
+  }, ESPERA_SERVIDOR_MS);
   return () => clearTimeout(t);
 }
 
