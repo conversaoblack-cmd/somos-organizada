@@ -76,3 +76,37 @@ com a grade a 30% e anel vermelho; celular e feixe no eixo x 450; sócio inteiro
 produção: torres cortadas no gancho, eixo único na cena da taxa, luz de borda do celular mais forte, "mensalidade" com
 dois sentidos (opção "Plano mensal fixo"), prévias do produto e do mergulho do CTA em movimento. A "queda" de áudio em
 211–216 é o vão entre batidas do surdo de tensão, não emenda. Mix inteira: −14,1 LUFS, −1,3 dBTP.
+
+## 15/10/2026 · Apresentação: telas do produto GRAVADAS em uso e bateria gravada (pedido do dono)
+
+**Pedido do dono (após aprovar a direção):** as telas não pareciam o sistema; mostrar a portaria com o leitor de QR e o QR
+dando "já utilizado", e o painel da diretoria com a pessoa abrindo o menu e criando o evento. A percussão sintetizada
+"pode não ficar tão boa": buscar música/percussão sem licença a pagar. Perfil: @somosorganizada.
+
+**Decidido:**
+- **Fluxos gravados do produto real** (`captura/portaria-camera.json`, `diretoria-evento.json`, `ingresso.json`) no
+  **build de produção apontado para os emuladores** (`vite build/preview --mode emulador`, porta 4173, como o
+  `testes-e2e/navegador.sh`). No modo de desenvolvimento o StrictMode monta o leitor duas vezes e a câmera não chega ao vídeo.
+- **Portaria com câmera de verdade:** `scripts/camera-falsa.mjs` gera um .y4m 1280×720 (o leitor pede ≥ 1024 px) do
+  celular do torcedor com o QR REAL do ingresso, espelhado (o leitor espelha câmera sem lado; espelhado na origem aparece
+  como na câmera traseira). O leitor real decodifica: LIBERADO; o mesmo QR depois de 5 s fora da câmera: JÁ UTILIZADO
+  (a portaria ignora o mesmo QR enquanto ele não sai 3 s da câmera).
+- **Gravador (`gravar-produto.mjs`):** duas gravações simultâneas, fluida (screencast, sempre 1×) e nítida (capturas 3×
+  a ~9 quadros/s); prints por captura direta (o `page.screenshot` mexia na emulação e o screencast soltava quadros tortos);
+  digitação letra por letra; pt-BR (`LANG` do processo: a data saía "11/07/2026, 01:00 PM"); corretor desligado.
+- **Vídeo no Remotion em WebM VP9:** o Chromium daqui não decodifica H.264 pelo WebCodecs; o `@remotion/media` caía no
+  `<OffthreadVideo>` (um `<Img>`), que quebra dentro do 3D.
+- **Na peça:** cena 5 = a portaria gravada (câmera → LIBERADO no 561 → mesmo QR → JÁ UTILIZADO no 612, com as placas
+  vermelhas); cena 7a = a diretoria digitando o valor e o sistema mostrando "Torcedor paga R$ 143,00 (inclui 10% de
+  taxa)"; cena 7b = menu → "Novo evento" → "Evento publicado!". O celular na arquibancada toca a mesma gravação. Instantes
+  medidos na gravação (cor da tela, mudança de quadro), nunca no olho.
+- **Verde do LIBERADO:** é a cor real do produto nesse estado e o dono pediu a tela como ela é; entra dentro do cartão da
+  prova e do celular. Anel, feixe e luz continuam brancos (verde segue fora da marca).
+- **Bateria gravada CC0** (Felix Blume, "Batucada rehearsal in Chile", Freesound 411465): pulso medido 82,46 BPM, 30
+  compassos 2/4 de acento a acento, acelerados 1,2127× sem mudar afinação (rubberband) para a grade de 100 BPM; acentos a
+  ±25 ms da grade. Tensão sintetizada antes (−11,8 LUFS de contraste), bateria "lá fora" no breakdown (−9), corte seco
+  no 1332 com impacto. `audio/montar-batucada.mjs` + `audio/apresentacao/batucada.json`.
+- CTA: "Plano mensal fixo, sem % das vendas." (antes "Mensalidade fixa": "mensalidade" já é a do sócio no gancho).
+
+**Descartado (música):** Wikimedia (CC-BY), discos comerciais com marcação de domínio público falsa, "Public Domain Mark"
+sem renúncia formal (Cavro), Pixabay (sem garantia sobre Content ID), gravações com voz de rádio ou canto.

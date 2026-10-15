@@ -1,11 +1,12 @@
 {
   "_comentario": "Mix da apresentação. Trilha e SFX sintetizados pelo estúdio (audio/LICENCAS.md).",
   "trilha": {
-    "arquivo": "audio/apresentacao/trilha.wav",
+    "arquivo": "audio/apresentacao/trilha-batucada.wav",
     "ganhoDb": -2,
     "inicioS": 3.6,
     "fadeInS": 0.1,
-    "fadeOutS": 0.6
+    "fadeOutS": 0.6,
+    "_comentario": "tensão sintetizada + bateria gravada CC0 (montar-batucada.mjs)"
   },
   "sfx": [
     {
@@ -80,7 +81,7 @@
     },
     {
       "arquivo": "audio/sfx/liberado.wav",
-      "frame": 558,
+      "frame": 561,
       "ganhoDb": -6
     },
     {
@@ -112,6 +113,11 @@
       "arquivo": "audio/sfx/entra.wav",
       "frame": 1262,
       "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/impacto.wav",
+      "frame": 1332,
+      "ganhoDb": -4
     }
   ],
   "ducking": {

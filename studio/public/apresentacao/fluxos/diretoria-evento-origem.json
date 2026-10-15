@@ -3,8 +3,8 @@
   "rotulo": "Torcida Brasil · dados de demonstração",
   "base": "http://127.0.0.1:4173",
   "conta": "diretoria@brasil.test",
-  "commitDoProduto": "a98cca62bc01fa5770ae6fb2a076a1da1078b7fd",
-  "gravadoEm": "2026-10-15T18:04:36.005Z",
+  "commitDoProduto": "93c6bedd15f57ee7824cb049c7a4fe7dbb682997",
+  "gravadoEm": "2026-10-15T18:19:20.374Z",
   "viewport": {
     "width": 390,
     "height": 844
@@ -47,48 +47,52 @@
     "gravacao.mp4": [
       1170,
       2532
+    ],
+    "gravacao-nitida.mp4": [
+      1170,
+      2532
     ]
   },
   "prints": [
     {
       "nome": "painel-inicio",
       "arquivo": "painel-inicio.png",
-      "ms": 4665
+      "ms": 4820
     },
     {
       "nome": "menu-aberto",
       "arquivo": "menu-aberto.png",
-      "ms": 6686
+      "ms": 6690
     },
     {
       "nome": "eventos-lista",
       "arquivo": "eventos-lista.png",
-      "ms": 9518
+      "ms": 10511
     },
     {
       "nome": "novo-evento-vazio",
       "arquivo": "novo-evento-vazio.png",
-      "ms": 14123
+      "ms": 15123
     },
     {
       "nome": "novo-evento-nome",
       "arquivo": "novo-evento-nome.png",
-      "ms": 20292
+      "ms": 21838
     },
     {
       "nome": "novo-evento-valores",
       "arquivo": "novo-evento-valores.png",
-      "ms": 24415
+      "ms": 26262
     },
     {
       "nome": "novo-evento-publicado",
       "arquivo": "novo-evento-publicado.png",
-      "ms": 25281
+      "ms": 27309
     },
     {
       "nome": "evento-publicado-lista",
       "arquivo": "evento-publicado-lista.png",
-      "ms": 28060
+      "ms": 30308
     }
   ],
   "ocultado": [

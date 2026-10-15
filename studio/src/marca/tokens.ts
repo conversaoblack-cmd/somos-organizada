@@ -58,7 +58,7 @@ export const MARCA = {
   cta: 'Cadastre sua torcida',
   /** rótulo REAL do botão do site (Landing.tsx:168): o botão desenhado no vídeo usa este */
   botaoSite: 'Cadastrar minha torcida',
-  semPorcentagem: 'Mensalidade fixa, sem % das vendas.',
+  semPorcentagem: 'Plano mensal fixo, sem % das vendas.',
   site: 'somosorganizada.com.br',
   linhaLegal: 'Só paga depois de publicar o site. Teste grátis em modo demonstração.',
   rotuloDemo: 'Torcida Brasil · dados de demonstração',

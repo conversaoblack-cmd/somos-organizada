@@ -3,8 +3,8 @@
   "rotulo": "Torcida Brasil · dados de demonstração",
   "base": "http://127.0.0.1:4173",
   "conta": "socio@brasil.test",
-  "commitDoProduto": "a98cca62bc01fa5770ae6fb2a076a1da1078b7fd",
-  "gravadoEm": "2026-10-15T18:02:47.495Z",
+  "commitDoProduto": "93c6bedd15f57ee7824cb049c7a4fe7dbb682997",
+  "gravadoEm": "2026-10-15T18:17:00.762Z",
   "viewport": {
     "width": 390,
     "height": 844
@@ -23,18 +23,22 @@
     "gravacao.mp4": [
       1170,
       2532
+    ],
+    "gravacao-nitida.mp4": [
+      1170,
+      2532
     ]
   },
   "prints": [
     {
       "nome": "ingressos-lista",
       "arquivo": "ingressos-lista.png",
-      "ms": 8182
+      "ms": 8331
     },
     {
       "nome": "ingresso-qr",
       "arquivo": "ingresso-qr.png",
-      "ms": 10968
+      "ms": 10911
     }
   ],
   "ocultado": [

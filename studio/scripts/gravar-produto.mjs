@@ -27,7 +27,7 @@
  *   ]
  * }
  *
- * Saída em <pasta>: <nome>.png (1170×2532 conferido com ffprobe), gravacao.mp4 (h264, 30 fps constantes, 1170×2532),
+ * Saída em <pasta>: <nome>.png (1170×2532 conferido com ffprobe), gravacao.mp4 (fluida, gravada em 1× e ampliada) e gravacao-nitida.mp4 (3×, ~9 quadros/s), ambas h264, 30 fps constantes, 1170×2532,
  * marcas.json (retângulo de cada toque em PIXELS DA CAPTURA + instante `ms` na gravação) e origem.json (de onde veio).
  * O retângulo vale para a tela NO INSTANTE do toque (depois de rolar até o alvo): bate com a gravação; para usar num
  * print, tire o print depois do toque.
@@ -92,7 +92,7 @@ function localizar(page, passo) {
   return l.filter({visible: true}).first();
 }
 
-async function executar(page, passo, {base, t0, marcas, prints, pasta, ocultar}) {
+async function executar(page, passo, {base, t0, marcas, prints, pasta, ocultar, capturar}) {
   switch (passo.acao) {
     case 'abrir':
       await page.goto(base + passo.url, {waitUntil: 'load'});
@@ -125,7 +125,10 @@ async function executar(page, passo, {base, t0, marcas, prints, pasta, ocultar})
       await aplicarOcultar(page, ocultar);
       await page.evaluate(() => document.fonts.ready);
       const arq = `${passo.nome}.png`;
-      await page.screenshot({path: join(pasta, arq), animations: 'disabled', caret: 'hide'});
+      // gravando vídeo: captura direta em 3× (o page.screenshot do Playwright mexe na emulação da tela por um instante
+      // e o screencast solta quadros tortos); sem vídeo: o print normal, com animações paradas e sem cursor
+      if (capturar) writeFileSync(join(pasta, arq), await capturar());
+      else await page.screenshot({path: join(pasta, arq), animations: 'disabled', caret: 'hide'});
       prints.push({nome: passo.nome, arquivo: arq, ms: Date.now() - t0});
       break;
     }
@@ -200,22 +203,46 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
   const consoleErros = [];
   page.on('console', (m) => m.type() === 'error' && consoleErros.push(m.text()));
 
-  // Vídeo por screencast do Chromium (CDP) na resolução do aparelho (3×). O recordVideo do Playwright grava a tela em
-  // 1× (390 px) no canto de um quadro cinza: texto ilegível. Cada quadro chega quando a tela muda, com o instante dele.
+  // DUAS gravações ao mesmo tempo (lição de 15/10/2026):
+  // - gravacao.mp4 (fluida): screencast do Chromium (CDP), ~30–60 quadros/s, mas SEMPRE em 1× (390×844) — o
+  //   screencast ignora o 3× do aparelho (só alguns quadros logo depois de um print saem em 3×; misturar os dois
+  //   tamanhos dava quadros "ampliados"). Por isso ele é fixado em 1× e ampliado no fim: serve para a tela do celular.
+  // - gravacao-nitida.mp4: capturas em 3× (clip com scale 3) em laço, ~9 quadros/s: texto nítido para os recortes
+  //   ampliados (digitação, telas de resultado). Animação curta (gaveta do menu, aviso) sai em degraus.
+  // O recordVideo do Playwright gravava em 1× no canto de um quadro cinza.
   const quadros = [];
+  const nitidos = [];
   const gravando = [];
   let cdp = null;
+  let parar = false;
+  let laco = null;
+  let capturar = null;
   if (video) {
     mkdirSync(tmpVideo, {recursive: true});
     cdp = await context.newCDPSession(page);
     cdp.on('Page.screencastFrame', ({data, metadata, sessionId}) => {
       const ms = metadata?.timestamp ? metadata.timestamp * 1000 - t0 : Date.now() - t0;
       const arq = join(tmpVideo, `q${String(quadros.length).padStart(5, '0')}.jpg`);
-      quadros.push({arq, ms});
+      quadros.push({arq, ms, meta: metadata});
       writeFileSync(arq, Buffer.from(data, 'base64'));
       gravando.push(cdp.send('Page.screencastFrameAck', {sessionId}).catch(() => {}));
     });
-    await cdp.send('Page.startScreencast', {format: 'jpeg', quality: 95, maxWidth: CAPTURA.width, maxHeight: CAPTURA.height, everyNthFrame: 1});
+    await cdp.send('Page.startScreencast', {format: 'jpeg', quality: 95, maxWidth: VIEWPORT.width, maxHeight: VIEWPORT.height, everyNthFrame: 1});
+    const cdpNitido = await context.newCDPSession(page);
+    capturar = async () =>
+      Buffer.from((await cdpNitido.send('Page.captureScreenshot', {format: 'png', clip: {x: 0, y: 0, width: VIEWPORT.width, height: VIEWPORT.height, scale: ESCALA}})).data, 'base64');
+    laco = (async () => {
+      while (!parar) {
+        const antes = Date.now() - t0;
+        const r = await cdpNitido
+          .send('Page.captureScreenshot', {format: 'jpeg', quality: 92, clip: {x: 0, y: 0, width: VIEWPORT.width, height: VIEWPORT.height, scale: ESCALA}})
+          .catch(() => null);
+        if (!r) break;
+        const arq = join(tmpVideo, `n${String(nitidos.length).padStart(5, '0')}.jpg`);
+        writeFileSync(arq, Buffer.from(r.data, 'base64'));
+        nitidos.push({arq, ms: (antes + (Date.now() - t0)) / 2});
+      }
+    })();
   }
 
   if (roteiro.conta) {
@@ -230,7 +257,7 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
 
   for (const [n, passo] of (roteiro.passos ?? []).entries()) {
     try {
-      await executar(page, passo, {base, t0, marcas, prints, pasta, ocultar: roteiro.ocultar});
+      await executar(page, passo, {base, t0, marcas, prints, pasta, ocultar: roteiro.ocultar, capturar});
     } catch (e) {
       // print do estado na falha: sem isso, "Timeout" não diz nada
       await page.screenshot({path: join(pasta, `erro-passo-${n + 1}.png`)}).catch(() => {});
@@ -241,30 +268,34 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
   }
 
   const fimMs = Date.now() - t0;
+  parar = true;
   if (cdp) {
     await cdp.send('Page.stopScreencast').catch(() => {});
     await Promise.all(gravando);
+    await laco;
   }
   await context.close();
   await browser.close();
 
-  let gravacao = null;
-  if (video && quadros.length) {
-    gravacao = 'gravacao.mp4';
-    // quadros com instante próprio → 30 fps constantes; o 1º cobre desde o início, então o tempo do vídeo = ms das marcas
-    quadros.sort((a, b) => a.ms - b.ms);
+  // quadros com instante próprio → 30 fps constantes; o 1º cobre desde o início, então o tempo do vídeo = ms das marcas
+  const montarVideo = (lista, nome) => {
+    lista.sort((a, b) => a.ms - b.ms);
     const linhas = [];
-    quadros.forEach((q, i) => {
+    lista.forEach((q, i) => {
       const de = i === 0 ? 0 : q.ms;
-      const ate = i + 1 < quadros.length ? quadros[i + 1].ms : fimMs;
+      const ate = i + 1 < lista.length ? lista[i + 1].ms : fimMs;
       linhas.push(`file '${q.arq}'`, `duration ${Math.max(0.001, (ate - de) / 1000).toFixed(4)}`);
     });
-    linhas.push(`file '${quadros[quadros.length - 1].arq}'`);
-    const lista = join(tmpVideo, 'lista.txt');
-    writeFileSync(lista, linhas.join('\n') + '\n');
-    rodar('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lista, '-vf', `scale=${CAPTURA.width}:${CAPTURA.height}:flags=lanczos,fps=30`, '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', '-an', join(pasta, gravacao)]);
-  }
-  rmSync(tmpVideo, {recursive: true, force: true});
+    linhas.push(`file '${lista[lista.length - 1].arq}'`);
+    const arqLista = join(tmpVideo, `${nome}.txt`);
+    writeFileSync(arqLista, linhas.join('\n') + '\n');
+    rodar('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', arqLista, '-vf', `scale=${CAPTURA.width}:${CAPTURA.height}:flags=lanczos,fps=30`, '-c:v', 'libx264', '-crf', '14', '-pix_fmt', 'yuv420p', '-an', join(pasta, nome)]);
+    return nome;
+  };
+  const gravacao = video && quadros.length ? montarVideo(quadros, 'gravacao.mp4') : null;
+  const gravacaoNitida = video && nitidos.length ? montarVideo(nitidos, 'gravacao-nitida.mp4') : null;
+  if (process.env.GUARDAR_QUADROS) writeFileSync(join(tmpVideo, 'quadros.json'), JSON.stringify(quadros.map(({arq, ms, meta}) => ({arq, ms, meta})), null, 1));
+  else rmSync(tmpVideo, {recursive: true, force: true});
 
   // confere a dimensão REAL de tudo (lição: captura com altura errada estica o cartão)
   const dimensoes = {};
@@ -273,9 +304,9 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
     dimensoes[p.arquivo] = [s.width, s.height];
     if (s.width !== CAPTURA.width || s.height !== CAPTURA.height) throw new Error(`${p.arquivo} saiu ${s.width}×${s.height}`);
   }
-  if (gravacao) {
-    const s = sonda(join(pasta, gravacao)).streams.find((x) => x.codec_type === 'video');
-    dimensoes[gravacao] = [s.width, s.height];
+  for (const g of [gravacao, gravacaoNitida].filter(Boolean)) {
+    const s = sonda(join(pasta, g)).streams.find((x) => x.codec_type === 'video');
+    dimensoes[g] = [s.width, s.height];
   }
 
   let commit = null;

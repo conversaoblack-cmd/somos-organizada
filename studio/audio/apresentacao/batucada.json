@@ -1,0 +1,11 @@
+{
+  "_comentario": "Bateria GRAVADA (Felix Blume, 'Batucada rehearsal in Chile', CC0; ver audio/LICENCAS.md). Pulso medido de 82,46 BPM (compasso 2/4 = 1,45525 s, acentos em 38,038 s + k × 1,45525 s, resíduos de ±44 ms). Trecho de 30 compassos, de acento a acento: 39,493 s → 83,150 s, acelerado 1,2127× para a grade da peça (100 BPM; 2 compassos 2/4 por compasso de 72 quadros). Entra no 252 (virada), fica 'lá fora' (abafada) no breakdown da taxa e volta aberta no 1080; corte seco no 1332 (o golpe é SFX).",
+  "fonte": "audio/biblioteca/blume-batucada-valparaiso.mp3",
+  "trecho": {"deS": 39.493, "ateS": 83.150},
+  "frameInicioArquivo": 108,
+  "deFrame": 252,
+  "ateFrame": 1332,
+  "ganhoDb": 0,
+  "abafar": [{"deFrame": 828, "ateFrame": 1080, "lowpassHz": 450, "ganhoDb": -7, "entradaS": 0.4, "saidaS": 0.6}],
+  "fimS": 0.06
+}

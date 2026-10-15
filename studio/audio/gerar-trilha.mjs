@@ -42,9 +42,9 @@ export function gerarTrilha(partitura) {
       const p = bloco.padrao;
       const cheio = p === 'cheio' || p === 'final';
       if (p === 'tensao') {
-        // ~9 dB abaixo do resto: a bateria que entra na virada precisa de espaço para soar como chegada
-        colocar(out, I.surdo1(rnd, vel(0.8)), t0 + humano(), 0.32, 0);
-        colocar(out, I.surdo1(rnd, vel(0.55)), t0 + 2 * tempo + humano(), 0.32, 0);
+        // ~10 dB abaixo da bateria gravada que entra na virada (medido na trilha-batucada.wav): espaço para a chegada
+        colocar(out, I.surdo1(rnd, vel(0.8)), t0 + humano(), 0.5, 0);
+        colocar(out, I.surdo1(rnd, vel(0.55)), t0 + 2 * tempo + humano(), 0.5, 0);
       }
       if (p === 'base' || cheio) {
         // marcação: segunda no 1 e no 3, primeira no 2 e no 4 (resposta grave)

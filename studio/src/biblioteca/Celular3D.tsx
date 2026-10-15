@@ -81,7 +81,12 @@ const TexturaImagem: React.FC<{src: string; children: (t: THREE.Texture) => Reac
   return tex ? <>{children(tex)}</> : null;
 };
 
-const TexturaVideo: React.FC<{src: string; children: (t: THREE.Texture) => React.ReactNode}> = ({src, children}) => {
+const TexturaVideo: React.FC<{src: string; trimBefore?: number; playbackRate?: number; children: (t: THREE.Texture) => React.ReactNode}> = ({
+  src,
+  trimBefore,
+  playbackRate,
+  children,
+}) => {
   const [c] = useState(() => {
     const canvas = new OffscreenCanvas(TELA_LARGURA_PX, TELA_ALTURA_PX);
     const context = canvas.getContext('2d')!;
@@ -102,7 +107,7 @@ const TexturaVideo: React.FC<{src: string; children: (t: THREE.Texture) => React
   );
   return (
     <>
-      <Video src={src} onVideoFrame={aoQuadro} muted headless />
+      <Video src={src} trimBefore={trimBefore} playbackRate={playbackRate ?? 1} onVideoFrame={aoQuadro} muted headless />
       {children(c.texture)}
     </>
   );
@@ -113,6 +118,9 @@ export type Celular3DProps = {
   tela?: string;
   /** gravação (staticFile) da tela, 1170×2532 */
   video?: string;
+  /** gravação: a partir de qual quadro dela (quadros da composição) e em que velocidade */
+  trimBefore?: number;
+  playbackRate?: number;
   posicao?: [number, number, number];
   rotacao?: [number, number, number];
   escala?: number;
@@ -124,6 +132,8 @@ export type Celular3DProps = {
 export const Celular3D: React.FC<Celular3DProps> = ({
   tela,
   video,
+  trimBefore,
+  playbackRate,
   posicao = [0, 0, 0],
   rotacao = [0, 0, 0],
   escala = 1,
@@ -167,7 +177,9 @@ export const Celular3D: React.FC<Celular3DProps> = ({
       {tela ? (
         <TexturaImagem src={tela}>{(t) => materialTela(t)}</TexturaImagem>
       ) : video ? (
-        <TexturaVideo src={video}>{(t) => materialTela(t)}</TexturaVideo>
+        <TexturaVideo src={video} trimBefore={trimBefore} playbackRate={playbackRate}>
+          {(t) => materialTela(t)}
+        </TexturaVideo>
       ) : (
         materialTela(null)
       )}

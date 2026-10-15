@@ -11,6 +11,7 @@ import {CENAS} from './roteiro';
 import {useCurrentFrame, interpolate} from 'remotion';
 import {ENTRADA} from '../../lib/movimento';
 import {ProvaCard} from './ProvaCard';
+import {FLUXOS, NA_CENA} from './fluxos';
 import {PROVAS} from './provas';
 import {CenaCta} from './CenaCta';
 import {Assinatura, Clarao, FaixaLeitura, Placar, RotuloDemo} from './Sobreposicoes';
@@ -78,20 +79,15 @@ export const Apresentacao: React.FC<{audio?: 'previa' | 'final' | 'nenhum'}> = (
         <ProvaCard prova={PROVAS.socio} cor={COR.azul} entrada={40} saida={134} />
         <RotuloDemo />
       </Sequence>
-      {/* 5 · INGRESSO + PORTARIA (cortes secos na batida) */}
-      <Sequence from={CENAS.ingresso.de} durationInFrames={54} premountFor={fps} name="5a ingresso">
-        <ProvaCard prova={PROVAS.ingresso} cor={COR.azul} entrada={8} />
-        <RotuloDemo />
-      </Sequence>
-      <Sequence from={CENAS.ingresso.de + 54} durationInFrames={54} premountFor={fps} name="5b liberado">
-        <ProvaCard prova={PROVAS.liberado} cor="#F1F4FA" entrada={0} />
-        <Clarao em={0} />
-        <RotuloDemo />
-      </Sequence>
-      <Sequence from={CENAS.ingresso.de + 108} durationInFrames={72} premountFor={fps} name="5c barrado">
+      {/* 5 · PORTARIA GRAVADA: a câmera do leitor vê o QR → LIBERADO; o mesmo QR de novo → JÁ UTILIZADO (612) */}
+      <Sequence from={CENAS.ingresso.de} durationInFrames={dur('ingresso')} premountFor={fps} name="5 portaria">
         <FaixaLeitura />
-        <ProvaCard prova={PROVAS.barrado} cor={COR.perigo} entrada={0} saida={62} />
-        <FraseImpacto entrada={6} saida={62} topo={TOPO_FRASE} tamanho={80} linhas={['QR repetido', '**barrado**{perigo}']} />
+        <ProvaCard fluxo={FLUXOS.portaria} entrada={0} saida={170} />
+        <Clarao em={NA_CENA.liberado} />
+        <FraseImpacto entrada={4} saida={NA_CENA.jaUtilizado - 6} topo={TOPO_FRASE} tamanho={80} linhas={['A portaria', '**lê o QR**{azul}']} />
+        <Sequence from={NA_CENA.jaUtilizado} layout="none">
+          <FraseImpacto entrada={6} saida={62} topo={TOPO_FRASE} tamanho={80} linhas={['QR repetido', '**barrado**{perigo}']} />
+        </Sequence>
         <RotuloDemo />
       </Sequence>
       {/* 6 · DINHEIRO */}
@@ -104,16 +100,16 @@ export const Apresentacao: React.FC<{audio?: 'previa' | 'final' | 'nenhum'}> = (
       {/* 7a · TAXA (insight; bateria em breakdown) */}
       <Sequence from={CENAS.taxa.de} durationInFrames={dur('taxa')} premountFor={fps} name="7a taxa">
         <FaixaLeitura />
-        <Placar de={18} ate={30} inicio={0} fim={10} sufixo="%" topo={338} tamanho={150} />
-        <FraseImpacto entrada={30} saida={134} topo={486} alinhamento="center" tamanho={72} linhas={['vira **caixa**{amarelo}']} />
-        <ProvaCard prova={PROVAS.taxa} cor={COR.amarelo} entrada={20} saida={134} />
+        <Placar de={18} ate={30} inicio={0} fim={10} sufixo="%" topo={338} tamanho={150} esquerda={120} />
+        <FraseImpacto entrada={30} saida={134} topo={486} tamanho={72} linhas={['vira **caixa**{amarelo}']} />
+        <ProvaCard fluxo={FLUXOS.taxa} entrada={20} saida={134} />
         <RotuloDemo />
       </Sequence>
-      {/* 7b · EVENTO: o ingresso só paga o evento */}
+      {/* 7b · EVENTO GRAVADO: menu → "Novo evento" preenchido → publicado (o ingresso só paga o evento) */}
       <Sequence from={CENAS.evento.de} durationInFrames={dur('evento')} premountFor={fps} name="7b evento">
         <FaixaLeitura />
-        <FraseImpacto entrada={6} saida={98} topo={TOPO_FRASE} tamanho={72} linhas={['A diretoria', '**decide o preço**{azul}']} />
-        <ProvaCard prova={PROVAS.evento} cor={COR.amarelo} entrada={14} saida={98} />
+        <FraseImpacto entrada={6} saida={98} topo={TOPO_FRASE} tamanho={72} linhas={['A diretoria', '**publica o evento**{azul}']} />
+        <ProvaCard fluxo={FLUXOS.evento} entrada={0} saida={100} />
         <RotuloDemo />
       </Sequence>
       {/* 8 · PROVA: planilha */}

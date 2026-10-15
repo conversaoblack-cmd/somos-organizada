@@ -107,6 +107,6 @@ volta, e a prova sobe da tela como um cartaz legível.*
 - **Virada:** a grade nasce **completa**; a placa que falta só se apaga no CTA (1188) e acende no toque (~1262).
 - **CTA:** a arquibancada preenche o quadro até embaixo; um eixo só; um CTA só (botão com o rótulo real do site
   "Cadastrar minha torcida"; a voz convida "Cadastre sua torcida"); "SOMOS ORGANIZADA" ≥ 96 px; linhas ≥ 44 px
-  ("Mensalidade fixa, sem % das vendas." em amarelo; "Só paga depois de publicar o site." em branco).
+  ("Plano mensal fixo, sem % das vendas." em amarelo — antes "Mensalidade fixa", trocado na rodada 2 porque "mensalidade" já é a do sócio no gancho; "Só paga depois de publicar o site." em branco).
 - **Estrutura:** marquise com volume (não linha de 1 px); torres de refletor inteiras dentro do quadro.
 - **Som:** leito de 108–234 cerca de 8–10 dB abaixo do pós-virada; ataque claro no 252 (surdo grande + estalo).

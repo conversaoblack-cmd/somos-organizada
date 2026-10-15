@@ -21,6 +21,7 @@ assets/**/.video/
 assets/**/erro-passo-*.png
 # gerados de forma determinística (refeitos pelos scripts)
 audio/**/trilha.wav
+audio/**/trilha-batucada.wav
 audio/**/trilha.json
 audio/sfx/*.wav
 audio/**/*-resultado.json

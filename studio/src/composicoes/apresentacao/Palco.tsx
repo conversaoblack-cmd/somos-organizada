@@ -2,7 +2,7 @@ import {ThreeCanvas} from '@remotion/three';
 import React from 'react';
 import {useVideoConfig} from 'remotion';
 import * as THREE from 'three';
-import {staticFile} from 'remotion';
+import {Sequence, staticFile} from 'remotion';
 import {Arquibancada3D, CameraNoFrame, Estadio, posicaoDaPlaca, type LinhaDoTempoPlaca} from '../../biblioteca/Arquibancada3D';
 import {Celular3D} from '../../biblioteca/Celular3D';
 import {COR, MARCA} from '../../marca/tokens';
@@ -35,7 +35,10 @@ export type CameraPalco = {posicao: [number, number, number]; alvo: [number, num
  * cena) fica atrás do aparelho, voltada para as placas, e uma contraluz colorida desenha o recorte da borda.
  */
 export type CelularNaArquibancada = {
-  tela: string;
+  /** captura parada (telas/) OU gravação (fluxos/, ver `gravacao`) */
+  tela?: string;
+  /** gravação fluida do produto: começa no quadro GLOBAL `inicio`, a partir de `recDe` s, na velocidade `vel` */
+  gravacao?: {arquivo: string; inicio: number; recDe: number; vel: number};
   /** cor semântica da luz (azul = ação, amarelo = o que entra, vermelho = barrado) */
   cor: string;
   x?: number;
@@ -77,7 +80,20 @@ const CelularNoPalco: React.FC<{cel: CelularNaArquibancada; camera: CameraPalco}
   return (
     <group>
       <group position={ponto.toArray() as [number, number, number]} rotation={[rot.x, rot.y + (cel.giro ?? 0), rot.z]}>
-        <Celular3D tela={staticFile(`apresentacao/telas/${cel.tela}`)} escala={escala} brilhoTela={0.35 + 0.65 * entrada} />
+        {cel.gravacao ? (
+          // a Sequence (sem layout, dentro do 3D) zera o tempo da gravação no início do trecho
+          <Sequence key={`${cel.gravacao.arquivo}-${cel.gravacao.inicio}`} from={cel.gravacao.inicio} layout="none">
+            <Celular3D
+              video={staticFile(`apresentacao/fluxos/${cel.gravacao.arquivo}`)}
+              trimBefore={Math.round(cel.gravacao.recDe * 30)}
+              playbackRate={cel.gravacao.vel}
+              escala={escala}
+              brilhoTela={0.35 + 0.65 * entrada}
+            />
+          </Sequence>
+        ) : (
+          <Celular3D tela={staticFile(`apresentacao/telas/${cel.tela}`)} escala={escala} brilhoTela={0.35 + 0.65 * entrada} />
+        )}
       </group>
       {/* a luz do aparelho espalhando nas placas (atrás dele, voltada para a arquibancada) */}
       <pointLight position={atras.toArray() as [number, number, number]} color={luz} intensity={(cel.intensidadeLuz ?? 60) * entrada} distance={22} decay={1.4} />

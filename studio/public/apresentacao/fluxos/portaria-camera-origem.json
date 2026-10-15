@@ -3,8 +3,8 @@
   "rotulo": "Torcida Brasil · dados de demonstração",
   "base": "http://127.0.0.1:4173",
   "conta": "portaria@brasil.test",
-  "commitDoProduto": "a98cca62bc01fa5770ae6fb2a076a1da1078b7fd",
-  "gravadoEm": "2026-10-15T18:03:49.961Z",
+  "commitDoProduto": "93c6bedd15f57ee7824cb049c7a4fe7dbb682997",
+  "gravadoEm": "2026-10-15T18:18:19.454Z",
   "viewport": {
     "width": 390,
     "height": 844
@@ -31,28 +31,32 @@
     "gravacao.mp4": [
       1170,
       2532
+    ],
+    "gravacao-nitida.mp4": [
+      1170,
+      2532
     ]
   },
   "prints": [
     {
       "nome": "portaria-eventos",
       "arquivo": "portaria-eventos.png",
-      "ms": 6552
+      "ms": 6546
     },
     {
       "nome": "leitor-camera",
       "arquivo": "leitor-camera.png",
-      "ms": 12237
+      "ms": 12225
     },
     {
       "nome": "leitor-liberado",
       "arquivo": "leitor-liberado.png",
-      "ms": 12997
+      "ms": 13009
     },
     {
       "nome": "leitor-ja-utilizado",
       "arquivo": "leitor-ja-utilizado.png",
-      "ms": 26819
+      "ms": 26800
     }
   ],
   "ocultado": [

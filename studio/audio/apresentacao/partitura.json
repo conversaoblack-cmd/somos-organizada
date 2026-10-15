@@ -1,12 +1,17 @@
 {
-  "_comentario": "Trilha da apresentação, começando no frame 108 (fim do gancho). Compasso = 72 frames (100 BPM). Âncoras: 252 virada (bateria entra), 828 breakdown (taxa), 1062 repique chama a volta, 1080 volta cheia, 1332 golpe final.",
+  "_comentario": "Só a TENSÃO sintetizada (108–252): surdo abafado e a virada de caixa no último tempo antes da bateria gravada entrar (audio/apresentacao/batucada.json, montar-batucada.mjs). Compasso = 72 quadros (100 BPM). O resto é silêncio aqui.",
   "bpm": 100,
   "compassos": [
-    {"n": 2, "padrao": "tensao"},
-    {"n": 8, "padrao": "cheio"},
-    {"n": 3.5, "padrao": "breakdown"},
-    {"n": 1.5, "padrao": "cheio"},
-    {"n": 2, "padrao": "final"}
+    {
+      "n": 2,
+      "padrao": "tensao"
+    },
+    {
+      "n": 15,
+      "padrao": "silencio"
+    }
   ],
-  "viradasNoFim": [1, 13]
+  "viradasNoFim": [
+    1
+  ]
 }

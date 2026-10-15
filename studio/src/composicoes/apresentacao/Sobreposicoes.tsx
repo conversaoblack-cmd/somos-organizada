@@ -53,7 +53,7 @@ export const FaixaLeitura: React.FC<{altura?: number; forca?: number}> = ({altur
 };
 
 /** Placar que conta (grafismo de transmissão esportiva): número grande em Archivo Black. */
-export const Placar: React.FC<{de: number; ate: number; inicio: number; fim: number; sufixo?: string; topo: number; cor?: string; tamanho?: number}> = ({
+export const Placar: React.FC<{de: number; ate: number; inicio: number; fim: number; sufixo?: string; topo: number; cor?: string; tamanho?: number; esquerda?: number}> = ({
   de,
   ate,
   inicio,
@@ -62,6 +62,7 @@ export const Placar: React.FC<{de: number; ate: number; inicio: number; fim: num
   topo,
   cor = COR.amarelo,
   tamanho = 260,
+  esquerda,
 }) => {
   const frame = useCurrentFrame();
   const {width} = useVideoConfig();
@@ -70,7 +71,7 @@ export const Placar: React.FC<{de: number; ate: number; inicio: number; fim: num
   const valor = Math.round(inicio + (fim - inicio) * p);
   const o = interpolate(frame, [de, de + 4], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   return (
-    <div style={{position: 'absolute', left: 0, width, top: topo * k, textAlign: 'center', fontFamily: FONTE.titulo, fontSize: tamanho * k, lineHeight: 1, color: cor, opacity: o, textShadow: '0 10px 50px rgba(0,0,0,0.7)', fontVariantNumeric: 'tabular-nums'}}>
+    <div style={{position: 'absolute', left: esquerda === undefined ? 0 : esquerda * k, width: esquerda === undefined ? width : width - esquerda * k, top: topo * k, textAlign: esquerda === undefined ? 'center' : 'left', fontFamily: FONTE.titulo, fontSize: tamanho * k, lineHeight: 1, color: cor, opacity: o, textShadow: '0 10px 50px rgba(0,0,0,0.7)', fontVariantNumeric: 'tabular-nums'}}>
       {valor}
       {sufixo}
     </div>
