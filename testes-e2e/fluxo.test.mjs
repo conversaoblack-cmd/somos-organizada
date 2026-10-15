@@ -686,7 +686,7 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
     endereco: { cep: "40000000", logradouro: "Rua A", numero: "1", bairro: "Centro", cidade: "Salvador", uf: "BA" },
     // cores escolhidas no cadastro (a de fundo inválida volta para o padrão azul e amarelo)
     tema: { corPrimaria: "#ffffff", corSecundaria: "#9CA3AF", corFundo: "preto", corTexto: "#F5F5F5", logoUrl: "https://x.test/a.png" },
-    termos: "9 de outubro de 2026",
+    termos: "15 de outubro de 2026",
   };
   await assert.rejects(b.chamar("solicitarTorcida", { ...dados, entidade: { ...dados.entidade, cnpj: "11222333000100" } }), /CNPJ/);
   const sol = await b.chamar("solicitarTorcida", dados);
@@ -745,7 +745,7 @@ test("15. cadastro pela página principal: diretor solicita, equipe aprova, torc
   assert.equal(t.get("publicada"), false);
   assert.deepEqual(t.get("tema"), { corPrimaria: "#FFFFFF", corSecundaria: "#9CA3AF", corFundo: "#070A12", corTexto: "#F5F5F5" });
   // Termos e Política: aceite gravado no cadastro; identificação pública (só razão social, CNPJ e cidade) na torcida
-  assert.equal((await aDb.doc(`solicitacoes/${sol.solicitacaoId}`).get()).get("aceiteTermos.versao"), "9 de outubro de 2026");
+  assert.equal((await aDb.doc(`solicitacoes/${sol.solicitacaoId}`).get()).get("aceiteTermos.versao"), "15 de outubro de 2026");
   assert.deepEqual(t.get("identificacao"), { cnpj: "11222333000181", razaoSocial: "Associação Fúria Azul", cidade: "Salvador", uf: "BA" });
   const membro = await aDb.doc(`torcidas/${ap.torcidaId}/membros/${u.uid}`).get();
   assert.equal(membro.get("papel"), "diretoria");

@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 import {
   clearIndexedDbPersistence,
@@ -17,13 +18,28 @@ export const app = initializeApp({
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 });
 
+export const USANDO_EMULADORES = import.meta.env.VITE_USAR_EMULADORES === "true";
+
+/**
+ * App Check: cada chamada ao Firebase leva um atestado de que veio do nosso site (reCAPTCHA Enterprise, invisível).
+ * Robô que chama o banco ou a api direto fica sem atestado. A chave do site é pública (vai no HTML de qualquer site
+ * com reCAPTCHA). Nos emuladores não liga. Precisa vir antes de Auth, Firestore, Storage e Functions.
+ */
+const CHAVE_RECAPTCHA = import.meta.env.VITE_RECAPTCHA_SITE_KEY ?? "6LcfC_EtAAAAAIYiuXmCN5E-I-Ehckuv1jtuJWlb";
+if (!USANDO_EMULADORES && CHAVE_RECAPTCHA) {
+  try {
+    initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(CHAVE_RECAPTCHA), isTokenAutoRefreshEnabled: true });
+  } catch {
+    /* sem App Check o site segue funcionando enquanto o Firebase não exigir */
+  }
+}
+
 export const auth = getAuth(app);
 auth.languageCode = "pt-BR";
 // Cache no aparelho: carteirinha, ingressos e dados já vistos abrem mesmo com internet ruim (portaria, estádio).
 export const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 export const fns = getFunctions(app, "southamerica-east1");
 
-export const USANDO_EMULADORES = import.meta.env.VITE_USAR_EMULADORES === "true";
 if (USANDO_EMULADORES) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);

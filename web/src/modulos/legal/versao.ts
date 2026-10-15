@@ -9,4 +9,4 @@ export const EMPRESA = {
 };
 
 /** Data exibida nas páginas e gravada no aceite do cadastro. Mudou o texto: atualize. */
-export const ATUALIZADO_EM = "9 de outubro de 2026";
+export const ATUALIZADO_EM = "15 de outubro de 2026";

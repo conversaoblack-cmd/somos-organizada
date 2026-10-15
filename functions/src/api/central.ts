@@ -10,6 +10,7 @@
  */
 import * as verificacao from "./verificacao";
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
+import { logger } from "firebase-functions/v2";
 import { EMAIL_API_KEY, MASTER_KEY, MAX_INSTANCIAS_API, QR_HMAC } from "../config";
 import * as ingressos from "./ingressos";
 import * as socios from "./socios";
@@ -111,6 +112,8 @@ export const api = onCall(
       throw new HttpsError("not-found", "Ação desconhecida.");
     }
     idsSeguros(dados);
+    // App Check ainda não é exigido: registra quem chega sem atestado para saber quando dá para exigir
+    if (!req.app && process.env.FUNCTIONS_EMULATOR !== "true") logger.info("api sem App Check", { acao });
     try {
       return await ACOES[acao].run({ ...req, data: dados ?? {} });
     } catch (e) {

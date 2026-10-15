@@ -474,6 +474,7 @@ export function privacidadePlataforma(): Secao[] {
           <Lista
             itens={[
               "Google Cloud / Firebase: hospedagem do site, banco de dados, arquivos (como o vídeo de verificação), login e envio de tarefas automáticas;",
+              "Google reCAPTCHA: confere, de forma invisível, que quem usa o site é uma pessoa e não um robô (proteção contra fraude);",
               "provedor de envio de e-mails (Brevo): só o nome, o e-mail e o conteúdo de cada mensagem de serviço;",
               "Pagar.me: quando a diretoria conecta a conta de pagamentos da torcida, os dados de cadastro da conta vão direto para a Pagar.me, que é a responsável por eles;",
               "autoridades públicas, quando houver ordem judicial ou obrigação legal, ou para defesa em processo.",
@@ -833,7 +834,7 @@ export function privacidadeTorcida(t: InfoTorcida): Secao[] {
               "a diretoria da torcida e a equipe autorizada por ela, cada uma só no que a função precisa (a portaria, por exemplo, vê o nome do titular e a situação do ingresso na hora da leitura);",
               "a Somos Organizada, para operar o sistema e dar suporte;",
               "a Pagar.me, para processar os pagamentos;",
-              "o Google Cloud/Firebase (hospedagem e banco de dados) e o provedor de envio de e-mails (Brevo), como fornecedores da Somos Organizada;",
+              "o Google Cloud/Firebase (hospedagem e banco de dados), o Google reCAPTCHA (proteção contra robôs e fraude) e o provedor de envio de e-mails (Brevo), como fornecedores da Somos Organizada;",
               "autoridades públicas, quando houver obrigação legal ou ordem judicial.",
             ]}
           />
