@@ -1,0 +1,53 @@
+{
+  "fonte": "produto real, ambiente local de demonstração (testes-e2e/dev-local.sh)",
+  "rotulo": "Torcida Brasil · dados de demonstração",
+  "base": "http://127.0.0.1:5173",
+  "conta": "portaria@brasil.test",
+  "commitDoProduto": "210d9867bbf6c97b315cbbadf8358aad9f3337cd",
+  "gravadoEm": "2026-10-15T16:20:33.616Z",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "escala": 3,
+  "navegador": "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  "dimensoes": {
+    "portaria-liberado-rafael.png": [
+      1170,
+      2532
+    ],
+    "portaria-ja-utilizado-rafael.png": [
+      1170,
+      2532
+    ],
+    "gravacao.mp4": [
+      1170,
+      2532
+    ]
+  },
+  "prints": [
+    {
+      "nome": "portaria-liberado-rafael",
+      "arquivo": "portaria-liberado-rafael.png",
+      "ms": 9866
+    },
+    {
+      "nome": "portaria-ja-utilizado-rafael",
+      "arquivo": "portaria-ja-utilizado-rafael.png",
+      "ms": 15617
+    }
+  ],
+  "ocultado": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    },
+    {
+      "texto": "Nenhuma câmera encontrada",
+      "subir": 2
+    }
+  ],
+  "errosNoConsole": []
+}

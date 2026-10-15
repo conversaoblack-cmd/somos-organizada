@@ -1,0 +1,17 @@
+{
+  "captura": {
+    "width": 1170,
+    "height": 2532
+  },
+  "escala": 3,
+  "marcas": [
+    {
+      "nome": "card-caixa",
+      "x": 99,
+      "y": 1205,
+      "w": 417,
+      "h": 120,
+      "ms": 6851
+    }
+  ]
+}

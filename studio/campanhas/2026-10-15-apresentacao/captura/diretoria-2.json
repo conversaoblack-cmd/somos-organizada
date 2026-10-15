@@ -1,0 +1,68 @@
+{
+  "_comentario": "Diretoria: lista de Sócios (status) e Financeiro com 'Baixar planilha'.",
+  "conta": "diretoria@brasil.test",
+  "entrarEm": "/brasil/admin",
+  "ocultar": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    },
+    {
+      "texto": "Nenhuma câmera encontrada",
+      "subir": 2
+    }
+  ],
+  "passos": [
+    {
+      "acao": "tocar",
+      "nome": "pular-tour",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "abrir",
+      "url": "/brasil/admin/socios",
+      "ms": 2500
+    },
+    {
+      "acao": "tocar",
+      "nome": "pular-tour-2",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "print",
+      "nome": "socios"
+    },
+    {
+      "acao": "abrir",
+      "url": "/brasil/admin/financeiro",
+      "ms": 2500
+    },
+    {
+      "acao": "tocar",
+      "nome": "pular-tour-3",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "tocar",
+      "nome": "baixar-planilha",
+      "texto": "Baixar planilha",
+      "soMarcar": true
+    },
+    {
+      "acao": "pausa",
+      "ms": 500
+    },
+    {
+      "acao": "print",
+      "nome": "financeiro-planilha"
+    }
+  ]
+}

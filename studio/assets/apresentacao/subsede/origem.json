@@ -1,0 +1,58 @@
+{
+  "fonte": "produto real, ambiente local de demonstração (testes-e2e/dev-local.sh)",
+  "rotulo": "Torcida Brasil · dados de demonstração",
+  "base": "http://127.0.0.1:5173",
+  "conta": "subsede4@brasil.test",
+  "commitDoProduto": "210d9867bbf6c97b315cbbadf8358aad9f3337cd",
+  "gravadoEm": "2026-10-15T16:21:02.027Z",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "escala": 3,
+  "navegador": "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  "dimensoes": {
+    "recebimentos.png": [
+      1170,
+      2532
+    ],
+    "recebimentos-2.png": [
+      1170,
+      2532
+    ],
+    "financeiro-subsede.png": [
+      1170,
+      2532
+    ]
+  },
+  "prints": [
+    {
+      "nome": "recebimentos",
+      "arquivo": "recebimentos.png",
+      "ms": 6798
+    },
+    {
+      "nome": "recebimentos-2",
+      "arquivo": "recebimentos-2.png",
+      "ms": 7677
+    },
+    {
+      "nome": "financeiro-subsede",
+      "arquivo": "financeiro-subsede.png",
+      "ms": 11170
+    }
+  ],
+  "ocultado": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    },
+    {
+      "texto": "Nenhuma câmera encontrada",
+      "subir": 2
+    }
+  ],
+  "errosNoConsole": []
+}

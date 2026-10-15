@@ -1,0 +1,17 @@
+{
+  "captura": {
+    "width": 1170,
+    "height": 2532
+  },
+  "escala": 3,
+  "marcas": [
+    {
+      "nome": "baixar-planilha",
+      "x": 48,
+      "y": 1200,
+      "w": 1074,
+      "h": 132,
+      "ms": 16428
+    }
+  ]
+}

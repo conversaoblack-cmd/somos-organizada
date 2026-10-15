@@ -1,0 +1,105 @@
+{
+  "fps": 30,
+  "duracaoFrames": 1350,
+  "palavrasFaladas": 89,
+  "palavrasPorSegundo": 1.98,
+  "falas": [
+    {
+      "id": "gancho",
+      "frame": 0,
+      "inicioMs": 0,
+      "fimMs": 2687,
+      "duracaoMs": 2687,
+      "palavrasFaladas": 7,
+      "fimFrame": 81
+    },
+    {
+      "id": "problema",
+      "frame": 114,
+      "inicioMs": 3800,
+      "fimMs": 8199,
+      "duracaoMs": 4399,
+      "palavrasFaladas": 10,
+      "fimFrame": 246
+    },
+    {
+      "id": "virada",
+      "frame": 260,
+      "inicioMs": 8667,
+      "fimMs": 10847,
+      "duracaoMs": 2180,
+      "palavrasFaladas": 7,
+      "fimFrame": 326
+    },
+    {
+      "id": "socio",
+      "frame": 380,
+      "inicioMs": 12667,
+      "fimMs": 16172,
+      "duracaoMs": 3505,
+      "palavrasFaladas": 8,
+      "fimFrame": 486
+    },
+    {
+      "id": "ingresso",
+      "frame": 516,
+      "inicioMs": 17200,
+      "fimMs": 21159,
+      "duracaoMs": 3959,
+      "palavrasFaladas": 12,
+      "fimFrame": 635
+    },
+    {
+      "id": "dinheiro",
+      "frame": 690,
+      "inicioMs": 23000,
+      "fimMs": 27105,
+      "duracaoMs": 4105,
+      "palavrasFaladas": 10,
+      "fimFrame": 814
+    },
+    {
+      "id": "taxa",
+      "frame": 834,
+      "inicioMs": 27800,
+      "fimMs": 30794,
+      "duracaoMs": 2994,
+      "palavrasFaladas": 10,
+      "fimFrame": 924
+    },
+    {
+      "id": "evento",
+      "frame": 980,
+      "inicioMs": 32667,
+      "fimMs": 35173,
+      "duracaoMs": 2506,
+      "palavrasFaladas": 7,
+      "fimFrame": 1056
+    },
+    {
+      "id": "prova",
+      "frame": 1092,
+      "inicioMs": 36400,
+      "fimMs": 38749,
+      "duracaoMs": 2349,
+      "palavrasFaladas": 6,
+      "fimFrame": 1163
+    },
+    {
+      "id": "cta",
+      "frame": 1200,
+      "inicioMs": 40000,
+      "fimMs": 45551,
+      "duracaoMs": 5551,
+      "palavrasFaladas": 12,
+      "fimFrame": 1367
+    }
+  ],
+  "avisos": [
+    "gancho: sem legenda (a tela precisa escrever esta fala; toda fala aparece escrita)",
+    "cta: sem legenda (a tela precisa escrever esta fala; toda fala aparece escrita)"
+  ],
+  "erros": [
+    "cta passa do fim da peça (45551 ms > 45000 ms)"
+  ]
+}

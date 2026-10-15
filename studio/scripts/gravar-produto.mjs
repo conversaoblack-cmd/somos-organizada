@@ -19,6 +19,10 @@
  *     {"acao": "rolar", "y": 600},
  *     {"acao": "pausa", "ms": 800},
  *     {"acao": "tocar", "texto": "Pular", "exato": true, "opcional": true}  // toca se aparecer; não vira marca
+ *   ],
+ *   "ocultar": [                                 // cobre o que não é assunto da cena (registrado no origem.json)
+ *     {"seletor": "button[aria-label^='Ajuda']"},
+ *     {"texto": "Ambiente de teste da Pagar.me", "subir": 1}
  *   ]
  * }
  *
@@ -52,6 +56,31 @@ const CHROMIUMS = [
 // PRNG com semente (mulberry32) injetado antes de qualquer script da página
 const SEMENTE_JS = `(() => { let s = 0x50D0A; Math.random = () => { s |= 0; s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();`;
 
+/**
+ * Cobre (esconde) elementos que não são assunto da cena: botão flutuante de suporte, faixa de "ambiente de teste".
+ * Equivale a cobrir/cortar na edição (seção 6.6) e fica registrado no origem.json. Nunca use para esconder estado
+ * do produto que mude o sentido da tela.
+ */
+async function aplicarOcultar(page, ocultar) {
+  if (!ocultar?.length) return;
+  await page.evaluate((regras) => {
+    for (const r of regras) {
+      if (r.seletor) document.querySelectorAll(r.seletor).forEach((el) => el.style.setProperty('visibility', 'hidden', 'important'));
+      if (r.texto) {
+        const andar = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+        let el;
+        while ((el = andar.nextNode())) {
+          if (el.children.length === 0 && el.textContent && el.textContent.includes(r.texto)) {
+            // esconde o bloco da faixa inteira (o pai com fundo), não só o texto
+            const alvo = r.subir ? Array.from({length: r.subir}).reduce((x) => x.parentElement ?? x, el) : el;
+            alvo.style.setProperty('display', 'none', 'important');
+          }
+        }
+      }
+    }
+  }, ocultar);
+}
+
 /** Primeiro alvo VISÍVEL (no celular, o menu lateral escondido repete textos como "Visão geral"). */
 function localizar(page, passo) {
   let l;
@@ -62,11 +91,12 @@ function localizar(page, passo) {
   return l.filter({visible: true}).first();
 }
 
-async function executar(page, passo, {base, t0, marcas, prints, pasta}) {
+async function executar(page, passo, {base, t0, marcas, prints, pasta, ocultar}) {
   switch (passo.acao) {
     case 'abrir':
       await page.goto(base + passo.url, {waitUntil: 'load'});
       await page.waitForTimeout(passo.ms ?? 600);
+      await aplicarOcultar(page, ocultar);
       break;
     case 'esperar':
       await localizar(page, passo).waitFor({state: 'visible', timeout: passo.timeout ?? 15000});
@@ -82,6 +112,7 @@ async function executar(page, passo, {base, t0, marcas, prints, pasta}) {
       await localizar(page, passo).fill(passo.texto ?? '');
       break;
     case 'print': {
+      await aplicarOcultar(page, ocultar);
       await page.evaluate(() => document.fonts.ready);
       const arq = `${passo.nome}.png`;
       await page.screenshot({path: join(pasta, arq), animations: 'disabled', caret: 'hide'});
@@ -161,7 +192,7 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
 
   for (const [n, passo] of (roteiro.passos ?? []).entries()) {
     try {
-      await executar(page, passo, {base, t0, marcas, prints, pasta});
+      await executar(page, passo, {base, t0, marcas, prints, pasta, ocultar: roteiro.ocultar});
     } catch (e) {
       // print do estado na falha: sem isso, "Timeout" não diz nada
       await page.screenshot({path: join(pasta, `erro-passo-${n + 1}.png`)}).catch(() => {});
@@ -215,6 +246,7 @@ export async function gravar(roteiro, pasta, {video = true} = {}) {
         navegador: exe,
         dimensoes,
         prints,
+        ocultado: roteiro.ocultar ?? [],
         errosNoConsole: consoleErros,
       },
       null,

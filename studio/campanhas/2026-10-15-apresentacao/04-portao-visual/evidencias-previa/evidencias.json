@@ -1,0 +1,60 @@
+{
+  "video": "campanhas/2026-10-15-apresentacao/04-portao-visual/previa-virada.mp4",
+  "duracao": 4.011,
+  "fps": 30,
+  "passo": 0.5,
+  "largura": 270,
+  "escala": 0.25,
+  "formato": "vertical",
+  "zona": {
+    "superior": [
+      120,
+      270,
+      960,
+      840
+    ],
+    "inferior": [
+      120,
+      840,
+      780,
+      1250
+    ]
+  },
+  "quadros": [
+    {
+      "t": 0,
+      "arquivo": "frames/t000.0.png"
+    },
+    {
+      "t": 0.5,
+      "arquivo": "frames/t000.5.png"
+    },
+    {
+      "t": 1,
+      "arquivo": "frames/t001.0.png"
+    },
+    {
+      "t": 1.5,
+      "arquivo": "frames/t001.5.png"
+    },
+    {
+      "t": 2,
+      "arquivo": "frames/t002.0.png"
+    },
+    {
+      "t": 2.5,
+      "arquivo": "frames/t002.5.png"
+    },
+    {
+      "t": 3,
+      "arquivo": "frames/t003.0.png"
+    },
+    {
+      "t": 3.5,
+      "arquivo": "frames/t003.5.png"
+    }
+  ],
+  "folha": "folha.png",
+  "folhaZona": "folha-zona.png",
+  "onda": "onda.png"
+}

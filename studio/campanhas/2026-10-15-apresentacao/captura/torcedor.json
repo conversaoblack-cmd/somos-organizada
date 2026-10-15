@@ -1,0 +1,12 @@
+{
+  "_comentario": "Jornada do torcedor no site da torcida de demonstração: página, evento e compra até o resumo com a taxa.",
+  "ocultar": [{"seletor": "button[aria-label^='Ajuda']"}, {"texto": "Ambiente de teste da Pagar.me"}],
+  "passos": [
+    {"acao": "abrir", "url": "/brasil", "ms": 2500},
+    {"acao": "print", "nome": "site-torcida"},
+    {"acao": "tocar", "nome": "evento-caravana", "texto": "Caravana para a Final", "depoisMs": 2000},
+    {"acao": "print", "nome": "evento"},
+    {"acao": "tocar", "nome": "comprar", "texto": "Comprar ingresso", "depoisMs": 1800},
+    {"acao": "print", "nome": "compra-1"}
+  ]
+}

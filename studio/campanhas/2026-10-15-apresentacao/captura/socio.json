@@ -1,0 +1,42 @@
+{
+  "_comentario": "Conta do sócio: carteirinha (frente e QR) e ingresso com QR.",
+  "conta": "socio@brasil.test",
+  "entrarEm": "/brasil/socio",
+  "passos": [
+    {
+      "acao": "tocar",
+      "nome": "pular-tour",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "pausa",
+      "ms": 2000
+    },
+    {
+      "acao": "print",
+      "nome": "carteirinha-frente"
+    },
+    {
+      "acao": "rolar",
+      "y": 500
+    },
+    {
+      "acao": "pausa",
+      "ms": 500
+    },
+    {
+      "acao": "print",
+      "nome": "carteirinha-em-dia"
+    }
+  ],
+  "ocultar": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    }
+  ]
+}

@@ -19,3 +19,13 @@ audio/**/take/take-guia.wav
 assets/**/gravacao.mp4
 assets/**/.video/
 assets/**/erro-passo-*.png
+# gerados de forma determinística (refeitos pelos scripts)
+audio/**/trilha.wav
+audio/**/trilha.json
+audio/sfx/*.wav
+audio/**/*-resultado.json
+# prévias e styleframes individuais em tamanho cheio (as folhas styleframes*.png ficam no Git)
+campanhas/**/*.mp4
+campanhas/**/04-portao-visual/sf-*.png
+# capturas brutas: as usadas na peça ficam em public/apresentacao/telas/; aqui só origem e marcas
+assets/**/*.png

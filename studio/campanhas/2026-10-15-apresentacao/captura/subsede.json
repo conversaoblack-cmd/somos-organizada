@@ -1,0 +1,18 @@
+{
+  "_comentario": "Subsede 4º Distrito: Recebimentos (divisão do pagamento) e Financeiro da subsede.",
+  "conta": "subsede4@brasil.test",
+  "entrarEm": "/brasil/admin",
+  "ocultar": [{"seletor": "button[aria-label^='Ajuda']"}, {"texto": "Ambiente de teste da Pagar.me"}, {"texto": "Nenhuma câmera encontrada", "subir": 2}],
+  "passos": [
+    {"acao": "tocar", "nome": "pular-tour", "texto": "Pular", "exato": true, "opcional": true},
+    {"acao": "abrir", "url": "/brasil/admin/recebimentos", "ms": 2500},
+    {"acao": "tocar", "nome": "pular-tour-2", "texto": "Pular", "exato": true, "opcional": true},
+    {"acao": "print", "nome": "recebimentos"},
+    {"acao": "rolar", "y": 700},
+    {"acao": "pausa", "ms": 500},
+    {"acao": "print", "nome": "recebimentos-2"},
+    {"acao": "abrir", "url": "/brasil/admin/financeiro", "ms": 2500},
+    {"acao": "tocar", "nome": "pular-tour-3", "texto": "Pular", "exato": true, "opcional": true},
+    {"acao": "print", "nome": "financeiro-subsede"}
+  ]
+}

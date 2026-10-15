@@ -1,0 +1,137 @@
+{
+  "avaliador": "marketing-review",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicoes": [
+    "Cena 4: usar a tela gravada que contém o texto do push-in ('Você está em dia — Preço de sócio liberado nos ingressos no seu nome'), que é assets/apresentacao/socio/carteirinha-em-dia.png, e não a public/apresentacao/telas/carteirinha-frente.png (que não tem esse texto). Enquadrar sem o card 'Seu plano · Sócio Mensal R$ 11,.. por mês' e sem o botão flutuante de conversa.",
+    "Faixa 'Ambiente de teste da Pagar.me: os pagamentos não são reais' e botão flutuante de conversa cobertos em todas as telas usadas: em public/apresentacao/telas/carteirinha-frente.png ainda aparecem, ao contrário do que diz o pacote (e o socio/origem.json não registra a cobertura).",
+    "Texto do post e comentário fixado entram na rodada 1 com: a variante longa da taxa (paga pelo torcedor, aparece antes de pagar, cobre as tarifas, o resto vira caixa), 'mensalidade fixa, sem porcentagem das vendas', o endereço somosorganizada.com.br/cadastro e sem preço."
+  ],
+  "evidencias_usadas": [
+    "auditoria/rodada-0-roteiro/pacote.md",
+    "01-briefing.md",
+    "02-direcao-de-arte.md",
+    "03-roteiro.md (seções 1 a 6)",
+    "audio/2026-10-15-apresentacao/narracao.json",
+    "conhecimento/verdade-do-produto.md",
+    "conhecimento/publico.md",
+    "marca/marca.md",
+    "auditoria/rubrica.md",
+    "evidencias/telas.png",
+    "evidencias/estudo-mosaico-gancho.png",
+    "evidencias/styleframe-caixa.png",
+    "public/apresentacao/telas/carteirinha-frente.png (tamanho real)",
+    "public/apresentacao/telas/financeiro-planilha.png (tamanho real)",
+    "assets/apresentacao/socio/carteirinha-em-dia.png (para contestar o fato: o texto 'Você está em dia' não está na tela escolhida)",
+    "assets/apresentacao/socio/origem.json",
+    "assets/apresentacao/diretoria-2/socios.png (alternativa da cena 4)",
+    "grep 'Você está em dia' em studio/ (achou só no roteiro e em produto-na-pratica.md)"
+  ],
+  "notas": {
+    "objetivo": 8.0,
+    "clareza": 7.5,
+    "gancho": 8.0,
+    "fidelidade": 8.5,
+    "cta": 8.0
+  },
+  "justificativa": {
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "O roteiro entrega os três itens do objetivo (sócio em dia, ingresso sem fraude, caixa na conta da torcida) e o insight da taxa, falando com a diretoria e na língua dela (grupo, caderno, print, caravana, subsede). Promessa ancorada no desejo (controle do dinheiro e respeito: 'quanto não entrou', 'direto na conta da torcida', 'a diretoria decide o preço'), sem 'lucro', sem jargão e sem número inventado. Serve à peça de lançamento: o nome aparece escrito aos 8,4 s e a assinatura fecha.",
+      "por_que_nao_e_10": "Cinco assuntos em 33 s (o próprio roteirista aponta) e falta de loop narrativo entre 12 s e 28 s; o payoff do gancho (dor da diretoria) é pago pela tela do torcedor (carteirinha), não pela da diretoria; o nome só é falado aos 40 s numa peça cuja régua é 'lembrar da marca'; quem ouve 'taxa de 10%' num anúncio de plataforma pode entender que é a plataforma que cobra 10% (o vídeo não diz 'mensalidade fixa, sem porcentagem das vendas').",
+      "metrica_que_confirma": "Retenção média (meta ≥ 40%) e a curva entre 12 s e 22 s (queda forte depois do payoff derruba a nota); compartilhamentos + salvamentos acima da média do perfil no trecho da taxa confirmam; cadastros de torcida nos 7 dias."
+    },
+    "clareza": {
+      "natureza": "execucao",
+      "texto": "Uma ideia por cena na maioria; frases de impacto curtas com cor semântica coerente; voz, legenda e tela dizem o mesmo nos pilares; o caminho do ingresso (QR do Rafael → LIBERADO → JÁ UTILIZADO, mesmo código BCXU-9UAJ) é seguível no mudo.",
+      "por_que_nao_e_10": "A tela escolhida para a cena 4 não contém o texto do push-in ('Você está em dia'); cena 5 empilha três camadas (tela, frase, legenda) em 6 s e 3 telas; na 7b a tela diz 'A DIRETORIA DECIDE O PREÇO' enquanto a legenda diz 'O ingresso só precisa pagar o evento' (duas mensagens ao mesmo tempo no mudo); cena 6 mostra 'Ninguém precisa repassar nada à mão' e a cena 8 fala 'caixa e repasses' com 'Registrar repasse' e 'A repassar' na mesma tela; a voz diz 'caixa da torcida' e o card do Financeiro diz 'Caixa da diretoria'."
+    },
+    "gancho": {
+      "natureza": "hipotese",
+      "texto": "Dor concreta do tesoureiro e do presidente, em pergunta, cheia no frame 0, voz e texto idênticos (um texto só na tela). 'NÃO ENTROU' em vermelho no escuro é interrupção de padrão sem inventar estatística. Em 1,5 s lê-se 'QUANTO DA MENSALIDADE NÃO ENTROU', que já é a dor inteira.",
+      "por_que_nao_e_10": "7 palavras (acima das 2–5); o visual dos primeiros 1,5 s é abstrato (no estudo, o mosaico lê como cadeiras de estádio com luzes vermelhas, não como 'torcida organizada'); não há sinal visual de que o vídeo é para diretoria de torcida até a fala do problema (3,8 s). Fala com o tesoureiro mais que com o diretor de caravana.",
+      "metrica_que_confirma": "Taxa de pulo e retenção nos 3 s (Insights do Reels). Retenção nos 3 s abaixo da média do perfil/categoria derruba; acima confirma."
+    },
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "Toda afirmação está em 'Comunicável: Sim': mensalidade que se cobra sozinha (cartão recorrente, Pix com lembrete), ingresso nominal, cada QR entra uma vez só ('O SEGUNDO É BARRADO' está correto; não diz 'print é barrado'), não diz 'câmera' nem 'sem internet', dinheiro não passa pela plataforma, subsede recebe direto (confirmado na tela com 'Conta de recebimento · Ativa'), taxa com a frase registrada na verdade-do-produto, oferta e linha legal verdadeiras. Sem preço de plano, sem Conversão Black, sem clube real, verde só dentro da tela do produto.",
+      "por_que_nao_e_10": "A tela carteirinha-frente.png em public/ ainda mostra a faixa 'Ambiente de teste da Pagar.me' e o botão flutuante (o pacote diz que foram cobertos); 'vira caixa' omite que a taxa cobre primeiro as tarifas (aceitável pela decisão do dono, mas depende do texto do post levar a variante longa); 'caixa da torcida' (voz) × 'Caixa da diretoria' (rótulo no card); a tela da cena 4 com 'Você está em dia' tem logo abaixo 'Seu plano · Sócio Mensal R$ 11,..' (preço de sócio da torcida, não da plataforma, mas o espectador pode confundir com preço da Somos Organizada)."
+    },
+    "cta": {
+      "natureza": "hipotese",
+      "texto": "Um passo só ('Cadastre sua torcida'), oferta verdadeira e de baixo atrito ('Só paga depois de publicar o site. Teste grátis em modo demonstração.'), sem preço, endereço certo (somosorganizada.com.br), repete o toque com anel azul da cena 8 e fecha o mosaico com a placa de quem assiste.",
+      "por_que_nao_e_10": "No Reels o endereço não é clicável e o vídeo não diz 'link na bio' (o caminho medido é o clique no link da bio); o botão do vídeo diz 'Cadastre sua torcida' e o do site diz 'Cadastrar minha torcida' (pequena quebra de reconhecimento); a voz encurta para 'Só paga depois de publicar' (sem 'o site'), o que pode soar ambíguo ('publicar o quê?').",
+      "metrica_que_confirma": "Cliques no link da bio no período do post e cadastros de torcida novos nos 7 dias seguintes (painel da plataforma), comparados com a semana anterior."
+    }
+  },
+  "pontos_fortes": [
+    "Promessa contável e do tamanho do produto: cada frase de impacto tem uma tela real que a prova (carteirinha em dia, LIBERADO/JÁ UTILIZADO do mesmo ingresso, Conta de recebimento Ativa da subsede, linha 'Taxa de serviço (10%)' antes de pagar, 'Baixar planilha').",
+    "Gancho pela dor do dinheiro que não entrou (controle e respeito), não pela feature.",
+    "Linguagem da arquibancada ('Cobrança no grupo, caravana no caderno, ingresso que vira print'), alinhada às dores do publico.md e às frases do site.",
+    "Taxa tratada com transparência: mostrada no resumo antes de pagar e com 'A DIRETORIA DECIDE O PREÇO' na tela, evitando promessa de preço pela plataforma.",
+    "'O SEGUNDO É BARRADO' respeita a armadilha do print (o primeiro uso entra).",
+    "Nenhuma falsa urgência, escassez, depoimento ou número de cliente; ausência de autoridade assumida de propósito.",
+    "Assinatura completa e sem preço; Conversão Black ausente."
+  ],
+  "problemas": [
+    {
+      "descricao": "A tela escolhida para a cena 4 (public/apresentacao/telas/carteirinha-frente.png) não contém o texto do push-in 'Você está em dia — Preço de sócio liberado nos ingressos no seu nome'; mostra só 'Sócio em dia' e 'ATIVO'. O texto existe em assets/apresentacao/socio/carteirinha-em-dia.png, que não está em public/.",
+      "gravidade": "media",
+      "criterio": "clareza",
+      "evidencia": "telas.png (carteirinha-frente); carteirinha-frente.png 1170×2532 inteira; carteirinha-em-dia.png y≈1500–1650 (px reais)",
+      "correcao": "Cena 4 (frames 396–468): usar carteirinha-em-dia.png e fazer o push-in no card 'Você está em dia' (y≈1500–1990 px reais), cortando antes de 'Seu plano · R$ 11,..' (y > 2350) e cobrindo o botão flutuante (canto inferior direito). Copiar para public/apresentacao/telas/ e registrar no origem.json."
+    },
+    {
+      "descricao": "Faixa 'Ambiente de teste da Pagar.me: os pagamentos não são reais' e botão flutuante de conversa visíveis na carteirinha-frente.png, embora o pacote diga que foram cobertos.",
+      "gravidade": "media",
+      "criterio": "fidelidade",
+      "evidencia": "public/apresentacao/telas/carteirinha-frente.png, topo (y 0–160 px) e canto inferior direito; socio/origem.json sem registro de cobertura",
+      "correcao": "Cobrir na captura (como nas outras telas) e registrar no origem.json; conferir também botão '?' e balão de conversa em visao-geral-caixa, financeiro-topo e evento."
+    },
+    {
+      "descricao": "Payoff do gancho pelo lado errado: a pergunta é da diretoria ('quanto não entrou?') e a resposta é a carteirinha do torcedor. A lista de Sócios da diretoria ('Ativo 3', 'Aguardando pagamento', 'Baixar planilha') responde à pergunta do tesoureiro.",
+      "gravidade": "media",
+      "criterio": "objetivo",
+      "evidencia": "03-roteiro.md cena 4 e risco 10; assets/apresentacao/diretoria-2/socios.png",
+      "correcao": "Cena 4: abrir com socios.png (360–432, push-in nos selos 'Ativo') e cortar na batida para 'Você está em dia' da carteirinha-em-dia (432–504); ou, se for uma tela só, preferir socios.png. Voz e frase de impacto não mudam."
+    },
+    {
+      "descricao": "Risco de leitura '10% é o que a plataforma cobra': a peça diz 'taxa de 10%' e não diz 'mensalidade fixa, sem porcentagem das vendas'.",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "03-roteiro.md cenas 6, 7a e 9; publico.md ('taxa escondida', 'promessa de dinheiro' afastam)",
+      "correcao": "Texto do post e comentário fixado: incluir 'Mensalidade fixa, sem porcentagem das vendas' e a variante longa da taxa. Opcional no vídeo: na cena 6, '...pela gente' já ajuda; não mexer na linha legal da marca."
+    },
+    {
+      "descricao": "7b: frase de impacto ('A DIRETORIA DECIDE O PREÇO') e legenda ('O ingresso só precisa pagar o evento') dizem coisas diferentes ao mesmo tempo; no mudo, são duas leituras em 3 s sobre a tela do evento.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "03-roteiro.md cena 7b (frames 972–1080) e decisão 2 da seção 6",
+      "correcao": "Manter a decisão, mas entrar a frase de impacto só depois do fim da legenda (frame ~1068 é tarde demais); alternativa: frase no 990 e legenda reduzida a 'Só precisa ↵ pagar **o evento**' (5 palavras)."
+    },
+    {
+      "descricao": "Cena 6 mostra 'Ninguém precisa repassar nada à mão' e a cena 8 diz 'Caixa e repasses' com 'Registrar repasse'/'A repassar' na tela: contradição aparente para quem presta atenção.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "telas.png recebimentos-2 e financeiro-topo/financeiro-planilha; narracao.json 'prova'",
+      "correcao": "Voz da cena 8: 'Caixa e vendas prontos para mostrar.' (6 palavras, mesma janela 1092–1188) e enquadrar sem 'Registrar repasse' e sem o card 'A repassar'."
+    },
+    {
+      "descricao": "CTA não diz onde clicar no Instagram (o endereço não é clicável no Reels).",
+      "gravidade": "baixa",
+      "criterio": "cta",
+      "evidencia": "03-roteiro.md cena 9; briefing ('Ação: abrir o link da bio')",
+      "correcao": "Se a bio tiver o link, acrescentar 'link na bio' no texto do post e no comentário fixado; no vídeo, manter a assinatura da marca como está."
+    }
+  ],
+  "riscos": [
+    "Lista de funcionalidades: queda de retenção entre 12 s e 22 s, depois do payoff do gancho.",
+    "Nome falado só aos 40 s: quem sai antes não ouve 'Somos Organizada' (só leu aos 8,4 s).",
+    "'Caixa da diretoria' no card do Financeiro pode alimentar a desconfiança 'pra onde foi o dinheiro' entre torcedores que compartilharem a peça; 'caixa da torcida' na voz ajuda.",
+    "Taxa: torcedor que vê o post pode reagir a '+ R$ 15 de taxa' na tela 7a; diretoria teme essa reação. O texto do post precisa explicar.",
+    "A tela recebimentos-2 diz que a subsede paga as tarifas da Pagar.me sobre a parte dela; a verdade-do-produto diz que a taxa cobre as tarifas. Não aparece na voz, mas o produto-review deve conferir antes de o texto do post afirmar 'cobre as tarifas'.",
+    "Visual do gancho (estudo) lê como cadeiras de estádio com luzes vermelhas; se não ler como 'torcida', a retenção nos 3 s depende só do texto."
+  ],
+  "argumento_contra_meu_veredito": "Deveria vetar pela taxa: o protocolo exige a frase confirmada pelo dono, e a verdade-do-produto registra a frase como 'escolhida pelo diretor' a partir da intenção do dono; 'A taxa de 10% vira caixa da torcida' omite que a taxa é paga pelo torcedor e cobre primeiro as tarifas, o que é uma promessa maior que o produto se o post não compensar. Mantenho a condição (não o veto) porque a linha da tabela diz 'Sim (dono, 15/10/2026; frase na seção abaixo)', a tela 7a mostra a taxa antes de pagar e a variante longa vai no post; se o dono não tiver visto a frase exata, o veto passa a valer.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

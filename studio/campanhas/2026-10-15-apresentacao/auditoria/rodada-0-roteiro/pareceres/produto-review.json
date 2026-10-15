@@ -1,0 +1,125 @@
+{
+  "avaliador": "produto-review",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicao": "(1) Cena 4: regravar a carteirinha (socio@brasil.test) com o mesmo 'ocultado' das outras capturas, ou cortar o topo e cobrir o botão de ajuda. A carteirinha-frente.png mostra a faixa 'Ambiente de teste da Pagar.me: os pagamentos não são reais.' e o botão flutuante de ajuda; o origem.json do sócio (e o da diretoria, usado na cena 8) não tem 'ocultado', ao contrário do que diz o pacote. (2) Cena 9: o botão 'Cadastre sua torcida' que o vídeo toca não existe no site. Os botões reais são 'Cadastrar minha torcida' (Landing.tsx:168 e :649) e 'Cadastrar torcida' (Landing.tsx:124). Trocar o rótulo do botão no CardMarca por 'Cadastrar minha torcida' ou pôr o endereço como 'somosorganizada.com.br/cadastro'. A voz pode continuar dizendo 'Cadastre sua torcida'.",
+  "evidencias_usadas": [
+    "auditoria/rodada-0-roteiro/pacote.md",
+    "01-briefing.md",
+    "03-roteiro.md (incl. seção 6)",
+    "audio/2026-10-15-apresentacao/narracao.json",
+    "conhecimento/verdade-do-produto.md",
+    "conhecimento/produto-na-pratica.md",
+    "marca/marca.md",
+    "auditoria/rubrica.md",
+    "docs/dividas-do-produto.md",
+    "evidencias/telas.png",
+    "evidencias/styleframe-prova.png",
+    "evidencias/styleframe-caixa.png",
+    "public/apresentacao/telas/carteirinha-frente.png",
+    "public/apresentacao/telas/financeiro-topo.png",
+    "assets/apresentacao/socio/carteirinha-em-dia.png",
+    "assets/apresentacao/diretoria-2/socios.png",
+    "assets/apresentacao/socio/origem.json",
+    "assets/apresentacao/subsede/origem.json",
+    "assets/apresentacao/portaria-rafael/origem.json",
+    "assets/apresentacao/diretoria/origem.json",
+    "assets/apresentacao/diretoria-2/origem.json",
+    "assets/apresentacao/torcedor/origem.json",
+    "assets/apresentacao/ingresso/origem.json",
+    "grep 'ocultado' em assets/apresentacao/*/origem.json",
+    "grep em src/ (tokens.ts:58 cta, CardMarca.tsx)",
+    "PRODUTO (para contestar um fato): web/src/landing/Landing.tsx linhas 121-124, 165-168, 648-649, 680 (rótulo real do botão e rota /cadastro)"
+  ],
+  "notas": {
+    "clareza": 8,
+    "fidelidade": 7.5,
+    "cta": 8
+  },
+  "justificativa": {
+    "clareza": {
+      "natureza": "execucao",
+      "texto": "Cada cena tem uma ideia e a tela que a prova. Sócio: carteirinha 'Você está em dia'. Ingresso: o mesmo bilhete BCXU-9UAJ do 'Mostrar ingresso' até LIBERADO e JÁ UTILIZADO, com o selo SÓCIO, e a continuidade fecha. Dinheiro: 'Conta de recebimento · Ativa' da subsede. Taxa: 'Taxa de serviço (10%)' no Passo 1 de 3, depois o '+ taxa' na página do evento. Prova: 'Baixar planilha'. Uma diretoria leiga consegue seguir a lógica sem saber de tecnologia, e o CTA é um passo só.",
+      "por_que_nao_e_10": "Três coisas pesam. (a) O payoff do gancho, que fala com a diretoria ('quanto não entrou'), vem pela tela do torcedor (carteirinha), e a lista de Sócios com 'Ativo' e 'Aguardando pagamento' já está gravada. (b) A cena 5 mostra só telas de resultado e ninguém diz como o porteiro confere, o que deixa uma lacuna para quem nunca viu um leitor de QR. (c) O rótulo do produto diz 'Caixa da diretoria' e a voz diz 'caixa da torcida', e a tabela da cena 7a ainda fala em 'etapa Pagamento', contrariando a decisão 5."
+    },
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "Conferi cada fala, legenda e frase de impacto contra a verdade-do-produto e as telas. Tudo é 'Comunicável: Sim': mensalidade no cartão recorrente e no Pix com lembrete; ingresso nominal; uso único, com 'JÁ UTILIZADO / Entrou às 13:20'; 'O dinheiro não passa pela gente'; divisão com a subsede ('A Pagar.me divide cada venda na hora, direto entre a torcida e a subsede'); a frase da taxa escolhida pelo diretor; a planilha para prestar contas; 'Só paga depois de publicar' e 'Teste grátis em modo demonstração'. Não há afirmação de portaria sem internet (o offline nem aparece), nem domínio próprio, preço de plano ou limites. Não aparece Fúria Jovem nem clube real, a portaria não lê a carteirinha (a cena 4 proíbe virar o cartão) e a voz não diz 'print é barrado'. O 'Cada subsede recebe direto' se sustenta na tela de Recebimentos e no recebimentos-2 ('Sem conta ativa, a diretoria não consegue aprovar os eventos da sua subsede').",
+      "por_que_nao_e_10": "O texto está perto de 9, mas a tela escolhida para a cena 4 (carteirinha-frente.png) mostra a faixa 'Ambiente de teste da Pagar.me: os pagamentos não são reais.' e o botão flutuante de ajuda. As capturas do sócio e da diretoria foram gravadas sem 'ocultado' (só ficou cortado onde a rolagem tirou a faixa), e o pacote afirma o contrário. Há também detalhes de demonstração e de faturamento visíveis: 'Fatura: 7 dias' no cabeçalho do Financeiro, banco real '341 · Itaú' em Recebimentos e CPF mascarado na portaria, que o roteiro disse que não apareceria."
+    },
+    "cta": {
+      "natureza": "hipotese",
+      "texto": "Um passo só, com oferta verdadeira ('Só paga depois de publicar o site. Teste grátis em modo demonstração.') e sem preço. O toque repete o anel azul do 'Baixar planilha' da cena 8, e o endereço somosorganizada.com.br existe, com botões de cadastro que levam a /cadastro.",
+      "por_que_nao_e_10": "O botão tocado no vídeo ('Cadastre sua torcida') não é o botão que a pessoa encontra no site ('Cadastrar minha torcida' / 'Cadastrar torcida'), e o endereço mostrado é a página inicial, não /cadastro. O link da bio ainda não foi definido. O vídeo também não avisa que o cadastro termina com o vídeo de verificação na sede, e quem chega esperando 'um toque' encontra 8 etapas.",
+      "metrica_que_confirma": "cliques no link da bio e cadastros de torcida nos 7 dias seguintes (painel da plataforma). Cliques altos com poucos cadastros indicam atrito entre o CTA e o caminho real (rótulo do botão ou etapa do vídeo de verificação)."
+    }
+  },
+  "pontos_fortes": [
+    "Continuidade real na cena 5: o mesmo ingresso (Rafael Torcedor, BCXU-9UAJ, selo SÓCIO) aparece em 'Mostrar ingresso', LIBERADO e JÁ UTILIZADO, sem campo de digitação e sem encenar câmera.",
+    "A taxa aparece de forma transparente: 'Taxa de serviço (10%)' e 'Total' no Passo 1 de 3, antes de pagar, e depois o '+ taxa' separado do preço de sócio e do público na página do evento.",
+    "A cena 7b põe 'A DIRETORIA DECIDE O PREÇO' na tela e evita que a frase da taxa vire promessa de preço da plataforma.",
+    "A cena 6 foi conferida na tela real da subsede ('Conta de recebimento · Ativa' e 'Ninguém precisa repassar nada à mão').",
+    "Nenhuma afirmação sobre offline e nenhum 'print é barrado' solto: a armadilha da portaria sem internet foi evitada por inteiro.",
+    "A cena 4 proíbe virar a carteirinha (a portaria não lê carteirinha)."
+  ],
+  "problemas": [
+    {
+      "descricao": "A faixa de demonstração e o botão de ajuda aparecem na tela da cena 4. carteirinha-frente.png traz no topo 'Ambiente de teste da Pagar.me: os pagamentos não são reais.' e o botão flutuante de ajuda no canto inferior direito; carteirinha-em-dia.png também tem o botão. O origem.json do sócio não tem 'ocultado', e o pacote diz que tudo foi coberto.",
+      "gravidade": "alta",
+      "criterio": "fidelidade",
+      "evidencia": "public/apresentacao/telas/carteirinha-frente.png (faixa em y 0-125 de 2532 px; botão em ~x 980-1120, y 2350-2490); assets/apresentacao/socio/origem.json sem 'ocultado'",
+      "correcao": "Regravar o roteiro de captura do sócio com o mesmo 'ocultado' das outras (button[aria-label^='Ajuda'], texto 'Ambiente de teste da Pagar.me'). Se não der, cortar os 160 px de cima da carteirinha-frente e cobrir o botão nos dois PNGs e no gravacao.mp4 que a cena 4 usar (frames 360-504). Corrigir a frase do pacote.md que diz que tudo foi coberto."
+    },
+    {
+      "descricao": "As capturas da diretoria (financeiro-topo e visao-geral-caixa) também foram gravadas sem 'ocultado', e o botão de ajuda aparece. A cena 8 faz push-in no card 'Taxa de serviço — Caixa da diretoria' do financeiro-topo.",
+      "gravidade": "media",
+      "criterio": "fidelidade",
+      "evidencia": "public/apresentacao/telas/financeiro-topo.png (botão em ~x 980-1120, y 2350-2490); assets/apresentacao/diretoria/origem.json sem 'ocultado'",
+      "correcao": "Regravar a diretoria com 'ocultado', ou garantir que o push-in da cena 8 (frames 1098-1143) enquadre só a fileira dos 4 cards (y ~230-990 do PNG), sem o canto inferior direito."
+    },
+    {
+      "descricao": "O botão do CTA não existe no site. O vídeo toca 'Cadastre sua torcida', mas na página inicial os botões são 'Cadastrar minha torcida' (Landing.tsx:168 e :649) e 'Cadastrar torcida' (Landing.tsx:124 e :680), todos levando a /cadastro. A diretoria leiga procura o botão que viu e não o encontra igual. O endereço mostrado é a página inicial, não /cadastro.",
+      "gravidade": "media",
+      "criterio": "cta",
+      "evidencia": "03-roteiro.md cena 9 (1188-1350, toque 1236-1290); src/marca/tokens.ts:58; web/src/landing/Landing.tsx:124, 168, 649",
+      "correcao": "Escolher uma das saídas: (a) rótulo do botão no CardMarca = 'Cadastrar minha torcida', mantendo a voz 'Cadastre sua torcida' e a frase de impacto; ou (b) endereço sob o botão = 'somosorganizada.com.br/cadastro' (frame 1200), que leva direto ao formulário. Nos dois casos, o link da bio deve apontar para somosorganizada.com.br/cadastro."
+    },
+    {
+      "descricao": "A tabela da cena 7a ainda diz 'Celular na etapa Pagamento da compra', mas a decisão 5 trocou para 'Passo 1 de 3: Ingressos' (compra-1.png). O motion pode gravar ou montar a etapa errada.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "03-roteiro.md linha da cena 7a × seção 6, item 5",
+      "correcao": "Na tabela da cena 7a, trocar 'etapa Pagamento' por 'Passo 1 de 3: Ingressos (compra-1.png), recorte em Taxa de serviço (10%) R$ 15,00 e Total R$ 165,00'."
+    },
+    {
+      "descricao": "O cabeçalho do painel da diretoria mostra 'Fatura: 7 dias', a cobrança da plataforma. Isso puxa para o plano e o preço, que não são comunicáveis, e confunde quem assiste.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "public/apresentacao/telas/financeiro-topo.png (cabeçalho, y 0-150 do PNG); também em socios.png e visao-geral-caixa",
+      "correcao": "Cena 8 (frames 1080-1188): enquadrar abaixo do cabeçalho, ou cobrir o chip 'Fatura: 7 dias' com o rótulo 'Torcida Brasil · dados de demonstração'."
+    },
+    {
+      "descricao": "A tela de Recebimentos mostra o nome de um banco real ('341 · Itaú') e o titular, CPF e agência/conta da subsede, todos fictícios e mascarados. Marca de terceiro aparece sem necessidade.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "public/apresentacao/telas/recebimentos.png (bloco Titular/CPF/Banco/Agência, metade de baixo do card 'Conta de recebimento')",
+      "correcao": "Cena 6 (frames 684-828): enquadrar só 'Conta de recebimento · Ativa' + 'Tudo certo: as vendas dos eventos da subsede caem direto nesta conta' e o card 'Como o dinheiro é dividido', sem as linhas de banco e titular."
+    },
+    {
+      "descricao": "A nota da cena 5 diz 'Nunca mostrar ... o CPF', e a decisão 3 diz que não aparece CPF, mas LIBERADO, JÁ UTILIZADO e ingresso-qr mostram 'CPF ***.903.300-**' (mascarado e fictício).",
+      "gravidade": "cosmetica",
+      "criterio": "fidelidade",
+      "evidencia": "telas.png: portaria-liberado-rafael, portaria-ja-utilizado-rafael, ingresso-qr; styleframe-prova.png",
+      "correcao": "Aceitar o CPF mascarado (é o que o produto mostra e reforça 'no nome de quem vai') e corrigir a nota do roteiro para 'nunca mostrar CPF digitado nem completo'."
+    }
+  ],
+  "riscos": [
+    "Subsede: 'Cada subsede recebe direto' vale para os eventos (sem conta ativa a diretoria não aprova os eventos da subsede), mas o Financeiro mostra subsede 'Pela conta da torcida' e 'A repassar'. Se a cena 8 enquadrar 'A repassar' ou 'Registrar repasse', um diretor atento vê a exceção. Manter o push-in só no card da taxa.",
+    "Texto do post: a variante longa diz que a taxa 'cobre as tarifas', mas com divisão a própria subsede paga as tarifas da Pagar.me sobre a parte dela ('Vai para a subsede R$ 50,00 · menos as tarifas da Pagar.me', recebimentos-2). Não afeta a fala do vídeo; revisar a legenda do post antes de publicar.",
+    "O cadastro termina com o vídeo de verificação na sede, e o vídeo não diz isso. Quem clica esperando 'um toque' encontra 8 etapas. Não é falso, mas pode derrubar a conversão de clique em cadastro.",
+    "'Caixa da diretoria' (rótulo do produto) × 'caixa da torcida' (voz e legenda): coerente com a marca, mas um diretor pode perceber a diferença no push-in da cena 8.",
+    "styleframe-caixa.png usa o card da Visão geral ('Taxa de serviço (caixa)'), não a tela da cena 7a (compra-1). Se ele virar referência de montagem, a cena 7a perde a prova 'antes de pagar'.",
+    "Nenhum bug do produto foi exposto nas telas avaliadas; nada a registrar em studio/docs/dividas-do-produto.md por enquanto. A faixa e o botão de ajuda são estado de demonstração já registrado ali, em 'Observações'."
+  ],
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

@@ -1,0 +1,19 @@
+{
+  "_comentario": "Portaria lendo o MESMO ingresso mostrado na conta do sócio (Rafael, código BCXU-9UAJ): continuidade da cena 5. Consome a entrada no emulador.",
+  "conta": "portaria@brasil.test",
+  "entrarEm": "/brasil/portaria",
+  "ocultar": [{"seletor": "button[aria-label^='Ajuda']"}, {"texto": "Ambiente de teste da Pagar.me"}, {"texto": "Nenhuma câmera encontrada", "subir": 2}],
+  "passos": [
+    {"acao": "tocar", "nome": "pular-tour", "texto": "Pular", "exato": true, "opcional": true},
+    {"acao": "pausa", "ms": 1500},
+    {"acao": "tocar", "nome": "evento-caravana", "texto": "Caravana para a Final", "depoisMs": 1500},
+    {"acao": "digitar", "seletor": "input[placeholder^='CPF']", "texto": "BCXU-9UAJ"},
+    {"acao": "tocar", "nome": "validar-1", "texto": "Validar entrada", "depoisMs": 900},
+    {"acao": "print", "nome": "portaria-liberado-rafael"},
+    {"acao": "pausa", "ms": 4500},
+    {"acao": "digitar", "seletor": "input[placeholder^='CPF']", "texto": "BCXU-9UAJ"},
+    {"acao": "tocar", "nome": "validar-2", "texto": "Validar entrada", "depoisMs": 900},
+    {"acao": "print", "nome": "portaria-ja-utilizado-rafael"},
+    {"acao": "pausa", "ms": 1500}
+  ]
+}

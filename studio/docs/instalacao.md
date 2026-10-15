@@ -20,7 +20,7 @@ O estúdio fica em `studio/`, **isolado do produto**: `package.json` próprio, n
 | Skills Remotion | commit `7ba4dcf` (v4.0.535) | Remotion License | teste de ativação | ok (`docs/testes-ativacao/`) |
 | Skills GSAP | commit `aed9cfd` | MIT | teste de ativação | ok |
 | Archivo e Archivo Black | cópia de `web/public/fontes/` | OFL | stills `CardMarca-*` | ok |
-| ElevenLabs | API (sem SDK) | plano comercial: **a definir** | `audio/gerar-take.mjs --elevenlabs` | **não testado**: falta `ELEVENLABS_API_KEY` no ambiente |
+| ElevenLabs | **manual pelo dono** (decisão de 15/10/2026); API opcional | plano comercial do dono | o estúdio entrega o texto e a configuração; o dono gera, baixa e envia o arquivo | o arquivo entra como `audio/<peca>/take/take-elevenlabs.mp3` (tipo `manual`) |
 | Firebase CLI (só para o ambiente de demonstração) | 15.34.0 (global) | MIT | `bash testes-e2e/dev-local.sh` | ok |
 
 ## Subir na nuvem (sessão nova; o contêiner é apagado)
@@ -79,7 +79,7 @@ Windows: use o WSL (Ubuntu) e siga os passos da nuvem.
 ## Licenças
 
 - **Remotion:** grátis para pessoa física e empresa com até 3 funcionários; acima disso, **Company License**.
-  **Situação da Conversão Black: a confirmar com o dono** antes da primeira peça publicada.
+  Situação confirmada pelo dono em 15/10/2026: **2 pessoas** (o dono e um colaborador sem carteira assinada) → **licença grátis**.
 - **GSAP:** grátis, inclusive uso comercial (licença padrão "no charge" da GreenSock/Webflow).
 - **Archivo e Archivo Black:** OFL.
 - **Música e SFX:** só com licença comercial **lida** e registrada em `audio/LICENCAS.md`.

@@ -1,0 +1,80 @@
+{
+  "fonte": "produto real, ambiente local de demonstração (testes-e2e/dev-local.sh)",
+  "rotulo": "Torcida Brasil · dados de demonstração",
+  "base": "http://127.0.0.1:5173",
+  "conta": "portaria@brasil.test",
+  "commitDoProduto": "210d9867bbf6c97b315cbbadf8358aad9f3337cd",
+  "gravadoEm": "2026-10-15T16:11:32.130Z",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "escala": 3,
+  "navegador": "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  "dimensoes": {
+    "portaria-inicio.png": [
+      1170,
+      2532
+    ],
+    "portaria-evento.png": [
+      1170,
+      2532
+    ],
+    "portaria-pronta.png": [
+      1170,
+      2532
+    ],
+    "portaria-liberado.png": [
+      1170,
+      2532
+    ],
+    "portaria-ja-utilizado.png": [
+      1170,
+      2532
+    ],
+    "gravacao.mp4": [
+      1170,
+      2532
+    ]
+  },
+  "prints": [
+    {
+      "nome": "portaria-inicio",
+      "arquivo": "portaria-inicio.png",
+      "ms": 7406
+    },
+    {
+      "nome": "portaria-evento",
+      "arquivo": "portaria-evento.png",
+      "ms": 9337
+    },
+    {
+      "nome": "portaria-pronta",
+      "arquivo": "portaria-pronta.png",
+      "ms": 10410
+    },
+    {
+      "nome": "portaria-liberado",
+      "arquivo": "portaria-liberado.png",
+      "ms": 12057
+    },
+    {
+      "nome": "portaria-ja-utilizado",
+      "arquivo": "portaria-ja-utilizado.png",
+      "ms": 17833
+    }
+  ],
+  "ocultado": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    },
+    {
+      "texto": "Nenhuma câmera encontrada",
+      "subir": 2
+    }
+  ],
+  "errosNoConsole": []
+}

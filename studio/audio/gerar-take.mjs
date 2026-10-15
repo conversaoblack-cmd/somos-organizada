@@ -3,7 +3,10 @@
  * Gera o TAKE ÚNICO da narração (todas as falas numa gravação só, para a voz ficar consistente; seção 6.5).
  * Uso:
  *   node audio/gerar-take.mjs <peca> --guia          voz guia do sistema (espeak-ng na nuvem, `say` no Mac): SÓ para cronometrar
- *   node audio/gerar-take.mjs <peca> --elevenlabs    take final pela ElevenLabs (custa créditos; confirme antes)
+ *   node audio/gerar-take.mjs <peca> --elevenlabs    take final pela API da ElevenLabs (custa créditos; confirme antes)
+ *   node audio/gerar-take.mjs <peca> --texto         imprime o texto e a configuração para o DONO gerar no site da
+ *                                                    ElevenLabs (fluxo padrão desde 15/10/2026) → audio/<peca>/take/PARA-ELEVENLABS.md
+ *   node audio/gerar-take.mjs <peca> --manual <arq>  importa o arquivo que o dono baixou da ElevenLabs como take final
  *
  * Lê audio/<peca>/narracao.json. Saída: audio/<peca>/take/take-guia.wav ou take-elevenlabs.mp3 + take.json (o que foi pedido).
  * Chave: process.env.ELEVENLABS_API_KEY (nunca em arquivo, chat ou log). Voz: narracao.json → voz.id (a definir com o dono).
@@ -93,7 +96,37 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const narracao = lerJson(join(dir, 'narracao.json'));
   const pasta = join(dir, 'take');
   mkdirSync(pasta, {recursive: true});
-  if (process.argv.includes('--elevenlabs')) {
+  if (process.argv.includes('--texto')) {
+    const voz = narracao.voz ?? {};
+    const modelo = voz.modelo ?? 'eleven_multilingual_v2';
+    const md = [
+      `# Texto para a ElevenLabs · ${peca}`,
+      '',
+      'Cole o bloco abaixo INTEIRO numa geração só (um take único: a voz fica igual do começo ao fim).',
+      '',
+      `- **Modelo:** ${modelo === 'eleven_v3' ? 'Eleven v3' : 'Eleven Multilingual v2'}`,
+      `- **Voz:** ${voz.nome ?? '(escolha uma voz masculina ou feminina, português do Brasil, sotaque neutro)'}`,
+      `- **Ajustes:** ${voz.ajustesTexto ?? 'Stability 50% · Similarity 80% · Style 20% · Speaker boost ligado · velocidade 1,0'}`,
+      '- **Formato de download:** MP3 44,1 kHz 128 kbps (ou maior) ou WAV',
+      '- Não corte nem edite o arquivo: o estúdio corta nas pausas.',
+      '',
+      '```',
+      textoDoTake(narracao, modelo),
+      '```',
+      '',
+      ...(voz.direcao ? ['## Direção de voz', '', voz.direcao, ''] : []),
+    ].join('\n');
+    writeFileSync(join(pasta, 'PARA-ELEVENLABS.md'), md + '\n');
+    console.log(md);
+  } else if (process.argv.includes('--manual')) {
+    const origem = process.argv[process.argv.indexOf('--manual') + 1];
+    if (!origem || !existsSync(origem)) throw new Error('informe o arquivo baixado: --manual <caminho>');
+    const ext = origem.toLowerCase().endsWith('.wav') ? 'wav' : 'mp3';
+    const destino = join(pasta, `take-elevenlabs.${ext}`);
+    ff(['-v', 'error', '-y', '-i', origem, '-c', 'copy', destino]);
+    gravarJson(join(pasta, 'take.json'), {tipo: 'manual', arquivo: `take-elevenlabs.${ext}`, importadoEm: new Date().toISOString(), origem: 'ElevenLabs (gerado pelo dono no site)'});
+    console.log(`Take final importado → ${destino}. Próximo: node audio/alinhar-take.mjs ${peca}`);
+  } else if (process.argv.includes('--elevenlabs')) {
     const {saida, pedido} = await elevenlabs(narracao, pasta);
     gravarJson(join(pasta, 'take.json'), {tipo: 'elevenlabs', arquivo: 'take-elevenlabs.mp3', geradoEm: new Date().toISOString(), pedido});
     console.log(`Take final → ${saida}`);

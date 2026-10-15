@@ -1,0 +1,80 @@
+{
+  "_comentario": "Painel da diretoria: Visão geral (card 'Taxa de serviço (caixa)') e Financeiro. Rodar scripts/semente-estudio.mjs antes.",
+  "conta": "diretoria@brasil.test",
+  "entrarEm": "/brasil/admin",
+  "passos": [
+    {
+      "acao": "tocar",
+      "nome": "pular-tour",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "esperar",
+      "texto": "Visão geral"
+    },
+    {
+      "acao": "pausa",
+      "ms": 1500
+    },
+    {
+      "acao": "print",
+      "nome": "visao-geral-topo"
+    },
+    {
+      "acao": "tocar",
+      "nome": "card-caixa",
+      "texto": "Taxa de serviço (caixa)",
+      "soMarcar": true
+    },
+    {
+      "acao": "pausa",
+      "ms": 600
+    },
+    {
+      "acao": "print",
+      "nome": "visao-geral-caixa"
+    },
+    {
+      "acao": "abrir",
+      "url": "/brasil/admin/financeiro",
+      "ms": 2500
+    },
+    {
+      "acao": "tocar",
+      "nome": "pular-tour-fin",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "print",
+      "nome": "financeiro-topo"
+    },
+    {
+      "acao": "rolar",
+      "y": 700
+    },
+    {
+      "acao": "pausa",
+      "ms": 600
+    },
+    {
+      "acao": "print",
+      "nome": "financeiro-sedes"
+    }
+  ],
+  "ocultar": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    },
+    {
+      "texto": "Nenhuma câmera encontrada",
+      "subir": 2
+    }
+  ]
+}

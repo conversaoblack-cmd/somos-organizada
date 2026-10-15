@@ -1,0 +1,12 @@
+{
+  "_comentario": "Trilha da apresentação, começando no frame 108 (fim do gancho). Compasso = 72 frames (100 BPM). Âncoras: 252 virada (bateria entra), 828 breakdown (taxa), 1062 repique chama a volta, 1080 volta cheia, 1332 golpe final.",
+  "bpm": 100,
+  "compassos": [
+    {"n": 2, "padrao": "tensao"},
+    {"n": 8, "padrao": "cheio"},
+    {"n": 3.5, "padrao": "breakdown"},
+    {"n": 1.5, "padrao": "cheio"},
+    {"n": 2, "padrao": "final"}
+  ],
+  "viradasNoFim": [1, 13]
+}

@@ -81,3 +81,11 @@ test('validação recusa parecer sem evidências ou com veredito inventado', () 
   assert.ok(validarParecer(base('motion-review', {}, {veredito: 'OK'}), 'x').length > 0);
   assert.equal(validarParecer(base('motion-review', {visual: 8}), 'x').length, 0);
 });
+
+test('gravidade com acento ("média", "crítica") é aceita e "crítica" bloqueia', () => {
+  const m = mesaBoa();
+  m[0].problemas = [{descricao: 'x', gravidade: 'média'}];
+  assert.equal(validarParecer(m[0], 'x').length, 0);
+  m[1].problemas = [{descricao: 'y', gravidade: 'crítica'}];
+  assert.equal(pontuar(m).situacao, 'BLOQUEADA');
+});

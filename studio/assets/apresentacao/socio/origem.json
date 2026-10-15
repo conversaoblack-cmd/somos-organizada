@@ -1,0 +1,49 @@
+{
+  "fonte": "produto real, ambiente local de demonstração (testes-e2e/dev-local.sh)",
+  "rotulo": "Torcida Brasil · dados de demonstração",
+  "base": "http://127.0.0.1:5173",
+  "conta": "socio@brasil.test",
+  "commitDoProduto": "210d9867bbf6c97b315cbbadf8358aad9f3337cd",
+  "gravadoEm": "2026-10-15T16:27:06.539Z",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "escala": 3,
+  "navegador": "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  "dimensoes": {
+    "carteirinha-frente.png": [
+      1170,
+      2532
+    ],
+    "carteirinha-em-dia.png": [
+      1170,
+      2532
+    ],
+    "gravacao.mp4": [
+      1170,
+      2532
+    ]
+  },
+  "prints": [
+    {
+      "nome": "carteirinha-frente",
+      "arquivo": "carteirinha-frente.png",
+      "ms": 8485
+    },
+    {
+      "nome": "carteirinha-em-dia",
+      "arquivo": "carteirinha-em-dia.png",
+      "ms": 9892
+    }
+  ],
+  "ocultado": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    }
+  ],
+  "errosNoConsole": []
+}

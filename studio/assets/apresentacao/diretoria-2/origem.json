@@ -1,0 +1,49 @@
+{
+  "fonte": "produto real, ambiente local de demonstração (testes-e2e/dev-local.sh)",
+  "rotulo": "Torcida Brasil · dados de demonstração",
+  "base": "http://127.0.0.1:5173",
+  "conta": "diretoria@brasil.test",
+  "commitDoProduto": "210d9867bbf6c97b315cbbadf8358aad9f3337cd",
+  "gravadoEm": "2026-10-15T16:28:53.512Z",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "escala": 3,
+  "navegador": "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  "dimensoes": {
+    "socios.png": [
+      1170,
+      2532
+    ],
+    "financeiro-planilha.png": [
+      1170,
+      2532
+    ]
+  },
+  "prints": [
+    {
+      "nome": "socios",
+      "arquivo": "socios.png",
+      "ms": 10807
+    },
+    {
+      "nome": "financeiro-planilha",
+      "arquivo": "financeiro-planilha.png",
+      "ms": 17144
+    }
+  ],
+  "ocultado": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    },
+    {
+      "texto": "Nenhuma câmera encontrada",
+      "subir": 2
+    }
+  ],
+  "errosNoConsole": []
+}

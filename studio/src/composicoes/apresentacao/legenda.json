@@ -1,0 +1,574 @@
+[
+  {
+    "id": "problema-0",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "Cobrança",
+        "startMs": 3860,
+        "endMs": 4460,
+        "timestampMs": 4160,
+        "confidence": 1
+      },
+      {
+        "text": "no",
+        "startMs": 4460,
+        "endMs": 4610,
+        "timestampMs": 4535,
+        "confidence": 1
+      },
+      {
+        "text": "grupo,",
+        "startMs": 4610,
+        "endMs": 4986,
+        "timestampMs": 4798,
+        "confidence": 1
+      },
+      {
+        "text": "caravana",
+        "startMs": 4986,
+        "endMs": 5795,
+        "timestampMs": 5391,
+        "confidence": 1,
+        "quebraAntes": true
+      },
+      {
+        "text": "no",
+        "startMs": 5795,
+        "endMs": 5945,
+        "timestampMs": 5870,
+        "confidence": 1
+      },
+      {
+        "text": "caderno,",
+        "startMs": 5945,
+        "endMs": 6638,
+        "timestampMs": 6292,
+        "confidence": 1
+      }
+    ]
+  },
+  {
+    "id": "problema-1",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "ingresso",
+        "startMs": 6638,
+        "endMs": 7238,
+        "timestampMs": 6938,
+        "confidence": 1
+      },
+      {
+        "text": "que",
+        "startMs": 7238,
+        "endMs": 7463,
+        "timestampMs": 7351,
+        "confidence": 1
+      },
+      {
+        "text": "vira",
+        "startMs": 7463,
+        "endMs": 7763,
+        "timestampMs": 7613,
+        "confidence": 1
+      },
+      {
+        "text": "print.",
+        "startMs": 7763,
+        "endMs": 8139,
+        "timestampMs": 7951,
+        "confidence": 1,
+        "cor": "perigo"
+      }
+    ]
+  },
+  {
+    "id": "virada-0",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "Agora",
+        "startMs": 8727,
+        "endMs": 9109,
+        "timestampMs": 8918,
+        "confidence": 1
+      },
+      {
+        "text": "a",
+        "startMs": 9109,
+        "endMs": 9261,
+        "timestampMs": 9185,
+        "confidence": 1
+      },
+      {
+        "text": "torcida",
+        "startMs": 9261,
+        "endMs": 9795,
+        "timestampMs": 9528,
+        "confidence": 1
+      },
+      {
+        "text": "tem",
+        "startMs": 9795,
+        "endMs": 10024,
+        "timestampMs": 9910,
+        "confidence": 1,
+        "quebraAntes": true
+      },
+      {
+        "text": "um",
+        "startMs": 10024,
+        "endMs": 10177,
+        "timestampMs": 10101,
+        "confidence": 1,
+        "cor": "azul"
+      },
+      {
+        "text": "painel",
+        "startMs": 10177,
+        "endMs": 10635,
+        "timestampMs": 10406,
+        "confidence": 1,
+        "cor": "azul"
+      },
+      {
+        "text": "só.",
+        "startMs": 10635,
+        "endMs": 10787,
+        "timestampMs": 10711,
+        "confidence": 1,
+        "cor": "azul"
+      }
+    ]
+  },
+  {
+    "id": "socio-0",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "No",
+        "startMs": 12727,
+        "endMs": 12896,
+        "timestampMs": 12812,
+        "confidence": 1
+      },
+      {
+        "text": "cartão,",
+        "startMs": 12896,
+        "endMs": 13404,
+        "timestampMs": 13150,
+        "confidence": 1
+      },
+      {
+        "text": "todo",
+        "startMs": 13404,
+        "endMs": 13963,
+        "timestampMs": 13684,
+        "confidence": 1,
+        "cor": "amarelo"
+      },
+      {
+        "text": "mês.",
+        "startMs": 13963,
+        "endMs": 14550,
+        "timestampMs": 14257,
+        "confidence": 1,
+        "cor": "amarelo"
+      },
+      {
+        "text": "No",
+        "startMs": 14550,
+        "endMs": 14719,
+        "timestampMs": 14635,
+        "confidence": 1,
+        "quebraAntes": true
+      },
+      {
+        "text": "Pix,",
+        "startMs": 14719,
+        "endMs": 14973,
+        "timestampMs": 14846,
+        "confidence": 1
+      },
+      {
+        "text": "com",
+        "startMs": 14973,
+        "endMs": 15434,
+        "timestampMs": 15204,
+        "confidence": 1,
+        "cor": "azul"
+      },
+      {
+        "text": "lembrete.",
+        "startMs": 15434,
+        "endMs": 16112,
+        "timestampMs": 15773,
+        "confidence": 1,
+        "cor": "azul"
+      }
+    ]
+  },
+  {
+    "id": "ingresso-0",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "Ingresso",
+        "startMs": 17260,
+        "endMs": 17917,
+        "timestampMs": 17589,
+        "confidence": 1
+      },
+      {
+        "text": "no",
+        "startMs": 17917,
+        "endMs": 18082,
+        "timestampMs": 18000,
+        "confidence": 1
+      },
+      {
+        "text": "nome",
+        "startMs": 18082,
+        "endMs": 18411,
+        "timestampMs": 18247,
+        "confidence": 1
+      },
+      {
+        "text": "de",
+        "startMs": 18411,
+        "endMs": 18575,
+        "timestampMs": 18493,
+        "confidence": 1,
+        "quebraAntes": true
+      },
+      {
+        "text": "quem",
+        "startMs": 18575,
+        "endMs": 18904,
+        "timestampMs": 18740,
+        "confidence": 1
+      },
+      {
+        "text": "vai.",
+        "startMs": 18904,
+        "endMs": 19537,
+        "timestampMs": 19221,
+        "confidence": 1
+      }
+    ]
+  },
+  {
+    "id": "ingresso-1",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "Cada",
+        "startMs": 19537,
+        "endMs": 19866,
+        "timestampMs": 19702,
+        "confidence": 1
+      },
+      {
+        "text": "QR",
+        "startMs": 19866,
+        "endMs": 20030,
+        "timestampMs": 19948,
+        "confidence": 1,
+        "cor": "azul"
+      },
+      {
+        "text": "entra",
+        "startMs": 20030,
+        "endMs": 20441,
+        "timestampMs": 20236,
+        "confidence": 1
+      },
+      {
+        "text": "uma",
+        "startMs": 20441,
+        "endMs": 20688,
+        "timestampMs": 20565,
+        "confidence": 1,
+        "cor": "azul",
+        "quebraAntes": true
+      },
+      {
+        "text": "vez",
+        "startMs": 20688,
+        "endMs": 20934,
+        "timestampMs": 20811,
+        "confidence": 1,
+        "cor": "azul"
+      },
+      {
+        "text": "só.",
+        "startMs": 20934,
+        "endMs": 21098,
+        "timestampMs": 21016,
+        "confidence": 1,
+        "cor": "azul"
+      }
+    ]
+  },
+  {
+    "id": "dinheiro-0",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "O",
+        "startMs": 23060,
+        "endMs": 23204,
+        "timestampMs": 23132,
+        "confidence": 1
+      },
+      {
+        "text": "dinheiro",
+        "startMs": 23204,
+        "endMs": 23780,
+        "timestampMs": 23492,
+        "confidence": 1
+      },
+      {
+        "text": "não",
+        "startMs": 23780,
+        "endMs": 23996,
+        "timestampMs": 23888,
+        "confidence": 1
+      },
+      {
+        "text": "passa",
+        "startMs": 23996,
+        "endMs": 24356,
+        "timestampMs": 24176,
+        "confidence": 1
+      },
+      {
+        "text": "pela",
+        "startMs": 24356,
+        "endMs": 24644,
+        "timestampMs": 24500,
+        "confidence": 1,
+        "quebraAntes": true
+      },
+      {
+        "text": "gente.",
+        "startMs": 24644,
+        "endMs": 25390,
+        "timestampMs": 25017,
+        "confidence": 1
+      }
+    ]
+  },
+  {
+    "id": "dinheiro-1",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "Cada",
+        "startMs": 25390,
+        "endMs": 25677,
+        "timestampMs": 25534,
+        "confidence": 1
+      },
+      {
+        "text": "subsede",
+        "startMs": 25677,
+        "endMs": 26181,
+        "timestampMs": 25929,
+        "confidence": 1,
+        "cor": "amarelo"
+      },
+      {
+        "text": "recebe",
+        "startMs": 26181,
+        "endMs": 26613,
+        "timestampMs": 26397,
+        "confidence": 1,
+        "quebraAntes": true
+      },
+      {
+        "text": "direto.",
+        "startMs": 26613,
+        "endMs": 27045,
+        "timestampMs": 26829,
+        "confidence": 1
+      }
+    ]
+  },
+  {
+    "id": "taxa-0",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "A",
+        "startMs": 27860,
+        "endMs": 28029,
+        "timestampMs": 27945,
+        "confidence": 1
+      },
+      {
+        "text": "taxa",
+        "startMs": 28029,
+        "endMs": 28367,
+        "timestampMs": 28198,
+        "confidence": 1
+      },
+      {
+        "text": "de",
+        "startMs": 28367,
+        "endMs": 28536,
+        "timestampMs": 28452,
+        "confidence": 1
+      },
+      {
+        "text": "10%",
+        "startMs": 28536,
+        "endMs": 29212,
+        "timestampMs": 28874,
+        "confidence": 1,
+        "cor": "amarelo"
+      },
+      {
+        "text": "vira",
+        "startMs": 29212,
+        "endMs": 29550,
+        "timestampMs": 29381,
+        "confidence": 1,
+        "quebraAntes": true
+      },
+      {
+        "text": "caixa",
+        "startMs": 29550,
+        "endMs": 29973,
+        "timestampMs": 29762,
+        "confidence": 1,
+        "cor": "amarelo"
+      },
+      {
+        "text": "da",
+        "startMs": 29973,
+        "endMs": 30142,
+        "timestampMs": 30058,
+        "confidence": 1,
+        "cor": "amarelo"
+      },
+      {
+        "text": "torcida.",
+        "startMs": 30142,
+        "endMs": 30733,
+        "timestampMs": 30438,
+        "confidence": 1,
+        "cor": "amarelo"
+      }
+    ]
+  },
+  {
+    "id": "evento-0",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "O",
+        "startMs": 32727,
+        "endMs": 32876,
+        "timestampMs": 32802,
+        "confidence": 1
+      },
+      {
+        "text": "ingresso",
+        "startMs": 32876,
+        "endMs": 33473,
+        "timestampMs": 33175,
+        "confidence": 1
+      },
+      {
+        "text": "só",
+        "startMs": 33473,
+        "endMs": 33622,
+        "timestampMs": 33548,
+        "confidence": 1
+      },
+      {
+        "text": "precisa",
+        "startMs": 33622,
+        "endMs": 34144,
+        "timestampMs": 33883,
+        "confidence": 1
+      },
+      {
+        "text": "pagar",
+        "startMs": 34144,
+        "endMs": 34516,
+        "timestampMs": 34330,
+        "confidence": 1,
+        "quebraAntes": true
+      },
+      {
+        "text": "o",
+        "startMs": 34516,
+        "endMs": 34665,
+        "timestampMs": 34591,
+        "confidence": 1,
+        "cor": "amarelo"
+      },
+      {
+        "text": "evento.",
+        "startMs": 34665,
+        "endMs": 35113,
+        "timestampMs": 34889,
+        "confidence": 1,
+        "cor": "amarelo"
+      }
+    ]
+  },
+  {
+    "id": "prova-0",
+    "faixa": "baixa",
+    "palavras": [
+      {
+        "text": "Caixa",
+        "startMs": 36460,
+        "endMs": 36820,
+        "timestampMs": 36640,
+        "confidence": 1,
+        "cor": "amarelo"
+      },
+      {
+        "text": "e",
+        "startMs": 36820,
+        "endMs": 36963,
+        "timestampMs": 36892,
+        "confidence": 1
+      },
+      {
+        "text": "vendas",
+        "startMs": 36963,
+        "endMs": 37395,
+        "timestampMs": 37179,
+        "confidence": 1
+      },
+      {
+        "text": "prontos",
+        "startMs": 37395,
+        "endMs": 37898,
+        "timestampMs": 37647,
+        "confidence": 1,
+        "quebraAntes": true
+      },
+      {
+        "text": "para",
+        "startMs": 37898,
+        "endMs": 38186,
+        "timestampMs": 38042,
+        "confidence": 1
+      },
+      {
+        "text": "mostrar.",
+        "startMs": 38186,
+        "endMs": 38689,
+        "timestampMs": 38438,
+        "confidence": 1
+      }
+    ]
+  }
+]

@@ -1,0 +1,87 @@
+{
+  "avaliador": "estrategia-review",
+  "rodada": "0-roteiro",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicao": "(1) Antes de publicar: perfil do Instagram criado, link da bio apontando para somosorganizada.com.br e este Reels fixado no perfil; legenda do post com a variante longa da taxa e um aviso de que o cadastro termina com um vídeo de verificação gravado na sede. Hoje o briefing marca 'Perfil do Instagram: sem resposta', ou seja, o primeiro passo do funil não existe. (2) A peça precisa dizer 'mensalidade fixa, sem porcentagem das vendas' (item 6 do briefing, 'O que a peça precisa dizer'), no mínimo escrito na tela. Hoje isso não aparece nem na voz nem na tela.",
+  "evidencias_usadas": [
+    "auditoria/rodada-0-roteiro/pacote.md",
+    "01-briefing.md",
+    "02-direcao-de-arte.md",
+    "03-roteiro.md (seções 1 a 6)",
+    "audio/2026-10-15-apresentacao/narracao.json",
+    "conhecimento/verdade-do-produto.md",
+    "conhecimento/produto-na-pratica.md",
+    "conhecimento/publico.md",
+    "marca/marca.md",
+    "auditoria/rubrica.md",
+    "auditoria/rodada-0-roteiro/evidencias/telas.png",
+    "auditoria/rodada-0-roteiro/evidencias/styleframe-caixa.png",
+    "assets/apresentacao/diretoria-2/socios.png (alternativa da cena 4 citada na decisão 6 do diretor)"
+  ],
+  "notas": {
+    "objetivo": 7.5
+  },
+  "justificativa": {
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "O tipo E (lançamento), com A (alcance) como secundário, bate com o pedido do dono e com o indicador do briefing (retenção média ≥ 40% e retenção nos 3 s; a régua é entender e lembrar, não converter). O roteiro cobre os três pilares da promessa ('sócio em dia, ingresso sem fraude, caixa na conta da torcida') só com telas reais. O gancho ('Quanto da mensalidade não entrou este mês?', frame 0) fala com o tesoureiro e filtra o torcedor comum: atrai quem decide. Não há verba (Reels orgânico, trilha do estúdio, cerca de 87 palavras de crédito de voz) e o custo maior, o mosaico 3D, vira a linguagem das próximas peças, então se paga em várias. Para o caminho até a receita (vídeo → bio → /cadastro → vídeo de verificação → aprovação → demonstração → publicar), a peça empurra até o /cadastro e depende de três coisas que estão fora dela: um perfil que ainda não existe, uma expectativa de 'teste grátis' que esbarra no vídeo de verificação na sede e uma medição sem ?src=.",
+      "por_que_nao_e_10": "(a) Falta 'mensalidade fixa, sem porcentagem das vendas', que responde à principal objeção de quem decide ('quanto vocês levam?'). Essa objeção fica mais forte justamente porque a peça mostra a 'Taxa de serviço (10%)' num checkout parecido com o das plataformas de ingresso que ficam com a taxa. (b) Numa peça cuja régua é lembrar da marca, o nome só é falado aos 40 s (1200), e o logo escrito aparece de 8,4 s a 12 s e some até o CTA. (c) O CTA entra aos 39,6 s, depois da cena 8 (planilha), que é a mais fraca em retenção e só fecha um laço que a cena 7 já resolveu em parte. (d) O payoff do gancho vem pelo lado do torcedor (carteirinha), não pelo do tesoureiro.",
+      "metrica_que_confirma": "Retenção média ≥ 40% e uma curva sem queda forte entre 12 s e 22 s confirmam a nota. Toques no link da bio ≥ 1% das contas alcançadas e pelo menos 1 cadastro de torcida em 7 dias (painel da plataforma, já que o site não registra ?src=) mostram que o funil anda. Queda > 50% até 16 s, ou zero toque no link com alcance acima de 2 mil contas, derruba a nota."
+    }
+  },
+  "pontos_fortes": [
+    "Tipo E com objetivo de entender e lembrar, e um CTA de um passo: coerente com a primeira peça de um perfil novo, que vai servir de âncora fixada para as próximas peças de aquisição (F) apontarem.",
+    "O gancho seleciona quem decide: 'mensalidade que não entrou' é a dor do tesoureiro e não do torcedor comum. Isso protege o público-alvo da distribuição orgânica.",
+    "Custo baixo e sem verba: trilha do estúdio sem licença, 87 palavras de voz, telas reais já gravadas (12 telas em telas.png). O custo alto, o mosaico 3D, é investimento de linguagem que as próximas peças reaproveitam.",
+    "A taxa é tratada como diferencial (caixa da torcida), mostrada antes de pagar (compra-1: 'Taxa de serviço (10%) R$ 15,00 · Total R$ 165,00'), e não é escondida, que é exatamente o que afasta o público segundo publico.md.",
+    "A linha legal 'Só paga depois de publicar o site. Teste grátis em modo demonstração.' alinha o CTA ao momento em que a receita começa (a publicação) e baixa o risco percebido.",
+    "Manter a carteirinha na cena 4 (decisão 6 do diretor) é certo para a retenção: a lista de Sócios gravada (socios.png) tem 4 nomes e selos verdes pequenos. Ela paga melhor o gancho do tesoureiro, mas lê pior no celular e no mudo."
+  ],
+  "problemas": [
+    {
+      "descricao": "O primeiro passo do funil (perfil + link da bio) não existe: o briefing marca 'Perfil do Instagram: sem resposta'. Sem bio com link, a ação do briefing ('abrir o link da bio') não acontece, e o endereço escrito na tela não é clicável no Reels.",
+      "gravidade": "alta",
+      "criterio": "objetivo",
+      "evidencia": "01-briefing.md, tabela 'Decisões em aberto' (linha 'Perfil do Instagram'); 03-roteiro.md, cena 9 (1188–1350) com somosorganizada.com.br",
+      "correcao": "Condição de publicação: criar o perfil com bio 'Plataforma para diretorias de torcida organizada', link para somosorganizada.com.br e este Reels fixado. Legenda terminando em 'Link na bio para cadastrar sua torcida'."
+    },
+    {
+      "descricao": "A peça não diz 'mensalidade fixa, sem porcentagem das vendas' (item 6 obrigatório do briefing). Mostrar 'Taxa de serviço (10%)' num checkout comum deixa aberta a leitura de que a plataforma fica com 10%, que é o padrão das plataformas de ingresso que a diretoria já conhece. 'Só paga depois de publicar' revela que existe cobrança, mas não diz qual é o modelo.",
+      "gravidade": "média",
+      "criterio": "objetivo",
+      "evidencia": "narracao.json (nenhuma fala contém 'porcentagem'); 03-roteiro.md, cena 9: linha legal sem o modelo de cobrança; briefing, item 6",
+      "correcao": "Opção A (preferida, sem mexer na voz): na cena 7b (972–1080), trocar a frase de impacto 'A DIRETORIA DECIDE O PREÇO' por 'A GENTE NÃO FICA COM **NENHUM %**{amarelo}' (7 palavras, 2,6 s em 3,0 s) ou, mais curta, 'SEM **% PRA GENTE**{amarelo}' (4 palavras, 1,7 s), deixando 'a diretoria decide o preço' para a legenda do post. Opção B: na cena 9, a voz vira 'Somos Organizada. Mensalidade fixa, sem porcentagem. Só paga depois de publicar.' (11 palavras, mínimo 4,2 s em 5,0 s, a partir do frame 1200); 'Cadastre sua torcida' continua escrito no botão. Mínimo aceitável: a frase na legenda do post e num comentário fixado."
+    },
+    {
+      "descricao": "Lembrança da marca: o nome só é falado aos 40 s. Escrito, ele aparece de 8,4 s a 12 s e depois só no CTA. A régua do briefing é 'entender e lembrar', e a parte do público que sai entre 12 s e 39 s (a maioria, numa curva típica) não leva o nome.",
+      "gravidade": "média",
+      "criterio": "objetivo",
+      "evidencia": "03-roteiro.md, seção 5, risco 9; cenas 4–8 (360–1188) sem marca na tela fora do celular",
+      "correcao": "Assinatura discreta fixa (grade 2×2 + 'Somos Organizada', Archivo 800 a ~34 px, #A1A5AC, 70% de opacidade) no canto superior da zona segura, dos frames 360 a 1188. Custo zero de voz, e não concorre com a frase de impacto se ficar fora da faixa dela."
+    },
+    {
+      "descricao": "A cena 8 (planilha, 36,0–39,6 s) empurra o CTA para 39,6 s. É a cena de menor valor marginal: a cena 7 já fechou o 'onde fica o caixa' com o mosaico cheio. Cada 3,6 s antes do CTA tira uma fatia de quem vê o pedido.",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "03-roteiro.md, cena 8 (1080–1188) e cena 9 (1188–1350)",
+      "correcao": "Não corte agora: os 45 s cabem no briefing, e a planilha é a única prova de prestação de contas, o que responde à dor 'pra onde foi o dinheiro'. Se a curva publicada cair mais de 10 pontos entre 32 s e 40 s, a versão 2 (ou o corte para anúncio, se um dia houver verba) funde a cena 8 com a 7b (push-in no card 'Caixa da diretoria' no lugar da página do evento) e antecipa o CTA para ~36 s."
+    },
+    {
+      "descricao": "Expectativa contra o funil: a linha legal promete 'Teste grátis em modo demonstração', mas o modo demonstração só abre depois da aprovação, e a aprovação exige um vídeo gravado na sede com documento e 2+ testemunhas (~1 dia útil). Quem clica esperando testar na hora encontra uma etapa que não estava prevista. O maior abandono do caminho até a receita tende a acontecer aí, fora da peça.",
+      "gravidade": "média",
+      "criterio": "objetivo",
+      "evidencia": "produto-na-pratica.md ('/cadastro tem 8 etapas ... Vídeo ... aprova em ~1 dia útil'); 03-roteiro.md, cena 9, linha legal",
+      "correcao": "Não mexa na peça. Na legenda do post: 'O cadastro termina com um vídeo rápido gravado na sede (é o que impede alguém de se passar pela sua torcida). Aprovado, você testa tudo em modo demonstração e só paga depois de publicar.' Confirmar que o botão 'Torcida de exemplo' da página inicial (VITE_SLUG_DEMO) está no ar em produção, para quem quer ver antes de cadastrar."
+    }
+  ],
+  "riscos": [
+    "Distribuição: num perfil novo e sem seguidores, o alcance orgânico vai para quem engaja com o tema, e isso tende a ser o torcedor comum (as telas de carteirinha, ingresso e compra são do lado do torcedor). Alcance alto com zero toque no link indica público errado, não peça boa.",
+    "Medição: o site não registra ?src=, e os cadastros do período misturam canais (indicação, comercial). Registrar os toques no link da bio (Insights do perfil) e perguntar 'como conheceu' no contato com cada torcida que se cadastrar nos 7 dias.",
+    "O argumento do roteirista (lista de funções × dois pilares) pode estar certo para a retenção. Testar com a próxima peça, não com esta: um Reels F de ~20 s só com 'a taxa vira caixa' (reaproveitando o mosaico, as cenas 7a/7b e o CTA) custa pouco e mede a hipótese da taxa isolada.",
+    "Se o take da ElevenLabs estourar as janelas de 'dinheiro' e 'taxa', a correção mexe no frame de início da fala, nunca na velocidade (seção 2 do roteiro). Fala corrida derruba a retenção justo no momento que a hipótese diz que faz salvar.",
+    "A peça vai ser usada também pelo comercial, enviada no WhatsApp para diretorias. Nesse uso a cobertura completa vale mais que a retenção no feed. Registrar no desempenho/registro.md quantas vezes foi enviada por esse caminho."
+  ],
+  "argumento_mais_forte_contra": "Meu veredito trata o 'tour de funções' como aceitável porque o briefing pede apresentar o que a gente entrega. Mas a função-objetivo é torcida publicada, e um tour de 45 s num perfil sem seguidores pode ter retenção baixa demais para o Instagram distribuir. Aí a peça não chega à diretoria nenhuma, e o roteiro de dois pilares (mensalidade + caixa, com a taxa no centro, como o roteirista sugere) seria o que gera os primeiros cadastros. Pelo mesmo custo de produção, uma peça mais estreita talvez desse mais receita. Mantenho o veredito por três razões: o pedido explícito do dono para a primeira peça; o fato de que 3 das 5 'funções' são um pilar só (caixa: cenas 6, 7 e 8, 12 s de 33 s), o que já aproxima o roteiro da versão de dois pilares; e o fato de esta peça ser a âncora fixada para onde as próximas peças F apontam. A curva de retenção entre 12 s e 22 s decide quem tem razão.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

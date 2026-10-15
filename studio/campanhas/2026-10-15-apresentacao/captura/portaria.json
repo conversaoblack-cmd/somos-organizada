@@ -1,0 +1,90 @@
+{
+  "_comentario": "Portaria: leitura por CPF (na nuvem não há câmera); LIBERADO e depois JÁ UTILIZADO. Consome a entrada da Ana Souza no emulador: para regravar, reinicie o dev-local.sh.",
+  "conta": "portaria@brasil.test",
+  "entrarEm": "/brasil/portaria",
+  "ocultar": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    },
+    {
+      "texto": "Nenhuma câmera encontrada",
+      "subir": 2
+    }
+  ],
+  "passos": [
+    {
+      "acao": "tocar",
+      "nome": "pular-tour",
+      "texto": "Pular",
+      "exato": true,
+      "opcional": true
+    },
+    {
+      "acao": "pausa",
+      "ms": 2000
+    },
+    {
+      "acao": "print",
+      "nome": "portaria-inicio"
+    },
+    {
+      "acao": "tocar",
+      "nome": "evento-caravana",
+      "texto": "Caravana para a Final",
+      "depoisMs": 1500
+    },
+    {
+      "acao": "print",
+      "nome": "portaria-evento"
+    },
+    {
+      "acao": "pausa",
+      "ms": 800
+    },
+    {
+      "acao": "print",
+      "nome": "portaria-pronta"
+    },
+    {
+      "acao": "digitar",
+      "seletor": "input[placeholder^='CPF']",
+      "texto": "39053344705"
+    },
+    {
+      "acao": "tocar",
+      "nome": "validar-1",
+      "texto": "Validar entrada",
+      "depoisMs": 900
+    },
+    {
+      "acao": "print",
+      "nome": "portaria-liberado"
+    },
+    {
+      "acao": "pausa",
+      "ms": 4500
+    },
+    {
+      "acao": "digitar",
+      "seletor": "input[placeholder^='CPF']",
+      "texto": "39053344705"
+    },
+    {
+      "acao": "tocar",
+      "nome": "validar-2",
+      "texto": "Validar entrada",
+      "depoisMs": 900
+    },
+    {
+      "acao": "print",
+      "nome": "portaria-ja-utilizado"
+    },
+    {
+      "acao": "pausa",
+      "ms": 1500
+    }
+  ]
+}

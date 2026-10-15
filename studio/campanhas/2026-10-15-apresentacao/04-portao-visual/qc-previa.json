@@ -1,0 +1,36 @@
+{
+  "gerado": "2026-10-15T16:42:25.545Z",
+  "alvo": {
+    "lufs": -14,
+    "toleranciaLufs": 1,
+    "truePeakMax": -1,
+    "fps": 30,
+    "toleranciaDuracao": 0.1,
+    "derivaMax": 0.1
+  },
+  "formato": "vertical",
+  "medidas": {
+    "arquivo": "campanhas/2026-10-15-apresentacao/04-portao-visual/previa-virada.mp4",
+    "bytes": 5305431,
+    "duracao": 4.011,
+    "largura": 1080,
+    "altura": 1920,
+    "fps": 30,
+    "codec": "h264",
+    "pixFmt": "yuv420p",
+    "espacoDeCor": "bt709",
+    "primarias": "bt709",
+    "transferencia": "bt709",
+    "bitrateVideo": 10277614,
+    "deriva": 0.011,
+    "integradoLufs": -14.3,
+    "faixaLu": 1,
+    "truePeakDbtp": -1.2,
+    "volumeMedioDb": -16.8,
+    "segmentosPretos": [],
+    "congelados": []
+  },
+  "problemas": [],
+  "nota": 10,
+  "falhaCritica": false
+}

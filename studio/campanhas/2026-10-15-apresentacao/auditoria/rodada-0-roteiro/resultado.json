@@ -1,0 +1,146 @@
+{
+  "situacao": "INCONCLUSIVA",
+  "nota": 7.94,
+  "cobertura": 0.75,
+  "meta": 9,
+  "nota_execucao": {
+    "nota": 7.96,
+    "cobertura": 0.55,
+    "criterios": [
+      "clareza",
+      "visual",
+      "fidelidade",
+      "tecnica"
+    ]
+  },
+  "previsao_de_conteudo": {
+    "nota": 7.93,
+    "cobertura": 1,
+    "criterios": [
+      "objetivo",
+      "gancho",
+      "cta"
+    ]
+  },
+  "criterios": {
+    "objetivo": {
+      "media": 7.83,
+      "peso": 0.2,
+      "natureza": "hipotese",
+      "notas": [
+        {
+          "avaliador": "estrategia-review",
+          "nota": 7.5
+        },
+        {
+          "avaliador": "marketing-review",
+          "nota": 8
+        },
+        {
+          "avaliador": "torcida-review",
+          "nota": 8
+        }
+      ]
+    },
+    "clareza": {
+      "media": 7.75,
+      "peso": 0.15,
+      "natureza": "execucao",
+      "notas": [
+        {
+          "avaliador": "marketing-review",
+          "nota": 7.5
+        },
+        {
+          "avaliador": "produto-review",
+          "nota": 8
+        }
+      ]
+    },
+    "gancho": {
+      "media": 8,
+      "peso": 0.15,
+      "natureza": "hipotese",
+      "notas": [
+        {
+          "avaliador": "marketing-review",
+          "nota": 8
+        }
+      ]
+    },
+    "visual": {
+      "media": null,
+      "peso": 0.15,
+      "natureza": "execucao",
+      "notas": []
+    },
+    "fidelidade": {
+      "media": 8.17,
+      "peso": 0.15,
+      "natureza": "execucao",
+      "notas": [
+        {
+          "avaliador": "marketing-review",
+          "nota": 8.5
+        },
+        {
+          "avaliador": "produto-review",
+          "nota": 7.5
+        },
+        {
+          "avaliador": "torcida-review",
+          "nota": 8.5
+        }
+      ]
+    },
+    "cta": {
+      "media": 8,
+      "peso": 0.1,
+      "natureza": "hipotese",
+      "notas": [
+        {
+          "avaliador": "marketing-review",
+          "nota": 8
+        },
+        {
+          "avaliador": "produto-review",
+          "nota": 8
+        }
+      ]
+    },
+    "tecnica": {
+      "media": null,
+      "peso": 0.1,
+      "natureza": "execucao",
+      "notas": []
+    }
+  },
+  "bloqueios": [],
+  "descartadas": [],
+  "cadeiras": [
+    {
+      "avaliador": "estrategia-review",
+      "veredito": "APROVA COM CONDIÇÃO"
+    },
+    {
+      "avaliador": "marketing-review",
+      "veredito": "APROVA COM CONDIÇÃO"
+    },
+    {
+      "avaliador": "produto-review",
+      "veredito": "APROVA COM CONDIÇÃO"
+    },
+    {
+      "avaliador": "torcida-review",
+      "veredito": "APROVA COM CONDIÇÃO"
+    }
+  ],
+  "arquivos": [
+    "estrategia-review.json",
+    "marketing-review.json",
+    "produto-review.json",
+    "torcida-review.json"
+  ],
+  "qc": null,
+  "erros": []
+}

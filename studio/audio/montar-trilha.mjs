@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Soma trilha, SFX por cue e voz; ducking por automação; normaliza a −14 LUFS com true peak ≤ −1 dBTP (seção 6.5).
- * Uso: node audio/montar-trilha.mjs <peca>
+ * Uso: node audio/montar-trilha.mjs <peca> [mix.json]   (padrão mix.json; ex.: mix-previa.json = sem voz)
  *
  * audio/<peca>/mix.json:
  * {
@@ -66,25 +66,28 @@ export function medir(arquivo) {
   return {lufs: Number(resumo.match(/I:\s+(-?[\d.]+) LUFS/)?.[1]), truePeak: Number(resumo.match(/Peak:\s+(-?[\d.]+|-inf) dBFS/)?.[1])};
 }
 
-export function montarTrilha(peca) {
+export function montarTrilha(peca, arquivoMix = 'mix.json') {
   const dir = join(RAIZ, 'audio', peca);
-  const mix = lerJson(join(dir, 'mix.json'));
+  const mix = lerJson(join(dir, arquivoMix));
   const tempos = lerJson(join(dir, 'tempos.json'));
   const fps = tempos.fps;
   const n = Math.round((tempos.duracaoFrames / fps) * TAXA);
   const alvo = {lufs: -14, truePeakDbtp: -1, ...(mix.alvo ?? {})};
   const soma = new Float32Array(n * 2);
 
-  const vozArq = join(RAIZ, 'public', 'audio', peca, 'voz.wav');
-  const voz = decodificar(vozArq, 2);
-  for (let i = 0; i < Math.min(voz.length, soma.length); i++) soma[i] += voz[i];
+  // "voz": false = mix só de trilha e SFX (prévia do portão visual, antes da voz final)
+  const comVoz = mix.voz !== false;
+  if (comVoz) {
+    const voz = decodificar(join(RAIZ, 'public', 'audio', peca, 'voz.wav'), 2);
+    for (let i = 0; i < Math.min(voz.length, soma.length); i++) soma[i] += voz[i];
+  }
 
   if (mix.trilha) {
     const t = mix.trilha;
     const arq = join(RAIZ, t.arquivo);
     if (!existsSync(arq)) throw new Error(`trilha não encontrada: ${t.arquivo}`);
     const m = decodificar(arq, 2);
-    const curva = curvaDucking(n, tempos.falas, mix.ducking, fps);
+    const curva = comVoz ? curvaDucking(n, tempos.falas, mix.ducking, fps) : new Float32Array(n);
     const off = Math.round((t.inicioS ?? 0) * TAXA);
     const fadeIn = Math.round((t.fadeInS ?? 0) * TAXA);
     const fadeOut = Math.round((t.fadeOutS ?? 0) * TAXA);
@@ -115,7 +118,7 @@ export function montarTrilha(peca) {
   mkdirSync(tmp, {recursive: true});
   const bruto = join(tmp, 'bruto.wav');
   escreverWav(bruto, soma, 2);
-  const saida = join(RAIZ, 'public', 'audio', peca, 'final.wav');
+  const saida = join(RAIZ, 'public', 'audio', peca, mix.saida ?? 'final.wav');
   const teto = dbParaLin(alvo.truePeakDbtp - 0.5).toFixed(6);
   let medida = medir(bruto);
   let ganho = alvo.lufs - medida.lufs;
@@ -133,8 +136,8 @@ export function montarTrilha(peca) {
   }
   rmSync(tmp, {recursive: true, force: true});
   const ok = Math.abs(medida.lufs - alvo.lufs) <= 0.5 && medida.truePeak <= alvo.truePeakDbtp;
-  const resumo = {saida: `public/audio/${peca}/final.wav`, alvo, medida, ok, tentativas};
-  gravarJson(join(dir, 'mix-resultado.json'), resumo);
+  const resumo = {saida: `public/audio/${peca}/${mix.saida ?? 'final.wav'}`, comVoz, alvo, medida, ok, tentativas};
+  gravarJson(join(dir, arquivoMix.replace(/\.json$/, '-resultado.json')), resumo);
   return resumo;
 }
 
@@ -144,7 +147,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error('Uso: node audio/montar-trilha.mjs <peca>');
     process.exit(2);
   }
-  const r = montarTrilha(peca);
+  const r = montarTrilha(peca, process.argv[3]);
   console.log(`${r.saida}: ${r.medida.lufs} LUFS · TP ${r.medida.truePeak} dBTP · ${r.ok ? 'OK' : 'FORA DO ALVO'} (${r.tentativas.length} passada(s))`);
   process.exit(r.ok ? 0 : 1);
 }

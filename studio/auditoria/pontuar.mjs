@@ -19,6 +19,8 @@ import {basename, join} from 'node:path';
 const CRIT = JSON.parse(readFileSync(new URL('./criterios.json', import.meta.url), 'utf8'));
 
 const arred = (x) => (x === null ? null : Math.round(x * 100) / 100);
+/** "média" e "media", "crítica" e "critica": a rubrica em texto usa acento, o JSON aceita os dois. */
+const semAcento = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export function validarParecer(p, origem) {
   const erros = [];
@@ -34,7 +36,7 @@ export function validarParecer(p, origem) {
     }
   }
   for (const [i, x] of (p.problemas ?? []).entries()) {
-    if (!CRIT.gravidades.includes(x.gravidade)) erros.push(`${origem}: problema ${i} com gravidade "${x.gravidade}"`);
+    if (!CRIT.gravidades.includes(semAcento(x.gravidade))) erros.push(`${origem}: problema ${i} com gravidade "${x.gravidade}"`);
   }
   return erros;
 }
@@ -58,7 +60,7 @@ export function pontuar(pareceres, qc = null) {
     if (p.informacao_falsa === true) bloqueios.push({tipo: 'informacao_falsa', avaliador: p.avaliador});
     if (p.desalinhado_objetivo === true) bloqueios.push({tipo: 'desalinhado_objetivo', avaliador: p.avaliador});
     for (const x of p.problemas ?? []) {
-      if (x.gravidade === 'critica') bloqueios.push({tipo: 'problema_critico', avaliador: p.avaliador, descricao: x.descricao});
+      if (semAcento(x.gravidade) === 'critica') bloqueios.push({tipo: 'problema_critico', avaliador: p.avaliador, descricao: x.descricao});
     }
   }
   if (qc) {

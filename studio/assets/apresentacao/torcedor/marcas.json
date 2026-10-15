@@ -1,0 +1,25 @@
+{
+  "captura": {
+    "width": 1170,
+    "height": 2532
+  },
+  "escala": 3,
+  "marcas": [
+    {
+      "nome": "evento-caravana",
+      "x": 339,
+      "y": 2446,
+      "w": 732,
+      "h": 70,
+      "ms": 3143
+    },
+    {
+      "nome": "comprar",
+      "x": 111,
+      "y": 1225,
+      "w": 948,
+      "h": 84,
+      "ms": 5506
+    }
+  ]
+}

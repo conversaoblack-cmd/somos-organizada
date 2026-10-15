@@ -1,0 +1,54 @@
+{
+  "fonte": "produto real, ambiente local de demonstração (testes-e2e/dev-local.sh)",
+  "rotulo": "Torcida Brasil · dados de demonstração",
+  "base": "http://127.0.0.1:5173",
+  "conta": null,
+  "commitDoProduto": "210d9867bbf6c97b315cbbadf8358aad9f3337cd",
+  "gravadoEm": "2026-10-15T16:09:15.043Z",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "escala": 3,
+  "navegador": "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  "dimensoes": {
+    "site-torcida.png": [
+      1170,
+      2532
+    ],
+    "evento.png": [
+      1170,
+      2532
+    ],
+    "compra-1.png": [
+      1170,
+      2532
+    ]
+  },
+  "prints": [
+    {
+      "nome": "site-torcida",
+      "arquivo": "site-torcida.png",
+      "ms": 3054
+    },
+    {
+      "nome": "evento",
+      "arquivo": "evento.png",
+      "ms": 5473
+    },
+    {
+      "nome": "compra-1",
+      "arquivo": "compra-1.png",
+      "ms": 7521
+    }
+  ],
+  "ocultado": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    }
+  ],
+  "errosNoConsole": []
+}

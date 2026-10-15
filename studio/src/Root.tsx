@@ -3,6 +3,10 @@ import {Composition, Folder, Still} from 'remotion';
 import {CardMarca} from './biblioteca/CardMarca';
 import {TesteCelular3D} from './composicoes/teste/TesteCelular3D';
 import {TesteKit} from './composicoes/teste/TesteKit';
+import {EstudoArquibancada} from './composicoes/apresentacao/EstudoArquibancada';
+import {StyleframeProva} from './composicoes/apresentacao/StyleframeProva';
+import {StyleframeCaixa} from './composicoes/apresentacao/StyleframeCaixa';
+import {Apresentacao} from './composicoes/apresentacao/Apresentacao';
 import {FORMATOS, FPS} from './formatos';
 import {carregarFontes} from './marca/fontes';
 
@@ -27,6 +31,12 @@ export const Root: React.FC = () => {
             height={f.height}
           />
         ))}
+      </Folder>
+      <Folder name="Apresentacao">
+        <Composition id="Apresentacao" component={Apresentacao} defaultProps={{audio: 'previa' as const}} durationInFrames={1350} fps={FPS} width={v.width} height={v.height} />
+        <Composition id="EstudoArquibancada" component={EstudoArquibancada} durationInFrames={150} fps={FPS} width={v.width} height={v.height} />
+        <Composition id="StyleframeCaixa" component={StyleframeCaixa} durationInFrames={90} fps={FPS} width={v.width} height={v.height} />
+        <Composition id="StyleframeProva" component={StyleframeProva} durationInFrames={90} fps={FPS} width={v.width} height={v.height} />
       </Folder>
       <Folder name="Testes">
         <Composition id="TesteKit" component={TesteKit} durationInFrames={180} fps={FPS} width={v.width} height={v.height} />

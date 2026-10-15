@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240">
+  <!-- Escudo FICTÍCIO da "Torcida Brasil" (dados de demonstração do estúdio). Não representa clube nem torcida real. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#5B21B6"/>
+    </linearGradient>
+  </defs>
+  <path d="M100 6 L188 34 L188 112 C188 170 148 208 100 234 C52 208 12 170 12 112 L12 34 Z" fill="#F5F3FF"/>
+  <path d="M100 18 L176 42 L176 112 C176 162 141 196 100 220 C59 196 24 162 24 112 L24 42 Z" fill="url(#g)"/>
+  <path d="M24 92 L176 92 L176 120 L24 120 Z" fill="#F5F3FF"/>
+  <text x="100" y="114" text-anchor="middle" font-family="Archivo Black, Arial Black, sans-serif" font-size="22" fill="#5B21B6" letter-spacing="1">TORCIDA</text>
+  <text x="100" y="176" text-anchor="middle" font-family="Archivo Black, Arial Black, sans-serif" font-size="52" fill="#F5F3FF">TB</text>
+  <g fill="#F5F3FF">
+    <path d="M70 60 l4 9 10 1 -8 6 3 10 -9 -6 -9 6 3 -10 -8 -6 10 -1z"/>
+    <path d="M100 52 l5 11 12 1 -9 8 3 12 -11 -7 -11 7 3 -12 -9 -8 12 -1z"/>
+    <path d="M130 60 l4 9 10 1 -8 6 3 10 -9 -6 -9 6 3 -10 -8 -6 10 -1z"/>
+  </g>
+  <text x="100" y="204" text-anchor="middle" font-family="Archivo, Arial, sans-serif" font-weight="700" font-size="13" fill="#DDD6FE">1990</text>
+</svg>

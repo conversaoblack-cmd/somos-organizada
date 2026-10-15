@@ -1,0 +1,67 @@
+{
+  "fonte": "produto real, ambiente local de demonstração (testes-e2e/dev-local.sh)",
+  "rotulo": "Torcida Brasil · dados de demonstração",
+  "base": "http://127.0.0.1:5173",
+  "conta": "diretoria@brasil.test",
+  "commitDoProduto": "210d9867bbf6c97b315cbbadf8358aad9f3337cd",
+  "gravadoEm": "2026-10-15T16:28:35.420Z",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "escala": 3,
+  "navegador": "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  "dimensoes": {
+    "visao-geral-topo.png": [
+      1170,
+      2532
+    ],
+    "visao-geral-caixa.png": [
+      1170,
+      2532
+    ],
+    "financeiro-topo.png": [
+      1170,
+      2532
+    ],
+    "financeiro-sedes.png": [
+      1170,
+      2532
+    ]
+  },
+  "prints": [
+    {
+      "nome": "visao-geral-topo",
+      "arquivo": "visao-geral-topo.png",
+      "ms": 6783
+    },
+    {
+      "nome": "visao-geral-caixa",
+      "arquivo": "visao-geral-caixa.png",
+      "ms": 7630
+    },
+    {
+      "nome": "financeiro-topo",
+      "arquivo": "financeiro-topo.png",
+      "ms": 13449
+    },
+    {
+      "nome": "financeiro-sedes",
+      "arquivo": "financeiro-sedes.png",
+      "ms": 14413
+    }
+  ],
+  "ocultado": [
+    {
+      "seletor": "button[aria-label^='Ajuda']"
+    },
+    {
+      "texto": "Ambiente de teste da Pagar.me"
+    },
+    {
+      "texto": "Nenhuma câmera encontrada",
+      "subir": 2
+    }
+  ],
+  "errosNoConsole": []
+}

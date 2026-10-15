@@ -1,0 +1,111 @@
+{
+  "avaliador": "torcida-review",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicao": "1) Cena 1-2: as placas vermelhas não podem cintilar como chama (sinalizador). Cada placa vermelha acende e fica acesa, ou pulsa devagar (ciclo >= 0,6 s, no máximo 1 ciclo por placa), sem cintilação aleatória rápida, sem bloom alaranjado, sem partícula nem fumaça; cor #EF4444 pura. 2) Cena 5b (LIBERADO, tela verde do produto): celular <= 45% da altura do quadro, 558-612 só, cercado pelo mosaico azul/amarelo (nenhuma placa ou luz verde fora do celular). 3) Trilha de percussão sintetizada registrada em audio/LICENCAS.md antes do render, sem reproduzir toque/batida reconhecível de bateria de torcida real.",
+  "evidencias_usadas": [
+    "campanhas/2026-10-15-apresentacao/auditoria/rodada-0-roteiro/pacote.md",
+    "campanhas/2026-10-15-apresentacao/01-briefing.md",
+    "campanhas/2026-10-15-apresentacao/02-direcao-de-arte.md",
+    "campanhas/2026-10-15-apresentacao/03-roteiro.md (inclui seção 6 e rascunho do narracao.json)",
+    "audio/2026-10-15-apresentacao/narracao.json (NÃO EXISTE ainda; usei o rascunho da seção 4 do roteiro)",
+    "conhecimento/publico.md",
+    "marca/marca.md",
+    "auditoria/rubrica.md",
+    "evidencias/telas.png",
+    "evidencias/estudo-mosaico-gancho.png",
+    "evidencias/estudo-mosaico-virada.png",
+    "evidencias/styleframe-prova.png",
+    "evidencias/styleframe-caixa.png",
+    "public/apresentacao/telas/carteirinha-frente.png",
+    "public/apresentacao/telas/financeiro-planilha.png",
+    "assets/apresentacao/subsede/origem.json",
+    "assets/apresentacao/portaria-rafael/origem.json",
+    "audio/LICENCAS.md",
+    "marca/demo/escudo-torcida-brasil.svg",
+    "scripts/semente-estudio.mjs (grep: nomes, cores, escudo)"
+  ],
+  "notas": {"fidelidade": 8.5, "objetivo": 8.0},
+  "justificativa": {
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "Torcida de exemplo fictícia e rotulada: escudo próprio do estúdio (escudo-torcida-brasil.svg, 'TB', 3 estrelas, '1990'), roxo #7C3AED e branco, que não remetem a clube grande; a semente não usa a 'Fúria Jovem (Esporte Clube Bahia)'. Nenhum clube, escudo, uniforme, cântico ou torcida real; nenhuma pessoa filmada (não há autorização de imagem a pedir); trilha sintetizada, sem cântico. Verde só aparece dentro de tela do produto (LIBERADO, badge 'ATIVO', 'Conta Ativa'); a marca fica em azul/amarelo. Os styleframes já trazem 'Torcida Brasil · dados de demonstração'.",
+      "por_que_nao_e_10": "LIBERADO é um celular inteiro em verde (#22C55E) no momento de 'sucesso' da peça; é permitido por ser tela do produto, mas é a maior mancha verde do vídeo e precisa da mitigação do risco 4 do roteiro. A captura carteirinha-frente.png em tamanho real ainda mostra a faixa 'Ambiente de teste da Pagar.me: os pagamentos não são reais.' (o pacote diz que foi coberta). Recebimentos mostra 'Banco 341 · Itaú' (marca de terceiro) e nome de titular. A trilha ainda não está em audio/LICENCAS.md."
+    },
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "Fala a língua da arquibancada sem caricatura: caravana, subsede, sede, distrito, sócio, mensalidade, diretoria, portaria, mosaico, bateria, 'Chamar a galera', 'setor da torcida incluso'. As dores são as do próprio site ('cobrança no grupo, caravana no caderno, ingresso que vira print') e a direção de voz proíbe ironia. A torcida não aparece como problema nem como violenta; a diretoria é quem decide ('A DIRETORIA DECIDE O PREÇO', 'Cadastre sua torcida' como convite). O mosaico de placas que vira em onda, sem sincronia perfeita, é imagem de festa de arquibancada, não de bagunça.",
+      "por_que_nao_e_10": "Três pontos de tom e leitura: (1) 'PRESTE CONTAS COM A PLANILHA' é uma ordem de fora para a diretoria e insinua desconfiança, justamente o 'pra onde foi o dinheiro' que ela quer encerrar; (2) placas vermelhas piscando sem padrão numa arquibancada escura podem ser lidas, em movimento, como sinalizador; (3) 'O SEGUNDO É BARRADO' põe o vilão numa pessoa, quando a dor da torcida é o print.",
+      "metrica_que_confirma": "Retenção nos 3 s e taxa de pulo (gancho no mosaico vermelho); retenção média e compartilhamentos/salvamentos (se diretorias reconhecem a linguagem como delas); cadastros de torcida nos 7 dias seguintes. Derruba a nota: pulo alto nos 3 s com retenção média abaixo de 40% e nenhum cadastro no período."
+    }
+  },
+  "pontos_fortes": [
+    "Vocabulário de arquibancada correto e sem caricatura em voz, legenda e telas (caravana, subsede, distrito, sócio, mensalidade, diretoria, portaria, 'Chamar a galera').",
+    "A diretoria é a protagonista que organiza; o problema é o controle no caderno e no grupo, nunca a torcida em si ('TORCIDA CRESCEU, CONTROLE NÃO' trata o crescimento como mérito).",
+    "Direção de voz proíbe rir do problema ('nada de ironia em caderno e print').",
+    "Torcida de exemplo fictícia, com identidade própria (escudo TB 1990, roxo e branco) e rótulo de demonstração em toda tela de produto.",
+    "Nenhuma pessoa filmada, nenhum clube, uniforme ou cântico real; trilha 100% sintetizada.",
+    "Mosaico que vira em onda com variação por semente ('torcida de verdade não vira em sincronia perfeita'): referência respeitosa ao trabalho coletivo do mosaico/bandeirão.",
+    "Nomes da demonstração incluem mulheres e sócio mirim (Juliana, Pedro Mirim): torcida como família, não só 'a pista'."
+  ],
+  "problemas": [
+    {
+      "descricao": "Placas vermelhas 'piscando sem padrão' numa arquibancada escura podem ser lidas como sinalizador/bengala em movimento (cintilação vermelha no meio da torcida à noite). No estudo estático a leitura é geométrica (quadrados nítidos), mas a cintilação aleatória é o que define o sinalizador.",
+      "gravidade": "media",
+      "criterio": "objetivo",
+      "evidencia": "03-roteiro.md cena 1 (0-108) e cena 2 (108-252); estudo-mosaico-gancho.png",
+      "correcao": "Frames 0-252: placa vermelha acende em degrau (subida <= 4 frames) e fica acesa ou pulsa devagar (ciclo >= 18 frames, no máximo 1 ciclo por placa); sem cintilação aleatória de alta frequência, sem bloom laranja (manter #EF4444, glow com raio <= 1,2x a placa), sem partícula, faísca ou fumaça."
+    },
+    {
+      "descricao": "'PRESTE CONTAS COM A PLANILHA' soa como ordem de 'gente de fora' à diretoria e insinua desconfiança sobre o caixa; a marca já tem a forma respeitosa ('Um caixa que toda a torcida pode conferir').",
+      "gravidade": "media",
+      "criterio": "objetivo",
+      "evidencia": "03-roteiro.md cena 8 (1098-1188), frase de impacto",
+      "correcao": "Trocar por 'CAIXA QUE A ↵ TORCIDA **CONFERE**{azul}' (5 palavras, 2,0 s; cabe em 1098-1188 com +1,0 s) ou 'CONTAS ABERTAS ↵ NA **PLANILHA**{azul}' (4 palavras, 1,7 s)."
+    },
+    {
+      "descricao": "'O SEGUNDO É BARRADO' põe o vilão numa pessoa ('o segundo') e usa 'barrado', palavra carregada para torcida (torcida barrada no estádio). A dor que o público nomeia é o print.",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "03-roteiro.md cena 5c (618-684)",
+      "correcao": "Frame 618: 'O **PRINT**{perigo} ↵ NÃO ENTRA' (4 palavras, 1,7 s; fecha o 'ingresso que vira print' da cena 2) ou 'O **PRINT**{perigo} ↵ É BARRADO'."
+    },
+    {
+      "descricao": "LIBERADO ocupa o celular inteiro em verde #22C55E, no momento de sucesso da peça. Permitido (tela do produto), mas é a maior área verde do vídeo e verde é a cor do rival de muitas torcidas.",
+      "gravidade": "media",
+      "criterio": "fidelidade",
+      "evidencia": "telas.png (portaria-liberado-rafael); 03-roteiro.md cena 5b (558-612) e risco 4",
+      "correcao": "Frames 558-612: celular <= 45% da altura do quadro (<= 864 px), luz de recorte branca/azul, mosaico atrás em azul e amarelo; nenhuma luz, placa ou partícula verde fora da tela; não estender além de 612."
+    },
+    {
+      "descricao": "A captura em tamanho real carteirinha-frente.png ainda mostra a faixa 'Ambiente de teste da Pagar.me: os pagamentos não são reais.' (o pacote diz que foi coberta em todas). Contesto o fato pela captura.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "public/apresentacao/telas/carteirinha-frente.png, topo (y 0-125 de 2532 na escala exibida; ~0-160 px no original)",
+      "correcao": "Regravar a carteirinha com o ocultamento do texto 'Ambiente de teste da Pagar.me' ativo, ou recortar o topo (y >= 160 px) na cena 4 (360-504)."
+    },
+    {
+      "descricao": "Recebimentos da subsede mostra 'Banco 341 · Itaú' (marca de terceiro) e o nome do titular 'Carlos Henrique do Periperi'.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "telas.png (recebimentos: linhas Titular/CPF/Banco/Agência)",
+      "correcao": "Cena 6 (684-828): enquadrar 'Conta de recebimento · Ativa' + 'Como o dinheiro é dividido' (recebimentos-2) e deixar fora do quadro as linhas Titular, CPF, Banco e Agência/conta."
+    },
+    {
+      "descricao": "Trilha de percussão sintetizada ainda não registrada em audio/LICENCAS.md (a tabela está vazia).",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "audio/LICENCAS.md; 02-direcao-de-arte.md, Música",
+      "correcao": "Antes do render: linha com arquivo da trilha e dos SFX, tipo 'gerado pelo estúdio', 'sem terceiros', lida por/em, peça 2026-10-15-apresentacao."
+    }
+  ],
+  "riscos": [
+    "Cena 8 com push-in no card 'Caixa da diretoria' (brilho amarelo) depois de a voz dizer 'caixa da torcida': para a arquibancada, 'caixa da diretoria' em destaque pode alimentar a suspeita de que a diretoria fica com o dinheiro. Preferir o card 'Taxa de serviço (caixa)' da visão geral (como no styleframe-caixa) ou enquadrar sem o subtítulo.",
+    "O mosaico final forma o logotipo de uma empresa: mosaico é patrimônio da torcida; se a última placa ('a sua torcida') não ficar clara, pode soar como patrocinador tomando a arquibancada.",
+    "Nome 'Torcida Brasil' pode ser lido como torcida da seleção; o rótulo 'dados de demonstração' mitiga, mas convém manter o escudo TB visível nas telas.",
+    "Bairros da demonstração (Periperi, Subúrbio, Orla) são de Salvador; somados à semente local com torcida baiana, um espectador da cidade pode associar a uma torcida real. Baixo, mas não usar em close.",
+    "Bateria sintetizada: se o padrão de surdo/caixa/repique lembrar o toque característico de uma bateria real, vira 'cântico' por outra via.",
+    "Vermelho do 'problema' também é cor de rival de muitas torcidas; mantê-lo só como estado (placa de problema), nunca como bloco grande da arquibancada."
+  ],
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

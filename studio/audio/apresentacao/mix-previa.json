@@ -1,0 +1,132 @@
+{
+  "_comentario": "Mix da apresentação. Trilha e SFX sintetizados pelo estúdio (audio/LICENCAS.md).",
+  "trilha": {
+    "arquivo": "audio/apresentacao/trilha.wav",
+    "ganhoDb": -2,
+    "inicioS": 3.6,
+    "fadeInS": 0.1,
+    "fadeOutS": 0.6
+  },
+  "sfx": [
+    {
+      "arquivo": "audio/sfx/impacto.wav",
+      "frame": 0,
+      "ganhoDb": -3
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 252,
+      "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 360,
+      "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 504,
+      "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 684,
+      "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 828,
+      "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 1080,
+      "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 1188,
+      "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/acende.wav",
+      "frame": 266,
+      "ganhoDb": -10
+    },
+    {
+      "arquivo": "audio/sfx/acende.wav",
+      "frame": 274,
+      "ganhoDb": -10
+    },
+    {
+      "arquivo": "audio/sfx/acende.wav",
+      "frame": 282,
+      "ganhoDb": -10
+    },
+    {
+      "arquivo": "audio/sfx/acende.wav",
+      "frame": 290,
+      "ganhoDb": -10
+    },
+    {
+      "arquivo": "audio/sfx/entra.wav",
+      "frame": 420,
+      "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/liberado.wav",
+      "frame": 558,
+      "ganhoDb": -6
+    },
+    {
+      "arquivo": "audio/sfx/barrado.wav",
+      "frame": 612,
+      "ganhoDb": -6
+    },
+    {
+      "arquivo": "audio/sfx/sopro.wav",
+      "frame": 716,
+      "ganhoDb": -12
+    },
+    {
+      "arquivo": "audio/sfx/sopro.wav",
+      "frame": 744,
+      "ganhoDb": -12
+    },
+    {
+      "arquivo": "audio/sfx/acende.wav",
+      "frame": 1140,
+      "ganhoDb": -10
+    },
+    {
+      "arquivo": "audio/sfx/acende.wav",
+      "frame": 1262,
+      "ganhoDb": -6
+    },
+    {
+      "arquivo": "audio/sfx/entra.wav",
+      "frame": 1262,
+      "ganhoDb": -8
+    }
+  ],
+  "ducking": {
+    "profundidadeDb": -10,
+    "ataqueMs": 80,
+    "preRolagemMs": 120,
+    "releaseMs": 350,
+    "vaoMinimoS": 0.7,
+    "regioes": [
+      {
+        "deFrame": 828,
+        "ateFrame": 1080,
+        "profundidadeDb": -5
+      }
+    ]
+  },
+  "alvo": {
+    "lufs": -14,
+    "truePeakDbtp": -1
+  },
+  "voz": false,
+  "saida": "previa-sem-voz.wav"
+}
