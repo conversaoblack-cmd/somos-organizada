@@ -1,0 +1,36 @@
+{
+  "gerado": "2026-10-15T20:27:34.893Z",
+  "alvo": {
+    "lufs": -14,
+    "toleranciaLufs": 1,
+    "truePeakMax": -1,
+    "fps": 30,
+    "toleranciaDuracao": 0.1,
+    "derivaMax": 0.1
+  },
+  "formato": "vertical",
+  "medidas": {
+    "arquivo": "campanhas/2026-10-15-apresentacao/05-producao/apresentacao-previa.mp4",
+    "bytes": 60091374,
+    "duracao": 45.013,
+    "largura": 1080,
+    "altura": 1920,
+    "fps": 30,
+    "codec": "h264",
+    "pixFmt": "yuv420p",
+    "espacoDeCor": "bt709",
+    "primarias": "bt709",
+    "transferencia": "bt709",
+    "bitrateVideo": 10356194,
+    "deriva": 0.013,
+    "integradoLufs": -14.3,
+    "faixaLu": 13.4,
+    "truePeakDbtp": -1.3,
+    "volumeMedioDb": -15.9,
+    "segmentosPretos": [],
+    "congelados": []
+  },
+  "problemas": [],
+  "nota": 10,
+  "falhaCritica": false
+}
