@@ -66,7 +66,7 @@ export const Apresentacao: React.FC<{audio?: 'previa' | 'final' | 'nenhum'}> = (
         <FraseImpacto entrada={null} saida={100} tamanho={96} linhas={['Quanto da', 'mensalidade', '**não entrou**{perigo}', 'este mês?']} />
       </Sequence>
       <Sequence from={CENAS.problema.de} durationInFrames={CENAS.problema.ate - CENAS.problema.de} premountFor={fps} name="2 problema">
-        <FraseImpacto entrada={6} saida={136} linhas={['Torcida cresceu,', 'controle **não**{perigo}.']} />
+        <FraseImpacto entrada={6} saida={136} tamanho={84} linhas={['A torcida', 'cresceu,', 'o **caderno**{perigo} não.']} />
       </Sequence>
       <Sequence from={CENAS.virada.de} durationInFrames={CENAS.virada.ate - CENAS.virada.de} premountFor={fps} name="3 virada">
         <NomeDaMarca />

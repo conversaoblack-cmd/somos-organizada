@@ -6,7 +6,7 @@ import {COR, FONTE, SEMANTICA, type CorSemantica} from '../marca/tokens';
 
 /**
  * Frase de impacto (tipografia de CENA, não de interface): Archivo Black em caixa alta, palavra-chave na cor semântica.
- * Sintaxe das linhas: "TORCIDA CRESCEU," / "CONTROLE **NÃO**{perigo}." (mesma do narracao.json).
+ * Sintaxe das linhas: "A TORCIDA CRESCEU," / "O **CADERNO**{perigo} NÃO." (mesma do narracao.json).
  * Entra com "batida" (sobe e assenta em `batida` frames) e sai virando como placa (rotateX) na virada seguinte.
  * Sem `scale` animado (regra do estúdio: só translate/rotate/opacity).
  */

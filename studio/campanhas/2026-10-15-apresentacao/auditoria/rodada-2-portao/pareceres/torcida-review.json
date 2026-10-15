@@ -1,0 +1,85 @@
+{
+  "avaliador": "torcida-review",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicao": "Antes do render de entrega, trocar a frase da cena 2 (Apresentacao.tsx:69, frames ~114-250) de 'TORCIDA CRESCEU, / CONTROLE NÃO.' para 'A TORCIDA CRESCEU, / O **CADERNO**{perigo} NÃO.' (ou outra que ponha a falta de controle na ferramenta, não na torcida). Não bloqueia o portão visual: as cenas refeitas desta rodada (produto e CTA) estão aprovadas pela minha cadeira.",
+  "evidencias_usadas": [
+    "campanhas/2026-10-15-apresentacao/auditoria/rodada-2-portao/pacote.md",
+    "campanhas/2026-10-15-apresentacao/auditoria/rodada-1-portao/pareceres/torcida-review.json (o meu próprio parecer anterior, para conferir as pendências)",
+    "04-portao-visual/styleframes.png",
+    "04-portao-visual/sf-1-gancho.png",
+    "04-portao-visual/sf-2-virada.png",
+    "04-portao-visual/sf-extra-socio.png",
+    "04-portao-visual/sf-3-portaria.png",
+    "04-portao-visual/sf-extra-dinheiro.png",
+    "04-portao-visual/sf-4-taxa.png",
+    "04-portao-visual/sf-5-cta.png",
+    "04-portao-visual/evidencias-previa/folha.png",
+    "02-direcao-de-arte.md (tabela de luz, linha 25; seção v2, linhas 90-112)",
+    "03-roteiro.md (tabela, linhas 20-35; grep das linhas 79, 86, 280)",
+    "marca/marca.md (grep: verde, vermelho, perigo)",
+    "audio/LICENCAS.md",
+    "grep em src/composicoes/apresentacao/ (Apresentacao.tsx:69 e :122, para confirmar o texto final das frases das cenas 2 e 8, que o roteiro descreve de forma desatualizada; mosaico.ts:48 e :71; EstudoArquibancada.tsx:35)"
+  ],
+  "notas": {"fidelidade": 9.0, "objetivo": 8.0},
+  "justificativa": {
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "A nova versão mantém tudo o que aprovei na rodada 1 e ainda melhora. Marca em azul, amarelo e branco; nenhuma cor de clube, nenhum escudo, uniforme ou cântico real. O rótulo 'Torcida Brasil · dados de demonstração' está em todas as cenas com dado (480, 640, 720 e 900, y ~325). Gancho (60) e virada (folha 0,0-3,7 s) sem fumaça, partícula ou flare: o vermelho fica em placa fixa e se apaga na virada. Os refletores (60, 320) são luz branca de estádio, sem estrobo. O recorte da cena 6 (720) mostra só 'Torcedor paga / Vai para a subsede / Taxa de serviço', sem titular e sem banco: o risco que deixei na rodada 1 para a cena 6 está resolvido. O comentário de mosaico.ts:48 já registra o motivo do 'sem cintilar'. Trilha regerada continua síntese autoral e coberta pela linha de LICENCAS.md.",
+      "por_que_nao_e_10": "Só detalhes de baixa gravidade: (1) a documentação ainda diz 'vermelho piscando' (03-roteiro.md:26 e 02-direcao-de-arte.md:25) e EstudoArquibancada.tsx:35 mantém pisca: true; o roteiro também não registra as frases finais das cenas 5 e 8 nem o rótulo do botão do CTA (linhas 30, 34, 35, 86). (2) No 640, o recorte 'JÁ UTILIZADO' é âmbar (é a tela real), não vermelho como diz o pacote, e há placas amarelas acesas atrás do cartão (y ~510-1000), o que deixa o amarelo 'o que entra para a torcida' encostado no estado de bloqueio. (3) No 720, o cartão 'Vai para a subsede' ampliado tem fundo e borda verde-escuros; é verde de tela do produto e está apagado, mas ampliado fora do celular fica mais exposto do que na rodada 1."
+    },
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "As cenas refeitas falam a língua da diretoria: 'MENSALIDADE QUE SE COBRA SOZINHA' com 'Você está em dia' (sem preço), 'QR REPETIDO BARRADO' (a barreira é o código, não a pessoa), 'DIRETO NA CONTA DA TORCIDA' com a subsede recebendo, '10% VIRA CAIXA' e, no CTA, o botão 'Cadastrar minha torcida' (a diretoria é quem age; um passo só) sobre um mosaico que enche o quadro. A grade da virada nasce completa, o que tira o risco de 'buraco' que eu tinha apontado. O que segura a nota: a frase da cena 2, 'TORCIDA CRESCEU, CONTROLE NÃO.', em vermelho, por 4,6 s. Para a diretoria, no contexto da voz (cobrança, caderno, print), lê-se como controle de gestão; isolada (print, recorte de terceiros, imprensa) ela diz literalmente que a torcida está sem controle, o estereótipo que a cadeira existe para evitar. Não percebi isso na rodada 1; é falha minha, não regressão da peça.",
+      "por_que_nao_e_10": "Um problema médio (frase da cena 2) e dois baixos: 'mensalidade' aparece com dois sentidos (no gancho é a do sócio; no CTA, 'Mensalidade fixa, sem % das vendas.' é o plano da Somos) e 'CONTAS ABERTAS NA PLANILHA' (Apresentacao.tsx:122) ainda pode soar como 'contas em aberto' para o tesoureiro; a cena 8 não tem styleframe nesta rodada.",
+      "metrica_que_confirma": "Confirma: retenção dos 3 s aos 9 s sem queda no trecho 3,6-8,4 s (frase da cena 2); compartilhamentos e salvamentos acima da média do perfil; comentários de diretores reconhecendo a rotina (caderno, print, caravana), sem comentário do tipo 'torcida sem controle' ou piada com briga; cadastros de torcida nos 7 dias seguintes. Derruba: queda de retenção entre 3,6 s e 8,4 s, comentários que leem a cena 2 como 'torcida desordeira', ou retenção média abaixo de 40% sem nenhum cadastro no período."
+    }
+  },
+  "pontos_fortes": [
+    "O celular virou 'mais uma placa erguida na arquibancada': a metáfora de mosaico e bandeirão é da própria cultura da torcida, sem caricatura.",
+    "CTA com o rótulo real 'Cadastrar minha torcida' (primeira pessoa da diretoria) e a arquibancada enchendo o quadro: a diretoria é a protagonista que organiza.",
+    "Cena do sócio sem preço: 'Você está em dia' fala de pertencimento, não de cobrança.",
+    "Cena 6 recortada só no repasse (torcedor paga, subsede recebe, taxa da torcida): fala de subsede com naturalidade e sem expor titular nem banco.",
+    "Vermelho só em placa fixa e no 'BARRADO' do código; nada de fumaça, partícula, estrobo ou brilho que lembre sinalizador.",
+    "Grade da virada completa desde o 252, sem 'buraco' que pareça defeito.",
+    "Rótulo de dados de demonstração presente em todas as cenas com dado."
+  ],
+  "problemas": [
+    {
+      "descricao": "'TORCIDA CRESCEU, CONTROLE NÃO.' em vermelho pode ser lido, fora do contexto da voz, como 'torcida sem controle', o estereótipo de desordem que a cadeira veta. Põe a falta de controle na torcida, não na ferramenta (o contrário do que a peça fez com 'QR REPETIDO BARRADO').",
+      "gravidade": "media",
+      "criterio": "objetivo",
+      "evidencia": "folha.png 0,0-1,5 s (frames 200-245); Apresentacao.tsx:69 (entrada 6, saída 136 da cena 2, ~114-250); 03-roteiro.md:27 e :79",
+      "correcao": "Apresentacao.tsx:69: linhas={['A torcida cresceu,', 'o **caderno**{perigo} não.']} (5 palavras, mesma janela de 4,6 s; ecoa a voz 'caravana no caderno'). Alternativa: ['Torcida cresceu,', 'o **caderno**{perigo} não.']. Evitar 'a gestão não' (culpa a diretoria). Atualizar 03-roteiro.md:27 e :79 e o comentário de FraseImpacto.tsx:9."
+    },
+    {
+      "descricao": "No barrado, o recorte é âmbar (tela real), e não vermelho como diz o pacote; e as placas amarelas atrás do cartão estão acesas no 640, acima dos '≤ 30%' da direção de arte. O amarelo da marca ('o que entra para a torcida') fica colado ao estado de bloqueio.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "sf-3-portaria.png (frame 640): cartão âmbar y 548-975; coluna amarela x ~780-860, y ~510-700 e fileira amarela y ~980-1020; 02-direcao-de-arte.md:105",
+      "correcao": "Manter o âmbar do recorte (é o produto; não pintar de vermelho). No mosaico do 612-684, levar as placas amarelas e brancas atrás do cartão a ≤ 30% já no 612 (não só no 688), para o vermelho das placas e do 'BARRADO' ser o único sinal de bloqueio. Corrigir a descrição no pacote."
+    },
+    {
+      "descricao": "'Mensalidade' com dois sentidos: no gancho é a do sócio para a torcida; no CTA, 'Mensalidade fixa, sem % das vendas.' é o plano da Somos. Na arquibancada, 'mensalidade' é a do sócio.",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "sf-1-gancho (frame 60) × sf-5-cta (frame 1320, y ~1030-1120); src/marca/tokens.ts:61",
+      "correcao": "Opcional, no CTA desta peça: 'Plano mensal fixo, ↵ sem % das vendas.' (44 px, mesma cor amarela). Se mudar o token, conferir com produto-review e com os termos (verdade-do-produto)."
+    },
+    {
+      "descricao": "Documentação desatualizada: roteiro e direção de arte ainda dizem 'vermelho piscando' no gancho; o roteiro mantém 'O SEGUNDO É BARRADO', 'PRESTE CONTAS COM A PLANILHA' e o botão 'Cadastre sua torcida'; EstudoArquibancada.tsx:35 mantém pisca: true. Já apontado na rodada 1.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "03-roteiro.md:26, :30, :34, :35, :86; 02-direcao-de-arte.md:25; EstudoArquibancada.tsx:35",
+      "correcao": "Trocar 'piscando' por 'acendem em degrau e ficam'; levar à tabela as frases finais ('QR REPETIDO BARRADO', 'CONTAS ABERTAS NA PLANILHA', botão 'Cadastrar minha torcida'); no estudo, tirar pisca: true ou marcar 'não usar em peça'."
+    }
+  ],
+  "riscos": [
+    "A cena 8 ('CONTAS ABERTAS NA PLANILHA') e a 7b não têm styleframe nesta rodada: na rodada final confiro se o Financeiro saiu sem 'Caixa da diretoria', 'Registrar repasse' e 'A repassar', e se a ambiguidade 'contas em aberto' foi resolvida pela voz.",
+    "O CTA ainda não está em movimento: a placa que falta apaga no 1192 e acende no toque (~1262); se o toque não ler, a última imagem fica só com o logotipo da empresa.",
+    "Cartão verde-escuro 'Vai para a subsede' ampliado (720): não acrescentar luz verde nas placas em volta; a luz da cena tem de continuar amarela.",
+    "Licença da voz ElevenLabs ainda 'a definir' em LICENCAS.md; precisa estar registrada antes da entrega. A linha da trilha cobre a regeração (mesma síntese autoral), mas vale atualizar a data se a partitura mudar de novo.",
+    "Pessoas filmadas: nenhuma na peça (bom); se entrar alguém em corte derivado, exige autorização de imagem."
+  ],
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}
