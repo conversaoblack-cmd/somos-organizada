@@ -32,7 +32,7 @@ export const EstudoArquibancada: React.FC = () => {
     const r = random(`p-${c}-${l}`);
     const estados: EstadoPlaca[] = [];
     // estudo antigo (NÃO usar em peça: a peça não cintila; ver mosaico.ts)
-    if (r < 0.08) estados.push({cor: COR.perigo, de: 5 + r * 60, pisca: true});
+    if (r < 0.08) estados.push({cor: COR.perigo, de: 5 + r * 60, pisca: false});
     const g = corDaGrade(c, l);
     const dist = Math.hypot(c - C / 2, l - L / 2) / Math.hypot(C / 2, L / 2);
     if (g) estados.push({cor: g, de: 40 + dist * 20});

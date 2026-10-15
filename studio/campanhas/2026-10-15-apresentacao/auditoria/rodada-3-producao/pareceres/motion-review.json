@@ -1,0 +1,180 @@
+{
+  "avaliador": "motion-review",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicao_ou_correcao": "Sem veto: nenhum texto essencial fica ilegível ou fora da zona, o logo está certo, não há verde como cor de marca ou de legenda, e o QC é 10/10. Das condições do portão, C1, C2, C3 e C5 estão cumpridas; a C4 foi cumprida no tempo, mas a taxa mudou de recorte e precisa de ajuste. Condições para a última rodada de correção: (R1) taxa, quadros 828–972: o recorte do campo 'Valor para o público' está cortado à direita (o campo passa da borda em x ≈ 920) e o rótulo encosta na borda de cima (y ≈ 566–586). Esticar o recorte para x 120–960 e escalar até a linha 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' ir de x ≈ 136 a 944 (~42 px, contra ~35 hoje; o campo já está cortado à direita, então a largura não é o limite que o pacote diz). Respiro de ≥ 20 px acima do rótulo. Foco arredondado na linha (contorno #FFCC00 de 3 px, raio 16) de 885 a 972. (R2) evento, quadros 1044–1080: o aviso 'Evento publicado! Já está na página da torcida.' (~26 px) fica na tela ≤ 0,6 s (aparece no t35.0 e o recorte já sumiu no t35.5, quadro 1065) e cobre o evento recém-criado. Acelerar menu e formulário (972–1026) e segurar o aviso de 1026 a 1080 (1,8 s), com aproximação de 1,5× no aviso (texto ≥ 40 px) e o recorte na tela até 1080. (R3) CTA, som: no tempos.json a fala do CTA acaba em 45 551 ms, depois do fim da peça (45 000), e passa por cima do impacto do 1332. Com a voz final, a fala do CTA tem de terminar até o quadro 1320; se não couber, o impacto vai para depois do fim da fala, sem passar de 1345. Refazer o QC com a voz (−14 ± 1 LUFS, TP ≤ −1 dBTP). (R4) prova, quadros 1080–1188: recorte opaco e inteiro, sem cortar a 3ª linha '+ R$ 12,00 de taxa' (hoje esmaecida em y ≈ 810–840), e escalado para 'Baixar planilha' e o valor ficarem com ≥ 40 px no andar de prova (y 590–1080; hoje ocupa só y 566–840, a ~28 px).",
+  "evidencias_usadas": [
+    "auditoria/rodada-3-producao/pacote.md",
+    "auditoria/rodada-2-portao/pareceres/motion-review.json (as minhas condições C1–C5)",
+    "05-producao/evidencias/folha-zona.png",
+    "05-producao/evidencias/onda.png",
+    "05-producao/evidencias/evidencias.json",
+    "05-producao/evidencias/frames/t000.5.png",
+    "05-producao/evidencias/frames/t003.5.png",
+    "05-producao/evidencias/frames/t006.0.png",
+    "05-producao/evidencias/frames/t008.5.png",
+    "05-producao/evidencias/frames/t011.5.png",
+    "05-producao/evidencias/frames/t012.5.png",
+    "05-producao/evidencias/frames/t014.5.png",
+    "05-producao/evidencias/frames/t016.0.png",
+    "05-producao/evidencias/frames/t016.5.png",
+    "05-producao/evidencias/frames/t017.0.png",
+    "05-producao/evidencias/frames/t017.5.png",
+    "05-producao/evidencias/frames/t019.5.png",
+    "05-producao/evidencias/frames/t020.5.png",
+    "05-producao/evidencias/frames/t021.5.png",
+    "05-producao/evidencias/frames/t022.5.png",
+    "05-producao/evidencias/frames/t024.0.png",
+    "05-producao/evidencias/frames/t026.0.png",
+    "05-producao/evidencias/frames/t028.0.png",
+    "05-producao/evidencias/frames/t029.0.png",
+    "05-producao/evidencias/frames/t029.5.png",
+    "05-producao/evidencias/frames/t031.0.png",
+    "05-producao/evidencias/frames/t032.5.png",
+    "05-producao/evidencias/frames/t033.5.png",
+    "05-producao/evidencias/frames/t034.5.png",
+    "05-producao/evidencias/frames/t035.0.png",
+    "05-producao/evidencias/frames/t035.5.png",
+    "05-producao/evidencias/frames/t037.0.png",
+    "05-producao/evidencias/frames/t038.0.png",
+    "05-producao/evidencias/frames/t039.0.png",
+    "05-producao/evidencias/frames/t040.0.png",
+    "05-producao/evidencias/frames/t040.5.png",
+    "05-producao/evidencias/frames/t041.5.png",
+    "05-producao/evidencias/frames/t042.0.png",
+    "05-producao/evidencias/frames/t043.0.png",
+    "05-producao/evidencias/frames/t044.5.png",
+    "auditoria/rodada-3-producao/qc.json",
+    "05-timeline.md",
+    "studio/audio/apresentacao/tempos.json",
+    "studio/src/composicoes/apresentacao/legenda.json",
+    "02-direcao-de-arte.md (v2, da rodada anterior)",
+    "studio/marca/marca.md (da rodada anterior)",
+    "studio/auditoria/rubrica.md (da rodada anterior)"
+  ],
+  "notas": {
+    "gancho": 7.5,
+    "visual": 8.0,
+    "fidelidade": 8.0,
+    "tecnica": 7.5
+  },
+  "justificativa": {
+    "gancho": {
+      "natureza": "hipotese",
+      "texto": "Agora vi os quadros de 0,5 s e 1,0 s. A pergunta inteira ('QUANTO DA MENSALIDADE NÃO ENTROU ESTE MÊS?', ~96 px, 'NÃO ENTROU' em #EF4444) está na tela desde o quadro 0, dentro da zona, com as placas vermelhas como único outro foco. Tela e voz dizem o mesmo, e o impacto cai no 0.",
+      "por_que_nao_e_10": "Sem o texto, a imagem é quase toda preta: o polegar para pela frase, não pela imagem. Pela onda, depois do impacto (0–1,4 s) não há trilha até o quadro 108: com a voz final, ficam ~0,9 s de ar morto (2,7–3,6 s) dentro da janela dos 3 s. As torres de refletor continuam encostadas nas bordas (x ≈ 16–164 e 916–1064 no t0.5).",
+      "metrica_que_confirma": "Taxa de pulo e retenção nos 3 s: se a retenção em 3 s ficar abaixo da média do perfil, a nota cai; se ficar acima, ela se confirma."
+    },
+    "visual": {
+      "natureza": "execucao",
+      "texto": "É publicidade com linguagem própria do começo ao fim: o mosaico da arquibancada é o fio, e cada capítulo vira com as placas. Do vermelho do problema (t3.5–7.5) para o 2×2 da virada (t8.5–11.5). Do vermelho do barrado para o amarelo do dinheiro (t22.5). O mosaico vai enchendo de amarelo enquanto a diretoria publica o evento (t33.5–35.5). E o mergulho até o 2×2 do CTA (t39.0–40.5). As telas gravadas dão prova real em movimento: o leitor vê o QR (t17.0), dá LIBERADO, lê de novo e barra (t20.5); o valor é digitado e o sistema calcula a taxa (t29.5); o menu se abre e o evento é publicado (t32.5–35.0). O celular na arquibancada toca a mesma gravação em sincronia. Os andares se mantêm em todas as cenas de produto, e há um foco por quadro.",
+      "por_que_nao_e_10": "As provas novas perderam o cuidado de recorte que a v2 tinha conquistado. Na taxa, o campo está cortado à direita e a linha-chave fica em ~35 px, sem foco. No evento, o aviso de sucesso pisca ≤ 0,6 s. Na prova, o recorte é pequeno (~28 px) e corta a 3ª linha. Na portaria, o visor da câmera fica preto e vazio, 660×534 px no centro do quadro, de ~495 a ~515. Na transição para o CTA (t39.0), a assinatura fica em opacidade cheia sobre o mergulho, com fantasmas do título e do recorte."
+    },
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "Paleta e semântica certas: azul nas ações ('LÊ O QR', 'PUBLICA O EVENTO', 'PLANILHA', botão do CTA), amarelo no que entra ('COBRA SOZINHA', 'CONTA DA TORCIDA', '10%', 'Caixa'), vermelho no problema (BARRADO, com anel vermelho de ~8 px e o resto da grade a ~30% no t20.5: C1 cumprida). Archivo Black nos títulos, Archivo na legenda. O logo 2×2 está na ordem certa na assinatura, na virada e no CTA. As telas são o produto real, gravado em uso, com o rótulo 'dados de demonstração'.",
+      "por_que_nao_e_10": "O LIBERADO (531–585) põe um bloco verde de 660×534 px no centro do quadro, mais o celular inteiro verde. É a tela real e foi pedido do dono, mas o verde vira a cor dominante por ~1,8 s e há um halo esverdeado nas placas em volta do celular (t17.5, x ≈ 330–570). O aviso e o bloco 'Vai para a subsede' também trazem verde de produto. O recorte âmbar do barrado continua grande (é a tela real), agora controlado pela luz vermelha."
+    },
+    "tecnica": {
+      "natureza": "execucao",
+      "texto": "QC 10/10: 45,00 s, 1080×1920, 30 fps, −14,0 LUFS, TP −1,2 dBTP, sem preto nem congelamento (C5 cumprida para a mix sem voz). Na onda, a tensão sintetizada vem em 4 ondas de 1,2 s (3,6–7,2 s) que crescem até um ataque claro no 8,4 s (quadro 252), quando entra a bateria gravada. O breakdown abafado aparece de ~27,9 a 35,5 s (828–1065), e o impacto final cai no 44,4 s (1332). Os cues batem com a timeline: virada no 252, liberado no 531, barrado no 612. Celular e feixe no eixo x 450, feixe suave e amarelo no t31.0 (C2). Sócio inteiro e opaco no t14.5 (C3). A legenda acompanha a fala, entra um pouco antes da palavra e nunca passa de 2 linhas.",
+      "por_que_nao_e_10": "No tempos.json, a fala do CTA passa do fim da peça (45 551 ms > 45 000) e cruza o impacto do 1332. Há recortes cortando conteúdo: o campo na taxa, a 3ª linha na prova e o cartão interno do LIBERADO e do JÁ UTILIZADO cortado na borda de baixo. O aviso do evento fica ≤ 0,6 s. O visor da portaria fica vazio ~0,7 s. A gravação nítida a ~9 quadros/s (declarada) faz a digitação andar em degraus e mostra valores intermediários ('R$ 1,30 → R$ 1,43' no t29.0). A faixa de loudness é de 14,9 LU, larga para Reels, puxada pelo silêncio de 1,4 a 3,6 s."
+    }
+  },
+  "condicoes_do_portao": {
+    "C1_barrado": "cumprida: grade amarela e branca a ~30% e anel vermelho de ~8 px no recorte (t20.5, t21.5); placas vermelhas até y ≈ 1120",
+    "C2_feixe": "cumprida: celular centrado em x 450 (t12.5, t17.5, t24.0, t31.0); feixe suave em x ≈ 410–490 (t31.0), sem o 'toco' retangular",
+    "C3_socio": "cumprida: cartão inteiro e opaco, com 'seu nome.' legível (t14.5, t16.0)",
+    "C4_taxa": "cumprida no tempo (linha final na tela de ~29,5 a 32,4 s, ≥ 2,9 s para 8 palavras); o recorte novo traz os problemas da R1 (campo cortado, ~35 px, sem foco)",
+    "C5_loudness": "cumprida para a mix sem voz (−14,0 LUFS, −1,2 dBTP); refazer com a voz final"
+  },
+  "pontos_fortes": [
+    "Linguagem própria sustentada nos 45 s: cada mudança de capítulo é uma virada de placas, e a cor da arquibancada conta a história (vermelho → 2×2 → azul/amarelo → vermelho no barrado → amarelo enchendo → 2×2 no CTA).",
+    "Prova do produto real em uso, com causa e efeito visíveis: o leitor vê o QR (t17.0), dá LIBERADO (t17.5) e, na segunda leitura, BARRADO (t20.5); a pessoa digita o valor e o sistema mostra a taxa (t29.5).",
+    "O celular na arquibancada toca a mesma gravação em sincronia com o recorte (t17.0, t20.5, t33.5), o que liga aparelho e prova sem precisar de texto.",
+    "O barrado agora se lê como problema: anel e placas vermelhas, e a grade amarela e branca apagada.",
+    "Som com arco claro: tensão sintetizada em ondas, ataque no 252, bateria gravada, breakdown abafado na taxa e impacto final; −14,0 LUFS e −1,2 dBTP.",
+    "CTA de anúncio: a arquibancada enche o quadro, um eixo em x 120, um botão, linhas legais a ~44 px e anel de toque de ~1,5 s que sai antes do fim."
+  ],
+  "problemas": [
+    {
+      "descricao": "Recorte da taxa cortado à direita (o campo 'R$ 130,00' perde a borda e o canto em x ≈ 920), com o rótulo encostado na borda de cima. A linha-chave 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' fica em ~35 px, sem foco. Como o campo já está cortado, a largura não é o limite: o recorte usa x 160–920 em vez de x 120–960.",
+      "gravidade": "media",
+      "criterio": "visual",
+      "evidencia": "t028.0, t029.5, t031.0 (recorte em y ≈ 566–840)",
+      "correcao": "Quadros 828–972: recorte em x 120–960, escalado para a linha ir de x ≈ 136 a 944 (~42 px); respiro de ≥ 20 px acima de 'Valor para o público'; contorno arredondado #FFCC00 de 3 px, raio 16, na linha de 885 a 972."
+    },
+    {
+      "descricao": "O aviso de sucesso do evento ('Evento publicado! Já está na página da torcida.', 8 palavras, ~26 px) fica na tela ≤ 0,6 s. O recorte some antes do fim da cena, e o aviso cobre o evento recém-criado na lista. O desfecho da cena 7b não se lê.",
+      "gravidade": "media",
+      "criterio": "tecnica",
+      "evidencia": "t035.0 (quadro 1050, aviso em y ≈ 940–1050) e t035.5 (quadro 1065, recorte já fora)",
+      "correcao": "Quadros 972–1026: menu e formulário (velocidade maior); quadros 1026–1080: segurar o último quadro com o aviso (1,8 s) e aproximar 1,5× nele (texto ≥ 40 px), com o recorte na tela até 1080."
+    },
+    {
+      "descricao": "A fala do CTA (voz guia) termina em 45 551 ms, depois do fim da peça (45 000), e passa por cima do impacto final no 1332: 'publicar o site' é cortado e o impacto fica sob a fala.",
+      "gravidade": "media",
+      "criterio": "tecnica",
+      "evidencia": "audio/apresentacao/tempos.json ('erros': 'cta passa do fim da peça'); 05-timeline.md (fala 1200–1367, impacto 1332); onda.png x ≈ 1972",
+      "correcao": "Com a voz final: a fala do CTA termina até o quadro 1320, com 12 quadros antes do impacto. Se não couber, começar a fala no 1194 ou mover o impacto para o fim da fala, sem passar de 1345. Refazer qc.json com a voz."
+    },
+    {
+      "descricao": "Recorte da prova pequeno (~28 px) e cortado: a 3ª linha '+ R$ 12,00 de taxa' é cortada e esmaecida pela borda de baixo, e o andar de prova fica meio vazio (recorte em y 566–840 de um andar que vai até 1080).",
+      "gravidade": "media",
+      "criterio": "visual",
+      "evidencia": "t037.0 e t038.0 (recorte em x ≈ 220–860, y ≈ 566–840)",
+      "correcao": "Quadros 1092–1170: recorte opaco com a linha inteira (até ~y 880 na escala atual), escalado 1,45× para 'Baixar planilha', 'Ingressos · Caravana para a Final' e 'R$ 120,00' ficarem com ≥ 40 px, no andar y 590–1080."
+    },
+    {
+      "descricao": "Visor da câmera da portaria preto e vazio (660×534 px no centro do quadro) antes de o celular do torcedor entrar: lê-se como tela preta.",
+      "gravidade": "baixa",
+      "criterio": "tecnica",
+      "evidencia": "t016.5 (quadro 495; o QR só aparece no t17.0)",
+      "correcao": "Quadros 495–520: começar a gravação 'portaria-camera.webm' em ~9,2 s (em vez de 8,73), para o celular já estar entrando no visor no quadro 504, e preencher 495–504 com o 1º quadro da gravação, não com preto."
+    },
+    {
+      "descricao": "Halo esverdeado da tela do LIBERADO nas placas em volta do celular. O pacote diz 'anel, feixe e luz brancos', mas o brilho emitido pela tela sai verde.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "t017.5 (x ≈ 330–570, y ≈ 1280–1760)",
+      "correcao": "Quadros 531–585: limitar o brilho e a luz emitida pela tela do celular a branco neutro (saturação 0) e manter verde só nos pixels da tela."
+    },
+    {
+      "descricao": "Na transição para o CTA, a assinatura fica em opacidade cheia sobre o mergulho da câmera, com o título e o recorte da prova ainda visíveis como fantasmas a ~15%: três camadas de interface sobre o 3D em movimento.",
+      "gravidade": "baixa",
+      "criterio": "visual",
+      "evidencia": "t039.0 (quadro 1170, y ≈ 270–660)",
+      "correcao": "Quadros 1150–1170: assinatura, título e recorte saem juntos, em 6 quadros (opacidade 1 → 0), antes do mergulho."
+    },
+    {
+      "descricao": "Anel de toque desenhado sobre o rótulo do botão (cobre 'r minh' de 'Cadastrar minha torcida') e sai ~0,5 s antes do 'acende' do 1262, que é a consequência do toque.",
+      "gravidade": "baixa",
+      "criterio": "visual",
+      "evidencia": "t040.5 e t041.5 (anel em x ≈ 336–480, y ≈ 820–970); t042.0 sem anel",
+      "correcao": "Quadros 1215–1265: anel centrado na ponta direita do botão (x ≈ 640, y ≈ 900), fora das letras, e saindo no 1262, junto com o acende."
+    },
+    {
+      "descricao": "Ar morto no gancho: depois do impacto (0–1,4 s), sem trilha até o 108. Com a voz final (fim no 81), sobram ~0,9 s de silêncio dentro dos 3 s.",
+      "gravidade": "baixa",
+      "criterio": "tecnica",
+      "evidencia": "onda.png x ≈ 62–160 (1,4–3,6 s)",
+      "correcao": "Quadros 42–108: ar de estádio ou surdo abafado a ~−30 LUFS sob a voz, entrando na tensão do 108 sem corte."
+    },
+    {
+      "descricao": "Torres de refletor do gancho ainda encostadas nas bordas (pendência baixa do portão).",
+      "gravidade": "baixa",
+      "criterio": "visual",
+      "evidencia": "t000.5 (x ≈ 16–164 e 916–1064)",
+      "correcao": "Quadros 0–108: torres em x ≥ 60 e x ≤ 1020."
+    }
+  ],
+  "riscos": [
+    "Verde: o LIBERADO põe ~1,8 s de verde dominante (bloco de 660×534 px e o celular inteiro) numa peça para torcidas em que o verde é a cor do rival. Está dentro da regra (tela real, pedido do dono), mas é a cadeira da torcida que deve dizer se pesa.",
+    "Os valores mudam entre cenas: na taxa, o público digita R$ 130,00 (paga R$ 143,00); na prova, 'Caravana para a Final' aparece a R$ 120,00 + R$ 12,00 de taxa. Pode parecer incoerente para quem acompanha a conta (é com a cadeira de produto).",
+    "A gravação nítida a ~9 quadros/s anda em degraus e mostra valores intermediários (R$ 1,30 / R$ 1,43 no t29.0). Se o render final mantiver isso, a digitação parece travada.",
+    "A voz final muda os tempos: a legenda, os cues e o QC precisam ser refeitos com ela, sobretudo no CTA.",
+    "A faixa de loudness de 14,9 LU pode soar baixa no começo, com o volume do celular no meio."
+  ],
+  "argumento_contra_meu_veredito": "Dá para dizer que três das provas novas (taxa, evento, prova) voltaram a ter os defeitos de recorte que a v2 corrigiu: campo cortado, texto pequeno, aviso que pisca. São justamente as provas do pilar 'dinheiro' e do 'evento'. Um veto forçaria a correção antes de o dono gastar a voz final. Não veto porque nenhum texto essencial depende desses recortes (o título e a legenda carregam cada mensagem, e ambos estão legíveis e na zona), o território e a narrativa estão inteiros, e as correções têm quadro e valor definidos e cabem na rodada de correção que resta.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

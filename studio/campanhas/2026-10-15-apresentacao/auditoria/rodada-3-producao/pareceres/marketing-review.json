@@ -1,0 +1,126 @@
+{
+  "avaliador": "marketing-review",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicoes": [
+    "Fala do CTA cabendo na peça: hoje termina no quadro 1367 (tempos.json: erro 'cta passa do fim da peça', 45551 ms > 45000 ms) e corta exatamente 'publicar o site', que é a oferta. Adiantar a fala para o quadro 1176 (a da prova termina no 1163) e exigir do take final da ElevenLabs fim ≤ quadro 1340; se ainda não couber, a voz do CTA fica 'Somos Organizada. Cadastre sua torcida. Só paga depois de publicar.' com o 'o site' escrito na tela.",
+    "Linha legal completa no CardMarca (marca.md:74 e tokens.ts linhaLegal): acrescentar 'Teste grátis em modo demonstração.' abaixo de 'Só paga depois de publicar o site.' (branco, ≥ 44 px, entra ~1224, y ≈ 1240–1330 px a 1080), em t041.0–t044.5. Hoje só aparece a primeira metade.",
+    "Cena 7b (972–1080): a frase de impacto 'A DIRETORIA PUBLICA O EVENTO' descreve a feature e não sustenta a legenda 'O ingresso só precisa pagar o evento' (o insight da hipótese). Trocar por 'A DIRETORIA ↵ DECIDE O PREÇO{azul}' (5 palavras, orçamento 2,0 s, já aprovado no roteiro) ou 'INGRESSO SÓ PAGA ↵ O EVENTO{amarelo}'; a gravação pode ficar.",
+    "Condição de publicação que segue aberta desde a rodada 0 (não está no pacote): texto do post e comentário fixado com a variante longa da taxa, 'plano mensal fixo, sem porcentagem das vendas', 'link na bio' para somosorganizada.com.br/cadastro, sem preço. Ao escrever 'cobre as tarifas', ressalvar o caso da subsede (no split ela paga as tarifas e a taxa vai inteira para a torcida: functions/src/dominio/split.ts:4-5 e a própria tela em t024.0 'menos as tarifas da Pagar.me')."
+  ],
+  "evidencias_usadas": [
+    "auditoria/rodada-3-producao/pacote.md",
+    "auditoria/rodada-3-producao/qc.json",
+    "05-producao/evidencias/folha.png",
+    "05-producao/evidencias/folha-zona.png",
+    "05-producao/evidencias/frames/t000.0.png, t003.0, t006.5, t009.5, t013.5, t015.0, t017.0, t018.5, t021.0, t024.0, t026.5, t029.5, t032.5, t034.5, t035.0, t035.5, t037.0, t038.5, t039.5, t040.0, t041.0, t042.0, t044.5",
+    "05-timeline.md",
+    "audio/apresentacao/tempos.json",
+    "01-briefing.md",
+    "02-direcao-de-arte.md (linhas 95-113)",
+    "03-roteiro.md",
+    "conhecimento/verdade-do-produto.md",
+    "auditoria/rubrica.md",
+    "auditoria/rodada-0-roteiro/pareceres/marketing-review.json (meu parecer anterior)",
+    "grep 'Teste grátis|Plano mensal fixo|CONTAS ABERTAS|PUBLICA O EVENTO|link na bio' em studio/ (fora de auditoria/): achou a linha legal completa em marca.md:74 e src/marca/tokens.ts:63",
+    "functions/src/api/recebedores.ts (cabeçalho) e functions/src/dominio/split.ts (para contestar o fato 'a taxa cobre as tarifas' da verdade-do-produto frente à tela de t024.0)"
+  ],
+  "notas": {
+    "objetivo": 8.0,
+    "clareza": 8.0,
+    "gancho": 8.0,
+    "fidelidade": 8.5,
+    "cta": 7.5
+  },
+  "justificativa": {
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "A peça montada entrega os três itens do objetivo com o produto real e na língua da diretoria: 'Você está em dia' (t013.5), a portaria lendo o QR pela câmera com LIBERADO e JÁ UTILIZADO do mesmo Rafael Torcedor (t017.0–t021.0), a divisão 'Torcedor paga R$ 55 · Vai para a subsede R$ 50 · Taxa (torcida) R$ 5' (t024.0) e a diretoria digitando o preço com o sistema mostrando 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' (t029.5). Duas falhas da rodada 0 foram resolvidas: a marca fica na tela de 12 s a 39,6 s (assinatura no topo) e 'Plano mensal fixo, sem % das vendas.' desfaz a leitura 'a plataforma cobra 10%' (t042.0). Promessa do tamanho do produto, sem 'lucro', sem jargão.",
+      "por_que_nao_e_10": "O insight que a hipótese aposta para salvar/compartilhar ('o ingresso só precisa pagar o evento') ficou sem prova visual na 7b: a tela é menu → formulário → 'Evento publicado' e a frase diz 'A DIRETORIA PUBLICA O EVENTO' (t032.5–t035.0). Continua uma sequência de cinco assuntos em 33 s, e o payoff do gancho segue pelo lado do torcedor (carteirinha), decisão do diretor que mantenho como risco.",
+      "metrica_que_confirma": "Retenção média ≥ 40% e a curva entre 12 s e 22 s (queda forte depois de 'Você está em dia' derruba); salvamentos + compartilhamentos acima da média do perfil e retenção estável entre 27,6 s e 36 s (taxa) confirmam; cadastros de torcida nos 7 dias."
+    },
+    "clareza": {
+      "natureza": "execucao",
+      "texto": "Um cartão de prova por cena, legível (≥ 44 px na maior parte), frase no andar fixo, legenda em caixa sólida. O caminho do ingresso é seguível no mudo: QR na câmera (t017.0) → LIBERADO com nome e selo SÓCIO (t018.5) → JÁ UTILIZADO 'Entrou às 15:17 · há 17 segundos' com placas vermelhas (t021.0). A cena da taxa mostra a causa e o efeito na mesma tela (valor digitado → total com 10%). 'Caixa e vendas prontos para mostrar' resolveu a contradição com 'ninguém precisa repassar'.",
+      "por_que_nao_e_10": "7b: frase ('A DIRETORIA PUBLICA O EVENTO'), legenda ('O ingresso só precisa pagar o evento') e tela (menu/formulário) dizem três coisas em 3,6 s (t032.5–t035.0), e a frase não aparece em 35,5 s (t035.5) enquanto a tela troca; a linha 'Torcedor paga R$ 143,00 (inclui 10% de taxa)', que é a prova da 7a, fica em ~35 px (t029.5)."
+    },
+    "gancho": {
+      "natureza": "hipotese",
+      "texto": "Frase cheia no quadro 0 (t000.0), 'NÃO ENTROU' em vermelho, dor de dinheiro da diretoria (controle e respeito), sem estatística inventada. A arquibancada 3D com refletores lê como estádio (melhor que o estudo da rodada 0) e as placas vermelhas acendem em degrau, sem piscar.",
+      "por_que_nao_e_10": "7 palavras (acima de 2–5); nada no quadro diz 'torcida organizada' até 3,6 s (o 'A TORCIDA CRESCEU' vem só em t003.5); na prévia não há voz final, então a dupla texto+voz não pôde ser conferida.",
+      "metrica_que_confirma": "Taxa de pulo e retenção nos 3 s (Insights do Reels): abaixo da média do perfil/categoria derruba; acima confirma."
+    },
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "Tudo o que é dito está em 'Comunicável: Sim': mensalidade que se cobra sozinha, ingresso nominal, portaria com leitor pela câmera e cada QR uma vez só ('QR REPETIDO BARRADO', sem 'print é barrado'), dinheiro direto e subsede recebendo direto (tela real), taxa paga pelo torcedor e mostrada pelo próprio sistema, oferta verdadeira. Sem preço de plano da Somos, sem Conversão Black, sem 'portaria sem internet', verde só dentro da tela do produto (LIBERADO), rótulo 'Torcida Brasil · dados de demonstração' em todas as telas. Botão com o rótulo real do site ('Cadastrar minha torcida').",
+      "por_que_nao_e_10": "A linha legal da marca aparece pela metade (falta 'Teste grátis em modo demonstração.', t042.0); 'CONTAS ABERTAS NA PLANILHA' (t037.0) pode ser lido como prestação de contas pública, que a verdade-do-produto diz não existir; no celular pequeno da cena 4 ainda aparece o card 'Sócio Mensal R$ 11,00' (t013.5, ilegível no tamanho, mas é o card que a rodada 0 pediu para deixar fora); CPF mascarado '***.903.300-**' na portaria (t018.5), fictício."
+    },
+    "cta": {
+      "natureza": "hipotese",
+      "texto": "Um passo só, botão com o mesmo texto do site, endereço certo, toque com anel (t041.0), sem preço, 'Plano mensal fixo, sem % das vendas.' e 'Só paga depois de publicar o site.' escritos. Fecha o mosaico com a placa de quem assiste.",
+      "por_que_nao_e_10": "A fala do CTA passa do fim da peça e corta 'publicar o site' (tempos.json: fim 1367 > 1350); falta 'Teste grátis em modo demonstração.', o argumento de menor atrito para quem nunca ouviu falar da marca; o vídeo não diz 'link na bio' e o endereço não é clicável no Reels (depende do post e da bio, que não estão no pacote).",
+      "metrica_que_confirma": "Cliques no link da bio no período do post e cadastros de torcida novos nos 7 dias seguintes, comparados com a semana anterior."
+    }
+  },
+  "pontos_fortes": [
+    "Produto real gravado com gente usando (câmera da portaria lendo o QR, diretoria digitando o preço e publicando o evento): a prova é o próprio sistema, não ilustração.",
+    "Taxa tratada com transparência pelo próprio produto: 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' ao lado de '10% VIRA CAIXA', e 'sem % das vendas' no CTA.",
+    "Continuidade do ingresso: mesmo titular do QR ao LIBERADO e ao JÁ UTILIZADO, com 'há 17 segundos' contando a história da fraude sem dizer 'print'.",
+    "Assinatura discreta de 12 s a 39,6 s: a marca não some no meio.",
+    "Botão 'Cadastrar minha torcida' igual ao do site (reconhecimento ao clicar no link).",
+    "Nenhuma falsa urgência, depoimento, número de cliente, 'lucro' ou jargão."
+  ],
+  "problemas": [
+    {
+      "descricao": "A fala do CTA (voz guia) termina no quadro 1367, depois do fim da peça; o trecho cortado é 'publicar o site', a oferta. Com a voz final a ~2,35 palavras/s, 12 palavras levam ~5,1 s e também não cabem na janela 1200–1350.",
+      "gravidade": "media",
+      "criterio": "cta",
+      "evidencia": "audio/apresentacao/tempos.json (erros: 'cta passa do fim da peça (45551 ms > 45000 ms)'); 05-timeline.md, cena cta 1200–1367",
+      "correcao": "narracao.json: fala 'cta' no quadro 1176 (a 'prova' termina no 1163); aceitar o take só com fim ≤ 1340. Plano B: voz sem 'o site' (está escrito na tela)."
+    },
+    {
+      "descricao": "Linha legal pela metade: falta 'Teste grátis em modo demonstração.', que está em marca.md e em tokens.ts (linhaLegal), e é a oferta de menor atrito.",
+      "gravidade": "media",
+      "criterio": "cta",
+      "evidencia": "t042.0 a t044.5 (só 'Só paga depois de publicar o site.'); marca/marca.md:74; src/marca/tokens.ts:63",
+      "correcao": "CardMarca: acrescentar a linha 'Teste grátis em modo demonstração.' (branco, ≥ 44 px) logo abaixo, entrando ~1224, y ≈ 1240–1330 px; ou usar tokens.linhaLegal inteira."
+    },
+    {
+      "descricao": "7b: a frase de impacto virou 'A DIRETORIA PUBLICA O EVENTO' (feature) e não ancora o insight que a legenda fala ('O ingresso só precisa pagar o evento'); no mudo, o momento de salvar vira 'a diretoria cria evento'.",
+      "gravidade": "media",
+      "criterio": "objetivo",
+      "evidencia": "t032.5, t034.5, t035.0 (frase + legenda + formulário/menu); t035.5 sem frase",
+      "correcao": "Quadros 972–1080: frase 'A DIRETORIA ↵ DECIDE O PREÇO{azul}' (como no roteiro, 2,0 s) ou 'INGRESSO SÓ PAGA ↵ O EVENTO{amarelo}'; manter a gravação."
+    },
+    {
+      "descricao": "'CONTAS ABERTAS NA PLANILHA' pode ser lido como prestação de contas pública (a verdade-do-produto diz que não existe; o certo é 'números que a diretoria pode mostrar').",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "t037.0, t038.5; verdade-do-produto.md (Financeiro: 'não existe prestação de contas pública')",
+      "correcao": "Quadros 1098–1188: 'CONTAS PRONTAS ↵ NA PLANILHA{azul}' (mesmo tamanho; não soa como ordem, que era a objeção da torcida-review)."
+    },
+    {
+      "descricao": "No celular pequeno da cena 4 aparece o card do plano do sócio com 'R$ 11,00' (preço da torcida de demonstração, não da Somos), que a rodada 0 pediu para deixar fora.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "t013.5 e t015.0, celular na base (y ≈ 820–850 a 540 px de largura)",
+      "correcao": "Na gravação fluida da cena 4, rolar até 'Você está em dia' no topo do aparelho (o card do plano sai da tela) ou cobrir o card como as demais coberturas."
+    },
+    {
+      "descricao": "A linha que prova a taxa paga pelo torcedor ('Torcedor paga R$ 143,00 (inclui 10% de taxa)') fica em ~35 px.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "t029.5 (limite declarado no pacote)",
+      "correcao": "Anel amarelo na linha entre 852 e 906 (como previsto na direção de arte) para levar o olho; tamanho fica, para não falsear a tela."
+    }
+  ],
+  "riscos": [
+    "Post e comentário fixado ainda não vieram para a mesa: sem 'link na bio' e sem a variante longa da taxa, o CTA depende só do endereço digitado.",
+    "A variante longa da taxa ('cobre as tarifas e o resto vira caixa') não vale ao pé da letra para venda de subsede com split: a subsede paga as tarifas e a taxa vai inteira para a torcida (split.ts:4-5; tela em t024.0). O texto do post precisa dizer 'na sede principal, cobre as tarifas' ou só 'fica com a torcida'. Levar ao produto-review.",
+    "'+ R$ 13 de taxa' (t029.5) visto por torcedor que receber a peça compartilhada pode gerar comentário negativo; o comentário fixado deve responder antes.",
+    "Payoff do gancho pelo torcedor (carteirinha) e cinco assuntos em 33 s: queda de retenção entre 12 s e 22 s.",
+    "A voz final da ElevenLabs pode mudar todas as janelas; a mesa avaliou a legenda da voz guia."
+  ],
+  "argumento_contra_meu_veredito": "Deveria vetar: a fala do CTA, como está, corta a oferta no meio ('Só paga depois de publicar...' sem 'o site'), o que é exatamente o caso 'CTA que leva a lugar errado / promessa ambígua', e a peça mostra preços (R$ 130/143, R$ 55/50/5, R$ 120 + 12 e o R$ 11,00 do plano do sócio), o que numa leitura estrita de 'preço na peça' é veto. Não vetei porque: o corte é da voz guia (limite declarado; a voz final será realinhada) e a correção é de um número no narracao.json; os preços são da torcida de demonstração, rotulados, e são a prova da taxa, enquanto a regra do dono é sobre o preço dos planos da Somos (verdade-do-produto: 'Preços dos planos ... Não'). Se o take final ainda passar do quadro 1350 ou o dono ler 'sem preço' como 'nenhum valor em reais na tela', o veto passa a valer.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

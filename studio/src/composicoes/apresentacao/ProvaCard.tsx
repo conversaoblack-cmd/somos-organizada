@@ -117,7 +117,7 @@ export const ProvaCard: React.FC<{prova?: Prova; fluxo?: Fluxo; cor?: string; en
         {d && (
           // o escurecimento do foco fica DENTRO do cartão (sem vazar sobre a frase e o placar)
           <div style={{position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: raio}}>
-            <Foco x={0} y={d.y * s} w={w} h={d.h * s} raio={12 * k} intensidade={focoP * (d.forca ?? 1)} margem={6 * k} />
+            <Foco x={0} y={d.y * s} w={w} h={d.h * s} raio={16 * k} intensidade={focoP * (d.forca ?? 1)} margem={6 * k} contorno={d.contorno ? {cor: d.contorno, opacidade: focoP} : undefined} />
           </div>
         )}
       </div>

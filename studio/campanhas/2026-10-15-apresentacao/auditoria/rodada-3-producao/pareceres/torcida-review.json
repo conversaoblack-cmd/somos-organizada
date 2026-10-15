@@ -1,0 +1,87 @@
+{
+  "avaliador": "torcida-review",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicao": "Antes do render de entrega, provar que a bateria gravada não é de torcida (barra) real. (1) Arquivar em audio/biblioteca/ a página do Freesound 411465 (título, descrição, tags, licença) e o _ia_meta.xml do Internet Archive, como o próprio LICENCAS.md manda ('Guardar'). Hoje só o .mp3 está no repositório. (2) O dono ouve o trecho usado (39,5 a 83,2 s do original) e confirma que não há canto, grito, apito de puxador nem nome de clube. Se a descrição ou as tags citarem barra, hinchada, clube ou estádio, ou se houver voz de torcida, volta a trilha.wav sintetizada (está no Git). Sem isso não dá para afirmar 'não é torcida': em Valparaíso, como no resto do Chile, batucada de ensaio muitas vezes é a percussão de uma barra.",
+  "condicao_da_rodada_2": "CUMPRIDA. A frase da cena 2 agora é 'A TORCIDA CRESCEU, / O CADERNO NÃO.' (t003.5 a t008.0; conferida em t005.0 e t007.5), com 'caderno' em vermelho, ecoando a legenda 'caravana no caderno'. A falha fica na ferramenta, não na torcida.",
+  "pontos_baixos_da_rodada_2": {
+    "mensalidade_com_dois_sentidos": "RESOLVIDO. O CTA diz 'Plano mensal fixo, sem % das vendas.' (t043.0).",
+    "amarelo_atras_do_barrado": "RESOLVIDO. Em t020.5 e t022.0 a grade fica a ~30% (cinza-azulado) e o vermelho das placas e do 'BARRADO' é o único sinal de bloqueio. O recorte segue âmbar (tela real), agora com anel vermelho.",
+    "documentacao_desatualizada": "PARCIAL. O roteiro tem a frase nova (03-roteiro.md:27), mas ainda diz 'piscando' (03-roteiro.md:26 e :275; 02-direcao-de-arte.md:25 e :32), 'O SEGUNDO É BARRADO' (:30, :82) e 'PRESTE CONTAS' (:34, :86). EstudoArquibancada.tsx:35 mantém pisca: true.",
+    "verde_do_cartao_da_subsede": "Sem mudança e sem luz verde nas placas (t023.0, luz amarela). Continua aceitável."
+  },
+  "evidencias_usadas": [
+    "campanhas/2026-10-15-apresentacao/auditoria/rodada-3-producao/pacote.md",
+    "campanhas/2026-10-15-apresentacao/05-timeline.md",
+    "05-producao/evidencias/folha.png (visão geral; pequena demais para ler texto)",
+    "05-producao/evidencias/frames: t005.0, t007.5, t014.0, t016.5, t017.0, t018.0, t020.5, t022.0, t022.5, t023.0, t030.0, t033.5, t035.0, t037.5, t039.0, t043.0",
+    "05-producao/evidencias/onda.png",
+    "audio/LICENCAS.md",
+    "audio/apresentacao/batucada.json",
+    "docs/decisoes.md (linhas 85-113)",
+    "Glob em audio/biblioteca/ (para conferir se a prova da licença CC0 foi arquivada: só há o .mp3)",
+    "Grep no .mp3 por metadados (barra, hinchada, club, Wanderers): binário, sem leitura útil",
+    "Grep em 01-03 .md da peça e em src/ ('piscando', 'pisca', frases antigas) para conferir a documentação"
+  ],
+  "notas": {"fidelidade": 8.5, "objetivo": 8.5},
+  "justificativa": {
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "A imagem continua limpa na minha competência. Marca em azul, amarelo e branco. Nenhum clube, escudo, uniforme ou pessoa real. O rótulo 'Torcida Brasil · dados de demonstração' aparece em todas as cenas de produto (t014.0 a t037.5). O vermelho só está em placa fixa e no bloqueio do código. Nada de fumaça, partícula ou estrobo. As gravações do produto em uso são honestas e falam a língua da torcida: 'Caravana para a Final', 'Saída: Sede Central', 'Churrasco do 4º Distrito', 'Rafael Torcedor' (fictício). O ponto novo é o áudio. A bateria gravada tem linha em LICENCAS.md (CC0, Felix Blume), mas a afirmação 'não é torcida' é do estúdio e não tem prova arquivada (só o .mp3 em audio/biblioteca/). Para a regra 'gravação de torcida real: proibido', isso precisa estar documentado antes da entrega.",
+      "por_que_nao_e_10": "Um problema médio: a origem da bateria gravada não está provada no repositório (condição). Baixos: o LIBERADO verde ficou bem maior que na v2, com recorte de ~660×270 px mais o celular verde, ~20% do quadro por ~1,8 s (t017.5 a t019.0); é a tela real e foi pedido do dono, então aceito, mas é o momento de mais verde da peça. Na passagem do barrado para o dinheiro (t022.5), as placas vermelhas viram amarelas passando por laranja brilhante em volta do celular, um quadro que lembra brasa. A documentação ainda está desatualizada. Com a condição cumprida, a nota vai a 9,0."
+    },
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "Com o produto em uso, a peça ficou mais da diretoria. A portaria lê o QR, libera e, no mesmo QR, barra ('Entrou às 15:17, há 17 segundos'). A diretoria digita o valor e vê a taxa. O evento é criado e publicado 'na página da torcida', ao lado de 'Churrasco do 4º Distrito'. É a rotina de quem toca caravana, subsede e portaria, sem caricatura. A diretoria é sempre quem age ('A DIRETORIA PUBLICA O EVENTO', 'Cadastrar minha torcida'). A torcida nunca aparece como problema: o gancho e a cena 2 culpam a mensalidade perdida e o caderno. A bateria gravada deve aproximar a peça do som de arquibancada, mas não ouvi (o diretor também não), então não pesa a favor nem contra na nota.",
+      "por_que_nao_e_10": "Baixos: 'CONTAS ABERTAS NA PLANILHA' (t037.5) ainda pode soar como 'contas em aberto' para o tesoureiro. O recorte da prova mostra uma linha de venda e o botão 'Baixar planilha', o que ajuda, mas a frase continua ambígua. O LIBERADO verde grande pode virar piada de rival para torcidas cujo rival é verde (1,8 s). Ninguém ouviu a trilha que vai ao ar.",
+      "metrica_que_confirma": "Confirma: retenção estável entre 16,8 e 22,8 s (portaria barrando, o trecho mais 'nosso'); salvamentos e compartilhamentos acima da média do perfil; comentários de diretores citando portaria, caravana e subsede; cadastros de torcida nos 7 dias seguintes. Derruba: queda de retenção na portaria; comentários sobre o verde ('tela do rival') ou que leiam a bateria como de outra torcida; retenção média abaixo de 40% sem nenhum cadastro no período."
+    }
+  },
+  "pontos_fortes": [
+    "Condição da rodada 2 cumprida: 'A torcida cresceu, o caderno não.' culpa a ferramenta, não a torcida.",
+    "Portaria gravada barrando o QR repetido com 'Entrou às 15:17, há 17 segundos': a barreira é o código, e a diretoria vê a prova.",
+    "Dados de exemplo com cultura da arquibancada, sem caricatura: 'Caravana para a Final', 'Sede Central', 'Churrasco do 4º Distrito', 'Torcedor paga R$ 143,00 (inclui 10% de taxa)'.",
+    "Barrado com a grade a ~30% e vermelho só em placas fixas: lê como placar de bloqueio, não como sinalizador.",
+    "CTA com 'Plano mensal fixo' (um sentido só para 'mensalidade') e 'Cadastrar minha torcida'.",
+    "Rótulo de demonstração em todas as cenas de produto.",
+    "A trilha sintetizada continua no Git como reserva pronta."
+  ],
+  "problemas": [
+    {
+      "descricao": "A bateria gravada (Felix Blume, 'Batucada rehearsal in Chile', Valparaíso) é declarada 'não é torcida' sem prova arquivada. Só o .mp3 está em audio/biblioteca/; a página do Freesound e o _ia_meta.xml que LICENCAS.md manda guardar não estão no repositório. Batucada de ensaio no Chile é com frequência a percussão de uma barra. Gravação de torcida real é proibida.",
+      "gravidade": "media",
+      "criterio": "fidelidade",
+      "evidencia": "audio/LICENCAS.md:9 e :12-15; Glob audio/biblioteca/ (só blume-batucada-valparaiso.mp3); batucada.json (trecho 39,493 a 83,150 s, do 252 ao 1332)",
+      "correcao": "Salvar a página do Freesound 411465 (descrição, tags, licença) e o _ia_meta.xml em audio/biblioteca/blume-batucada-valparaiso.licenca/; o dono ouve o trecho usado. Se aparecer barra, hinchada, clube, estádio, canto ou grito de puxador, voltar audio/apresentacao/trilha.wav no mix (05-timeline.md: trilha a partir do quadro 108)."
+    },
+    {
+      "descricao": "Na passagem do barrado para o dinheiro, as placas vermelhas passam por laranja brilhante em volta do celular, uma mancha quente que lembra brasa ou sinalizador.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "t022.5 (~quadro 675-684): bloco laranja de y ~560 a ~850, em volta do celular",
+      "correcao": "mosaico.ts, troca 684: em vez de interpolar a cor de #EF4444 para amarelo, apagar o vermelho para #1A1E2A em 4 quadros (680-684) e acender o amarelo em degrau a partir do 684 (sempre passando pelo escuro)."
+    },
+    {
+      "descricao": "LIBERADO verde ocupa ~20% do quadro por ~1,8 s (recorte grande mais o celular), bem mais verde que na v2. É a tela real e foi pedido do dono.",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "t017.5 a t019.0 (531-585): recorte x 60-390, y 272-540 a 540 px de largura; celular verde abaixo",
+      "correcao": "Opcional, sem falsear a tela: segurar o LIBERADO no recorte grande só até ~561 (1 s) e deixar o resto no celular, ou recortar do ícone até o nome (sem a área verde vazia de baixo). Anel, feixe e luz continuam brancos (já estão)."
+    },
+    {
+      "descricao": "Documentação ainda desatualizada: 'piscando', 'O SEGUNDO É BARRADO', 'PRESTE CONTAS', e pisca: true no estudo.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "03-roteiro.md:26, :30, :34, :82, :86, :275; 02-direcao-de-arte.md:25, :32; EstudoArquibancada.tsx:35",
+      "correcao": "Levar as frases finais para a tabela e trocar 'piscando' por 'acendem em degrau e ficam'; no estudo, tirar pisca: true ou marcar 'não usar em peça'."
+    }
+  ],
+  "riscos": [
+    "Direitos conexos: o CC0 é do gravador, não dos músicos da banda gravada. O risco de uso comercial sem autorização dos intérpretes é baixo na prática, mas é uma decisão do dono, não do estúdio. Recomendo registrar em LICENCAS.md que o dono aceitou esse risco.",
+    "Ninguém da mesa ouviu a trilha que vai ao ar; o dono precisa ouvir antes da entrega, também para conferir se a batucada chilena acelerada 1,21× soa natural a ouvido de bateria de torcida brasileira.",
+    "CPF mascarado '***.903.300-**' e código 'E4BT-SAMA' aparecem na portaria (t018.0). O dado é fictício e rotulado, sem problema de imagem; o roteiro dizia 'nunca mostrar o CPF', então cabe ao produto-review aceitar o desvio.",
+    "Licença da voz ElevenLabs ainda 'a definir' em LICENCAS.md.",
+    "Nenhuma pessoa filmada na peça; se entrar alguém em corte derivado, exige autorização de imagem."
+  ],
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

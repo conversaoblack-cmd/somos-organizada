@@ -110,3 +110,35 @@ dando "já utilizado", e o painel da diretoria com a pessoa abrindo o menu e cri
 
 **Descartado (música):** Wikimedia (CC-BY), discos comerciais com marcação de domínio público falsa, "Public Domain Mark"
 sem renúncia formal (Cavro), Pixabay (sem garantia sobre Content ID), gravações com voz de rádio ou canto.
+
+## 15/10/2026 · Apresentação: rodada 3 (peça completa) e a última correção
+
+**Resultado da rodada 3:** 8,16 (meta 9,0), cobertura 100%, sem veto nem bloqueio. produto-review APROVA; motion,
+roteirista, marketing, estratégia e torcida APROVA COM CONDIÇÃO. Correção aplicada = 2ª e última rodada permitida.
+
+**Aceito e feito:**
+- Cenas 7a/7b na ordem real (roteirista, produto): 828–936 "A diretoria decide o preço" (menu → Eventos → "+ Novo
+  evento" com foco → nome → valor) com a voz "O ingresso só precisa pagar o evento"; 936–1080 "10% vira caixa" com o
+  close no "Torcedor paga R$ 143,00 (inclui 10% de taxa)" a ~40 px e contorno amarelo, voz da taxa. Mosaico e câmera
+  seguem a nova virada (936); SFX de virada leve no 936.
+- Fala do CTA no quadro 1176 (marketing, motion, estratégia, roteirista): na voz guia termina no 1343; o take final
+  precisa terminar até 1320 (condição da voz).
+- Prova da planilha: só o 1º lançamento, inteiro, a 0,78× (antes 0,6× e cortando "+ R$ 12,00 de taxa").
+- "Contas prontas na planilha" (antes "abertas": lia-se como prestação de contas pública, que não existe).
+- "Direto na conta de cada sede" (o cartão fala em subsede).
+- Celular da cena do sócio só com a frente da carteirinha (a tela "em dia" trazia o preço do plano do sócio).
+- Cena 8 sai inteira antes do mergulho do CTA (1150–1170).
+- Vermelho do barrado apaga antes do amarelo (sem laranja de brasa).
+- Sopro baixo no 84 para não deixar ~0,9 s de ar morto no fim do gancho.
+- Procedência da bateria arquivada (`audio/biblioteca/*.PROCEDENCIA.md`): tags e descrição sem barra, hinchada,
+  clube ou estádio; o dono ainda ouve o trecho.
+
+**Recusado (com motivo):**
+- "Teste grátis em modo demonstração" no cartão final (marketing): a 5ª linha sairia da zona (y > 1250) e a estratégia
+  mostrou que prometer teste imediato frustra quem depois grava o vídeo de verificação. Vai no texto do post.
+- Voz do CTA dizer "Cadastrar minha torcida" (roteirista): a voz convida ("Cadastre sua torcida"), o botão rotula.
+- Igualar R$ 130 da Caravana da semifinal com os R$ 120 da planilha (roteirista): são eventos diferentes, ambos reais
+  no ambiente de demonstração.
+- Regravar a câmera da portaria com celular e mão de verdade (produto, risco): a entrega diz "leitor real, QR real,
+  câmera simulada".
+- Publicar evento e "Evento publicado!" saíram da peça (a ordem nova termina a 7a no valor; o aviso ficava ≤ 0,6 s).

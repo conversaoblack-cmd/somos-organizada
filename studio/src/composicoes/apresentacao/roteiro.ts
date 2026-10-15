@@ -15,8 +15,9 @@ export const CENAS = {
   socio: {de: 360, ate: 504},
   ingresso: {de: 504, ate: 684},
   dinheiro: {de: 684, ate: 828},
-  taxa: {de: 828, ate: 972},
-  evento: {de: 972, ate: 1080},
+  // ordem da roteirista (rodada 3): a diretoria cria o evento e decide o preço; o sistema soma 10% e isso vira caixa
+  evento: {de: 828, ate: 936},
+  taxa: {de: 936, ate: 1080},
   prova: {de: 1080, ate: 1188},
   cta: {de: 1188, ate: 1350},
 } as const;

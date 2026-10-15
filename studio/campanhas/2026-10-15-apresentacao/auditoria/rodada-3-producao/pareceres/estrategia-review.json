@@ -1,0 +1,97 @@
+{
+  "avaliador": "estrategia-review",
+  "rodada": "3-producao",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicao": "(1) Peça: a fala do CTA tem que terminar dentro da peça. Hoje tempos.json registra o erro 'cta passa do fim da peça (45551 ms > 45000 ms)': a fala começa no frame 1200 e termina no 1367, e a peça acaba no 1350. Na voz guia, o fim de 'Só paga depois de publicar o site', que é a linha que baixa o risco de quem decide, fica cortado e emenda no loop. Com o take final da ElevenLabs, meça a fala do CTA. Se ela passar de 4,6 s (do frame 1200 ao 1338), estenda a composição para 1200 + duração da fala + 12 frames, segurando o CardMarca e levando o impacto e o corte seco do 1332 para 12 frames antes do novo fim. Não acelere a voz e não corte 'o site'. (2) Publicação (vem da rodada 0 e continua aberta, porque não há entrega.md): link da bio do @somosorganizada apontando para somosorganizada.com.br, este Reels fixado no perfil, legenda do post com a variante longa da taxa ('paga pelo torcedor, aparece antes de pagar e fica com a torcida'), com 'Plano mensal fixo, sem % das vendas' e com o aviso 'o cadastro termina com um vídeo rápido gravado na sede (é o que impede alguém de se passar pela sua torcida); aprovado, você testa tudo em modo demonstração e só paga depois de publicar', terminando em 'Link na bio para cadastrar sua torcida'.",
+  "evidencias_usadas": [
+    "auditoria/rodada-3-producao/pacote.md",
+    "auditoria/rodada-3-producao/qc.json",
+    "auditoria/rodada-0-roteiro/pareceres/estrategia-review.json (meu parecer anterior)",
+    "05-timeline.md",
+    "01-briefing.md",
+    "03-roteiro.md (seções 5, 6 e 7: riscos, decisões do diretor e decisões depois da rodada 0)",
+    "05-producao/evidencias/folha.png",
+    "05-producao/evidencias/onda.png",
+    "05-producao/evidencias/frames/t000.0.png",
+    "05-producao/evidencias/frames/t003.0.png",
+    "05-producao/evidencias/frames/t013.0.png",
+    "05-producao/evidencias/frames/t017.5.png",
+    "05-producao/evidencias/frames/t020.5.png",
+    "05-producao/evidencias/frames/t025.5.png",
+    "05-producao/evidencias/frames/t029.5.png",
+    "05-producao/evidencias/frames/t035.0.png",
+    "05-producao/evidencias/frames/t037.5.png",
+    "05-producao/evidencias/frames/t039.5.png",
+    "05-producao/evidencias/frames/t041.5.png",
+    "05-producao/evidencias/frames/t044.5.png",
+    "audio/apresentacao/tempos.json",
+    "audio/apresentacao/take/PARA-ELEVENLABS.md",
+    "src/composicoes/apresentacao/legenda.json",
+    "conhecimento/verdade-do-produto.md",
+    "conhecimento/produto-na-pratica.md",
+    "conhecimento/publico.md",
+    "docs/decisoes.md (linhas 70-109: perfil @somosorganizada, gravações reais, bateria CC0, CTA 'Plano mensal fixo')",
+    "auditoria/rubrica.md",
+    "busca por entrega.md, link da bio e legenda do post na pasta da campanha (nenhum arquivo de entrega encontrado)"
+  ],
+  "notas": {
+    "objetivo": 8.0
+  },
+  "justificativa": {
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "O tipo E (lançamento), com A (alcance) como secundário, continua batendo com o pedido do dono e com o indicador (retenção média ≥ 40% e retenção nos 3 s). As duas faltas da rodada 0 que estavam dentro da peça foram resolvidas. (a) A objeção 'quanto vocês levam?' agora tem resposta escrita no CTA: 'Plano mensal fixo, sem % das vendas.' (t041.5, t044.5, em amarelo). O CTA também deixou de prometer 'teste grátis' sem contexto, o que reduz o choque com o vídeo de verificação no /cadastro. (b) A marca fica na tela do começo ao fim: 'SOMOS ORGANIZADA' grande na virada (9,0–11,5 s) e a assinatura com a grade 2×2 e 'Torcida Brasil · dados de demonstração' de 12 s a 39 s (t013.0, t020.5, t029.5, t037.5). A troca por gravações reais do produto em uso fortalece o argumento para quem decide: a portaria lendo o QR, LIBERADO e depois JÁ UTILIZADO (t017.5, t020.5); a diretoria digitando o valor e o sistema calculando 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' (t029.5); 'Evento publicado! Já está na página da torcida.' (t035.0). Isso é prova, não promessa, e responde ao 'app genérico de ingresso' que afasta o público. Os títulos falam com a diretoria ('A DIRETORIA PUBLICA O EVENTO', '10% VIRA CAIXA', 'DIRETO NA CONTA DA TORCIDA'), então a peça não puxa o torcedor comum como alvo. Custo: zero verba (Reels orgânico; bateria CC0 de Felix Blume, sem licença a pagar; cerca de 89 palavras de crédito de voz). O custo real foram as horas de gravação do produto, e essas gravações (portaria, criação de evento, taxa) viram material das próximas peças F. No caminho até a receita (Reels → bio → /cadastro → vídeo de verificação → aprovação → demonstração → publicar → 1ª mensalidade 7 dias depois), a peça leva até o botão 'Cadastrar minha torcida'. O resto depende de coisas fora dela: link da bio e post fixado, ainda sem registro de entrega, e o vídeo na sede, que é a etapa de maior abandono e precisa estar avisado na legenda.",
+      "por_que_nao_e_10": "(1) A fala do CTA passa do fim da peça (tempos.json: 45551 ms > 45000 ms; timeline: 1200–1367 numa peça de 1350). A linha que baixa o risco ('Só paga depois de publicar o site') é a que fica cortada na voz. Ela está escrita, mas quem ouve perde o fim. (2) O funil fora da peça continua sem garantia: não há entrega.md com o link da bio, o post fixado e a legenda. (3) O pagamento do gancho continua vindo pelo lado do torcedor ('Você está em dia', t013.0); quem parou pela dor do tesoureiro ganha a resposta pelo celular do sócio, não pelo painel. (4) O CTA entra só aos 39,6 s, depois de cinco assuntos (sócio, portaria, dinheiro direto, taxa, evento) e da planilha. É o risco de retenção do 'tour' que o próprio roteirista registrou e que só a curva vai decidir.",
+      "metrica_que_confirma": "Confirma a nota: retenção nos 3 s ≥ 60% e taxa de pulo abaixo da média dos Reels do perfil; retenção média ≥ 40%, sem queda maior que 15 pontos entre 12 s e 22 s (depois do pagamento do gancho); toques no link da bio ≥ 1% das contas alcançadas; pelo menos 1 cadastro de torcida em /cadastro nos 7 dias (painel da plataforma), com 'como conheceu' = Instagram. Derruba a nota: zero toque no link com alcance acima de 2 mil contas (público errado, provavelmente torcedor comum); queda maior que 50% até 16 s; comentários majoritariamente de torcedores sobre a taxa de 10% em vez de perguntas de diretoria. Em 30 dias: torcidas que publicaram vindas desse período (é a receita de verdade)."
+    }
+  },
+  "pontos_fortes": [
+    "A objeção que mais pesa para quem decide ('vocês ficam com uma parte?') agora é respondida na própria peça: 'Plano mensal fixo, sem % das vendas.' no CTA (t041.5), logo abaixo do endereço. Isso cumpre o item 6 do briefing e desarma a leitura de que os 10% do checkout seriam da plataforma.",
+    "A taxa aparece calculada pelo próprio sistema ('Torcedor paga R$ 143,00 (inclui 10% de taxa)', t029.5) e o dinheiro aparece dividido na tela de recebimentos ('Vai para a subsede R$ 50,00 · Taxa de serviço (torcida) R$ 5,00', t025.5). É a taxa à mostra, o contrário da 'taxa escondida' que afasta o público (publico.md).",
+    "A portaria gravada em uso (LIBERADO → o mesmo QR → JÁ UTILIZADO, t017.5 e t020.5) é a prova mais forte de 'ingresso sem fraude' que o estúdio pode dar sem pessoas filmadas, e é verdadeira: diz 'Cada QR entra uma vez só', nunca 'print é barrado'.",
+    "A marca na tela de 9 s a 45 s, com a assinatura fixa de 12 s a 39 s, resolve a lembrança da marca para quem sai antes do CTA, que é a maioria de uma curva típica.",
+    "Custo de oportunidade baixo: sem verba, música CC0 sem licença a pagar, voz de cerca de 89 palavras. As gravações reais do produto (portaria, criar evento, taxa) já pagam a próxima peça F de ~20 s sobre 'a taxa vira caixa', que pode reaproveitar as cenas 7a/7b, o mosaico e o CTA.",
+    "O 'Teste grátis em modo demonstração' saiu do cartão do CTA. 'Só paga depois de publicar o site' é verdadeiro e não cria a expectativa de testar na hora, que o vídeo de verificação frustraria."
+  ],
+  "problemas": [
+    {
+      "descricao": "A fala do CTA termina depois do fim da peça. A voz guia vai de 1200 a 1367 (5551 ms), e a peça acaba em 1350. 'Só paga depois de publicar o site', a frase da oferta que baixa o risco de quem decide, fica cortada no fim e emenda no recomeço do loop do Reels. Com a direção de voz pedindo velocidade ~0,9, o take final tende a ficar mais longo, não mais curto.",
+      "gravidade": "média",
+      "criterio": "objetivo",
+      "evidencia": "audio/apresentacao/tempos.json, 'erros': 'cta passa do fim da peça (45551 ms > 45000 ms)'; 05-timeline.md, cena cta, fala 1200–1367 numa peça de 1350 quadros",
+      "correcao": "Depois do take final: se a fala do CTA passar de 4,6 s (do frame 1200 ao 1338), estenda a composição para 1200 + duração da fala + 12 frames (ex.: fala de 5,6 s = 168 frames, peça de 1380 frames, 46,0 s), segurando o CardMarca parado e levando o impacto e o corte seco da trilha do 1332 para 12 frames antes do novo fim. Não acelere a voz e não tire 'o site' (decisão da rodada 0). O briefing fala em 'entender em menos de 45 s', e o entendimento termina antes do CTA, então 1 s a mais no cartão final não fere o objetivo."
+    },
+    {
+      "descricao": "O primeiro passo do funil fora da peça continua sem registro. O perfil foi decidido (@somosorganizada, decisoes.md), mas não existe entrega.md com o link da bio, o Reels fixado e a legenda do post, que levaria a variante longa da taxa, o modelo de cobrança e o aviso do vídeo de verificação. O endereço escrito no CTA não é clicável no Reels: sem link na bio, a ação do briefing não acontece.",
+      "gravidade": "média",
+      "criterio": "objetivo",
+      "evidencia": "pasta da campanha sem entrega.md; 03-roteiro.md, seção 7, última linha ('Condição de publicação: vai na entrega.md'); t041.5 (somosorganizada.com.br escrito)",
+      "correcao": "Criar campanhas/2026-10-15-apresentacao/entrega.md com: bio 'Plataforma para diretorias de torcida organizada' + link somosorganizada.com.br; o Reels fixado; o texto da legenda (variante longa da taxa de verdade-do-produto.md + 'Plano mensal fixo, sem % das vendas' + o aviso do vídeo de verificação na sede + 'Link na bio para cadastrar sua torcida'); o comentário fixado com 'Quer ver uma torcida de exemplo? Botão no topo do site'. Confirmar com o dono antes de publicar."
+    },
+    {
+      "descricao": "O pagamento do gancho continua vindo pelo lado do torcedor. O gancho pergunta ao tesoureiro 'quanto da mensalidade não entrou', e a resposta é o cartão 'Você está em dia' do sócio, com o celular do sócio (t013.0). A diretoria entende a tese, mas não vê a lista dela.",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "t000.0 (gancho) × t013.0 (cena sócio: 'Você está em dia · Preço de sócio liberado nos ingressos no seu nome')",
+      "correcao": "Não mexa nesta rodada: a decisão do diretor (lista de Sócios lê mal no mudo) continua certa para a retenção, e a última rodada de correção vale mais na fala do CTA. Reavaliar na v2 se a curva cair mais de 15 pontos entre 12 s e 17 s."
+    },
+    {
+      "descricao": "O CTA entra só aos 39,6 s, depois da cena da planilha (36,0–39,6 s). Cada segundo antes do pedido tira uma fatia de quem vê o botão.",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "05-timeline.md, cena prova 1080–1188 e cta 1188–1350; t037.5",
+      "correcao": "Mantenho a posição da rodada 0: não cortar agora, porque a planilha é a única prova de prestação de contas. Se a curva publicada cair mais de 10 pontos entre 32 s e 40 s, o corte da v2 (ou para anúncio, se um dia houver verba) funde a cena 8 na 7b e antecipa o CTA para ~36 s."
+    }
+  ],
+  "riscos": [
+    "Distribuição para o público errado: num perfil novo, o alcance orgânico vai para quem engaja com o tema, e as telas mais vistosas (LIBERADO, JÁ UTILIZADO, celular do torcedor) são do lado do torcedor. Alcance alto com zero toque no link indica torcedor comum, não diretoria.",
+    "Reação de torcedor nos comentários a 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' e '10% VIRA CAIXA' ('a diretoria fica com a minha taxa'). Isso afeta a diretoria que pensa em adotar. Tenha pronta uma resposta fixável com a variante longa ('cobre as tarifas do Pix e do cartão; o resto vira caixa da torcida, e a diretoria pode cobrar no ingresso só o que o evento custa').",
+    "'CONTAS ABERTAS NA PLANILHA' (t037.5) pode ser lido como prestação de contas pública, que não existe (verdade-do-produto.md: 'números que a diretoria pode mostrar'). Se um torcedor cobrar 'onde vejo as contas abertas?', quem paga é a diretoria cliente. Isso é da competência de fidelidade (produto e marketing); registro aqui pelo efeito na confiança de quem decide.",
+    "Medição: o site não registra ?src=, e os cadastros do período misturam canais (comercial, indicação). Perguntar 'como conheceu' a cada torcida cadastrada nos 7 dias e anotar em desempenho/registro.md. Registrar também quantas vezes o comercial mandou a peça por WhatsApp, porque nesse uso a cobertura completa vale mais que a retenção no feed.",
+    "Receita realista do primeiro Reels de um perfil sem seguidores: baixa no curto prazo. O valor da peça é ser a âncora fixada para onde as próximas peças F apontam e o material do comercial. Não julgue a peça por receita em 7 dias; julgue por toques no link e por cadastros em 30 dias.",
+    "Gargalo fora da peça: o vídeo de verificação na sede (~1 dia útil) é a etapa com mais chance de abandono entre /cadastro e publicar. Se aparecerem cadastros parados em 'Vídeo' no painel, a correção é na legenda e no contato da equipe, não numa peça nova."
+  ],
+  "argumento_mais_forte_contra": "Esta peça custou mais horas do que precisava para o que pode trazer em receita. As gravações reais, a bateria gravada e o 3D fazem uma ótima apresentação de marca, mas a função-objetivo é torcida publicada, e num perfil sem seguidores o primeiro Reels quase não é distribuído. Um Reels F de ~20 s só com 'a taxa vira caixa' e o CTA, com essas mesmas gravações, teria mais chance de retenção e de toque no link pelo mesmo custo marginal. Pior: ao aprovar com condição, deixo a última rodada de correção ir para a fala do CTA, quando a curva talvez peça cortar a planilha. Mantenho o veredito por três razões. O pedido explícito do dono é apresentar o que a gente entrega. As gravações já feitas pagam a peça F seguinte quase de graça, então o custo está amortizado. E a correção que peço (estender o cartão final em ~1 s se a voz final passar) não gasta a rodada de correção com nada que dependa de opinião. Se a retenção média ficar abaixo de 30% e não houver toque no link com mais de 2 mil contas alcançadas, o argumento contra vence, e a próxima peça deve ser a F estreita, não outra apresentação.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

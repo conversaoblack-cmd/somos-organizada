@@ -397,125 +397,125 @@
     ]
   },
   {
-    "id": "taxa-0",
+    "id": "evento-0",
     "faixa": "baixa",
     "palavras": [
       {
-        "text": "A",
+        "text": "O",
         "startMs": 27860,
-        "endMs": 28029,
-        "timestampMs": 27945,
+        "endMs": 28009,
+        "timestampMs": 27935,
         "confidence": 1
       },
       {
-        "text": "taxa",
-        "startMs": 28029,
-        "endMs": 28367,
-        "timestampMs": 28198,
+        "text": "ingresso",
+        "startMs": 28009,
+        "endMs": 28606,
+        "timestampMs": 28308,
         "confidence": 1
       },
       {
-        "text": "de",
-        "startMs": 28367,
-        "endMs": 28536,
-        "timestampMs": 28452,
+        "text": "só",
+        "startMs": 28606,
+        "endMs": 28755,
+        "timestampMs": 28681,
         "confidence": 1
       },
       {
-        "text": "10%",
-        "startMs": 28536,
-        "endMs": 29212,
-        "timestampMs": 28874,
-        "confidence": 1,
-        "cor": "amarelo"
+        "text": "precisa",
+        "startMs": 28755,
+        "endMs": 29277,
+        "timestampMs": 29016,
+        "confidence": 1
       },
       {
-        "text": "vira",
-        "startMs": 29212,
-        "endMs": 29550,
-        "timestampMs": 29381,
+        "text": "pagar",
+        "startMs": 29277,
+        "endMs": 29649,
+        "timestampMs": 29463,
         "confidence": 1,
         "quebraAntes": true
       },
       {
-        "text": "caixa",
-        "startMs": 29550,
-        "endMs": 29973,
-        "timestampMs": 29762,
+        "text": "o",
+        "startMs": 29649,
+        "endMs": 29798,
+        "timestampMs": 29724,
         "confidence": 1,
         "cor": "amarelo"
       },
       {
-        "text": "da",
-        "startMs": 29973,
-        "endMs": 30142,
-        "timestampMs": 30058,
-        "confidence": 1,
-        "cor": "amarelo"
-      },
-      {
-        "text": "torcida.",
-        "startMs": 30142,
-        "endMs": 30733,
-        "timestampMs": 30438,
+        "text": "evento.",
+        "startMs": 29798,
+        "endMs": 30246,
+        "timestampMs": 30022,
         "confidence": 1,
         "cor": "amarelo"
       }
     ]
   },
   {
-    "id": "evento-0",
+    "id": "taxa-0",
     "faixa": "baixa",
     "palavras": [
       {
-        "text": "O",
-        "startMs": 32727,
-        "endMs": 32876,
-        "timestampMs": 32802,
+        "text": "A",
+        "startMs": 31393,
+        "endMs": 31562,
+        "timestampMs": 31478,
         "confidence": 1
       },
       {
-        "text": "ingresso",
-        "startMs": 32876,
-        "endMs": 33473,
-        "timestampMs": 33175,
+        "text": "taxa",
+        "startMs": 31562,
+        "endMs": 31900,
+        "timestampMs": 31731,
         "confidence": 1
       },
       {
-        "text": "só",
-        "startMs": 33473,
-        "endMs": 33622,
-        "timestampMs": 33548,
+        "text": "de",
+        "startMs": 31900,
+        "endMs": 32069,
+        "timestampMs": 31985,
         "confidence": 1
       },
       {
-        "text": "precisa",
-        "startMs": 33622,
-        "endMs": 34144,
-        "timestampMs": 33883,
-        "confidence": 1
-      },
-      {
-        "text": "pagar",
-        "startMs": 34144,
-        "endMs": 34516,
-        "timestampMs": 34330,
-        "confidence": 1,
-        "quebraAntes": true
-      },
-      {
-        "text": "o",
-        "startMs": 34516,
-        "endMs": 34665,
-        "timestampMs": 34591,
+        "text": "10%",
+        "startMs": 32069,
+        "endMs": 32745,
+        "timestampMs": 32407,
         "confidence": 1,
         "cor": "amarelo"
       },
       {
-        "text": "evento.",
-        "startMs": 34665,
-        "endMs": 35113,
-        "timestampMs": 34889,
+        "text": "vira",
+        "startMs": 32745,
+        "endMs": 33083,
+        "timestampMs": 32914,
+        "confidence": 1,
+        "quebraAntes": true
+      },
+      {
+        "text": "caixa",
+        "startMs": 33083,
+        "endMs": 33506,
+        "timestampMs": 33295,
+        "confidence": 1,
+        "cor": "amarelo"
+      },
+      {
+        "text": "da",
+        "startMs": 33506,
+        "endMs": 33675,
+        "timestampMs": 33591,
+        "confidence": 1,
+        "cor": "amarelo"
+      },
+      {
+        "text": "torcida.",
+        "startMs": 33675,
+        "endMs": 34266,
+        "timestampMs": 33971,
         "confidence": 1,
         "cor": "amarelo"
       }

@@ -1,0 +1,103 @@
+{
+  "avaliador": "roteirista",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicao": "(1) Cena 7b (972–1080): tela, frase de impacto e voz contam três coisas diferentes (tela: abrir o menu, digitar o nome e publicar; frase: 'A DIRETORIA PUBLICA O EVENTO'; voz/legenda: 'O ingresso só precisa pagar o evento'), e a gravação volta no tempo em relação à 7a. Corrigir por uma das duas opções do problema 1. (2) Take final da ElevenLabs: cada fala dentro do mínimo e do máximo da tabela 'Ritmo da fala' do 03-roteiro.md (na voz guia, taxa = 3,34 p/s, virada = 3,21, ingresso = 3,03 e evento = 2,79 passam de 2,6) e a fala do CTA terminando até o quadro 1332 (na voz guia termina no 1367, depois do fim da peça). Conferir no tempos.json novo antes de entregar; se alguma fala passar de 2,6 p/s no trecho, o veto da cadeira vale automaticamente.",
+  "evidencias_usadas": [
+    "auditoria/rodada-3-producao/pacote.md",
+    "auditoria/rodada-3-producao/qc.json",
+    "05-timeline.md",
+    "03-roteiro.md",
+    "01-briefing.md (grep: hipótese e insight)",
+    "05-producao/evidencias/folha.png",
+    "05-producao/evidencias/onda.png",
+    "05-producao/evidencias/evidencias.json",
+    "frames/t000.0.png", "frames/t001.5.png", "frames/t003.5.png", "frames/t007.0.png", "frames/t008.5.png",
+    "frames/t010.0.png", "frames/t012.5.png", "frames/t014.5.png", "frames/t016.5.png", "frames/t017.0.png",
+    "frames/t018.0.png", "frames/t019.5.png", "frames/t020.5.png", "frames/t022.0.png", "frames/t022.5.png",
+    "frames/t023.5.png", "frames/t026.0.png", "frames/t027.5.png", "frames/t028.0.png", "frames/t029.5.png",
+    "frames/t031.5.png", "frames/t032.0.png", "frames/t032.5.png", "frames/t033.5.png", "frames/t034.5.png",
+    "frames/t035.0.png", "frames/t035.5.png", "frames/t036.5.png", "frames/t038.0.png", "frames/t039.5.png",
+    "frames/t041.0.png", "frames/t042.5.png", "frames/t044.5.png",
+    "audio/apresentacao/narracao.json",
+    "audio/apresentacao/tempos.json",
+    "src/composicoes/apresentacao/legenda.json",
+    "src/composicoes/apresentacao/Apresentacao.tsx (só grep, linhas 87 e 111: para confirmar que as frases 'A portaria lê o QR' e 'A diretoria publica o evento' são da produção e não estão no 03-roteiro.md)"
+  ],
+  "notas": {"gancho": 8.0, "clareza": 7.5},
+  "justificativa": {
+    "gancho": {
+      "natureza": "hipotese",
+      "texto": "No quadro 0 (t000.0) a pergunta inteira já está escrita, 'QUANTO DA MENSALIDADE / NÃO ENTROU (vermelho) / ESTE MÊS?', sobre arquibancada escura com placas vermelhas. Texto e voz são idênticos (narracao.json: gancho com legenda vazia, de propósito), têm aversão à perda e lacuna de curiosidade, e o vermelho cresce até t001.5 sem precisar de som. No mudo funciona. O gancho é pago aos 12–16,8 s ('MENSALIDADE QUE SE COBRA SOZINHA' + push-in em 'Você está em dia', t014.5), dentro do que a peça promete.",
+      "por_que_nao_e_10": "Não tem algarismo: o número é o que o tesoureiro tem na cabeça, e o risco 1 do roteiro continua de pé. São 7 palavras para ler em 1,5 s. E o gancho é pago pelo lado do sócio (carteirinha 'em dia'), não pela tela da diretoria que mostra quem pagou: a promessa ('quanto não entrou') é respondida com um mecanismo, não com o número.",
+      "metrica_que_confirma": "Taxa de pulo e retenção nos 3 s do Reels: retenção nos 3 s acima da mediana do perfil confirma; pulo alto antes de 1,5 s derruba (texto longo demais para quem rola). A queda entre 12 s e 17 s diz se o payoff pelo lado do sócio segura quem parou pela dor."
+    },
+    "clareza": {
+      "natureza": "execucao",
+      "texto": "Na maior parte da peça, tela, frase e legenda contam a mesma história. Cena 5: na mesma batida em que a legenda diz 'Ingresso no nome de quem vai', o LIBERADO mostra 'Rafael Torcedor · SÓCIO' (t018.0); o mesmo QR volta na câmera quando entra 'Cada QR entra uma vez só' (t019.5) e vira JÁ UTILIZADO 'Entrou às 15:17' com 'QR REPETIDO BARRADO' (t020.5). Cena 6: o card 'Torcedor paga R$ 55 / Vai para a subsede R$ 50 / Taxa de serviço (torcida) R$ 5' sustenta 'Cada subsede recebe direto' (t026.0). Cena 7a: 'Valor para o público R$ 130,00 → Torcedor paga R$ 143,00 (inclui 10% de taxa)' com '10% VIRA CAIXA' e a legenda da taxa (t029.5). Cena 8: 'Baixar planilha' + venda da Caravana (t036.5). Uma ideia por cena e recompensa a cada 5 s ou menos.",
+      "por_que_nao_e_10": "A 7b quebra a regra de uma ideia por cena. A tela mostra como se publica um evento (t032.5 menu, t033.5 'Caravana para', t034.5 'Publicar evento', t035.0 'Evento publicado!'), a frase diz 'A DIRETORIA PUBLICA O EVENTO' e a voz diz 'O ingresso só precisa pagar o evento'. A metade do insight que o briefing aposta como o momento de salvar fica sem prova na tela, e o 'o evento' da legenda passa a ser lido como 'o evento publicado'. Além disso, a 7b volta no tempo: a 7a já mostrou o preço digitado e a 7b reabre o menu e digita o nome. Há ainda detalhes baixos: o botão do CTA diz 'Cadastrar minha torcida' e a voz diz 'Cadastre sua torcida'; a frase da cena 6 diz 'torcida' e o card diz 'subsede'; a mesma Caravana custa R$ 130 na 7a e R$ 120 na cena 8; a prova do 10% fica em ~35 px."
+    }
+  },
+  "pontos_fortes": [
+    "Gancho cheio no quadro 0, com texto e voz iguais e o vermelho no escuro: interrompe o padrão sem depender de som (t000.0, t001.5).",
+    "Cena 5 é a mais clara da peça: a câmera lê o QR real, o LIBERADO traz o nome do titular na hora de 'no nome de quem vai', e o JÁ UTILIZADO 'Entrou às 15:17 · há 17 segundos' é prova concreta de 'uma vez só' (t017.0–t022.0).",
+    "Cena 6: o card 'Torcedor paga R$ 55 / Vai para a subsede R$ 50 / Taxa de serviço (torcida) R$ 5' já antecipa o insight da taxa com números de demonstração rotulados.",
+    "Na 7a, o próprio sistema escreve 'inclui 10% de taxa' enquanto a voz diz 'dez por cento': a voz completa a tela, não lê a tela.",
+    "O arco do mosaico (vermelho → 2×2 → amarelo → grade completa no CTA) é um fio que se lê no mudo, e a assinatura 'SOMOS ORGANIZADA · Torcida Brasil · dados de demonstração' segura o nome e o rótulo de 12 s a 39 s.",
+    "CTA com oferta verdadeira escrita ('Plano mensal fixo, sem % das vendas.' / 'Só paga depois de publicar o site.') e toque no botão repetindo o gesto (t041.0).",
+    "Nenhum número de cliente, depoimento, escassez ou urgência inventados."
+  ],
+  "problemas": [
+    {
+      "descricao": "Cena 7b: tela (abrir o menu → Novo evento → nome → Publicar → 'Evento publicado!'), frase de impacto ('A DIRETORIA PUBLICA O EVENTO', que não é a do roteiro: a decisão 2 da seção 6 era 'A DIRETORIA DECIDE O PREÇO') e voz/legenda ('O ingresso só precisa pagar o evento') contam três coisas. Nenhuma tela sustenta a 2ª metade do insight do briefing. A gravação também volta no tempo: a 7a mostra o preço digitado (gravação 24,67 s) e a 7b volta ao menu (5,90 s) e ao nome (15,45 s), e o caminho do produto deixa de ser seguível.",
+      "gravidade": "média",
+      "criterio": "clareza",
+      "evidencia": "t032.5 (menu + frase 'publica o evento' + legenda 'pagar o evento'), t033.5 ('Caravana para' sendo digitado depois do R$ 130 da 7a em t029.5), t034.5, t035.0; 05-timeline.md 7b: trechos de 5,90 s, 15,45 s e 27,40 s depois do de 24,67 s; Apresentacao.tsx:111",
+      "correcao": "Opção A (a de que gosto mais; mantém o pedido do dono do menu): montar a gravação em ordem e inverter as duas falas do insight, com corte no 936 (na grade: 936 − 252 = 38 × 18). 7a 828–936: menu (5,90 s) → nome (15,45 s) → 'Valor para o público R$ 130,00' (24,67 s); frase `A DIRETORIA ↵ **DECIDE O PREÇO**{azul}`; voz 'O ingresso só precisa pagar o evento.' no 834 (take 2,7–2,9 s, termina até o 921). 7b 936–1080: 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' com anel amarelo e placar '10% VIRA CAIXA' (936–1044) → 'Publicar evento' → 'Evento publicado!' (1044–1080); voz 'A taxa de dez por cento vira caixa da torcida.' no 940 (take 3,9–4,2 s, termina até o 1066). O insight termina em 'caixa' e emenda com 'Caixa e vendas' da cena 8. Opção B (só remontagem, textos iguais): 7b sem o menu e o nome; 972–1044 segue o recorte da 7a com anel em 'R$ 130,00' (o preço do evento), 1044–1080 Publicar → 'Evento publicado!'; frase de volta para `A DIRETORIA ↵ **DECIDE O PREÇO**{azul}`. O menu aberto fica só no celular da arquibancada. A opção B perde o menu no recorte, que foi pedido do dono: a decisão é do diretor com o dono."
+    },
+    {
+      "descricao": "Ritmo da fala na voz guia passa de 2,6 p/s em quatro trechos, e a fala do CTA passa do fim da peça. Não julgo a voz guia como defeito (limite conhecido), mas é a condição de entrega e é o meu critério de veto.",
+      "gravidade": "média",
+      "criterio": "clareza",
+      "evidencia": "tempos.json: taxa 10 palavras em 2,994 s = 3,34 p/s; virada 7/2,180 = 3,21; ingresso 12/3,959 = 3,03; evento 7/2,506 = 2,79; erro 'cta passa do fim da peça (45551 ms > 45000 ms)', fimFrame 1367",
+      "correcao": "Take final dentro da tabela do 03-roteiro.md: taxa ≥ 3,9 s, virada ≥ 2,7 s, ingresso ≥ 4,6 s, evento ≥ 2,7 s (com a opção A do problema 1 valem os novos inícios 834 e 940). CTA: mover a fala para o quadro 1188 e pedir take de 4,6–4,8 s (12 palavras, 2,5–2,6 p/s; termina entre o 1326 e o 1332, antes do impacto do 1332). Se não couber sem correr, tirar 'Somos Organizada' da voz do CTA (já está escrito grande na tela desde o 1188): ficam 10 palavras em 3,9–4,3 s a partir do 1200."
+    },
+    {
+      "descricao": "A voz do CTA diz 'Cadastre sua torcida' e o botão escreve 'Cadastrar minha torcida': a fala não aparece escrita igual, e o gesto que a voz pede não tem a mesma palavra do botão tocado.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "t041.0 e t042.5 (botão 'Cadastrar minha torcida'); narracao.json cta",
+      "correcao": "Se 'Cadastrar minha torcida' é o rótulo real do site, a voz diz 'Cadastrar minha torcida.' (as mesmas 3 palavras, sem mudar o tempo). Se não for, o botão do CardMarca passa a 'Cadastre sua torcida'. Nos dois casos, o botão precisa ter o mesmo rótulo do site."
+    },
+    {
+      "descricao": "Continuidade de preço: a mesma 'Caravana para a Final' custa R$ 130,00 → R$ 143,00 na 7a e aparece como 'R$ 120,00 + R$ 12,00 de taxa' na planilha da cena 8. Perde-se a chance de o número da taxa pagar a promessa na prova.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "t029.5 (R$ 130,00 / R$ 143,00) × t036.5 (R$ 120,00 + R$ 12,00 de taxa)",
+      "correcao": "Na regravação da 7a, digitar 120,00 (o sistema mostra 'Torcedor paga R$ 132,00 (inclui 10% de taxa)'). Assim os R$ 12,00 de taxa da 7a reaparecem na planilha da cena 8 e o mesmo número pago vira o caixa mostrado."
+    },
+    {
+      "descricao": "A prova do insight ('Torcedor paga R$ 143,00 (inclui 10% de taxa)') é o menor texto da cena (~35 px). O campo também passa da borda direita do recorte, e o anel corta o campo.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "t029.5, t031.5 (linha a ~17 px na prévia de 540 px; campo cortado em x ≈ 460/540)",
+      "correcao": "Na 7a, de 900 a 972, fazer push-in no recorte só da linha 'Torcedor paga R$ 143,00 (inclui 10% de taxa)', até ela chegar a ≥ 48 px na peça, com o campo 'Valor para o público' saindo por cima. Também cabe recortar mais estreito para o campo não passar da borda."
+    },
+    {
+      "descricao": "A frase da cena 6 diz 'DIRETO NA CONTA DA TORCIDA', mas a linha em destaque do card diz 'Vai para a subsede R$ 50,00' e a legenda diz 'Cada subsede recebe direto'. A leitura no mudo pede um passo a mais.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "t023.5, t026.0",
+      "correcao": "Deixar a frase e a tela com a mesma palavra: `DIRETO NA CONTA ↵ **DE CADA SEDE**{amarelo}` (5 palavras, 2,0 s; cabe nos 702–828). Ou manter a frase e pôr o anel na linha 'Taxa de serviço (torcida) R$ 5,00' de 702 a 756 e na de 'Vai para a subsede' de 756 a 828."
+    }
+  ],
+  "riscos": [
+    "'Plano mensal fixo, sem % das vendas.' no CTA, 8 s depois de '10% vira caixa', pode ser lido como contradição por quem não ouviu 'o dinheiro não passa pela gente'. O post e o comentário fixado precisam dizer que os 10% são pagos pelo torcedor e ficam com a torcida.",
+    "Com a voz final, os blocos de legenda de 4 palavras (problema-1, dinheiro-1) ficam perto do orçamento de 1,7 s (dinheiro-1 tem 1,66 s na voz guia). Conferir o legenda.json realinhado.",
+    "A cena 5 mostra 'CPF ***.903.300-**' no LIBERADO (t018.0). O roteiro pedia nunca mostrar CPF. É mascarado e de demonstração, mas a fidelidade cabe ao produto-review e à torcida-review.",
+    "A peça continua passando por cinco assuntos em 33 s. A curva de retenção entre 17 s e 28 s diz se o mosaico basta como fio.",
+    "A 7b atual e o toast 'Evento publicado!' (t035.0) mostram uma lista com outro evento ('Churrasco do 4º Distrito', 'Aguardando aprovação'). Lida rápido, parece que a Caravana foi criada de novo, sendo que ela já existe na cena 5."
+  ],
+  "argumento_contra_meu_veredito": "Eu poderia vetar: pela letra da minha regra, quatro falas estão acima de 2,6 p/s no trecho (taxa 3,34) e o CTA passa do fim da peça, que é exatamente o que me manda vetar. Também se pode dizer que a 7b fere a promessa central do briefing (o insight do momento de salvar). Mantenho a condição em vez do veto porque a voz é guia (espeak, limite declarado no pacote), a correção da velocidade é do take e não da peça, e o 'vira caixa' está bem provado na 7a. Do outro lado, alguém pode dizer que estou duro com a 7b: no ritmo do feed, quem assiste lê 'publica o evento' + 'pagar o evento' como uma frase só e entende 'a diretoria cria o evento e o ingresso paga o evento', o que não é falso. Se a curva de retenção ficar estável de 32 s a 36 s e os salvamentos ficarem acima da média do perfil, a 7b atual estava boa o bastante e a opção A seria polimento.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

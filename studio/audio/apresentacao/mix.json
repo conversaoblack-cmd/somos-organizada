@@ -15,6 +15,11 @@
       "ganhoDb": -3
     },
     {
+      "arquivo": "audio/sfx/sopro.wav",
+      "frame": 84,
+      "ganhoDb": -14
+    },
+    {
       "arquivo": "audio/sfx/impacto.wav",
       "frame": 252,
       "ganhoDb": -4
@@ -22,36 +27,6 @@
     {
       "arquivo": "audio/sfx/virada.wav",
       "frame": 252,
-      "ganhoDb": -8
-    },
-    {
-      "arquivo": "audio/sfx/virada.wav",
-      "frame": 360,
-      "ganhoDb": -8
-    },
-    {
-      "arquivo": "audio/sfx/virada.wav",
-      "frame": 504,
-      "ganhoDb": -8
-    },
-    {
-      "arquivo": "audio/sfx/virada.wav",
-      "frame": 684,
-      "ganhoDb": -8
-    },
-    {
-      "arquivo": "audio/sfx/virada.wav",
-      "frame": 828,
-      "ganhoDb": -8
-    },
-    {
-      "arquivo": "audio/sfx/virada.wav",
-      "frame": 1080,
-      "ganhoDb": -8
-    },
-    {
-      "arquivo": "audio/sfx/virada.wav",
-      "frame": 1188,
       "ganhoDb": -8
     },
     {
@@ -75,8 +50,18 @@
       "ganhoDb": -10
     },
     {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 360,
+      "ganhoDb": -8
+    },
+    {
       "arquivo": "audio/sfx/entra.wav",
       "frame": 420,
+      "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 504,
       "ganhoDb": -8
     },
     {
@@ -90,6 +75,11 @@
       "ganhoDb": -6
     },
     {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 684,
+      "ganhoDb": -8
+    },
+    {
       "arquivo": "audio/sfx/sopro.wav",
       "frame": 716,
       "ganhoDb": -12
@@ -100,9 +90,29 @@
       "ganhoDb": -12
     },
     {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 828,
+      "ganhoDb": -8
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 936,
+      "ganhoDb": -10
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 1080,
+      "ganhoDb": -8
+    },
+    {
       "arquivo": "audio/sfx/acende.wav",
       "frame": 1140,
       "ganhoDb": -10
+    },
+    {
+      "arquivo": "audio/sfx/virada.wav",
+      "frame": 1188,
+      "ganhoDb": -8
     },
     {
       "arquivo": "audio/sfx/acende.wav",

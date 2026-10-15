@@ -93,37 +93,38 @@ export const Apresentacao: React.FC<{audio?: 'previa' | 'final' | 'nenhum'}> = (
       {/* 6 · DINHEIRO */}
       <Sequence from={CENAS.dinheiro.de} durationInFrames={dur('dinheiro')} premountFor={fps} name="6 dinheiro">
         <FaixaLeitura />
-        <FraseImpacto entrada={18} saida={134} topo={TOPO_FRASE} tamanho={72} linhas={['Direto na', '**conta da torcida**{amarelo}']} />
+        <FraseImpacto entrada={18} saida={134} topo={TOPO_FRASE} tamanho={72} linhas={['Direto na conta', '**de cada sede**{amarelo}']} />
         <ProvaCard prova={PROVAS.dinheiro} cor={COR.amarelo} entrada={24} saida={134} />
         <RotuloDemo />
       </Sequence>
-      {/* 7a · TAXA (insight; bateria em breakdown) */}
-      <Sequence from={CENAS.taxa.de} durationInFrames={dur('taxa')} premountFor={fps} name="7a taxa">
+      {/* 7a · EVENTO GRAVADO (828–936): menu → Eventos → "+ Novo evento" → nome → valor: a diretoria decide o preço */}
+      <Sequence from={CENAS.evento.de} durationInFrames={dur('evento')} premountFor={fps} name="7a evento">
+        <FaixaLeitura />
+        <FraseImpacto entrada={6} saida={98} topo={TOPO_FRASE} tamanho={72} linhas={['A diretoria', '**decide o preço**{azul}']} />
+        <ProvaCard fluxo={FLUXOS.evento} entrada={0} saida={100} />
+        <RotuloDemo />
+      </Sequence>
+      {/* 7b · TAXA (936–1080; bateria em breakdown): o sistema soma 10% ao preço e isso vira caixa da torcida */}
+      <Sequence from={CENAS.taxa.de} durationInFrames={dur('taxa')} premountFor={fps} name="7b taxa">
         <FaixaLeitura />
         <Placar de={18} ate={30} inicio={0} fim={10} sufixo="%" topo={338} tamanho={150} esquerda={120} />
         <FraseImpacto entrada={30} saida={134} topo={486} tamanho={72} linhas={['vira **caixa**{amarelo}']} />
-        <ProvaCard fluxo={FLUXOS.taxa} entrada={20} saida={134} />
-        <RotuloDemo />
-      </Sequence>
-      {/* 7b · EVENTO GRAVADO: menu → "Novo evento" preenchido → publicado (o ingresso só paga o evento) */}
-      <Sequence from={CENAS.evento.de} durationInFrames={dur('evento')} premountFor={fps} name="7b evento">
-        <FaixaLeitura />
-        <FraseImpacto entrada={6} saida={98} topo={TOPO_FRASE} tamanho={72} linhas={['A diretoria', '**publica o evento**{azul}']} />
-        <ProvaCard fluxo={FLUXOS.evento} entrada={0} saida={100} />
+        <ProvaCard prova={PROVAS.taxa} cor={COR.amarelo} entrada={20} saida={134} />
         <RotuloDemo />
       </Sequence>
       {/* 8 · PROVA: planilha */}
       <Sequence from={CENAS.prova.de} durationInFrames={dur('prova')} premountFor={fps} name="8 prova">
         <FaixaLeitura />
-        <FraseImpacto entrada={6} saida={98} topo={TOPO_FRASE} tamanho={72} linhas={['Contas abertas', 'na **planilha**{azul}']} />
-        <ProvaCard prova={PROVAS.planilha} cor={COR.azul} entrada={14} saida={98} />
+        {/* tudo sai junto antes do mergulho da câmera no CTA (1150) */}
+        <FraseImpacto entrada={6} saida={70} topo={TOPO_FRASE} tamanho={72} linhas={['Contas prontas', 'na **planilha**{azul}']} />
+        <ProvaCard prova={PROVAS.planilha} cor={COR.azul} entrada={14} saida={70} />
         <RotuloDemo />
       </Sequence>
       {/* 9 · CTA */}
       <Sequence from={CENAS.cta.de} durationInFrames={dur('cta')} premountFor={fps} name="9 cta">
         <CenaCta />
       </Sequence>
-      <Assinatura de={CENAS.socio.de} ate={CENAS.prova.ate} />
+      <Assinatura de={CENAS.socio.de} ate={CENAS.prova.de + 90} />
       <Legenda blocos={LEGENDA} />
       {audio !== 'nenhum' && <Audio src={staticFile(`audio/apresentacao/${audio === 'final' ? 'final' : 'previa-sem-voz'}.wav`)} />}
     </AbsoluteFill>

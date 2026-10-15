@@ -22,7 +22,7 @@ export type Trecho = {
   /** anel sólido em px (barrado) */
   anel?: number;
   /** linha a destacar (y relativo à região, px da captura); de/ate em quadros da cena */
-  destaque?: {y: number; h: number; de: number; ate: number; forca?: number};
+  destaque?: {y: number; h: number; de: number; ate: number; forca?: number; contorno?: string};
 };
 
 export type Fluxo = {andar: 'baixo' | 'alto'; trechos: Trecho[]};
@@ -54,34 +54,26 @@ export const FLUXOS = {
       {de: NA_CENA.jaUtilizado, ate: 180, arquivo: PORTARIA_NITIDA, recDe: JA_UTILIZADO_S, regiao: RESULTADO_JA_UTILIZADO, cor: COR.perigo, anel: 10},
     ],
   },
-  /**
-   * cena 7a (taxa): a diretoria digita o valor do público e o próprio sistema mostra "Torcedor paga R$ 143,00 (inclui
-   * 10% de taxa)". No arquivo nítido o campo chega à tela aos 24,87 s, a digitação vai de 25,0 a 25,4 s e a tela rola
-   * para "Publicado" aos 26,37 s: 0,34× para caber. Recorte justo no texto (a linha termina em x≈794): ~35 px.
-   */
-  taxa: {
-    andar: 'alto',
-    trechos: [
-      {
-        de: 0,
-        ate: 144,
-        arquivo: DIRETORIA_NITIDA,
-        recDe: 24.9 - (20 / fps) * 0.34,
-        vel: 0.34,
-        regiao: {x: 40, y: 1102, w: 800, h: 290},
-        cor: COR.amarelo,
-        destaque: {y: 228, h: 48, de: 70, ate: 132, forca: 0.45},
-      },
-    ],
-  },
-  /** cena 7b (evento): menu aberto → "Novo evento" sendo preenchido → "Publicar evento" e o aviso de publicado */
+  /** cena 7a (evento, 828–936): menu → "Eventos" → "+ Novo evento" → nome → o valor (a diretoria decide o preço) */
   evento: {
     andar: 'baixo',
     trechos: [
-      // menu aberto (≈5,6 s) até o toque em Eventos (≈7,5 s); nome digitado (15,5 s →); "Publicar evento" (≈27,7 s) e o aviso (≈28,2 s)
-      {de: 0, ate: 36, arquivo: DIRETORIA_NITIDA, recDe: 5.9, vel: 1.4, regiao: {x: 0, y: 40, w: 940, h: 758}, cor: COR.azul},
-      {de: 36, ate: 72, arquivo: DIRETORIA_NITIDA, recDe: 15.45, vel: 2.2, regiao: {x: 40, y: 120, w: 1100, h: 887}, cor: COR.azul},
-      {de: 72, ate: 108, arquivo: DIRETORIA_NITIDA, recDe: 27.4, vel: 1.2, regiao: {x: 0, y: 1589, w: 1170, h: 943}, cor: COR.amarelo},
+      // o caminho real, na ordem (produto-review, rodada 3), com instantes medidos no arquivo nítido: menu aberto e toque
+      // em "Eventos" (7,87 s) → lista com "+ Novo evento" (o tour some aos ~10,1 s; toque e formulário aos 10,97 s) →
+      // nome digitado (15,5 s →) → "Publicar evento" (≈27,7 s) e o aviso "Evento publicado!" (≈28,2 s)
+      {de: 0, ate: 24, arquivo: DIRETORIA_NITIDA, recDe: 7.0, vel: 1.2, regiao: {x: 0, y: 40, w: 940, h: 758}, cor: COR.azul},
+      {
+        de: 24,
+        ate: 48,
+        arquivo: DIRETORIA_NITIDA,
+        recDe: 10.35,
+        regiao: {x: 0, y: 120, w: 940, h: 758},
+        cor: COR.azul,
+        destaque: {y: 410, h: 140, de: 26, ate: 46, forca: 0.45},
+      },
+      {de: 48, ate: 72, arquivo: DIRETORIA_NITIDA, recDe: 15.45, vel: 2.2, regiao: {x: 40, y: 120, w: 1100, h: 887}, cor: COR.azul},
+      // o valor: sócio R$ 100,00 e o público sendo digitado (25,0–25,4 s); o sistema escreve "Torcedor paga R$ 143,00"
+      {de: 72, ate: 108, arquivo: DIRETORIA_NITIDA, recDe: 24.9, vel: 0.9, regiao: {x: 40, y: 780, w: 1000, h: 806}, cor: COR.amarelo},
     ],
   },
 } satisfies Record<string, Fluxo>;

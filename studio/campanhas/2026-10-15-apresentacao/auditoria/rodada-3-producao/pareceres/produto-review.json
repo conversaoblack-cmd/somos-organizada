@@ -1,0 +1,116 @@
+{
+  "avaliador": "produto-review",
+  "veredito": "APROVA",
+  "evidencias_usadas": [
+    "auditoria/rodada-3-producao/pacote.md",
+    "auditoria/rodada-3-producao/qc.json",
+    "05-timeline.md",
+    "05-producao/evidencias/folha.png",
+    "05-producao/evidencias/frames/t014.0.png",
+    "05-producao/evidencias/frames/t016.5.png",
+    "05-producao/evidencias/frames/t017.0.png",
+    "05-producao/evidencias/frames/t017.5.png",
+    "05-producao/evidencias/frames/t018.5.png",
+    "05-producao/evidencias/frames/t019.5.png",
+    "05-producao/evidencias/frames/t020.5.png",
+    "05-producao/evidencias/frames/t022.5.png",
+    "05-producao/evidencias/frames/t024.0.png",
+    "05-producao/evidencias/frames/t026.0.png",
+    "05-producao/evidencias/frames/t028.0.png",
+    "05-producao/evidencias/frames/t030.0.png",
+    "05-producao/evidencias/frames/t031.5.png",
+    "05-producao/evidencias/frames/t032.5.png",
+    "05-producao/evidencias/frames/t033.0.png",
+    "05-producao/evidencias/frames/t033.5.png",
+    "05-producao/evidencias/frames/t034.5.png",
+    "05-producao/evidencias/frames/t035.0.png",
+    "05-producao/evidencias/frames/t035.5.png",
+    "05-producao/evidencias/frames/t037.5.png",
+    "05-producao/evidencias/frames/t041.5.png",
+    "05-producao/evidencias/frames/t044.5.png",
+    "01-briefing.md",
+    "03-roteiro.md",
+    "captura/portaria-camera.json",
+    "captura/diretoria-evento.json",
+    "captura/ingresso.json",
+    "public/apresentacao/fluxos/portaria-camera-origem.json",
+    "public/apresentacao/fluxos/diretoria-evento-origem.json",
+    "public/apresentacao/fluxos/ingresso-origem.json",
+    "public/apresentacao/telas/evento-publicado-lista.png",
+    "src/composicoes/apresentacao/legenda.json",
+    "scripts/camera-falsa.mjs",
+    "docs/decisoes.md (15/10, telas gravadas)",
+    "conhecimento/verdade-do-produto.md",
+    "auditoria/rubrica.md",
+    "web/src/modulos/admin/Eventos.tsx:423,524,564 (contestação de fato: 'Torcedor paga ... (inclui 10% de taxa)', 'Evento publicado! Já está na página da torcida.', 'Publicar evento')",
+    "web/src/modulos/portaria/Portaria.tsx:293-372 (contestação de fato: 'Liberado'/'Já utilizado', 'Entrou às' + tempo relativo, titular, CPF, selo Sócio, código)",
+    "web/src/landing/Landing.tsx:121-184,551,604,648-649 (contestação de fato: botão 'Cadastrar minha torcida' -> /cadastro; 'Só paga depois de publicar o site'; 'Nenhuma porcentagem sobre as vendas')"
+  ],
+  "notas": {"clareza": 8.5, "fidelidade": 9.0, "cta": 8.5},
+  "justificativa": {
+    "clareza": {
+      "natureza": "execucao",
+      "texto": "Uma ideia por cena e todas legíveis no mudo: 'A PORTARIA LÊ O QR' com a câmera vendo o ingresso (t017.0) e o LIBERADO com 'Rafael Torcedor' e selo SÓCIO sustentando 'Ingresso no nome de quem vai' (t017.5-t018.5); 'QR REPETIDO BARRADO' com JÁ UTILIZADO 'Entrou às 15:17' (t020.5); a diretoria digitando 130,00 e o próprio sistema escrevendo 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' (t030.0) é a melhor explicação da taxa que a peça já teve; 'Evento publicado! Já está na página da torcida.' fecha o 7b (t035.0). Um diretor leigo entende o que acontece em cada tela.",
+      "por_que_nao_e_10": "O caminho de criar evento não é seguível: o menu aparece sem o toque em 'Eventos' e sem o botão 'Novo evento' (t032.5-t033.0 -> t033.5 já no formulário), e a ordem está invertida em relação ao produto (o valor 130,00 é digitado no 7a, t030.0, antes do formulário aparecer vazio com o nome sendo digitado no 7b, t033.5). Em 35 px a linha 'Torcedor paga R$ 143,00' fica pequena (limite conhecido)."
+    },
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "Toda tela é do produto real (build de produção nos emuladores, commit 93c6bed, sem erro no console nos três -origem.json), rotulada 'Torcida Brasil · dados de demonstração' em todos os quadros conferidos, com a faixa 'Ambiente de teste da Pagar.me' e o botão de ajuda ocultados na captura. Conferi no código os textos que a peça usa como prova: Eventos.tsx:423 (dica 'Torcedor paga ... (inclui N% de taxa)'; 130 + 10% = 143 bate), Eventos.tsx:524 (toast), Portaria.tsx:293-372 (Liberado/Já utilizado, 'Entrou às' + relativo, titular, CPF mascarado, selo Sócio, código). O leitor real decodificou o QR real do ingresso (camera-falsa.mjs usa o print ingresso-qr.png). A portaria não aparece validando sem internet, não há preço, limite de plano, domínio próprio, painel da equipe nem 'Fúria Jovem'. 'QR REPETIDO BARRADO' é verdadeiro (cada QR entra uma vez) e não diz 'print é barrado'.",
+      "por_que_nao_e_10": "A imagem que a câmera vê é uma composição do estúdio (o print real do ingresso sobre fundo escuro com ruído, sem celular nem mão), não uma filmagem: honesta quanto ao produto, mas é a única coisa da cena 5 que não é 'gravada em uso'. No t035.0 o recorte deixa no topo a pílula laranja 'Aguardando aprovação' (de outro evento, o 'Ensaio aberto da bateria' da subsede) logo acima do toast 'Evento publicado!', e o evento recém-criado ('Caravana para a semifinal', 7/11) não aparece na lista enquadrada; um leigo pode ler que o evento publicado ficou aguardando aprovação."
+    },
+    "cta": {
+      "natureza": "hipotese",
+      "texto": "Um passo, oferta verdadeira e o mesmo gesto do produto: o botão do card é 'Cadastrar minha torcida', exatamente o texto do botão da página inicial que leva a /cadastro (Landing.tsx:165-168 e 648-649), com o toque do anel (t041.5); 'somosorganizada.com.br' existe; 'Plano mensal fixo, sem % das vendas.' e 'Só paga depois de publicar o site.' batem com Landing.tsx:551 e 604. Sem preço.",
+      "por_que_nao_e_10": "Endereço em vídeo não é clicável no Reels e a peça não diz 'link na bio' (depende da legenda do post e da bio, ainda condição de publicação); o 'Teste grátis em modo demonstração', o argumento de menor atrito, saiu da tela e da voz. A voz diz 'Cadastre sua torcida' e o botão diz 'Cadastrar minha torcida' (escolha certa por ser o botão real, mas são dois textos para o mesmo gesto).",
+      "metrica_que_confirma": "cliques no link da bio e cadastros de torcida nos 7 dias seguintes ao post (painel da plataforma); se os cliques vierem mas os cadastros não, o atrito está depois da página inicial, não na peça"
+    }
+  },
+  "pontos_fortes": [
+    "Cena 5 é a portaria real lendo o QR real do mesmo ingresso pela câmera: LIBERADO com nome do titular e selo SÓCIO, depois JÁ UTILIZADO com 'Entrou às' (Portaria.tsx). Não há encenação de estado que o produto não mostra.",
+    "Cena 7a deixa o próprio sistema explicar a taxa: 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' (Eventos.tsx:423), mostrando que a taxa é paga pelo torcedor e aparece antes; sustenta 'a taxa vira caixa' sem prometer preço.",
+    "Cena 7b termina no toast real 'Evento publicado! Já está na página da torcida.' (Eventos.tsx:524), que é exatamente o 'publicar' que o CTA promete pagar só depois.",
+    "O botão do CTA é o texto do botão real da página inicial ('Cadastrar minha torcida' -> /cadastro): o diretor reconhece o botão quando abrir o site.",
+    "Rótulo 'Torcida Brasil · dados de demonstração' presente em todas as cenas com tela; faixa da Pagar.me e ajuda ocultadas na captura; CPF mascarado pelo próprio produto.",
+    "Nenhuma frase de offline foi usada, então não há risco de 'a portaria funciona sem internet'."
+  ],
+  "problemas": [
+    {
+      "descricao": "O caminho de criar evento pula o toque em 'Eventos' e o botão 'Novo evento': do menu (com 'Visão geral' destacado) a peça corta direto para o formulário já sendo preenchido. Para quem não é de tecnologia, a ação 'abrir o menu' não leva visivelmente a lugar nenhum.",
+      "gravidade": "media",
+      "criterio": "clareza",
+      "evidencia": "t032.5-t033.0 (menu, sem toque em Eventos) -> t033.5 (formulário 'Nome do evento')",
+      "correcao": "Cena 7b: 972-990 manter o menu, mas tocando a gravação de ~6,0 s a ~7,0 s a 1,4x para incluir o toque em 'Eventos'; 990-1008 trocar por eventos-lista (diretoria-evento-nitida ~10,5-12,5 s) com o anel azul sobre '+ Novo evento'; 1008-1044 formulário; 1044-1080 publicar + toast. Se não couber, cortar o menu e abrir a cena no '+ Novo evento'."
+    },
+    {
+      "descricao": "Ordem invertida em relação ao produto: o 7a mostra o valor 130,00 digitado e o 7b mostra depois o formulário com o nome sendo digitado do zero. Não é ordem impossível de usar, mas a montagem sugere outra sequência.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "t030.0 (Valor para o público 130,00) -> t033.5 (Nome do evento 'Caravana para' sendo digitado)",
+      "correcao": "Aceitável como montagem (7a é o insight, 7b o gesto). Se quiser coerência, no 7b pular o nome e mostrar só 'Situação: Publicado' + 'Publicar evento' + toast (gravação 26,3-30,3 s), deixando o formulário com valores já preenchidos visível."
+    },
+    {
+      "descricao": "No recorte do toast fica no topo a pílula laranja 'Aguardando aprovação' (do 'Ensaio aberto da bateria', evento de subsede) colada ao 'Evento publicado!'; o evento recém-criado não aparece no enquadramento.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "t035.0 (topo do recorte) e public/apresentacao/telas/evento-publicado-lista.png",
+      "correcao": "Frames ~1044-1080: descer o topo do recorte para começar no card 'Churrasco do 4º Distrito' (selo verde 'Publicado') ou enquadrar só o toast, tirando a pílula 'Aguardando aprovação' do quadro."
+    },
+    {
+      "descricao": "O CTA não diz onde tocar no Instagram ('link na bio') e perdeu o 'Teste grátis em modo demonstração', o argumento de menor atrito para quem nunca usou.",
+      "gravidade": "baixa",
+      "criterio": "cta",
+      "evidencia": "t041.5 e t044.5 (card final: botão, endereço, 'Plano mensal fixo, sem % das vendas.', 'Só paga depois de publicar o site.')",
+      "correcao": "Garantir no post (condição de publicação já registrada): link na bio para somosorganizada.com.br/cadastro e a primeira linha da legenda com 'Teste grátis em modo demonstração'. Se couber no card, trocar 'somosorganizada.com.br' por 'Link na bio · somosorganizada.com.br' a partir do frame 1200."
+    }
+  ],
+  "riscos": [
+    "A imagem que a câmera do leitor vê é uma composição do estúdio (print real do ingresso sobre fundo com ruído e tremor). O pacote diz 'gravações do produto real em uso': se alguém perguntar, a resposta honesta é 'leitor real, QR real, câmera simulada'. Registrar isso na entrega.md.",
+    "O cabeçalho do painel da diretoria tem 'Fatura: 7 dias' (evento-publicado-lista.png); no celular da arquibancada está borrado e minúsculo, mas qualquer recorte futuro nítido desse topo expõe status de cobrança da plataforma (não é preço, mas é assunto de plano).",
+    "CPF parcial mascarado ('***.903.300-**') aparece no LIBERADO; é fictício e o mascaramento é do produto, mas o roteiro tinha 'nunca mostrar o CPF'. Aceito por ser o estado real; não ampliar.",
+    "A voz final da ElevenLabs pode deslocar 'Ingresso no nome de quem vai' para fora do LIBERADO (hoje 17,26-19,54 s com LIBERADO de ~17,5 a ~19,4 s); se escorregar, a fala do nome cai sobre a câmera vazia.",
+    "Não há bug do produto exposto pelo vídeo; nada a anotar em studio/docs/dividas-do-produto.md nesta rodada."
+  ],
+  "argumento_contra_meu_veredito": "Esta cadeira deveria ser mais dura justamente porque a promessa da rodada era 'o sistema como ele é, com a pessoa usando', e em dois pontos não é: a câmera vê uma imagem composta, não um celular filmado, e o 7b monta um caminho que o produto não percorre nessa ordem (valor antes do nome, sem 'Eventos' e sem 'Novo evento'). Para um diretor que nunca viu o painel, 'abri o menu e o formulário apareceu' é exatamente o tipo de caminho que vira frustração quando ele tenta repetir. Se a função-objetivo é 'consegue seguir a peça', isso pesaria como caminho incompleto. Mantenho APROVA porque a peça não é tutorial de evento: o caminho que o diretor precisa seguir é o do CTA (site -> 'Cadastrar minha torcida' -> /cadastro), e esse está certo e é o botão real; nada mostrado é falso nem 'Comunicável: Não'.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

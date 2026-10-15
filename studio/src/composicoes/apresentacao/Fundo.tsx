@@ -17,11 +17,12 @@ type Plano = {de: number; tela?: string; cor: string; gravacao?: {arquivo: strin
 /** A tela do celular acompanha o recorte: mesma gravação (versão fluida), mesmo instante, mesma cor. */
 const doFluxo = (f: Fluxo): Plano[] => f.trechos.map((t) => ({de: t.de, cor: t.cor, gravacao: {arquivo: fluida(t.arquivo), recDe: t.recDe, vel: t.vel ?? 1}}));
 const CELULAR: Partial<Record<keyof typeof CENAS, Plano[]>> = {
-  socio: [{de: 0, tela: 'carteirinha-frente.png', cor: COR.azul}, {de: 54, tela: 'carteirinha-em-dia.png', cor: COR.azul}],
+  // só a frente da carteirinha: a tela "em dia" traz o cartão com o preço do plano do sócio (sem preço na peça)
+  socio: [{de: 0, tela: 'carteirinha-frente.png', cor: COR.azul}],
   // a portaria inteira na tela; a cor da luz troca no LIBERADO (branca) e no JÁ UTILIZADO (vermelha)
   ingresso: doFluxo(FLUXOS.portaria),
   dinheiro: [{de: 0, tela: 'recebimentos-2.png', cor: COR.amarelo}],
-  taxa: doFluxo(FLUXOS.taxa),
+  taxa: [{de: 0, tela: 'novo-evento-valores.png', cor: COR.amarelo}],
   evento: doFluxo(FLUXOS.evento),
   prova: [{de: 0, tela: 'financeiro-planilha.png', cor: COR.azul}],
 };

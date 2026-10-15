@@ -59,22 +59,22 @@
       "fimFrame": 814
     },
     {
-      "id": "taxa",
+      "id": "evento",
       "frame": 834,
       "inicioMs": 27800,
-      "fimMs": 30794,
-      "duracaoMs": 2994,
-      "palavrasFaladas": 10,
-      "fimFrame": 924
-    },
-    {
-      "id": "evento",
-      "frame": 980,
-      "inicioMs": 32667,
-      "fimMs": 35173,
+      "fimMs": 30306,
       "duracaoMs": 2506,
       "palavrasFaladas": 7,
-      "fimFrame": 1056
+      "fimFrame": 910
+    },
+    {
+      "id": "taxa",
+      "frame": 940,
+      "inicioMs": 31333,
+      "fimMs": 34327,
+      "duracaoMs": 2994,
+      "palavrasFaladas": 10,
+      "fimFrame": 1030
     },
     {
       "id": "prova",
@@ -87,19 +87,17 @@
     },
     {
       "id": "cta",
-      "frame": 1200,
-      "inicioMs": 40000,
-      "fimMs": 45551,
+      "frame": 1176,
+      "inicioMs": 39200,
+      "fimMs": 44751,
       "duracaoMs": 5551,
       "palavrasFaladas": 12,
-      "fimFrame": 1367
+      "fimFrame": 1343
     }
   ],
   "avisos": [
     "gancho: sem legenda (a tela precisa escrever esta fala; toda fala aparece escrita)",
     "cta: sem legenda (a tela precisa escrever esta fala; toda fala aparece escrita)"
   ],
-  "erros": [
-    "cta passa do fim da peça (45551 ms > 45000 ms)"
-  ]
+  "erros": []
 }

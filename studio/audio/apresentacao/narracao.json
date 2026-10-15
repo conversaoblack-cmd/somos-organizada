@@ -47,16 +47,16 @@
       "legenda": "O dinheiro não passa ↵ pela gente. / Cada **subsede**{amarelo} ↵ recebe direto."
     },
     {
-      "id": "taxa",
-      "frame": 834,
-      "texto": "A taxa de dez por cento vira caixa da torcida.",
-      "legenda": "A taxa de **10%**{amarelo} ↵ vira **caixa da torcida**{amarelo}."
-    },
-    {
       "id": "evento",
-      "frame": 980,
+      "frame": 834,
       "texto": "O ingresso só precisa pagar o evento.",
       "legenda": "O ingresso só precisa ↵ pagar **o evento**{amarelo}."
+    },
+    {
+      "id": "taxa",
+      "frame": 940,
+      "texto": "A taxa de dez por cento vira caixa da torcida.",
+      "legenda": "A taxa de **10%**{amarelo} ↵ vira **caixa da torcida**{amarelo}."
     },
     {
       "id": "prova",
@@ -66,7 +66,7 @@
     },
     {
       "id": "cta",
-      "frame": 1200,
+      "frame": 1176,
       "texto": "Somos Organizada. Cadastre sua torcida. Só paga depois de publicar o site.",
       "legenda": ""
     }

@@ -86,7 +86,11 @@ export function linhaDoTempoPlaca(c: number, l: number): EstadoPlaca[] {
   if (!grade) {
     const perto = v < 0.27 && Math.abs(u - 0.5) < 0.2;
     const antes = [...estados].reverse().find((e) => e.de < 612);
-    if (perto && r2 < 0.45) estados.push({cor: COR.perigo, de: 612 + Math.abs(u - 0.5) * 20 + v * 10, virada: 4});
+    if (perto && r2 < 0.45) {
+      estados.push({cor: COR.perigo, de: 612 + Math.abs(u - 0.5) * 20 + v * 10, virada: 4});
+      // o vermelho apaga ANTES de voltar o amarelo: direto, a virada passava por um laranja de brasa
+      estados.push({cor: '#1A1E2A', de: 676 + v * 6, virada: 4});
+    }
     else if (antes && antes.cor !== APAGADA_AZUL) estados.push({cor: '#1A1E2A', de: 612 + v * 8, virada: 6});
     if ((perto && r2 < 0.45) || antes) estados.push({cor: antes ? antes.cor : APAGADA_AZUL, de: 688 + v * 10, virada: 6});
   }
@@ -95,8 +99,8 @@ export function linhaDoTempoPlaca(c: number, l: number): EstadoPlaca[] {
   const subsede = (u < 0.18 || u > 0.82) && v > 0.15 && v < 0.85;
   if (!grade && subsede && r2 < 0.55) estados.push({cor: COR.amarelo, de: 720 + Math.abs(v - 0.5) * 60 + r * 20});
 
-  // TAXA / EVENTO (972–1080): o mosaico enche de amarelo de baixo para cima
-  if (!grade && r < 0.85) estados.push({cor: r2 < 0.75 ? COR.amarelo : '#5A4B10', de: 978 + v * 70 + r * 8});
+  // TAXA (936–1080): o "10% vira caixa": o mosaico enche de amarelo de baixo para cima
+  if (!grade && r < 0.85) estados.push({cor: r2 < 0.75 ? COR.amarelo : '#5A4B10', de: 942 + v * 70 + r * 8});
 
   // CTA (1188): luz cheia; a grade 2×2 em destaque e o resto num amarelo mais baixo
   if (!grade) estados.push({cor: r < 0.5 ? '#3B3313' : '#263252', de: 1190 + v * 12});
