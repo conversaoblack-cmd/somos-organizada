@@ -1,0 +1,87 @@
+{
+  "avaliador": "roteirista",
+  "veredito": "APROVA",
+  "conferencia_condicoes_rodada_3": [
+    {
+      "condicao": "(1) Cena 7b: tela, frase e voz contando a mesma coisa, com a gravação em ordem (opção A).",
+      "status": "cumprida",
+      "evidencia": "05-timeline.md: evento 828–936 com trechos 7,00 s → 10,35 s → 15,45 s → 24,90 s (em ordem); taxa 936–1080. t027.5 (menu) → t028.0 (Eventos, '+ Novo evento') → t029.5 ('Caravana para a semifina|') → t030.5 ('Valor para o público R$ 130,00'), sempre com 'A DIRETORIA DECIDE O PREÇO' e a legenda 'O ingresso só precisa pagar o evento.'; t033.0: '10% VIRA CAIXA' + contorno amarelo em 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' + legenda da taxa. O insight termina em 'caixa' e emenda com 'Caixa e vendas' (t036.5)."
+    },
+    {
+      "condicao": "(2) Take final com toda fala ≤ 2,6 palavras/s e o CTA terminando até o quadro 1332.",
+      "status": "cumprida",
+      "evidencia": "tempos.json: gancho 7/2,713 = 2,58; problema 10/3,870 = 2,58; virada 7/2,951 = 2,37; sócio 8/3,101 = 2,58; ingresso 12/4,679 = 2,56; dinheiro 10/3,897 = 2,57; evento 7/2,717 = 2,58; taxa 10/3,863 = 2,59; prova 6/2,450 = 2,45; cta 12/5,268 = 2,28; 'erros': []. CTA de 1168 a 1327 (impacto no 1332). Os blocos de legenda cabem no orçamento porque entram antes da voz: problema-0 já está na tela em t003.5 (voz no 3,866 s) e dinheiro-0 em t023.0."
+    }
+  ],
+  "conferencia_baixos_rodada_3": [
+    {"item": "Botão 'Cadastrar minha torcida' × voz 'Cadastre sua torcida'", "status": "recusado com motivo (decisoes.md 15/10: a voz convida, o botão rotula)", "leitura": "Aceito: é cosmético, as palavras-chave são as mesmas."},
+    {"item": "R$ 130 da 7a × R$ 120 da planilha", "status": "recusado com motivo (são eventos diferentes)", "leitura": "Confirmado na tela: t029.5 digita 'Caravana para a semifinal' e a planilha mostra 'Caravana para a Final'. Item fechado."},
+    {"item": "Prova do 10% pequena e campo cortado", "status": "cumprido", "leitura": "t033.0: close só na linha, com contorno amarelo, ~40 px na peça. Ainda é texto de interface, mas lê-se."},
+    {"item": "'CONTA DA TORCIDA' × card 'subsede'", "status": "cumprido", "leitura": "t023.0: 'DIRETO NA CONTA DE CADA SEDE'."},
+    {"item": "Risco 'sem % das vendas' × '10%'", "status": "tratado no post", "leitura": "entrega.md linhas 33, 35 e 47: o texto do post e o comentário fixado explicam que o torcedor paga os 10% e que eles ficam com a torcida."}
+  ],
+  "evidencias_usadas": [
+    "auditoria/rodada-4-final/pacote.md",
+    "05-timeline.md (gerada em 2026-10-16)",
+    "audio/apresentacao/tempos.json",
+    "src/composicoes/apresentacao/legenda.json (tempos dos blocos)",
+    "05-producao/evidencias-final/folha.png",
+    "evidencias-final/frames: t003.5, t006.0, t021.5, t023.0, t027.5, t028.0, t029.0, t029.5, t030.5, t031.5, t033.0, t035.5, t036.5, t038.5, t039.0, t039.5, t040.5",
+    "docs/decisoes.md (seções de 15/10 rodada 3 e de 16/10 voz final: o que foi aceito e recusado)",
+    "entrega.md (só busca: taxa e 'sem porcentagem')",
+    "auditoria/rodada-3-producao/pareceres/roteirista.json (o meu)"
+  ],
+  "notas": {"gancho": 8.0, "clareza": 9.0},
+  "justificativa": {
+    "gancho": {
+      "natureza": "hipotese",
+      "texto": "Não mudou na tela: pergunta inteira no quadro 0, 'NÃO ENTROU' em vermelho no escuro, e texto e voz iguais. A voz final ficou dentro do ritmo (2,58 p/s) e o sopro no 84 tira o ar morto do fim do gancho. O payoff continua aos 12–16,8 s ('MENSALIDADE QUE SE COBRA SOZINHA').",
+      "por_que_nao_e_10": "Os limites do roteiro continuam: o gancho não tem algarismo, são 7 palavras para 1,5 s, e o payoff vem pelo lado do sócio. Há também um risco que não consigo julgar sem ouvir: a voz escolhida é 'Excited, Constant and Cheerful', e a direção pedia o gancho sério, sem sorriso. O gancho também foi desacelerado ~18% (rubberband). Se soar animado ou arrastado, a pergunta perde peso. Não subo a nota sem ouvir, e também não desço.",
+      "metrica_que_confirma": "Taxa de pulo e retenção nos 3 s do Reels: acima da mediana do perfil confirma; pulo alto antes de 1,5 s derruba. A queda entre 12 e 17 s diz se o payoff pelo lado do sócio segura."
+    },
+    "clareza": {
+      "natureza": "execucao",
+      "texto": "Agora cada cena tem uma ideia, e tela, frase e legenda contam a mesma. Problema (vermelho por item), virada (2×2 + 'um painel só'), sócio ('Você está em dia'), portaria (nome do titular no LIBERADO, mesmo QR no JÁ UTILIZADO), dinheiro ('de cada sede' + card da subsede), preço (a diretoria cria o evento e digita o valor sob 'O ingresso só precisa pagar o evento'), taxa (o próprio sistema mostra '+10%' sob '10% vira caixa'), prova (lançamento inteiro com '+ R$ 12,00 de taxa' sob 'Caixa e vendas'), CTA. O caminho do produto agora anda para a frente, e cada fala aparece escrita dentro do orçamento de leitura.",
+      "por_que_nao_e_10": "Restam detalhes baixos: (a) em t030.5 a nota da tela diz '...e fica no caixa da diretoria' (cortada, pequena) e 2 s depois a voz diz 'caixa da torcida'; (b) a voz do CTA começa 'Somos Organizada' no 1168 e o nome só volta escrito por volta do 1185 (t039.0 sem nome, t039.5 com); (c) o botão diz 'Cadastrar minha torcida' e a voz diz 'Cadastre sua torcida'; (d) o placar conta '9%' (t031.5) enquanto a legenda já diz 10%, efeito da contagem que dura uma fração de segundo."
+    }
+  },
+  "pontos_fortes": [
+    "Insight em duas batidas, em ordem real e com prova na tela: a diretoria digita R$ 130 e o sistema escreve 'Torcedor paga R$ 143,00 (inclui 10% de taxa)'. É o momento de salvar que o briefing aposta.",
+    "Nova ordem do insight: termina em 'caixa da torcida' e emenda com 'Caixa e vendas prontos para mostrar', um loop curto e fechado.",
+    "Voz final sem nenhum trecho corrido (máximo 2,59 p/s), e o CTA termina 5 quadros antes do impacto final.",
+    "Cena 5 continua a mais clara da peça: nome do titular no LIBERADO e o mesmo QR barrado, 'Entrou às 15:17'.",
+    "Recusas da direção bem fundamentadas e conferíveis na tela (semifinal × Final)."
+  ],
+  "problemas": [
+    {
+      "descricao": "A tela da 7a mostra a nota do produto '...e fica no caixa da diretoria' e logo depois a voz diz 'caixa da torcida'. Quem lê com atenção vê duas palavras para o mesmo caixa.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "t030.5 (linha cortada embaixo do recorte, ~16 px na prévia) e t031.5–t035.0 (legenda 'caixa da torcida')",
+      "correcao": "Sem rodada de correção: fica registrado. Numa v2, subir o recorte de 900 a 936 ~60 px para que a nota não entre no quadro (o enquadramento termina em 'Torcedor paga R$ 143,00')."
+    },
+    {
+      "descricao": "A voz do CTA diz 'Somos Organizada' de 1168 a ~1185, enquanto o quadro está no mergulho, sem o nome escrito (a assinatura já saiu em t038.5–t039.0).",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "tempos.json cta inicia 1168; t039.0 sem nome; t039.5 com 'SOMOS ORGANIZADA'",
+      "correcao": "Numa v2: fazer o 'SOMOS ORGANIZADA' do CardMarca entrar no 1170 (em vez de ~1185), ou começar a fala no 1180. A fala termina no 1339, depois do impacto, mas antes do fim (1350)."
+    },
+    {
+      "descricao": "O botão escreve 'Cadastrar minha torcida' e a voz diz 'Cadastre sua torcida' (recusado pela direção: a voz convida, o botão rotula).",
+      "gravidade": "cosmética",
+      "criterio": "clareza",
+      "evidencia": "t040.5",
+      "correcao": "Nenhuma: aceito o motivo da direção."
+    }
+  ],
+  "riscos": [
+    "Tom da voz: o take usa uma voz 'Excited, Cheerful' e a direção do roteiro pede gancho sério e problema solidário, sem riso em 'caderno' e 'print'. O estúdio não ouve. Se o dono ouvir sorriso no problema, regerar só as falas gancho e problema com estilo mais baixo, como já prevê decisoes.md.",
+      "O gancho e o evento foram desacelerados ~18% por rubberband. Se soarem arrastados, perdem força exatamente no 1º segundo. A alternativa já registrada é regerar com speed menor.",
+      "A peça continua com cinco assuntos em 33 s. A curva de retenção entre 17 e 28 s dirá se o mosaico basta como fio.",
+      "'Caixa da diretoria' (texto do produto) × 'caixa da torcida' (marca) pode aparecer no comentário de quem pausa o vídeo. O comentário fixado da entrega.md já responde."
+    ],
+  "argumento_contra_meu_veredito": "Pode-se dizer que dar 9,0 em clareza é generoso numa peça com cinco assuntos em 33 s e três camadas de leitura por cena (tela do produto, frase em Archivo Black, legenda), em que quem rola no mudo talvez não leia tudo. E a nota de clareza depende de uma voz que eu não ouvi: se o rubberband ou o tom animado embolarem 'dez por cento' ou 'quê-érre', a legenda segura o sentido, mas a fluência cai. Mantenho porque a clareza se mede no mudo, as âncoras dão 9 quando só restam detalhes baixos, e cada cena agora tem uma ideia provada na tela. A densidade de assuntos é risco de objetivo e retenção, não de clareza. A curva de retenção do post (queda entre 17 e 28 s) e os salvamentos dirão se eu estava errado.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

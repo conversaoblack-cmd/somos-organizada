@@ -1,8 +1,8 @@
 # Entrega · Apresentação (2026-10-15) · RASCUNHO
 
-> Estado: **peça montada, sem voz final**. A mesa avaliou a peça completa (rodada 3: 8,16, meta 9,0, sem veto); as
-> condições foram aplicadas na última rodada de correção permitida e a conferência final (rodada 4) sai depois do
-> render. A voz é gerada pelo dono na ElevenLabs (passo 1 abaixo); com o take, o estúdio refaz a mix, o QC e a entrega.
+> Estado: **peça montada com a voz final do dono** (render da nuvem `05-producao/apresentacao-final.mp4`, QC 10/10,
+> −14,2 LUFS, −1,3 dBTP). Rodada 4 (conferência final, sem nova correção) em andamento. Falta o dono ouvir e confirmar
+> 3 pontos (abaixo), a licença comercial da voz e o render de entrega no Mac.
 
 ## Arquivos
 
@@ -12,14 +12,13 @@
 
 ## Passos que faltam (nesta ordem)
 
-1. **Voz (dono):** colar o bloco de `audio/apresentacao/take/PARA-ELEVENLABS.md` na ElevenLabs (configuração no próprio
-   arquivo), baixar e mandar o arquivo no chat. O estúdio corta, alinha e mede cada fala.
-   - **Condições da mesa para o take valer:** nenhuma fala acima de 2,6 palavras/s; a fala do CTA começa no quadro 1176 e
-     termina **até o quadro 1320**. Se não couber, o estúdio tira "Somos Organizada" da voz do CTA (o nome está escrito
-     grande na tela) ou estende o fim da peça segurando o cartão; nunca acelera a voz nem tira "o site".
+1. **Voz: feita.** Take do dono importado, cortes conferidos pela transcrição, 5 falas desaceleradas só até 2,6
+   palavras/s (rubberband), CTA de 1168 a 1327. **O dono confere ouvindo:** (a) o gancho e "O ingresso só precisa pagar
+   o evento" (≈18% mais lentos) soam naturais; (b) "Cada subsede recebe direto" não soa "subsídio" (se soar, gerar só
+   essa fala de novo escrevendo "sub-sede"); (c) licença comercial da ElevenLabs (plano Starter ou maior).
 2. **Dono ouve a bateria** (trecho 39,5 → 83,2 s de `audio/biblioteca/blume-batucada-valparaiso.mp3`): sem canto nem
-   grito de puxador. Se houver, volta a percussão sintetizada (histórico do Git).
-3. Mix com voz (`node audio/montar-trilha.mjs apresentacao`), QC de novo (−14 LUFS, true peak ≤ −1 dBTP), render no Mac.
+   grito de puxador. Se houver, volta a percussão sintetizada (histórico do Git) e a mix e o QC são refeitos.
+3. Render de entrega no Mac (`npx remotion render Apresentacao out/apresentacao.mp4 --props='{"audio":"final"}'`), QC de novo, Drive.
 4. Instagram **@somosorganizada**: link da bio para `https://somosorganizada.com.br/cadastro`; publicar o Reels e
    **fixar no perfil**; colar o texto e o comentário fixado abaixo.
 

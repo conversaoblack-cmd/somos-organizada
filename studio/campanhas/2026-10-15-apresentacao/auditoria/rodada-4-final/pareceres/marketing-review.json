@@ -1,0 +1,137 @@
+{
+  "avaliador": "marketing-review",
+  "veredito": "APROVA",
+  "conferencia_condicoes_rodada_3": [
+    {
+      "condicao": "Fala do CTA cabendo na peça (início ~1176, fim ≤ 1340, sem acelerar e sem tirar 'o site')",
+      "situacao": "cumprida",
+      "evidencia": "audio/apresentacao/tempos.json: cta 1168–1327, 12 palavras em 5,27 s (2,28 p/s), 'erros: []'; 05-timeline.md cena cta. Começa 8 quadros antes do que pedi, sem pisar na fala da prova (fim 1160)."
+    },
+    {
+      "condicao": "Linha legal completa no cartão final ('Teste grátis em modo demonstração.')",
+      "situacao": "em parte (recusada no vídeo, com motivo registrado; levada ao post)",
+      "evidencia": "t042.0 e t044.5 só com 'Só paga depois de publicar o site.'; docs/decisoes.md (15/10, 'Recusado'): a 5ª linha sairia da zona (y > 1250) e prometer teste imediato frustra quem depois grava o vídeo de verificação; entrega.md, texto do post: 'Dá pra testar tudo antes em modo demonstração, sem dinheiro de verdade.' Aceito o motivo; fica como detalhe de baixa gravidade."
+    },
+    {
+      "condicao": "Cena 7b: frase que sustente o insight ('A DIRETORIA DECIDE O PREÇO')",
+      "situacao": "cumprida (e melhor que o pedido)",
+      "evidencia": "t028.5 e t030.0: 'A DIRETORIA DECIDE O PREÇO' com a diretoria em Eventos → '+ Novo evento' → digitando 'Valor para o público', e a legenda 'O ingresso só precisa pagar o evento'. Agora frase, tela e legenda dizem a mesma coisa."
+    },
+    {
+      "condicao": "Texto do post e comentário fixado (variante da taxa, plano fixo sem %, link na bio, sem preço, ressalva das tarifas)",
+      "situacao": "cumprida",
+      "evidencia": "entrega.md: post com a taxa explicada (somada ao ingresso, paga pelo torcedor, fica no caixa da torcida), 'plano mensal fixo, sem porcentagem das vendas', 'Só paga depois de publicar o site', modo demonstração, 'Link na bio pra cadastrar sua torcida', rótulo de demonstração; comentário fixado responde à objeção da taxa; nota 'não escrever que a taxa cobre as tarifas' (split.ts); link da bio para /cadastro; sem preço de plano."
+    },
+    {
+      "condicao": "Baixos: 'CONTAS ABERTAS' → sem leitura de prestação de contas pública",
+      "situacao": "cumprida",
+      "evidencia": "t036.5, t037.5: 'CONTAS PRONTAS NA PLANILHA'."
+    },
+    {
+      "condicao": "Baixos: card 'Sócio Mensal R$ 11,00' no celular da cena 4",
+      "situacao": "cumprida",
+      "evidencia": "t013.5: o celular mostra só a frente da carteirinha (RT · Rafael Torcedor), sem o card do plano."
+    },
+    {
+      "condicao": "Baixos: linha 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' mais legível",
+      "situacao": "cumprida",
+      "evidencia": "t031.5 e t033.0: ~40 px com contorno amarelo, debaixo de '10% VIRA CAIXA'."
+    }
+  ],
+  "evidencias_usadas": [
+    "auditoria/rodada-4-final/pacote.md",
+    "auditoria/rodada-4-final/qc.json",
+    "05-producao/evidencias-final/folha.png",
+    "05-producao/evidencias-final/frames/t000.0, t013.5, t021.0, t024.0, t028.5, t030.0, t031.5, t033.0, t035.5, t036.5, t037.5, t039.0, t042.0, t044.5",
+    "05-timeline.md (gerada em 2026-10-16)",
+    "audio/apresentacao/tempos.json",
+    "entrega.md (texto do post, comentário fixado, medição)",
+    "docs/decisoes.md (15/10 'rodada 3 (peça completa) e a última correção' e 16/10 'voz final')",
+    "auditoria/rodada-3-producao/pareceres/marketing-review.json (meu parecer anterior)",
+    "auditoria/rubrica.md e conhecimento/verdade-do-produto.md (já lidos na rodada 3, mesmas versões)"
+  ],
+  "notas": {
+    "objetivo": 8.5,
+    "clareza": 8.5,
+    "gancho": 8.0,
+    "fidelidade": 9.0,
+    "cta": 8.5
+  },
+  "justificativa": {
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "A peça entrega os três itens do objetivo com o produto real e agora também o insight da hipótese com prova na tela: a diretoria digita o preço ('A DIRETORIA DECIDE O PREÇO', t030.0) e o sistema mostra 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' sob '10% VIRA CAIXA' (t033.0), com 'Contas prontas na planilha' fechando (t037.5) e 'Plano mensal fixo, sem % das vendas' no fim (t042.0). Marca na tela de 12 s a 39 s. Promessa do tamanho do produto, sem 'lucro' e sem jargão.",
+      "por_que_nao_e_10": "A ordem real (voz 'O ingresso só precisa pagar o evento' antes de 'A taxa de 10% vira caixa') põe a conclusão antes da causa: o 'por quê' do insight fica para o post. Continuam cinco assuntos em 33 s e o payoff do gancho pela carteirinha do torcedor (decisão do diretor, mantida como risco).",
+      "metrica_que_confirma": "Retenção média ≥ 40% e curva sem queda forte entre 12 s e 22 s; salvamentos + compartilhamentos acima da média do perfil com retenção estável entre 27,6 s e 36 s (decide o preço + taxa); cadastros de torcida nos 7 dias. Abaixo de 30% de retenção média sem toque no link derruba (regra da entrega.md)."
+    },
+    "clareza": {
+      "natureza": "execucao",
+      "texto": "Uma ideia por cena e frase, prova e legenda dizendo o mesmo em todas as cenas, inclusive na 7b, que era o ponto fraco. Caminho do ingresso seguível no mudo (QR → LIBERADO → JÁ UTILIZADO 'há 17 segundos', t021.0). Linha da taxa com contorno e ~40 px.",
+      "por_que_nao_e_10": "O 'Baixar planilha' saiu do recorte da cena 8 (t036.5–t037.5): a palavra 'planilha' fica só na frase, a tela mostra um lançamento; na digitação do valor aparece um estado intermediário 'R$ 1,30 · Torcedor paga R$ 1,43' (t030.0), lido em degrau por ~0,5 s."
+    },
+    "gancho": {
+      "natureza": "hipotese",
+      "texto": "Frase cheia no quadro 0 (t000.0), 'NÃO ENTROU' em vermelho, dor de dinheiro da diretoria, voz dizendo exatamente o texto (0–82). Sopro no 84 tirou o ar morto do fim do gancho.",
+      "por_que_nao_e_10": "7 palavras (acima de 2–5); nada no quadro diz 'torcida organizada' até 3,6 s; a voz escolhida é 'Excited, Cheerful' e o roteiro pedia pergunta séria no gancho; não ouço o áudio, então o tom não foi conferido (o dono ouve).",
+      "metrica_que_confirma": "Taxa de pulo e retenção nos 3 s (meta da entrega: ≥ 60%). Abaixo da média do perfil/categoria derruba; acima confirma."
+    },
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "Toda afirmação é 'Comunicável: Sim'; 'Direto na conta de cada sede' bate com a tela de divisão (t024.0); sem preço de plano da Somos (o card do plano do sócio saiu); sem Conversão Black; sem 'portaria sem internet'; verde só dentro do produto; rótulo de demonstração em todas as telas; 'Contas prontas' em vez de 'abertas'. Post e comentário sem promessa extra e com a ressalva das tarifas.",
+      "por_que_nao_e_10": "A linha legal da marca segue pela metade no cartão final (recusa com motivo aceito; o teste grátis está no post); no recorte de t030.0 aparece o começo do aviso do produto 'fica no caixa da diretoria', ~1 s e cortado, enquanto a voz e a marca dizem 'caixa da torcida'."
+    },
+    "cta": {
+      "natureza": "hipotese",
+      "texto": "Um passo só, voz inteira dentro da peça ('Somos Organizada. Cadastre sua torcida. Só paga depois de publicar o site.', 1168–1327), botão com o rótulo do site, endereço certo, toque com anel, 'sem % das vendas' escrito, sem preço. O post e o comentário fixado levam 'link na bio' e o link da bio vai para /cadastro.",
+      "por_que_nao_e_10": "O vídeo em si não diz 'link na bio' (depende do post); o teste grátis, oferta de menor atrito, ficou só no post; a voz diz 'Somos Organizada' ~0,6 s antes de o nome aparecer escrito (t039.0 mostra só a transição).",
+      "metrica_que_confirma": "Toques no link da bio ≥ 1% das contas alcançadas e cadastros de torcida novos nos 7 dias seguintes (com 'como conheceu'), comparados com a semana anterior."
+    }
+  },
+  "pontos_fortes": [
+    "O insight da taxa ganhou prova completa: a diretoria decide o preço digitando e o próprio sistema mostra quanto o torcedor paga com os 10%.",
+    "Todas as condições de execução que pedi foram cumpridas; a única recusa veio com motivo de público (verificação em vídeo) e foi compensada no post.",
+    "Post e comentário fixado coerentes com a peça, respondendo de antemão à objeção da taxa e com 'link na bio' para /cadastro, sem preço.",
+    "CTA falado inteiro sem acelerar a voz e sem perder 'o site'.",
+    "Medição honesta na entrega: Instagram + cadastros com 'como conheceu', e uma regra explícita de quando a hipótese cai."
+  ],
+  "problemas": [
+    {
+      "descricao": "'Baixar planilha' não aparece mais na cena 8; a planilha fica só na frase.",
+      "gravidade": "baixa",
+      "criterio": "clareza",
+      "evidencia": "t036.5, t037.5",
+      "correcao": "Sem rodada de correção: registrar para a próxima peça (enquadrar o botão 'Baixar planilha' acima do lançamento, 1098–1150)."
+    },
+    {
+      "descricao": "Aviso do produto 'fica no caixa da diretoria' aparece cortado no recorte da 7b.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "t030.0 (base do cartão de prova)",
+      "correcao": "Próximas peças: subir o recorte para terminar em 'Torcedor paga R$ 1,43 (inclui 10% de taxa)'."
+    },
+    {
+      "descricao": "Teste grátis fora do cartão final (decisão registrada).",
+      "gravidade": "baixa",
+      "criterio": "cta",
+      "evidencia": "t042.0; docs/decisoes.md 15/10",
+      "correcao": "Nenhuma na peça; manter no post e no comentário."
+    },
+    {
+      "descricao": "entrega.md desatualizada: o cabeçalho ainda diz 'sem voz final', a condição do take diz 'até o quadro 1320' (o take termina no 1327, dentro da minha condição de ≤ 1340), o QC aponta para a rodada 3 e a linha da rodada 4 está 'a fazer'.",
+      "gravidade": "baixa",
+      "criterio": "cta",
+      "evidencia": "entrega.md, linhas 3–5, 11, 17–19, 88",
+      "correcao": "Atualizar o estado, o QC (auditoria/rodada-4-final/qc.json) e a condição do CTA (1168–1327) antes de entregar ao dono."
+    }
+  ],
+  "riscos": [
+    "Cinco assuntos em 33 s: queda de retenção entre 12 s e 22 s.",
+    "Voz 'animada' no gancho (pedido era pergunta séria): o dono precisa ouvir; se soar alegre demais, a dor perde força nos 3 s.",
+    "Torcedor que receber a peça pode reagir aos '+ 10%'; o comentário fixado e a resposta pronta cobrem.",
+    "'Fica com tudo' no comentário fixado é verdade em relação à plataforma; na sede principal as tarifas da Pagar.me saem do total recebido pela torcida. Não responder 'a torcida recebe os 10% líquidos'.",
+    "Licença comercial da ElevenLabs ainda a confirmar pelo dono antes de publicar (entrega.md)."
+  ],
+  "argumento_contra_meu_veredito": "Deveria ser APROVA COM CONDIÇÃO, não APROVA: a assinatura final da minha cadeira exige a linha legal da marca, e ela está incompleta no vídeo; o vídeo não diz 'link na bio'; e o gancho pode ter sido entregue num tom alegre que ninguém da mesa ouviu. Mantenho APROVA porque a recusa da linha veio com motivo de público verificável e o teste grátis está no post; 'link na bio' está no post e no comentário fixado, que é onde o Reels converte; o tom da voz é do dono e já está nas pendências dele; e não há mais rodada de correção, então uma condição na peça não teria como ser cumprida. As notas ficam abaixo de 9 onde há detalhe real, sem subir para bater a meta.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

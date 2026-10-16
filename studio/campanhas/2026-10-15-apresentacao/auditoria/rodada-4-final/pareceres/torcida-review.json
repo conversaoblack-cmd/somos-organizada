@@ -1,0 +1,82 @@
+{
+  "avaliador": "torcida-review",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicao": "Condições para o DONO cumprir antes de publicar (não pedem rodada do estúdio). (1) Ouvir o trecho da bateria (39,5 a 83,2 s do original) e confirmar que não há canto nem grito de puxador; se houver, volta a percussão sintetizada (entrega.md, passo 2). (2) Ouvir a fala 'Cada subsede recebe direto' (quadros ~690-807): a transcrição ouviu 'subsédio' (docs/decisoes.md:158). Se a voz disser 'subsédio' ou 'subsídio', gerar de novo só essa fala na ElevenLabs (como já previsto para o gancho e o evento). 'Subsede' é palavra da arquibancada, e pronunciada errada é exatamente a 'linguagem de gente de fora' que esta cadeira veta.",
+  "condicao_da_rodada_3": {
+    "1_prova_da_procedencia_arquivada": "CUMPRIDA. audio/biblioteca/blume-batucada-valparaiso.PROCEDENCIA.md traz autor, página, licença CC0, a descrição do autor, todas as tags e a busca negativa (barra, hinchada, club, estádio, fútbol, Wanderers, torcida, fans, chant). blume-batucada-valparaiso.ia_meta.xml é verbatim e confere: 'a batucada band is rehearsing inside a hangar... I record them from the entrance', Av. Francia 1061-1101, Valparaíso, 18/11/2015, nenhum termo de futebol. Ressalva: a página do Freesound está transcrita (resumo fiel, lida em 15/10/2026), não salva como captura; o .ia_meta.xml supre a prova independente. No Internet Archive a licença aparece como Public Domain Mark; a PROCEDENCIA registra isso e vale a renúncia CC0 do autor no Freesound.",
+    "2_dono_ouve_o_trecho": "PENDENTE, como previsto: está no entrega.md (passo 2) e na PROCEDENCIA. Fica como condição de publicação (acima).",
+    "direitos_conexos": "REGISTRADO como risco residual na PROCEDENCIA e levado ao dono no entrega.md. Era recomendação, não condição."
+  },
+  "pontos_baixos_da_rodada_3": {
+    "laranja_de_brasa_no_barrado_para_dinheiro": "RESOLVIDO. Em t022.5 o vermelho apaga para o escuro antes do amarelo; não há mais mancha laranja em volta do celular.",
+    "LIBERADO_verde_grande": "MANTIDO (era opcional). t017.5 a t019.0: recorte verde ~660×270 px mais o celular verde, ~1,8 s. É a tela real, pedido do dono, com anel, feixe e luz brancos. Aceito.",
+    "documentacao": "EM PARTE. O código foi corrigido (nenhum 'pisca: true' em src/). Os textos ainda dizem 'piscando', 'O SEGUNDO É BARRADO', 'PRESTE CONTAS' e 'ABERTAS' (11 ocorrências em 02-direcao-de-arte.md e 03-roteiro.md). Não vai ao ar; é só risco para peça derivada.",
+    "contas_abertas_ambiguo": "RESOLVIDO. 'CONTAS PRONTAS NA PLANILHA' (t037.0), com um lançamento inteiro ('Caravana para a Final', 'Sede Central', '+ R$ 12,00 de taxa')."
+  },
+  "evidencias_usadas": [
+    "campanhas/2026-10-15-apresentacao/auditoria/rodada-4-final/pacote.md",
+    "audio/biblioteca/blume-batucada-valparaiso.PROCEDENCIA.md",
+    "audio/biblioteca/blume-batucada-valparaiso.ia_meta.xml",
+    "campanhas/2026-10-15-apresentacao/entrega.md (texto do post, comentário fixado, passos, licenças)",
+    "campanhas/2026-10-15-apresentacao/05-timeline.md",
+    "docs/decisoes.md (linhas 114-159: correções da rodada 3 e voz final; inclui a transcrição 'subsédio')",
+    "05-producao/evidencias-final/folha.png (visão geral)",
+    "05-producao/evidencias-final/frames: t018.5, t022.5, t023.5, t029.0, t033.0, t037.0, t039.0, t043.5",
+    "Grep em audio/apresentacao/ ('subsede': narracao.json:49-50, falas.json:404)",
+    "Grep em 02-direcao-de-arte.md e 03-roteiro.md (frases antigas) e em src/ ('pisca: true')",
+    "O meu parecer da rodada 3 (auditoria/rodada-3-producao/pareceres/torcida-review.json)"
+  ],
+  "notas": {"fidelidade": 9.0, "objetivo": 8.5},
+  "justificativa": {
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "A condição da rodada 3 está cumprida na parte do estúdio: a procedência está arquivada e é verificável, e nada na descrição, nas tags ou no XML do Internet Archive liga a gravação a barra, clube ou estádio. A imagem segue limpa: só azul, amarelo e branco; nenhum clube, escudo, uniforme ou pessoa real. O rótulo 'Torcida Brasil · dados de demonstração' está em todas as cenas de produto e vai também no post ('Torcida Brasil é uma torcida de demonstração'). O vermelho só aparece em placa fixa e no bloqueio do código, sem fumaça, partícula, estrobo nem a passagem laranja. A tabela de licenças da entrega.md cobre bateria, SFX, fonte, Remotion e telas.",
+      "por_que_nao_e_10": "Só baixos: o dono ainda não ouviu a bateria; a página do Freesound está transcrita, não capturada; os textos do roteiro e da direção de arte continuam com frases antigas; o LIBERADO verde grande ficou (aceito, é a tela real). A licença comercial da voz ElevenLabs ainda está 'a confirmar pelo dono'."
+    },
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "Ficou mais da diretoria. A ordem real 'A DIRETORIA DECIDE O PREÇO' (menu, Eventos, 'Caravana' sendo digitada), depois '10% VIRA CAIXA' com 'Torcedor paga R$ 143,00 (inclui 10% de taxa)', mostra quem manda. 'CONTAS PRONTAS NA PLANILHA' tirou a leitura de 'contas em aberto' e de prestação de contas pública. A portaria libera e barra o mesmo QR. O CTA é 'Cadastrar minha torcida', com 'Plano mensal fixo'. O texto do post fala como a torcida fala ('A torcida cresceu. O caderno não.', 'a gente não deixa ninguém se passar pela sua') e explica a taxa sem jogar o torcedor contra a diretoria.",
+      "por_que_nao_e_10": "Há uma dúvida e um baixo. A dúvida: a voz final pode dizer 'subsédio' em vez de 'subsede' (transcrição); não ouvi, por isso a condição. Se o dono confirmar a pronúncia certa, a nota vai a 9,0. O baixo: 'DIRETO NA CONTA DE CADA SEDE' (t023.5) com o cartão dizendo 'Vai para a subsede'; para a diretoria, 'sede' é a principal e 'subsede' é a filial, então a frase é verdadeira no geral, mas o termo exato era 'subsede'. Também ninguém da mesa ouviu a bateria nem a voz.",
+      "metrica_que_confirma": "Confirma: retenção nos 3 s ≥ 60% e média ≥ 40% (meta da entrega.md); curva estável entre 12 e 22 s (sócio e portaria); toques no link da bio ≥ 1% do alcance; cadastros de torcida nos 7 dias com 'como conheceu' citando o vídeo; comentários de diretores falando de subsede, caravana e portaria. Derruba: comentários corrigindo a pronúncia ('subsídio?') ou lendo a bateria como de outra torcida, piada de rival com o verde do LIBERADO, ou retenção média abaixo de 30% sem toque no link."
+    }
+  },
+  "pontos_fortes": [
+    "Procedência da bateria arquivada e verificável (PROCEDENCIA.md + ia_meta.xml verbatim): a regra 'gravação de torcida real: proibido' agora tem prova, não só afirmação.",
+    "Fim da passagem laranja (t022.5): o vermelho apaga para o escuro antes do amarelo.",
+    "'CONTAS PRONTAS NA PLANILHA' e 'A DIRETORIA DECIDE O PREÇO': a diretoria aparece como protagonista que organiza, sem tom de quem manda de fora.",
+    "Post e comentário fixado no tom da arquibancada, com a torcida de demonstração declarada.",
+    "Dados de exemplo com a cultura da torcida e sem caricatura: 'Caravana para a Final', 'Sede Central', 'Rafael Torcedor' (fictício)."
+  ],
+  "problemas": [
+    {
+      "descricao": "A transcrição da voz final ouviu 'subsédio' em 'Cada subsede recebe direto'. Pronunciada errada, a palavra-chave da organização da torcida soa como 'gente de fora'.",
+      "gravidade": "media",
+      "criterio": "objetivo",
+      "evidencia": "docs/decisoes.md:158; fala 690-807 (05-timeline.md, cena dinheiro); narracao.json:49",
+      "correcao": "O dono ouve. Se estiver errada, gerar só essa fala de novo na ElevenLabs, escrevendo 'sub-sede' ou 'subsséde' no texto do take para forçar a pronúncia, e encaixar nos mesmos quadros (690-807; ritmo ≤ 2,6 palavras/s)."
+    },
+    {
+      "descricao": "'DIRETO NA CONTA DE CADA SEDE' enquanto o cartão e a voz dizem 'subsede'.",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "t023.5 (frase) × cartão 'Vai para a subsede'",
+      "correcao": "Sem rodada de correção: aceitar. Em peça derivada, usar 'DIRETO NA CONTA ↵ DE CADA SUBSEDE'."
+    },
+    {
+      "descricao": "Roteiro e direção de arte ainda com as frases antigas ('piscando', 'O SEGUNDO É BARRADO', 'PRESTE CONTAS', 'ABERTAS').",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "11 ocorrências em 02-direcao-de-arte.md e 03-roteiro.md",
+      "correcao": "Atualizar antes de qualquer peça derivada desta (não afeta o vídeo)."
+    }
+  ],
+  "riscos": [
+    "Bateria: se o dono ouvir canto ou grito de puxador, a trilha volta à sintetizada; isso refaz a mix e o QC.",
+    "Direitos conexos dos músicos da banda (o CC0 é do gravador): risco baixo, registrado e levado ao dono.",
+    "Licença comercial da voz ElevenLabs ainda 'a confirmar pelo dono' (entrega.md): sem ela não publica.",
+    "LIBERADO verde grande (~1,8 s): pode virar piada de rival para torcidas cujo rival é verde; acompanhar os comentários.",
+    "entrega.md ainda diz 'peça montada, sem voz final' e 'rodada 4 a fazer': atualizar antes de mandar ao dono, para ele não seguir passos já feitos (passo 1)."
+  ],
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}

@@ -1,0 +1,95 @@
+{
+  "avaliador": "estrategia-review",
+  "rodada": "4-final",
+  "veredito": "APROVA COM CONDIÇÃO",
+  "condicao": "Condição de publicação; a peça não muda. (a) O dono confirma que o plano da ElevenLabs usado no take tem licença comercial antes de publicar. A entrega.md (tabela de Licenças) ainda marca 'plano com licença comercial a confirmar pelo dono', e voz sem licença comercial impede publicar. (b) A entrega.md passa para o estado final: tirar 'RASCUNHO · peça montada, sem voz final' do topo, apontar o QC para auditoria/rodada-4-final/qc.json, preencher a linha da rodada 4 e corrigir o passo 1, que ainda diz que o CTA começa no 1176 (o real é 1168–1327). Na legenda, trocar 'Dá pra testar tudo antes em modo demonstração' por 'Aprovado o cadastro, dá pra testar tudo em modo demonstração, sem dinheiro de verdade' e colocar essa frase depois do parágrafo do vídeo de verificação.",
+  "conferencia_das_condicoes_da_rodada_3": [
+    {
+      "condicao": "(1) A fala do CTA tem que terminar dentro da peça, inteira e com 'o site', sem acelerar a voz.",
+      "situacao": "cumprida",
+      "evidencia": "audio/apresentacao/tempos.json: cta de 1168 a 1327 (38933–44201 ms), 'erros': [] (na rodada 3 era 1200–1367, 45551 ms > 45000 ms); 05-timeline.md, cta 1168–1327 com 'Só paga depois de publicar o site.', impacto no 1332; sobram 23 quadros (0,77 s) até o 1350. Todas as falas entre 2,28 e 2,59 palavras/s (pacote; decisões de 16/10): a voz foi desacelerada, não acelerada. Na tela, 'Só paga depois de publicar o site.' segue escrito (t044.0). O 'Somos Organizada' da voz começa no 1168 (38,9 s), cerca de 0,5 s antes de o nome aparecer escrito (t039.0 sem o nome, t039.5 com o nome). É uma diferença cosmética, não pesa."
+    },
+    {
+      "condicao": "(2) Funil de publicação: link da bio, Reels fixado, legenda (variante longa da taxa + plano mensal fixo + aviso do vídeo de verificação + 'Link na bio') e comentário fixado registrados na entrega.md.",
+      "situacao": "cumprida (ressalvas de baixa gravidade)",
+      "evidencia": "entrega.md, passo 4: bio do @somosorganizada com link para https://somosorganizada.com.br/cadastro, Reels publicado e fixado no perfil. Na legenda: a taxa ('somada ao valor do ingresso, quem paga é o torcedor, e ela fica no caixa da torcida'), 'plano mensal fixo, sem porcentagem das vendas', 'Só paga depois de publicar o site', o vídeo de verificação gravado na sede com o motivo, 'Link na bio pra cadastrar sua torcida' e o aviso de dados de demonstração. Comentário fixado responde a '10% de taxa? A torcida fica com uma parte?'. Ressalvas: a ordem 'testar antes' × vídeo de verificação na legenda e o estado de RASCUNHO da entrega.md (ver condição de publicação). Conferi no código (functions/src/dominio/split.ts) a frase 'Fica com tudo' do comentário: a regra de split manda a taxa inteira para o recebedor da torcida (liable false, charge_processing_fee false) e, sem split, tudo cai na conta da torcida. A frase é verdadeira, e a nota da entrega que proíbe 'cobre as tarifas' está correta para a venda de subsede."
+    }
+  ],
+  "evidencias_usadas": [
+    "auditoria/rodada-4-final/pacote.md",
+    "auditoria/rodada-4-final/qc.json",
+    "auditoria/rodada-3-producao/pareceres/estrategia-review.json (meu parecer anterior)",
+    "entrega.md",
+    "05-timeline.md (gerada em 2026-10-16)",
+    "audio/apresentacao/tempos.json",
+    "docs/decisoes.md (linhas 114-153: correção da rodada 3 e voz final)",
+    "05-producao/evidencias-final/folha.png",
+    "05-producao/evidencias-final/frames/t029.5.png",
+    "05-producao/evidencias-final/frames/t034.0.png",
+    "05-producao/evidencias-final/frames/t037.0.png",
+    "05-producao/evidencias-final/frames/t039.0.png",
+    "05-producao/evidencias-final/frames/t039.5.png",
+    "05-producao/evidencias-final/frames/t044.0.png",
+    "functions/src/dominio/split.ts (só para conferir o fato 'a taxa fica com a torcida' do comentário fixado)",
+    "Da rodada 3, mantidos como base: 01-briefing.md, conhecimento/verdade-do-produto.md, conhecimento/produto-na-pratica.md, conhecimento/publico.md, auditoria/rubrica.md"
+  ],
+  "notas": {
+    "objetivo": 8.5
+  },
+  "justificativa": {
+    "objetivo": {
+      "natureza": "hipotese",
+      "texto": "As duas condições de gravidade média da rodada 3 foram cumpridas. A oferta inteira cabe na peça: a voz do CTA vai de 1168 a 1327, termina antes do impacto do 1332 e diz 'o site'. O funil fora da peça está escrito na entrega.md: link da bio direto para /cadastro, Reels fixado, legenda com o modelo de cobrança e o aviso do vídeo de verificação, e comentário fixado que antecipa a objeção da taxa. A correção também melhorou o que eu tinha como risco. 'CONTAS PRONTAS NA PLANILHA' (t037.0) não promete mais prestação de contas pública, e o lançamento inteiro da planilha mostra '+ R$ 12,00 de taxa'. A cena da diretoria agora segue a ordem real ('A DIRETORIA DECIDE O PREÇO', digitando 'Caravana para a semifinal' e o valor, t029.5, com a voz 'O ingresso só precisa pagar o evento'). Ela fecha no close 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' com contorno amarelo e '10% VIRA CAIXA' (t034.0): o preço que a diretoria põe cobre o evento, e os 10% somados viram caixa. É o insight da hipótese do briefing contado na ordem em que a diretoria faz no sistema, e lê no mudo. O tipo E com A secundário continua coerente. Não há verba; o custo variável foi o crédito de voz e as horas de gravação, que já servem para a próxima peça F. A nota fica abaixo de 9 porque a hipótese central (um tour de cinco assuntos em 45 s prende uma diretoria num perfil novo) só se confirma com dado, e porque ficam quatro pontos baixos no caminho até a receita (ver por_que_nao_e_10) que, somados, pesam perto de um médio.",
+      "por_que_nao_e_10": "(1) O pagamento do gancho continua pelo lado do torcedor (carteirinha do sócio, cena 12–16,8 s), não pela lista da diretoria. (2) O CTA visual só entra aos 39,6 s (a voz aos 38,9 s), depois de cinco assuntos e da planilha; no Reels, cada segundo antes do pedido custa público. (3) A legenda diz 'Dá pra testar tudo antes em modo demonstração' antes de falar do vídeo de verificação, e quem lê pode esperar testar antes de ser aprovado, que é a frustração que tiramos do cartão final. (4) A entrega.md ainda está como RASCUNHO, sem voz final, com o QC da rodada 3 e a licença comercial da voz por confirmar. Nada disso muda a peça, mas tudo isso está entre o Reels e a torcida publicada.",
+      "metrica_que_confirma": "Confirma: retenção nos 3 s ≥ 60%; retenção média ≥ 40%, sem queda maior que 15 pontos entre 12 s e 22 s; toques no link da bio ≥ 1% das contas alcançadas; pelo menos 1 cadastro de torcida em /cadastro nos 7 dias, com 'como conheceu' = Instagram; em 30 dias, pelo menos uma torcida desse período publicando o site (a receita de fato). Derruba: zero toque no link com mais de 2 mil contas alcançadas; queda maior que 50% até 16 s; retenção média abaixo de 30% (aí a próxima peça é a F só da taxa, como a entrega.md já registra); cadastros parados na etapa 'Vídeo' no painel (o gargalo está fora da peça e a correção é no contato da equipe)."
+    }
+  },
+  "pontos_fortes": [
+    "A oferta completa chega inteira: voz 'Somos Organizada. Cadastre sua torcida. Só paga depois de publicar o site.' de 1168 a 1327, e na tela 'Plano mensal fixo, sem % das vendas.' + 'Só paga depois de publicar o site.' (t044.0). Responde 'quanto vocês levam?' e baixa o risco de quem decide.",
+    "O insight da taxa agora segue a ordem real do sistema: a diretoria põe o preço do evento (t029.5) e o próprio produto mostra 'Torcedor paga R$ 143,00 (inclui 10% de taxa)' em close com contorno amarelo (t034.0). É prova em tela, não afirmação.",
+    "'CONTAS PRONTAS NA PLANILHA' (t037.0) troca 'abertas', que podia virar cobrança de transparência pública contra a diretoria cliente, por algo verdadeiro e útil para a diretoria.",
+    "O funil fora da peça está desenhado na entrega.md. O link da bio vai direto para /cadastro (um toque a menos). O comentário fixado antecipa a dúvida mais provável de torcedor e de diretoria, com a afirmação 'fica com tudo' conferida em split.ts. E o post avisa do vídeo de verificação com o motivo (anti-fraude), o que transforma atrito em segurança.",
+    "Custo de oportunidade baixo: sem verba, bateria CC0, um único take de voz. As gravações (portaria, criar evento, taxa) sustentam a próxima peça F de ~20 s sem custo novo de captura."
+  ],
+  "problemas": [
+    {
+      "descricao": "A licença comercial da voz não está confirmada. A entrega.md registra 'ElevenLabs: plano com licença comercial a confirmar pelo dono antes de publicar'. Publicar com voz de plano sem licença comercial é um risco jurídico na peça que vira a âncora do perfil.",
+      "gravidade": "média",
+      "criterio": "objetivo",
+      "evidencia": "entrega.md, tabela 'Licenças', linha 'Voz'",
+      "correcao": "Antes de publicar, o dono confirma o plano (Starter ou superior inclui uso comercial) e a estúdio registra a confirmação na tabela de Licenças da entrega.md. Se não houver licença, assinar o plano antes de publicar; não regerar o take (muda a voz e gasta crédito)."
+    },
+    {
+      "descricao": "A legenda promete teste antes do vídeo de verificação. 'Dá pra testar tudo antes em modo demonstração' vem antes do parágrafo do vídeo e pode ser lido como 'testo antes de me verificar', a expectativa que a mesa tirou do cartão final porque frustra no /cadastro.",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "entrega.md, 'Texto do post', 4º e 5º parágrafos",
+      "correcao": "Trocar a ordem e o texto: 'Por segurança, o cadastro termina com um vídeo de verificação gravado na sede (...). Aprovado o cadastro, dá pra testar tudo em modo demonstração, sem dinheiro de verdade. Plano mensal fixo, sem porcentagem das vendas, e só paga depois de publicar o site.'"
+    },
+    {
+      "descricao": "A entrega.md ainda descreve o estado de antes da voz: topo 'RASCUNHO · peça montada, sem voz final'; QC apontando para a rodada 3; linha da rodada 4 'a fazer'; passo 1 com o CTA 'começa no quadro 1176' (o real é 1168).",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "entrega.md, linhas 1-5, 11, 17 e 88; tempos.json (cta 1168–1327)",
+      "correcao": "Atualizar a entrega.md para o estado final: arquivo apresentacao-final.mp4, QC da rodada 4 (−14,2 LUFS, −1,3 dBTP), CTA 1168–1327, nota e veredito da rodada 4, e passos 1 e 3 marcados como feitos."
+    },
+    {
+      "descricao": "O link da bio vai direto para /cadastro. Para uma diretoria fria, vinda do primeiro Reels de um perfil novo, o cadastro sem a página inicial pula a 'torcida de exemplo' e os '4 passos', que respondem a 'como é por dentro' antes do compromisso (8 etapas e vídeo na sede).",
+      "gravidade": "baixa",
+      "criterio": "objetivo",
+      "evidencia": "entrega.md, passo 4",
+      "correcao": "Usar dois links na bio (o Instagram aceita até 5): 1º 'Cadastrar minha torcida' → /cadastro; 2º 'Ver uma torcida de exemplo' → https://somosorganizada.com.br (botão do topo, VITE_SLUG_DEMO). Comparar os toques de cada link nos Insights depois de 7 dias."
+    }
+  ],
+  "riscos": [
+    "Distribuição para o torcedor comum: as telas mais vistosas (LIBERADO, JÁ UTILIZADO, carteirinha) são do lado do torcedor. Alcance alto sem toque no link indica público errado, não peça boa.",
+    "Comentários de torcedor contra a taxa de 10%: o comentário fixado e a resposta pronta da entrega.md cobrem isso. Responder sempre com o mesmo texto e nunca citar preço de plano.",
+    "A voz foi desacelerada em até 19% (gancho e evento, fator 0,81). Se o dono ouvir artefato, a retenção nos 3 s é a primeira a sofrer. A decisão é do dono; o estúdio não ouve áudio.",
+    "Se o dono ouvir canto ou grito de puxador na bateria e ela voltar para a percussão sintetizada, a mix muda depois desta conferência. Exigir QC novo (−14 LUFS, true peak ≤ −1 dBTP) antes de publicar, sem nova rodada da mesa se só a trilha mudar.",
+    "Medição: o site não registra ?src=. Perguntar 'como conheceu' a cada torcida cadastrada e preencher desempenho/registro.md em 7 e 30 dias.",
+    "Receita no curto prazo tende a ser baixa (primeiro Reels de perfil sem seguidores). O valor da peça é ser a âncora fixada e o material do comercial no WhatsApp: registrar quantas vezes foi enviada por esse caminho."
+  ],
+  "argumento_mais_forte_contra": "Dou 8,5 a um objetivo que nenhuma métrica ainda sustenta. As condições que conferi são de execução e de entrega (a voz cabe, a entrega.md existe), e cumprir isso não prova que um tour de cinco assuntos em 45 s, num perfil sem seguidores, chegue a uma diretoria e a faça tocar no link. Pelo mesmo crédito de voz e com as mesmas gravações, a peça F estreita sobre a taxa talvez gerasse mais cadastros, e a nota de uma hipótese não testada deveria ficar mais perto de 8. Mantenho 8,5 porque, dentro do que a peça controla, os problemas que sobram são baixos, as duas médias da rodada 3 foram resolvidas e o insight da taxa agora é contado com o próprio sistema na ordem real. Mesmo assim, a régua é a métrica: se a retenção média ficar abaixo de 30% e não houver toque no link com mais de 2 mil contas alcançadas, esta nota estava alta e a próxima peça deve ser a F.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}
