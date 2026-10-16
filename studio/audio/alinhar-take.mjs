@@ -7,7 +7,8 @@
  *   O whisper acerta a ORDEM mas erra o tempo dentro da frase (palavras com duração zero): serve só de guia.
  *   Sem whisper (ou --sem-whisper), o guia é a proporção de palavras de cada fala.
  * - Palavras da LEGENDA distribuídas no tempo FALADO da fala (pausas puladas), com peso pelo tamanho.
- * - Tratamento: passa-alta 80 Hz; −2 dB em 250 Hz; +3 dB em 3,5 kHz; +2 dB em 10 kHz; compressão 3:1; atempo.
+ * - Tratamento: passa-alta 80 Hz; −2 dB em 250 Hz; +3 dB em 3,5 kHz; +2 dB em 10 kHz; compressão 3:1; velocidade por
+ *   rubberband com formantes preservados (o atempo deixa a voz mais metálica ao desacelerar).
  * - Velocidade global (narracao.velocidade, ex.: 1.1) com exceção por fala (`tempo`, ex.: o insight principal a 1.0).
  * Saída: audio/<peca>/falas/<id>.wav e audio/<peca>/falas.json.
  */
@@ -180,7 +181,7 @@ export function alinharTake(peca, {usarWhisper = true} = {}) {
     const arquivo = `${f.id}.wav`;
     ff([
       '-v', 'error', '-y', '-i', wav,
-      '-af', [`atrim=start=${de.toFixed(4)}:end=${ate.toFixed(4)}`, 'asetpts=PTS-STARTPTS', ...TRATAMENTO, ...(vel !== 1 ? [`atempo=${vel}`] : [])].join(','),
+      '-af', [`atrim=start=${de.toFixed(4)}:end=${ate.toFixed(4)}`, 'asetpts=PTS-STARTPTS', ...TRATAMENTO, ...(vel !== 1 ? [`rubberband=tempo=${vel}:formant=preserved:pitchq=quality`] : [])].join(','),
       '-ar', String(TAXA), '-c:a', 'pcm_s24le', '-fflags', '+bitexact', '-flags:a', '+bitexact',
       join(pastaFalas, arquivo),
     ]);

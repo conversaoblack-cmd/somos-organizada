@@ -142,3 +142,17 @@ roteirista, marketing, estratégia e torcida APROVA COM CONDIÇÃO. Correção a
 - Regravar a câmera da portaria com celular e mão de verdade (produto, risco): a entrega diz "leitor real, QR real,
   câmera simulada".
 - Publicar evento e "Evento publicado!" saíram da peça (a ordem nova termina a 7a no valor; o aviso ficava ≤ 0,6 s).
+
+## 16/10/2026 · Apresentação: voz final (take do dono)
+
+- Take do dono: ElevenLabs, voz "Mário - Excited, Constant and Cheerful", Multilingual v2, speed 0,9, stability 50,
+  similarity 75, style 15 (`audio/apresentacao/take/take-elevenlabs.mp3`, no Git: gerar de novo custa crédito e muda a voz).
+  O dono gostou da voz. Cortes conferidos pela transcrição (whisper): as 10 falas certas.
+- A voz é animada e rápida: 5 falas acima de 2,6 palavras/s (gancho e evento ~3,2). Cada uma desacelerada **só até
+  2,6** (fator 0,81–0,95), com `rubberband` de formantes preservados no lugar do `atempo` (soa menos metálico).
+  Resultado: todas entre 2,28 e 2,59 palavras/s. O dono precisa ouvir se o gancho e o evento (≈18% mais lentos) ficaram
+  naturais; se não, a alternativa é gerar só essas duas falas de novo com speed menor.
+- CTA no 1168 (termina no 1327, antes do impacto do 1332, que fica no fim da fala); prova no 1086 (respiro de 0,27 s
+  antes do CTA). "Somos Organizada" ficou na voz.
+- Mix final: −14,1 LUFS, true peak −1,5 dBTP.
+- A transcrição ouviu "subsédio" em "Cada subsede recebe direto": o dono confere a pronúncia.

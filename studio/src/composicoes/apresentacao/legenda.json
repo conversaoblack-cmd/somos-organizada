@@ -5,45 +5,45 @@
     "palavras": [
       {
         "text": "Cobrança",
-        "startMs": 3860,
-        "endMs": 4460,
-        "timestampMs": 4160,
+        "startMs": 3866,
+        "endMs": 4424,
+        "timestampMs": 4145,
         "confidence": 1
       },
       {
         "text": "no",
-        "startMs": 4460,
-        "endMs": 4610,
-        "timestampMs": 4535,
+        "startMs": 4424,
+        "endMs": 4563,
+        "timestampMs": 4494,
         "confidence": 1
       },
       {
         "text": "grupo,",
-        "startMs": 4610,
-        "endMs": 4986,
-        "timestampMs": 4798,
+        "startMs": 4563,
+        "endMs": 4912,
+        "timestampMs": 4738,
         "confidence": 1
       },
       {
         "text": "caravana",
-        "startMs": 4986,
-        "endMs": 5795,
-        "timestampMs": 5391,
+        "startMs": 4912,
+        "endMs": 5470,
+        "timestampMs": 5191,
         "confidence": 1,
         "quebraAntes": true
       },
       {
         "text": "no",
-        "startMs": 5795,
-        "endMs": 5945,
-        "timestampMs": 5870,
+        "startMs": 5470,
+        "endMs": 5609,
+        "timestampMs": 5540,
         "confidence": 1
       },
       {
         "text": "caderno,",
-        "startMs": 5945,
-        "endMs": 6638,
-        "timestampMs": 6292,
+        "startMs": 5609,
+        "endMs": 6097,
+        "timestampMs": 5853,
         "confidence": 1
       }
     ]
@@ -54,30 +54,30 @@
     "palavras": [
       {
         "text": "ingresso",
-        "startMs": 6638,
-        "endMs": 7238,
-        "timestampMs": 6938,
+        "startMs": 6097,
+        "endMs": 6656,
+        "timestampMs": 6377,
         "confidence": 1
       },
       {
         "text": "que",
-        "startMs": 7238,
-        "endMs": 7463,
-        "timestampMs": 7351,
+        "startMs": 6656,
+        "endMs": 6865,
+        "timestampMs": 6761,
         "confidence": 1
       },
       {
         "text": "vira",
-        "startMs": 7463,
-        "endMs": 7763,
-        "timestampMs": 7613,
+        "startMs": 6865,
+        "endMs": 7256,
+        "timestampMs": 7061,
         "confidence": 1
       },
       {
         "text": "print.",
-        "startMs": 7763,
-        "endMs": 8139,
-        "timestampMs": 7951,
+        "startMs": 7256,
+        "endMs": 7604,
+        "timestampMs": 7430,
         "confidence": 1,
         "cor": "perigo"
       }
@@ -90,53 +90,53 @@
       {
         "text": "Agora",
         "startMs": 8727,
-        "endMs": 9109,
-        "timestampMs": 8918,
+        "endMs": 9362,
+        "timestampMs": 9045,
         "confidence": 1
       },
       {
         "text": "a",
-        "startMs": 9109,
-        "endMs": 9261,
-        "timestampMs": 9185,
+        "startMs": 9362,
+        "endMs": 9544,
+        "timestampMs": 9453,
         "confidence": 1
       },
       {
         "text": "torcida",
-        "startMs": 9261,
-        "endMs": 9795,
-        "timestampMs": 9528,
+        "startMs": 9544,
+        "endMs": 10180,
+        "timestampMs": 9862,
         "confidence": 1
       },
       {
         "text": "tem",
-        "startMs": 9795,
-        "endMs": 10024,
-        "timestampMs": 9910,
+        "startMs": 10180,
+        "endMs": 10650,
+        "timestampMs": 10415,
         "confidence": 1,
         "quebraAntes": true
       },
       {
         "text": "um",
-        "startMs": 10024,
-        "endMs": 10177,
-        "timestampMs": 10101,
+        "startMs": 10650,
+        "endMs": 10831,
+        "timestampMs": 10741,
         "confidence": 1,
         "cor": "azul"
       },
       {
         "text": "painel",
-        "startMs": 10177,
-        "endMs": 10635,
-        "timestampMs": 10406,
+        "startMs": 10831,
+        "endMs": 11376,
+        "timestampMs": 11104,
         "confidence": 1,
         "cor": "azul"
       },
       {
         "text": "só.",
-        "startMs": 10635,
-        "endMs": 10787,
-        "timestampMs": 10711,
+        "startMs": 11376,
+        "endMs": 11558,
+        "timestampMs": 11467,
         "confidence": 1,
         "cor": "azul"
       }
@@ -148,62 +148,62 @@
     "palavras": [
       {
         "text": "No",
-        "startMs": 12727,
-        "endMs": 12896,
-        "timestampMs": 12812,
+        "startMs": 12730,
+        "endMs": 12880,
+        "timestampMs": 12805,
         "confidence": 1
       },
       {
         "text": "cartão,",
-        "startMs": 12896,
-        "endMs": 13404,
-        "timestampMs": 13150,
+        "startMs": 12880,
+        "endMs": 13720,
+        "timestampMs": 13300,
         "confidence": 1
       },
       {
         "text": "todo",
-        "startMs": 13404,
-        "endMs": 13963,
-        "timestampMs": 13684,
+        "startMs": 13720,
+        "endMs": 14019,
+        "timestampMs": 13870,
         "confidence": 1,
         "cor": "amarelo"
       },
       {
         "text": "mês.",
-        "startMs": 13963,
-        "endMs": 14550,
-        "timestampMs": 14257,
+        "startMs": 14019,
+        "endMs": 14243,
+        "timestampMs": 14131,
         "confidence": 1,
         "cor": "amarelo"
       },
       {
         "text": "No",
-        "startMs": 14550,
-        "endMs": 14719,
-        "timestampMs": 14635,
+        "startMs": 14243,
+        "endMs": 14394,
+        "timestampMs": 14319,
         "confidence": 1,
         "quebraAntes": true
       },
       {
         "text": "Pix,",
-        "startMs": 14719,
-        "endMs": 14973,
-        "timestampMs": 14846,
+        "startMs": 14394,
+        "endMs": 14743,
+        "timestampMs": 14569,
         "confidence": 1
       },
       {
         "text": "com",
-        "startMs": 14973,
-        "endMs": 15434,
-        "timestampMs": 15204,
+        "startMs": 14743,
+        "endMs": 15105,
+        "timestampMs": 14924,
         "confidence": 1,
         "cor": "azul"
       },
       {
         "text": "lembrete.",
-        "startMs": 15434,
-        "endMs": 16112,
-        "timestampMs": 15773,
+        "startMs": 15105,
+        "endMs": 15705,
+        "timestampMs": 15405,
         "confidence": 1,
         "cor": "azul"
       }
@@ -216,44 +216,44 @@
       {
         "text": "Ingresso",
         "startMs": 17260,
-        "endMs": 17917,
-        "timestampMs": 17589,
+        "endMs": 17958,
+        "timestampMs": 17609,
         "confidence": 1
       },
       {
         "text": "no",
-        "startMs": 17917,
-        "endMs": 18082,
-        "timestampMs": 18000,
+        "startMs": 17958,
+        "endMs": 18132,
+        "timestampMs": 18045,
         "confidence": 1
       },
       {
         "text": "nome",
-        "startMs": 18082,
-        "endMs": 18411,
-        "timestampMs": 18247,
+        "startMs": 18132,
+        "endMs": 18481,
+        "timestampMs": 18307,
         "confidence": 1
       },
       {
         "text": "de",
-        "startMs": 18411,
-        "endMs": 18575,
-        "timestampMs": 18493,
+        "startMs": 18481,
+        "endMs": 18656,
+        "timestampMs": 18569,
         "confidence": 1,
         "quebraAntes": true
       },
       {
         "text": "quem",
-        "startMs": 18575,
-        "endMs": 18904,
-        "timestampMs": 18740,
+        "startMs": 18656,
+        "endMs": 19778,
+        "timestampMs": 19217,
         "confidence": 1
       },
       {
         "text": "vai.",
-        "startMs": 18904,
-        "endMs": 19537,
-        "timestampMs": 19221,
+        "startMs": 19778,
+        "endMs": 20162,
+        "timestampMs": 19970,
         "confidence": 1
       }
     ]
@@ -264,48 +264,48 @@
     "palavras": [
       {
         "text": "Cada",
-        "startMs": 19537,
-        "endMs": 19866,
-        "timestampMs": 19702,
+        "startMs": 20162,
+        "endMs": 20511,
+        "timestampMs": 20337,
         "confidence": 1
       },
       {
         "text": "QR",
-        "startMs": 19866,
-        "endMs": 20030,
-        "timestampMs": 19948,
+        "startMs": 20511,
+        "endMs": 20685,
+        "timestampMs": 20598,
         "confidence": 1,
         "cor": "azul"
       },
       {
         "text": "entra",
-        "startMs": 20030,
-        "endMs": 20441,
-        "timestampMs": 20236,
+        "startMs": 20685,
+        "endMs": 21122,
+        "timestampMs": 20904,
         "confidence": 1
       },
       {
         "text": "uma",
-        "startMs": 20441,
-        "endMs": 20688,
-        "timestampMs": 20565,
+        "startMs": 21122,
+        "endMs": 21383,
+        "timestampMs": 21253,
         "confidence": 1,
         "cor": "azul",
         "quebraAntes": true
       },
       {
         "text": "vez",
-        "startMs": 20688,
-        "endMs": 20934,
-        "timestampMs": 20811,
+        "startMs": 21383,
+        "endMs": 21645,
+        "timestampMs": 21514,
         "confidence": 1,
         "cor": "azul"
       },
       {
         "text": "só.",
-        "startMs": 20934,
-        "endMs": 21098,
-        "timestampMs": 21016,
+        "startMs": 21645,
+        "endMs": 21819,
+        "timestampMs": 21732,
         "confidence": 1,
         "cor": "azul"
       }
@@ -318,44 +318,44 @@
       {
         "text": "O",
         "startMs": 23060,
-        "endMs": 23204,
-        "timestampMs": 23132,
+        "endMs": 23194,
+        "timestampMs": 23127,
         "confidence": 1
       },
       {
         "text": "dinheiro",
-        "startMs": 23204,
-        "endMs": 23780,
-        "timestampMs": 23492,
+        "startMs": 23194,
+        "endMs": 23856,
+        "timestampMs": 23525,
         "confidence": 1
       },
       {
         "text": "não",
-        "startMs": 23780,
-        "endMs": 23996,
-        "timestampMs": 23888,
+        "startMs": 23856,
+        "endMs": 24056,
+        "timestampMs": 23956,
         "confidence": 1
       },
       {
         "text": "passa",
-        "startMs": 23996,
-        "endMs": 24356,
-        "timestampMs": 24176,
+        "startMs": 24056,
+        "endMs": 24390,
+        "timestampMs": 24223,
         "confidence": 1
       },
       {
         "text": "pela",
-        "startMs": 24356,
-        "endMs": 24644,
-        "timestampMs": 24500,
+        "startMs": 24390,
+        "endMs": 24657,
+        "timestampMs": 24524,
         "confidence": 1,
         "quebraAntes": true
       },
       {
         "text": "gente.",
-        "startMs": 24644,
-        "endMs": 25390,
-        "timestampMs": 25017,
+        "startMs": 24657,
+        "endMs": 25302,
+        "timestampMs": 24980,
         "confidence": 1
       }
     ]
@@ -366,32 +366,32 @@
     "palavras": [
       {
         "text": "Cada",
-        "startMs": 25390,
-        "endMs": 25677,
-        "timestampMs": 25534,
+        "startMs": 25302,
+        "endMs": 25569,
+        "timestampMs": 25436,
         "confidence": 1
       },
       {
         "text": "subsede",
-        "startMs": 25677,
-        "endMs": 26181,
-        "timestampMs": 25929,
+        "startMs": 25569,
+        "endMs": 26036,
+        "timestampMs": 25803,
         "confidence": 1,
         "cor": "amarelo"
       },
       {
         "text": "recebe",
-        "startMs": 26181,
-        "endMs": 26613,
-        "timestampMs": 26397,
+        "startMs": 26036,
+        "endMs": 26437,
+        "timestampMs": 26237,
         "confidence": 1,
         "quebraAntes": true
       },
       {
         "text": "direto.",
-        "startMs": 26613,
-        "endMs": 27045,
-        "timestampMs": 26829,
+        "startMs": 26437,
+        "endMs": 26837,
+        "timestampMs": 26637,
         "confidence": 1
       }
     ]
@@ -402,53 +402,53 @@
     "palavras": [
       {
         "text": "O",
-        "startMs": 27860,
-        "endMs": 28009,
-        "timestampMs": 27935,
+        "startMs": 27874,
+        "endMs": 28034,
+        "timestampMs": 27954,
         "confidence": 1
       },
       {
         "text": "ingresso",
-        "startMs": 28009,
-        "endMs": 28606,
-        "timestampMs": 28308,
+        "startMs": 28034,
+        "endMs": 28677,
+        "timestampMs": 28356,
         "confidence": 1
       },
       {
         "text": "só",
-        "startMs": 28606,
-        "endMs": 28755,
-        "timestampMs": 28681,
+        "startMs": 28677,
+        "endMs": 28837,
+        "timestampMs": 28757,
         "confidence": 1
       },
       {
         "text": "precisa",
-        "startMs": 28755,
-        "endMs": 29277,
-        "timestampMs": 29016,
+        "startMs": 28837,
+        "endMs": 29399,
+        "timestampMs": 29118,
         "confidence": 1
       },
       {
         "text": "pagar",
-        "startMs": 29277,
-        "endMs": 29649,
-        "timestampMs": 29463,
+        "startMs": 29399,
+        "endMs": 29800,
+        "timestampMs": 29600,
         "confidence": 1,
         "quebraAntes": true
       },
       {
         "text": "o",
-        "startMs": 29649,
-        "endMs": 29798,
-        "timestampMs": 29724,
+        "startMs": 29800,
+        "endMs": 29962,
+        "timestampMs": 29881,
         "confidence": 1,
         "cor": "amarelo"
       },
       {
         "text": "evento.",
-        "startMs": 29798,
-        "endMs": 30246,
-        "timestampMs": 30022,
+        "startMs": 29962,
+        "endMs": 30442,
+        "timestampMs": 30202,
         "confidence": 1,
         "cor": "amarelo"
       }
@@ -460,62 +460,62 @@
     "palavras": [
       {
         "text": "A",
-        "startMs": 31393,
-        "endMs": 31562,
-        "timestampMs": 31478,
+        "startMs": 31401,
+        "endMs": 31733,
+        "timestampMs": 31567,
         "confidence": 1
       },
       {
         "text": "taxa",
-        "startMs": 31562,
-        "endMs": 31900,
-        "timestampMs": 31731,
+        "startMs": 31733,
+        "endMs": 32139,
+        "timestampMs": 31936,
         "confidence": 1
       },
       {
         "text": "de",
-        "startMs": 31900,
-        "endMs": 32069,
-        "timestampMs": 31985,
+        "startMs": 32139,
+        "endMs": 32343,
+        "timestampMs": 32241,
         "confidence": 1
       },
       {
         "text": "10%",
-        "startMs": 32069,
-        "endMs": 32745,
-        "timestampMs": 32407,
+        "startMs": 32343,
+        "endMs": 33156,
+        "timestampMs": 32750,
         "confidence": 1,
         "cor": "amarelo"
       },
       {
         "text": "vira",
-        "startMs": 32745,
-        "endMs": 33083,
-        "timestampMs": 32914,
+        "startMs": 33156,
+        "endMs": 33563,
+        "timestampMs": 33360,
         "confidence": 1,
         "quebraAntes": true
       },
       {
         "text": "caixa",
-        "startMs": 33083,
-        "endMs": 33506,
-        "timestampMs": 33295,
+        "startMs": 33563,
+        "endMs": 34213,
+        "timestampMs": 33888,
         "confidence": 1,
         "cor": "amarelo"
       },
       {
         "text": "da",
-        "startMs": 33506,
-        "endMs": 33675,
-        "timestampMs": 33591,
+        "startMs": 34213,
+        "endMs": 34416,
+        "timestampMs": 34315,
         "confidence": 1,
         "cor": "amarelo"
       },
       {
         "text": "torcida.",
-        "startMs": 33675,
-        "endMs": 34266,
-        "timestampMs": 33971,
+        "startMs": 34416,
+        "endMs": 35128,
+        "timestampMs": 34772,
         "confidence": 1,
         "cor": "amarelo"
       }
@@ -527,46 +527,46 @@
     "palavras": [
       {
         "text": "Caixa",
-        "startMs": 36460,
-        "endMs": 36820,
-        "timestampMs": 36640,
+        "startMs": 36260,
+        "endMs": 36595,
+        "timestampMs": 36428,
         "confidence": 1,
         "cor": "amarelo"
       },
       {
         "text": "e",
-        "startMs": 36820,
-        "endMs": 36963,
-        "timestampMs": 36892,
+        "startMs": 36595,
+        "endMs": 36852,
+        "timestampMs": 36724,
         "confidence": 1
       },
       {
         "text": "vendas",
-        "startMs": 36963,
-        "endMs": 37395,
-        "timestampMs": 37179,
+        "startMs": 36852,
+        "endMs": 37255,
+        "timestampMs": 37054,
         "confidence": 1
       },
       {
         "text": "prontos",
-        "startMs": 37395,
-        "endMs": 37898,
-        "timestampMs": 37647,
+        "startMs": 37255,
+        "endMs": 37852,
+        "timestampMs": 37554,
         "confidence": 1,
         "quebraAntes": true
       },
       {
         "text": "para",
-        "startMs": 37898,
-        "endMs": 38186,
-        "timestampMs": 38042,
+        "startMs": 37852,
+        "endMs": 38120,
+        "timestampMs": 37986,
         "confidence": 1
       },
       {
         "text": "mostrar.",
-        "startMs": 38186,
-        "endMs": 38689,
-        "timestampMs": 38438,
+        "startMs": 38120,
+        "endMs": 38590,
+        "timestampMs": 38355,
         "confidence": 1
       }
     ]

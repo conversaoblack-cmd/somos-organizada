@@ -52,8 +52,8 @@
     {
       "id": "gancho",
       "arquivo": "falas/gancho.wav",
-      "duracaoMs": 2230,
-      "velocidade": 1,
+      "duracaoMs": 2713,
+      "velocidade": 0.822,
       "noTake": {
         "de": 0.04325,
         "ate": 2.2734
@@ -63,8 +63,8 @@
     {
       "id": "problema",
       "arquivo": "falas/problema.wav",
-      "duracaoMs": 3514,
-      "velocidade": 1,
+      "duracaoMs": 3870,
+      "velocidade": 0.908,
       "noTake": {
         "de": 3.02871,
         "ate": 6.542999999999999
@@ -73,64 +73,64 @@
         {
           "texto": "Cobrança",
           "bloco": 0,
-          "inicioMs": 60,
-          "fimMs": 567
+          "inicioMs": 66,
+          "fimMs": 624
         },
         {
           "texto": "no",
           "bloco": 0,
-          "inicioMs": 567,
-          "fimMs": 693
+          "inicioMs": 624,
+          "fimMs": 763
         },
         {
           "texto": "grupo,",
           "bloco": 0,
-          "inicioMs": 693,
-          "fimMs": 1010
+          "inicioMs": 763,
+          "fimMs": 1112
         },
         {
           "texto": "caravana",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 1010,
-          "fimMs": 1516
+          "inicioMs": 1112,
+          "fimMs": 1670
         },
         {
           "texto": "no",
           "bloco": 0,
-          "inicioMs": 1516,
-          "fimMs": 1643
+          "inicioMs": 1670,
+          "fimMs": 1809
         },
         {
           "texto": "caderno,",
           "bloco": 0,
-          "inicioMs": 1643,
-          "fimMs": 2086
+          "inicioMs": 1809,
+          "fimMs": 2297
         },
         {
           "texto": "ingresso",
           "bloco": 1,
-          "inicioMs": 2086,
-          "fimMs": 2593
+          "inicioMs": 2297,
+          "fimMs": 2856
         },
         {
           "texto": "que",
           "bloco": 1,
-          "inicioMs": 2593,
-          "fimMs": 2783
+          "inicioMs": 2856,
+          "fimMs": 3065
         },
         {
           "texto": "vira",
           "bloco": 1,
-          "inicioMs": 2783,
-          "fimMs": 3138
+          "inicioMs": 3065,
+          "fimMs": 3456
         },
         {
           "texto": "print.",
           "cor": "perigo",
           "bloco": 1,
-          "inicioMs": 3138,
-          "fimMs": 3454
+          "inicioMs": 3456,
+          "fimMs": 3804
         }
       ]
     },
@@ -195,8 +195,8 @@
     {
       "id": "socio",
       "arquivo": "falas/socio.wav",
-      "duracaoMs": 2943,
-      "velocidade": 1,
+      "duracaoMs": 3101,
+      "velocidade": 0.949,
       "noTake": {
         "de": 11.3197,
         "ate": 14.2622
@@ -205,55 +205,55 @@
         {
           "texto": "No",
           "bloco": 0,
-          "inicioMs": 60,
-          "fimMs": 202
+          "inicioMs": 63,
+          "fimMs": 213
         },
         {
           "texto": "cartão,",
           "bloco": 0,
-          "inicioMs": 202,
-          "fimMs": 999
+          "inicioMs": 213,
+          "fimMs": 1053
         },
         {
           "texto": "todo",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 999,
-          "fimMs": 1283
+          "inicioMs": 1053,
+          "fimMs": 1352
         },
         {
           "texto": "mês.",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 1283,
-          "fimMs": 1496
+          "inicioMs": 1352,
+          "fimMs": 1576
         },
         {
           "texto": "No",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 1496,
-          "fimMs": 1639
+          "inicioMs": 1576,
+          "fimMs": 1727
         },
         {
           "texto": "Pix,",
           "bloco": 0,
-          "inicioMs": 1639,
-          "fimMs": 1970
+          "inicioMs": 1727,
+          "fimMs": 2076
         },
         {
           "texto": "com",
           "cor": "azul",
           "bloco": 0,
-          "inicioMs": 1970,
-          "fimMs": 2314
+          "inicioMs": 2076,
+          "fimMs": 2438
         },
         {
           "texto": "lembrete.",
           "cor": "azul",
           "bloco": 0,
-          "inicioMs": 2314,
-          "fimMs": 2883
+          "inicioMs": 2438,
+          "fimMs": 3038
         }
       ]
     },
@@ -425,8 +425,8 @@
     {
       "id": "evento",
       "arquivo": "falas/evento.wav",
-      "duracaoMs": 2203,
-      "velocidade": 1,
+      "duracaoMs": 2717,
+      "velocidade": 0.811,
       "noTake": {
         "de": 25.6206,
         "ate": 27.8238
@@ -435,55 +435,55 @@
         {
           "texto": "O",
           "bloco": 0,
-          "inicioMs": 60,
-          "fimMs": 190
+          "inicioMs": 74,
+          "fimMs": 234
         },
         {
           "texto": "ingresso",
           "bloco": 0,
-          "inicioMs": 190,
-          "fimMs": 711
+          "inicioMs": 234,
+          "fimMs": 877
         },
         {
           "texto": "só",
           "bloco": 0,
-          "inicioMs": 711,
-          "fimMs": 841
+          "inicioMs": 877,
+          "fimMs": 1037
         },
         {
           "texto": "precisa",
           "bloco": 0,
-          "inicioMs": 841,
-          "fimMs": 1297
+          "inicioMs": 1037,
+          "fimMs": 1599
         },
         {
           "texto": "pagar",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 1297,
-          "fimMs": 1622
+          "inicioMs": 1599,
+          "fimMs": 2000
         },
         {
           "texto": "o",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 1622,
-          "fimMs": 1753
+          "inicioMs": 2000,
+          "fimMs": 2162
         },
         {
           "texto": "evento.",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 1753,
-          "fimMs": 2143
+          "inicioMs": 2162,
+          "fimMs": 2642
         }
       ]
     },
     {
       "id": "taxa",
       "arquivo": "falas/taxa.wav",
-      "duracaoMs": 3388,
-      "velocidade": 1,
+      "duracaoMs": 3863,
+      "velocidade": 0.877,
       "noTake": {
         "de": 28.588700000000003,
         "ate": 31.976799999999997
@@ -492,55 +492,55 @@
         {
           "texto": "A",
           "bloco": 0,
-          "inicioMs": 60,
-          "fimMs": 351
+          "inicioMs": 68,
+          "fimMs": 400
         },
         {
           "texto": "taxa",
           "bloco": 0,
-          "inicioMs": 351,
-          "fimMs": 707
+          "inicioMs": 400,
+          "fimMs": 806
         },
         {
           "texto": "de",
           "bloco": 0,
-          "inicioMs": 707,
-          "fimMs": 886
+          "inicioMs": 806,
+          "fimMs": 1010
         },
         {
           "texto": "10%",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 886,
-          "fimMs": 1599
+          "inicioMs": 1010,
+          "fimMs": 1823
         },
         {
           "texto": "vira",
           "quebraAntes": true,
           "bloco": 0,
-          "inicioMs": 1599,
-          "fimMs": 1956
+          "inicioMs": 1823,
+          "fimMs": 2230
         },
         {
           "texto": "caixa",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 1956,
-          "fimMs": 2526
+          "inicioMs": 2230,
+          "fimMs": 2880
         },
         {
           "texto": "da",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 2526,
-          "fimMs": 2704
+          "inicioMs": 2880,
+          "fimMs": 3083
         },
         {
           "texto": "torcida.",
           "cor": "amarelo",
           "bloco": 0,
-          "inicioMs": 2704,
-          "fimMs": 3328
+          "inicioMs": 3083,
+          "fimMs": 3795
         }
       ]
     },

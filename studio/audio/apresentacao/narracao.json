@@ -14,13 +14,15 @@
       "id": "gancho",
       "frame": 0,
       "texto": "Quanto da mensalidade não entrou este mês?",
-      "legenda": ""
+      "legenda": "",
+      "tempo": 0.822
     },
     {
       "id": "problema",
       "frame": 114,
       "texto": "Cobrança no grupo, caravana no caderno, ingresso que vira print.",
-      "legenda": "Cobrança no grupo, ↵ caravana no caderno, / ingresso que vira **print**{perigo}."
+      "legenda": "Cobrança no grupo, ↵ caravana no caderno, / ingresso que vira **print**{perigo}.",
+      "tempo": 0.908
     },
     {
       "id": "virada",
@@ -32,7 +34,8 @@
       "id": "socio",
       "frame": 380,
       "texto": "No cartão, todo mês. No Pix, com lembrete.",
-      "legenda": "No cartão, **todo mês**{amarelo}. ↵ No Pix, **com lembrete**{azul}."
+      "legenda": "No cartão, **todo mês**{amarelo}. ↵ No Pix, **com lembrete**{azul}.",
+      "tempo": 0.949
     },
     {
       "id": "ingresso",
@@ -50,26 +53,29 @@
       "id": "evento",
       "frame": 834,
       "texto": "O ingresso só precisa pagar o evento.",
-      "legenda": "O ingresso só precisa ↵ pagar **o evento**{amarelo}."
+      "legenda": "O ingresso só precisa ↵ pagar **o evento**{amarelo}.",
+      "tempo": 0.811
     },
     {
       "id": "taxa",
       "frame": 940,
       "texto": "A taxa de dez por cento vira caixa da torcida.",
-      "legenda": "A taxa de **10%**{amarelo} ↵ vira **caixa da torcida**{amarelo}."
+      "legenda": "A taxa de **10%**{amarelo} ↵ vira **caixa da torcida**{amarelo}.",
+      "tempo": 0.877
     },
     {
       "id": "prova",
-      "frame": 1092,
+      "frame": 1086,
       "texto": "Caixa e vendas prontos para mostrar.",
       "legenda": "**Caixa**{amarelo} e vendas ↵ prontos para mostrar."
     },
     {
       "id": "cta",
-      "frame": 1176,
+      "frame": 1168,
       "texto": "Somos Organizada. Cadastre sua torcida. Só paga depois de publicar o site.",
       "legenda": ""
     }
   ],
-  "_comentario": "Narração da peça de apresentação (roteiro: campanhas/2026-10-15-apresentacao/03-roteiro.md). texto = voz (por extenso); legenda = tela."
+  "_comentario": "Narração da peça de apresentação (roteiro: campanhas/2026-10-15-apresentacao/03-roteiro.md). texto = voz (por extenso); legenda = tela.",
+  "_tempo": "Take do dono (ElevenLabs, voz 'Mário - Excited', speed 0,9) mais rápido que 2,6 palavras/s em 5 falas: cada uma desacelerada só até 2,6 (rubberband, formantes preservados). CTA no 1168 para terminar antes do impacto do 1332."
 }

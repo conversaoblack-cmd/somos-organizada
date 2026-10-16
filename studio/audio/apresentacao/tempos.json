@@ -8,91 +8,91 @@
       "id": "gancho",
       "frame": 0,
       "inicioMs": 0,
-      "fimMs": 2687,
-      "duracaoMs": 2687,
+      "fimMs": 2713,
+      "duracaoMs": 2713,
       "palavrasFaladas": 7,
-      "fimFrame": 81
+      "fimFrame": 82
     },
     {
       "id": "problema",
       "frame": 114,
       "inicioMs": 3800,
-      "fimMs": 8199,
-      "duracaoMs": 4399,
+      "fimMs": 7670,
+      "duracaoMs": 3870,
       "palavrasFaladas": 10,
-      "fimFrame": 246
+      "fimFrame": 231
     },
     {
       "id": "virada",
       "frame": 260,
       "inicioMs": 8667,
-      "fimMs": 10847,
-      "duracaoMs": 2180,
+      "fimMs": 11618,
+      "duracaoMs": 2951,
       "palavrasFaladas": 7,
-      "fimFrame": 326
+      "fimFrame": 349
     },
     {
       "id": "socio",
       "frame": 380,
       "inicioMs": 12667,
-      "fimMs": 16172,
-      "duracaoMs": 3505,
+      "fimMs": 15768,
+      "duracaoMs": 3101,
       "palavrasFaladas": 8,
-      "fimFrame": 486
+      "fimFrame": 474
     },
     {
       "id": "ingresso",
       "frame": 516,
       "inicioMs": 17200,
-      "fimMs": 21159,
-      "duracaoMs": 3959,
+      "fimMs": 21879,
+      "duracaoMs": 4679,
       "palavrasFaladas": 12,
-      "fimFrame": 635
+      "fimFrame": 657
     },
     {
       "id": "dinheiro",
       "frame": 690,
       "inicioMs": 23000,
-      "fimMs": 27105,
-      "duracaoMs": 4105,
+      "fimMs": 26897,
+      "duracaoMs": 3897,
       "palavrasFaladas": 10,
-      "fimFrame": 814
+      "fimFrame": 807
     },
     {
       "id": "evento",
       "frame": 834,
       "inicioMs": 27800,
-      "fimMs": 30306,
-      "duracaoMs": 2506,
+      "fimMs": 30517,
+      "duracaoMs": 2717,
       "palavrasFaladas": 7,
-      "fimFrame": 910
+      "fimFrame": 916
     },
     {
       "id": "taxa",
       "frame": 940,
       "inicioMs": 31333,
-      "fimMs": 34327,
-      "duracaoMs": 2994,
+      "fimMs": 35196,
+      "duracaoMs": 3863,
       "palavrasFaladas": 10,
-      "fimFrame": 1030
+      "fimFrame": 1056
     },
     {
       "id": "prova",
-      "frame": 1092,
-      "inicioMs": 36400,
-      "fimMs": 38749,
-      "duracaoMs": 2349,
+      "frame": 1086,
+      "inicioMs": 36200,
+      "fimMs": 38650,
+      "duracaoMs": 2450,
       "palavrasFaladas": 6,
-      "fimFrame": 1163
+      "fimFrame": 1160
     },
     {
       "id": "cta",
-      "frame": 1176,
-      "inicioMs": 39200,
-      "fimMs": 44751,
-      "duracaoMs": 5551,
+      "frame": 1168,
+      "inicioMs": 38933,
+      "fimMs": 44201,
+      "duracaoMs": 5268,
       "palavrasFaladas": 12,
-      "fimFrame": 1343
+      "fimFrame": 1327
     }
   ],
   "avisos": [
