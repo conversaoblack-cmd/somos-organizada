@@ -1,0 +1,87 @@
+{
+  "avaliador": "produto-review",
+  "veredito": "APROVA",
+  "evidencias_usadas": [
+    "auditoria/rodada-4-final/pacote.md",
+    "auditoria/rodada-4-final/qc.json",
+    "05-timeline.md (gerada em 2026-10-16)",
+    "05-producao/evidencias-final/folha.png",
+    "05-producao/evidencias-final/frames/t027.0.png",
+    "05-producao/evidencias-final/frames/t027.5.png",
+    "05-producao/evidencias-final/frames/t028.0.png",
+    "05-producao/evidencias-final/frames/t028.5.png",
+    "05-producao/evidencias-final/frames/t029.0.png",
+    "05-producao/evidencias-final/frames/t029.5.png",
+    "05-producao/evidencias-final/frames/t030.0.png",
+    "05-producao/evidencias-final/frames/t030.5.png",
+    "05-producao/evidencias-final/frames/t031.5.png",
+    "05-producao/evidencias-final/frames/t033.0.png",
+    "05-producao/evidencias-final/frames/t035.0.png",
+    "05-producao/evidencias-final/frames/t037.0.png",
+    "05-producao/evidencias-final/frames/t041.5.png",
+    "src/composicoes/apresentacao/legenda.json (tempos das palavras com a voz final)",
+    "entrega.md",
+    "auditoria/rodada-3-producao/pareceres/produto-review.json (meu parecer anterior)",
+    "functions/src/dominio/split.ts (contestação de fato: quem paga as tarifas na venda da sede principal e na de subsede)",
+    "web/src/landing/Landing.tsx:28-29,438-439 (contestação de fato: a FAQ e a seção da taxa dizem 'ajuda a cobrir as tarifas... o que sobra vira caixa')"
+  ],
+  "condicoes_rodada_3": [
+    {"condicao": "Caminho até 'Novo evento' na ordem real (média, clareza)", "situacao": "cumprida", "evidencia": "t027.5 menu com 'Eventos' -> t028.0 página 'Eventos' com '+ Novo evento' -> t028.5 botão pressionado -> t029.0/t029.5 'Nome do evento' sendo digitado -> t030.0/t030.5 'Valor para sócio' 100,00 e 'Valor para o público' 130,00. Gravação em ordem (timeline 828-936: 7,00 s -> 10,35 s -> 15,45 s -> 24,90 s). Resta, como detalhe: o toque em 'Eventos' no menu não tem marca (t027.5 ainda destaca 'Visão geral') e menu e lista ficam ~0,8 s cada."},
+    {"condicao": "Ordem invertida valor/nome (baixa, clareza)", "situacao": "cumprida", "evidencia": "nome (t029.0-t029.5) antes do valor (t030.0-t030.5); o close da taxa (t031.5-t035.0) vem depois, com o mesmo 130,00."},
+    {"condicao": "Pílula 'Aguardando aprovação' colada ao 'Evento publicado!' (baixa, fidelidade)", "situacao": "cumprida", "evidencia": "o aviso de publicado saiu da peça; nenhum quadro de 27,0 a 36,0 s mostra a lista com o toast. A pílula 'Aguardando aprovação 1' em t028.0 é o filtro da página, ao lado de 'Todos 8', em contexto."},
+    {"condicao": "Link na bio e teste grátis (baixa, cta)", "situacao": "cumprida", "evidencia": "entrega.md: passo 4 (link da bio para https://somosorganizada.com.br/cadastro), legenda com 'Dá pra testar tudo antes em modo demonstração' e 'Link na bio pra cadastrar sua torcida', comentário fixado termina em 'Link na bio.'. O card final continua sem 'link na bio' (t041.5), o que a minha correção permitia."},
+    {"condicao": "Risco: 'leitor real, QR real, câmera simulada' registrado na entrega", "situacao": "cumprida", "evidencia": "entrega.md, seção 'Honestidade sobre o que aparece'."}
+  ],
+  "notas": {"clareza": 9.0, "fidelidade": 9.0, "cta": 9.0},
+  "justificativa": {
+    "clareza": {
+      "natureza": "execucao",
+      "texto": "O trecho que eu tinha apontado agora é um caminho que um diretor leigo consegue repetir: menu -> 'Eventos' -> '+ Novo evento' -> nome -> valor, na ordem do produto e sob 'A DIRETORIA DECIDE O PREÇO'. O sistema mostrando 'Torcedor paga R$ 110,00' e 'R$ 143,00 (inclui 10% de taxa)' ao lado do valor digitado deixa claro, sem explicação, que a diretoria põe o preço e a taxa vem por cima. As outras cenas continuam com uma ideia cada, e a fala 'Ingresso no nome de quem vai' (17,26-19,9 s) cai sobre o LIBERADO com o nome do titular.",
+      "por_que_nao_e_10": "Detalhes baixos: o toque em 'Eventos' no menu não tem marca e cada passo dura ~0,8 s (t027.5-t028.5); durante a digitação aparece o estado intermediário real 'R$ 1,30 / Torcedor paga R$ 1,43' (t030.0); e a voz agora diz 'O ingresso só precisa pagar o evento' (27,9 s) antes de 'A taxa de 10% vira caixa' (31,4 s), então o porquê do 'só' chega uma cena depois."
+    },
+    "fidelidade": {
+      "natureza": "execucao",
+      "texto": "Tudo o que aparece é tela real gravada no build de produção, na ordem real, rotulada 'Torcida Brasil · dados de demonstração'. O único estado que podia confundir (o toast junto da pílula de outro evento) saiu da peça. A planilha mostra o lançamento inteiro com '+ R$ 12,00 de taxa' (t037.0), coerente com os 10% de R$ 120,00. Nada 'Comunicável: Não' (sem portaria offline, preço, limite, domínio, painel interno), nada de clube real. A câmera simulada está declarada na entrega.",
+      "por_que_nao_e_10": "Em t030.0-t030.5 aparece, cortado, o texto real do produto 'A taxa de serviço de 10% é somada ao valor e fica no caixa da diretoria', enquanto a voz diz 'caixa da torcida'. É o produto como ele é, mas é o termo que a mesa já apontou como fonte de desconfiança. Na entrega, a nota 'não escrever que a taxa cobre as tarifas' e o 'Fica com tudo' do comentário fixado não batem com a FAQ do site (Landing.tsx:29, 'ajuda a cobrir as tarifas... o que sobra vira caixa'): na venda da sede principal tudo cai na conta da torcida e as tarifas da Pagar.me saem do total (split.ts:25, sem split). Só na venda de subsede a taxa vai inteira e a subsede paga as tarifas."
+    },
+    "cta": {
+      "natureza": "hipotese",
+      "texto": "Um passo, oferta verdadeira, o botão é o texto real da página inicial ('Cadastrar minha torcida' -> /cadastro). Agora o post fecha o circuito: bio com /cadastro, teste grátis em modo demonstração na legenda e 'Link na bio' no comentário fixado.",
+      "por_que_nao_e_10": "O card do vídeo continua sem dizer onde tocar, e na legenda o 'Link na bio' está na última linha, escondido pelo 'mais' do Instagram; quem chega a ele é o comentário fixado. O teste grátis segue fora do vídeo.",
+      "metrica_que_confirma": "toques no link da bio (meta da entrega: >= 1% das contas alcançadas) e cadastros de torcida nos 7 dias seguintes, com o 'como conheceu' de cada cadastro"
+    }
+  },
+  "pontos_fortes": [
+    "O caminho de criar evento agora é o do produto, na ordem: menu, Eventos, '+ Novo evento', nome, valor.",
+    "A diretoria digitando o preço e o sistema somando a taxa ('Torcedor paga R$ 143,00 (inclui 10% de taxa)') é a prova mais honesta possível de que a diretoria decide o preço e a taxa é paga pelo torcedor e aparece antes.",
+    "Portaria real lendo o QR real; a fala do nome cai sobre o LIBERADO com o titular.",
+    "A planilha mostra um lançamento inteiro com a taxa separada, e o '+ R$ 12,00' bate com os 10%.",
+    "A entrega declara 'leitor real, QR real, câmera simulada' e o CPF mascarado pelo produto.",
+    "O CTA leva a um caminho que existe: botão real -> /cadastro; o link da bio vai direto para /cadastro."
+  ],
+  "problemas": [
+    {
+      "descricao": "A nota da entrega e o comentário fixado contradizem a FAQ do próprio site sobre as tarifas. 'Não escrever que a taxa cobre as tarifas' só vale para a venda de subsede; na venda da sede principal as tarifas da Pagar.me saem do total que cai na conta da torcida. 'Fica com tudo' pode ser lido como 'os 10% inteiros viram caixa' por um tesoureiro que confere o extrato.",
+      "gravidade": "baixa",
+      "criterio": "fidelidade",
+      "evidencia": "entrega.md (comentário fixado e 'Notas para quem publica') x functions/src/dominio/split.ts:4-7,25 x web/src/landing/Landing.tsx:29",
+      "correcao": "Comentário fixado: trocar 'Fica com tudo: os 10%... vão pro caixa da torcida' por 'A Somos Organizada não fica com nada dos 10%: eles são pagos pelo torcedor e vão para a conta da torcida.' Nota para quem publica: 'na venda da sede principal as tarifas da Pagar.me saem do total da torcida; na de subsede, a subsede paga as tarifas e a taxa vai inteira para a torcida'. Não mexe no vídeo."
+    },
+    {
+      "descricao": "A entrega ainda está como rascunho de antes da voz: cabeçalho 'peça montada, sem voz final', passo 1 pedindo o take, QC apontando para a rodada 3 e rodada 4 'a fazer'. Quem for publicar pode achar que falta a voz.",
+      "gravidade": "baixa",
+      "criterio": "cta",
+      "evidencia": "entrega.md, linhas 1-11 e tabela 'Notas da mesa'",
+      "correcao": "Atualizar o cabeçalho para 'voz final aplicada', apontar o QC para auditoria/rodada-4-final/qc.json e o arquivo para 05-producao/apresentacao-final.mp4, marcar o passo 1 como feito e preencher a linha da rodada 4 com o resultado."
+    }
+  ],
+  "riscos": [
+    "Em t030.0-t030.5 a tela real diz 'fica no caixa da diretoria' enquanto a voz diz 'caixa da torcida'. Se um comentário apontar, a resposta é a do comentário fixado. A divergência de termo é do produto: o diretor pode registrar em studio/docs/dividas-do-produto.md se quiser alinhar o texto do Eventos.tsx com o do site ('caixa da torcida'). O estúdio não edita o produto.",
+    "A voz diz 'O ingresso só precisa pagar o evento' antes de explicar o caixa; se a curva de retenção cair em 27-31 s, é sinal de que a frase sem o porquê não segurou.",
+    "Licença comercial da ElevenLabs ainda a confirmar pelo dono (entrega.md): é condição de publicação, fora dos meus critérios.",
+    "Nenhum bug do produto exposto pelo vídeo nesta rodada."
+  ],
+  "argumento_contra_meu_veredito": "Dá para dizer que eu deveria segurar a nota de fidelidade mais baixa porque, depois da correção, a peça mostra criar o evento mas não mostra mais publicá-lo, e o CTA promete 'só paga depois de publicar o site': o gesto de publicar sumiu da peça. E o texto que acompanha a peça (comentário fixado) simplifica a taxa de um jeito que a FAQ do site não sustenta. Mantenho APROVA e 9,0 porque 'publicar o site' (a torcida) e 'publicar o evento' são coisas diferentes, e nenhuma delas fica falsa. A simplificação está no texto do post, não no vídeo, e tem correção de uma linha sem render.",
+  "informacao_falsa": false,
+  "desalinhado_objetivo": false
+}
