@@ -5,24 +5,22 @@
   "voz": {
     "id": null,
     "modelo": "eleven_multilingual_v2",
-    "nome": "voz adulta (30 a 45 anos), timbre médio-grave, sotaque brasileiro neutro",
-    "ajustesTexto": "Stability ~50% · Similarity ~75% · Style 15–25% · velocidade ~0,9",
-    "direcao": "Ver seção 4 do 03-roteiro.md (arco de energia; não rir do problema da torcida; pronúncias: QR = quê-érre, Pix = píks)."
+    "nome": "voz de NARRAÇÃO (não de anúncio), masculina, 30 a 45 anos, português do Brasil, timbre médio-grave, tom de conversa de quem já foi diretoria. Na Voice Library: Language = Portuguese, Accent = Brazilian, categoria Narrative & Story ou Conversational. Evite vozes marcadas Excited, Cheerful, Advertisement, Announcer ou Energetic",
+    "ajustesTexto": "Stability 60% · Similarity 75% · Style 0% a 10% · Speaker boost ligado · Speed 0,95",
+    "direcao": "- **Teste antes de gerar tudo:** gere só as 2 primeiras frases e a da taxa com 2 ou 3 vozes candidatas e escolha a que soa como diretoria conversando com diretoria: firme, sem sorriso no começo, sem voz de locutor.\n- **Ritmo:** o vídeo vai ser montado em cima da voz (a voz vem primeiro), então NÃO precisa caber em tempo nenhum. Só não pode correr: se as frases saírem coladas ou apressadas, baixe Speed para 0,9; se arrastarem, suba para 1,0.\n- **Arco:** começo sério (ênfase em \"não entrou\"); \"caderno\" e \"print\" sem ironia; \"Agora a torcida tem um painel só\" sobe a energia; sócio, ingresso e dinheiro confiantes (\"uma vez só\" bem separado); \"O ingresso só precisa pagar o evento\" e a frase da taxa mais baixas, quase de confidência; final com orgulho, \"Cadastre sua torcida\" como convite.\n- **Pronúncia:** \"QR\" = quê-érre (se sair \"kiú-ar\", troque no texto por quê-érre); \"Pix\" = píks; \"sub-sede\" já está escrito separado para não sair \"subsídio\"; \"dez por cento\" bem claro.\n- **Se uma frase sair ruim**, gere de novo só ela com o mesmo ajuste e me mande o arquivo dela junto: eu troco no take."
   },
   "falas": [
     {
       "id": "gancho",
       "frame": 0,
       "texto": "Quanto da mensalidade não entrou este mês?",
-      "legenda": "",
-      "tempo": 0.822
+      "legenda": ""
     },
     {
       "id": "problema",
       "frame": 114,
       "texto": "Cobrança no grupo, caravana no caderno, ingresso que vira print.",
-      "legenda": "Cobrança no grupo, ↵ caravana no caderno, / ingresso que vira **print**{perigo}.",
-      "tempo": 0.908
+      "legenda": "Cobrança no grupo, ↵ caravana no caderno, / ingresso que vira **print**{perigo}."
     },
     {
       "id": "virada",
@@ -34,8 +32,7 @@
       "id": "socio",
       "frame": 380,
       "texto": "No cartão, todo mês. No Pix, com lembrete.",
-      "legenda": "No cartão, **todo mês**{amarelo}. ↵ No Pix, **com lembrete**{azul}.",
-      "tempo": 0.949
+      "legenda": "No cartão, **todo mês**{amarelo}. ↵ No Pix, **com lembrete**{azul}."
     },
     {
       "id": "ingresso",
@@ -46,22 +43,20 @@
     {
       "id": "dinheiro",
       "frame": 690,
-      "texto": "O dinheiro não passa pela gente. Cada subsede recebe direto.",
+      "texto": "O dinheiro não passa pela gente. Cada sub-sede recebe direto.",
       "legenda": "O dinheiro não passa ↵ pela gente. / Cada **subsede**{amarelo} ↵ recebe direto."
     },
     {
       "id": "evento",
       "frame": 834,
       "texto": "O ingresso só precisa pagar o evento.",
-      "legenda": "O ingresso só precisa ↵ pagar **o evento**{amarelo}.",
-      "tempo": 0.811
+      "legenda": "O ingresso só precisa ↵ pagar **o evento**{amarelo}."
     },
     {
       "id": "taxa",
       "frame": 940,
       "texto": "A taxa de dez por cento vira caixa da torcida.",
-      "legenda": "A taxa de **10%**{amarelo} ↵ vira **caixa da torcida**{amarelo}.",
-      "tempo": 0.877
+      "legenda": "A taxa de **10%**{amarelo} ↵ vira **caixa da torcida**{amarelo}."
     },
     {
       "id": "prova",
@@ -76,6 +71,5 @@
       "legenda": ""
     }
   ],
-  "_comentario": "Narração da peça de apresentação (roteiro: campanhas/2026-10-15-apresentacao/03-roteiro.md). texto = voz (por extenso); legenda = tela.",
-  "_tempo": "Take do dono (ElevenLabs, voz 'Mário - Excited', speed 0,9) mais rápido que 2,6 palavras/s em 5 falas: cada uma desacelerada só até 2,6 (rubberband, formantes preservados). CTA no 1168 para terminar antes do impacto do 1332."
+  "_comentario": "Narração da peça de apresentação (roteiro: campanhas/2026-10-15-apresentacao/03-roteiro.md). texto = voz (por extenso); legenda = tela."
 }
