@@ -183,3 +183,20 @@ diz "caixa da torcida" (termo do produto: avaliar em `dividas-do-produto.md`); v
 - Voz animada da ElevenLabs sai acima de 2,6 palavras/s: pedir speed ~0,8 ao dono ou contar com rubberband até 2,6.
 - Render completo na nuvem: ~40 min (3D por software + vídeo); para ajuste localizado, renderizar só o trecho e emendar
   quadro a quadro (conferido por PSNR ~50 dB fora do trecho).
+
+## 16/10/2026 · Apresentação: retorno do dono sobre a versão 8,49 → nova versão (v3), meta 9,5
+
+**O dono (verbatim no essencial):** a narração não ficou nada boa; a legenda não está boa; o mockup do celular navegando
+não está bom; "não precisa ter nosso slogan, nosso nome, Torcida Brasil, dados de demonstração" (assinatura e rótulo
+fora); alguns recortes do sistema ficaram bons, mas podem ser maiores; ficou poluído (gravação num quadradão, celular
+embaixo, arquibancada de quadradinhos chamando atenção atrás, legenda): precisa de harmonia. O roteiro (conteúdo) agrada.
+**Meta desta peça: 9,5** (decisão do dono, acima da meta padrão de 9,0).
+
+**Decidido:**
+- Nova versão da peça (v3), pedida pelo dono: as rodadas de correção da versão anterior não contam para esta.
+- **Voz primeiro:** o dono gera a narração completa com a configuração nova (`audio/apresentacao/take/PARA-ELEVENLABS.md`)
+  e o vídeo é montado em cima da voz (cortes no tempo da fala), sem desacelerar voz.
+- **Sem assinatura "SOMOS ORGANIZADA" nas cenas e sem o rótulo "Torcida Brasil · dados de demonstração" na tela**
+  (decisão do dono; muda a regra do estúdio de rotular na tela). O aviso de dados de exemplo fica só no texto do post.
+- Direção de arte v3 (harmonia): um foco por vez; o produto grande e nítido; arquibancada calma nas cenas de produto;
+  um só sistema de texto por cena. Detalhes em `02-direcao-de-arte.md` (seção v3) e portão visual antes de produzir.
