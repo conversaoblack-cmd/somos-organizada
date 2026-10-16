@@ -1,0 +1,186 @@
+{
+  "situacao": "ABAIXO DA META",
+  "nota": 8.49,
+  "cobertura": 1,
+  "meta": 9,
+  "nota_execucao": {
+    "nota": 8.61,
+    "cobertura": 1,
+    "criterios": [
+      "clareza",
+      "visual",
+      "fidelidade",
+      "tecnica"
+    ]
+  },
+  "previsao_de_conteudo": {
+    "nota": 8.33,
+    "cobertura": 1,
+    "criterios": [
+      "objetivo",
+      "gancho",
+      "cta"
+    ]
+  },
+  "criterios": {
+    "objetivo": {
+      "media": 8.5,
+      "peso": 0.2,
+      "natureza": "hipotese",
+      "notas": [
+        {
+          "avaliador": "estrategia-review",
+          "nota": 8.5
+        },
+        {
+          "avaliador": "marketing-review",
+          "nota": 8.5
+        },
+        {
+          "avaliador": "torcida-review",
+          "nota": 8.5
+        }
+      ]
+    },
+    "clareza": {
+      "media": 8.83,
+      "peso": 0.15,
+      "natureza": "execucao",
+      "notas": [
+        {
+          "avaliador": "marketing-review",
+          "nota": 8.5
+        },
+        {
+          "avaliador": "produto-review",
+          "nota": 9
+        },
+        {
+          "avaliador": "roteirista",
+          "nota": 9
+        }
+      ]
+    },
+    "gancho": {
+      "media": 7.83,
+      "peso": 0.15,
+      "natureza": "hipotese",
+      "notas": [
+        {
+          "avaliador": "marketing-review",
+          "nota": 8
+        },
+        {
+          "avaliador": "motion-review",
+          "nota": 7.5
+        },
+        {
+          "avaliador": "roteirista",
+          "nota": 8
+        }
+      ]
+    },
+    "visual": {
+      "media": 8,
+      "peso": 0.15,
+      "natureza": "execucao",
+      "notas": [
+        {
+          "avaliador": "motion-review",
+          "nota": 8
+        }
+      ]
+    },
+    "fidelidade": {
+      "media": 8.75,
+      "peso": 0.15,
+      "natureza": "execucao",
+      "notas": [
+        {
+          "avaliador": "marketing-review",
+          "nota": 9
+        },
+        {
+          "avaliador": "motion-review",
+          "nota": 8
+        },
+        {
+          "avaliador": "produto-review",
+          "nota": 9
+        },
+        {
+          "avaliador": "torcida-review",
+          "nota": 9
+        }
+      ]
+    },
+    "cta": {
+      "media": 8.75,
+      "peso": 0.1,
+      "natureza": "hipotese",
+      "notas": [
+        {
+          "avaliador": "marketing-review",
+          "nota": 8.5
+        },
+        {
+          "avaliador": "produto-review",
+          "nota": 9
+        }
+      ]
+    },
+    "tecnica": {
+      "media": 9,
+      "peso": 0.1,
+      "natureza": "execucao",
+      "notas": [
+        {
+          "avaliador": "motion-review",
+          "nota": 8
+        },
+        {
+          "avaliador": "qc",
+          "nota": 10
+        }
+      ]
+    }
+  },
+  "bloqueios": [],
+  "descartadas": [],
+  "cadeiras": [
+    {
+      "avaliador": "estrategia-review",
+      "veredito": "APROVA COM CONDIÇÃO"
+    },
+    {
+      "avaliador": "marketing-review",
+      "veredito": "APROVA"
+    },
+    {
+      "avaliador": "motion-review",
+      "veredito": "APROVA COM CONDIÇÃO"
+    },
+    {
+      "avaliador": "produto-review",
+      "veredito": "APROVA"
+    },
+    {
+      "avaliador": "roteirista",
+      "veredito": "APROVA"
+    },
+    {
+      "avaliador": "torcida-review",
+      "veredito": "APROVA COM CONDIÇÃO"
+    }
+  ],
+  "arquivos": [
+    "estrategia-review.json",
+    "marketing-review.json",
+    "motion-review.json",
+    "produto-review.json",
+    "roteirista.json",
+    "torcida-review.json"
+  ],
+  "qc": "campanhas/2026-10-15-apresentacao/auditoria/rodada-4-final/qc.json",
+  "erros": []
+}

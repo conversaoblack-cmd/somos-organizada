@@ -1,14 +1,16 @@
-# Entrega · Apresentação (2026-10-15) · RASCUNHO
+# Entrega · Apresentação (2026-10-15) · ABAIXO DA META (8,49 / 9,0)
 
-> Estado: **peça montada com a voz final do dono** (render da nuvem `05-producao/apresentacao-final.mp4`, QC 10/10,
-> −14,2 LUFS, −1,3 dBTP). Rodada 4 (conferência final, sem nova correção) em andamento. Falta o dono ouvir e confirmar
-> 3 pontos (abaixo), a licença comercial da voz e o render de entrega no Mac.
+> Estado: **peça pronta com a voz final do dono** (render da nuvem `05-producao/apresentacao-final.mp4`, QC 10/10,
+> −14,2 LUFS, −1,3 dBTP). Conferência final da mesa (rodada 4): **8,49, abaixo da meta de 9,0**, sem veto nem bloqueio;
+> produto, marketing e roteirista APROVA; motion, torcida e estratégia APROVA COM CONDIÇÃO (condições de publicação,
+> abaixo). As 2 rodadas de correção foram usadas: a nota é a que a mesa deu, sem inflar. Para publicar faltam as
+> escutas do dono, a licença comercial da voz e o render de entrega no Mac.
 
 ## Arquivos
 
-- Prévia (sem voz): `05-producao/apresentacao-previa.mp4` (fora do Git). Versão leve enviada ao dono no chat.
-- MP4 final: render no Mac, depois da voz → Google Drive, pasta **"Somos Organizada · Motion" → `2026-10-15-apresentacao/`**.
-- Timeline: `05-timeline.md` · QC: `auditoria/rodada-3-producao/qc.json` · Notas: `auditoria/rodada-*/resultado.json`.
+- Com voz (nuvem): `05-producao/apresentacao-final.mp4` (fora do Git). Versão leve enviada ao dono no chat.
+- MP4 de entrega: render no Mac → Google Drive, pasta **"Somos Organizada · Motion" → `2026-10-15-apresentacao/`**.
+- Timeline: `05-timeline.md` · QC: `auditoria/rodada-4-final/qc.json` · Notas: `auditoria/rodada-*/resultado.json`.
 
 ## Passos que faltam (nesta ordem)
 
@@ -18,7 +20,10 @@
    essa fala de novo escrevendo "sub-sede"); (c) licença comercial da ElevenLabs (plano Starter ou maior).
 2. **Dono ouve a bateria** (trecho 39,5 → 83,2 s de `audio/biblioteca/blume-batucada-valparaiso.mp3`): sem canto nem
    grito de puxador. Se houver, volta a percussão sintetizada (histórico do Git) e a mix e o QC são refeitos.
-3. Render de entrega no Mac (`npx remotion render Apresentacao out/apresentacao.mp4 --props='{"audio":"final"}'`), QC de novo, Drive.
+3. Render de entrega no Mac (`npx remotion render Apresentacao out/apresentacao.mp4 --props='{"audio":"final"}'`) e
+   **condição da motion-review:** `node scripts/qc.mjs` com o mesmo resultado (−14 ± 1 LUFS, TP ≤ −1 dBTP, 1350 quadros,
+   sem preto nem congelado) e a folha de contato conferida contra `05-producao/evidencias-final/` nos quadros 495, 531,
+   612, 936–1056 e 1188–1350 (o 3D por software da nuvem pode sair diferente do Mac). Depois, Drive.
 4. Instagram **@somosorganizada**: link da bio para `https://somosorganizada.com.br/cadastro`; publicar o Reels e
    **fixar no perfil**; colar o texto e o comentário fixado abaixo.
 
@@ -31,9 +36,9 @@ A Somos Organizada é o painel da torcida organizada: sócios com mensalidade no
 
 Sobre a taxa de 10%: ela é somada ao valor do ingresso, quem paga é o torcedor, e ela fica no caixa da torcida. O ingresso só precisa pagar o evento, e o caixa cresce a cada venda.
 
-Pra torcida: plano mensal fixo, sem porcentagem das vendas. Só paga depois de publicar o site. Dá pra testar tudo antes em modo demonstração, sem dinheiro de verdade.
+Pra torcida: plano mensal fixo, sem porcentagem das vendas. Só paga depois de publicar o site.
 
-Por segurança, o cadastro termina com um vídeo de verificação gravado na sede (dados de torcida são públicos e a gente não deixa ninguém se passar pela sua).
+Por segurança, o cadastro termina com um vídeo de verificação gravado na sede (dados de torcida são públicos e a gente não deixa ninguém se passar pela sua). Aprovado o cadastro, dá pra testar tudo em modo demonstração, sem dinheiro de verdade.
 
 Link na bio pra cadastrar sua torcida.
 
@@ -43,12 +48,13 @@ Link na bio pra cadastrar sua torcida.
 ## Comentário fixado
 
 ```
-"10% de taxa? A torcida fica com uma parte?" Fica com tudo: os 10% são pagos pelo torcedor junto com o ingresso e vão pro caixa da torcida. A Somos Organizada não fica com porcentagem de venda nenhuma: a torcida paga um plano mensal fixo, e só depois de publicar o site. Link na bio.
+"10% de taxa? A Somos fica com uma parte?" Não: a Somos Organizada não fica com nada dos 10%. Eles são pagos pelo torcedor junto com o ingresso e vão pra conta da torcida. A Somos não fica com porcentagem de venda nenhuma: a torcida paga um plano mensal fixo, e só depois de publicar o site. Link na bio.
 ```
 
 Notas para quem publica:
-- Não escrever que a taxa "cobre as tarifas": na venda de subsede é a subsede que paga as tarifas da Pagar.me e a taxa
-  vai inteira para a torcida (`functions/src/dominio/split.ts`).
+- Não escrever que a taxa "cobre as tarifas" nem que os 10% "chegam limpos": na venda da sede principal, as tarifas da
+  Pagar.me saem do total que cai na conta da torcida; na venda de subsede, a subsede paga as tarifas e a taxa vai
+  inteira para a torcida (`functions/src/dominio/split.ts`, conferido pela produto-review).
 - Sem preço de plano no post, nos comentários e nas respostas (decisão do dono).
 - Resposta pronta para torcedor reclamando da taxa: a mesma do comentário fixado.
 
@@ -84,4 +90,16 @@ caixa", com as mesmas gravações.
 | 1 · portão | veto da motion-review | — | direção de arte refeita (v2) |
 | 2 · portão | veto derrubado | — | motion e torcida APROVA COM CONDIÇÃO |
 | 3 · peça completa | ABAIXO DA META (9,0) | 8,16 | sem veto; produto APROVA, as outras 5 APROVA COM CONDIÇÃO |
-| 4 · conferência final | a fazer | — | depois do render com as correções da rodada 3 |
+| 4 · conferência final | ABAIXO DA META (9,0) | **8,49** | sem veto; produto, marketing e roteirista APROVA; motion, torcida e estratégia APROVA COM CONDIÇÃO (só publicação) |
+
+Notas finais por critério (rodada 4): objetivo 8,50 · clareza 8,83 · gancho 7,83 · visual 8,00 · fidelidade 8,75 ·
+cta 8,75 · técnica 9,00.
+
+**Diagnóstico (por que não chegou a 9):**
+- **Gancho (7,83):** 7 palavras para ler em 1,5 s, sem algarismo, e a resposta vem pelo lado do sócio. A voz escolhida
+  é "Excited, Cheerful" e o roteiro pedia um gancho sério: só a retenção nos 3 s vai dizer.
+- **Visual (8,00):** o recorte da cena "A diretoria decide o preço" (828–936) corta texto nas bordas (problema médio novo
+  da rodada 4, sem rodada para corrigir); a planilha ficou em ~32 px; detalhes baixos (visor vazio no início da
+  portaria, halo verde do LIBERADO nas placas, anel de toque sobre o botão, torres nas bordas).
+- **Hipótese não testada:** cinco assuntos em 33 s num perfil novo. A curva de retenção decide; se a média ficar
+  abaixo de 30% sem toque no link, a próxima peça é a de aquisição (tipo F) só sobre a taxa.

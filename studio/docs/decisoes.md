@@ -156,3 +156,30 @@ roteirista, marketing, estratégia e torcida APROVA COM CONDIÇÃO. Correção a
   antes do CTA). "Somos Organizada" ficou na voz.
 - Mix final: −14,1 LUFS, true peak −1,5 dBTP.
 - A transcrição ouviu "subsédio" em "Cada subsede recebe direto": o dono confere a pronúncia.
+
+## 16/10/2026 · Apresentação: conferência final (rodada 4) e fechamento
+
+**Resultado:** 8,49 (meta 9,0) · ABAIXO DA META, sem veto nem bloqueio. produto, marketing e roteirista APROVA; motion,
+torcida e estratégia APROVA COM CONDIÇÃO, só de publicação. As 2 rodadas de correção foram usadas; nota sem inflar.
+Por critério: objetivo 8,50 · clareza 8,83 · gancho 7,83 · visual 8,00 · fidelidade 8,75 · cta 8,75 · técnica 9,00.
+
+**Para publicar (do dono):** ouvir a bateria (sem canto ou puxador), "subsede" (a transcrição ouviu "subsídio") e a
+naturalidade do gancho e do evento desacelerados; confirmar a licença comercial da ElevenLabs; render no Mac com QC
+igual e folha conferida (condição da motion). Texto do post corrigido: o teste em modo demonstração vem depois do vídeo
+de verificação; o comentário fixado não diz mais "fica com tudo" (na sede principal as tarifas saem do total da torcida).
+
+**Dívidas para a próxima peça (sem rodada para corrigir nesta):** recorte da 7a (828–936) cortando texto nas bordas;
+planilha em ~32 px e sem o botão "Baixar planilha"; visor vazio no início da portaria; halo verde do LIBERADO nas
+placas; anel de toque sobre o rótulo do botão; torres nas bordas do gancho; a tela mostra "caixa da diretoria" e a voz
+diz "caixa da torcida" (termo do produto: avaliar em `dividas-do-produto.md`); valores intermediários da digitação a
+~9 quadros/s (R$ 1,30 / R$ 1,43) visíveis numa pausa.
+
+**Aprendizados para o processo:**
+- Gravar o produto com duas gravações (fluida 1× para o aparelho, nítida 3× para recortes) e medir instantes no arquivo
+  final (WebM), não nas marcas do roteiro (a nítida chega ~0,3 s depois).
+- Recorte de gravação precisa de região conferida no quadro do instante usado: o layout rola com o foco do campo.
+- Para recortes legíveis (≥ 40 px), a região não pode passar de ~840 px da captura 3×; plano de cena que precisa de texto
+  pequeno do produto deve prever o close desde a captura.
+- Voz animada da ElevenLabs sai acima de 2,6 palavras/s: pedir speed ~0,8 ao dono ou contar com rubberband até 2,6.
+- Render completo na nuvem: ~40 min (3D por software + vídeo); para ajuste localizado, renderizar só o trecho e emendar
+  quadro a quadro (conferido por PSNR ~50 dB fora do trecho).
